@@ -16,8 +16,6 @@ import asyncio
 import numpy as np
 import carb
 
-world = World()
-world.scene.add_default_ground_plane()
 fancy_cube =  world.scene.add(
     DynamicCuboid(
         prim_path="/World/random_cube",

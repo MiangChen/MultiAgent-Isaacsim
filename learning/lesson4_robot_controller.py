@@ -72,3 +72,4 @@ if __name__ == "__main__":
         world.step(render=True) # execute one physics step and one rendering step
 
     simulation_app.close() # close Isaac Sim
+
