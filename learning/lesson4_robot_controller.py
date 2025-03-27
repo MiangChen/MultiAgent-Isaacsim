@@ -55,6 +55,16 @@ jetbot_robot = world.scene.add(
     )
 )
 
+jetbot_robot2 = WheeledRobot(
+            prim_path="/World/Fancy_Robot2",
+            name="fancy_robot2",
+            wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
+            create_robot=True,
+            usd_path=jet_robot_asset_path,
+            position=[1, 1, 0],
+        )
+world.scene.add(jetbot_robot2)
+
 
 simulation_time = 0.0  # 记录模拟时间
 duration = 5.0  # 目标时间 (5 秒)
@@ -67,8 +77,9 @@ if __name__ == "__main__":
     world.reset()
 
     controller = CoolController()
-    for i in range(5000):
+    for i in range(50000):
         jetbot_robot.apply_action(controller.forward(command=[0.20, np.pi/4]))
+        jetbot_robot2.apply_action(controller.forward(command=[0.3, np.pi]))
         world.step(render=True) # execute one physics step and one rendering step
 
     simulation_app.close() # close Isaac Sim

@@ -19,3 +19,4 @@ class CoolController(BaseController):
         joint_velocities[1] = ((2 * command[0]) + (command[1] * self._wheel_base)) / (2 * self._wheel_radius)
         # A controller has to return an ArticulationAction
         return ArticulationAction(joint_velocities=joint_velocities)
+

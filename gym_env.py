@@ -5,7 +5,17 @@ import gymnasium as gym
 
 from scene import Simulator
 
+from isaacsim.core.api import World
+from isaacsim.core.api.objects import DynamicCuboid
+from isaacsim.core.utils.nucleus import get_assets_root_path
 
+from isaacsim.core.api.controllers import BaseController
+
+from isaacsim.core.utils.types import ArticulationAction
+
+from isaacsim.robot.wheeled_robots.robots import WheeledRobot
+
+from isaacsim.core.utils.prims import create_prim
 
 
 def create_scene(config_json_path: str, prim_path_root: str = 'background'):
@@ -44,13 +54,34 @@ class Env(gym.Env):
         # self.simulation_app = SimulationApp({"headless": False})  # we can also run as headless.
         print("init success")
 
-        from isaacsim.core.api import World
-        from isaacsim.core.api.objects import DynamicCuboid
-        from isaacsim.core.utils.nucleus import get_assets_root_path
-
         self._runner = simulation_app
         self.world = World()
         # self.world.scene.add_default_ground_plane()
+
+        assets_root_path = get_assets_root_path()
+        if assets_root_path is None:
+            carb.log_error("Could not find nucleus server with /Isaac folder")
+        jet_robot_asset_path = assets_root_path + "/Isaac/Robots/Jetbot/jetbot.usd"
+
+        self.jetbot_robot = WheeledRobot(
+            prim_path="/World/Fancy_Robot",
+            name="fancy_robot",
+            wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
+            create_robot=True,
+            usd_path=jet_robot_asset_path,
+            position=[-2, 0, 0],
+            # orientation =
+        )  # 参考：super().__init__(prim_path=prim_path, name=name, position=position, orientation=orientation, scale=scale)
+
+        self.jetbot_robot2 = WheeledRobot(
+            prim_path="/World/Fancy_Robot2",
+            name="fancy_robot2",
+            wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
+            create_robot=True,
+            usd_path=jet_robot_asset_path,
+            position=[-2, -1, 0],
+            # orientation =
+        )  # 参考：super().__init__(prim_path=prim_path, name=name, position=position, orientation=orientation, scale=scale)
 
         # 加载复杂场景
         # usd_path = './scene/CityDemopack/World_CityDemopack.usd'
@@ -59,7 +90,6 @@ class Env(gym.Env):
             os.path.abspath(usd_path),
             prim_path_root=f'World/env_test_first/scene',
         )
-        from isaacsim.core.utils.prims import create_prim
 
         create_prim(
             prim_path,
@@ -69,14 +99,47 @@ class Env(gym.Env):
             # translation=[self.runtime.env.offset[idx] + i for idx, i in enumerate(self.runtime.scene_position)],
         )
 
+        # 加载jetbot机器人
+        self.world.scene.add(self.jetbot_robot)
+
+        self.add_jetbot()
+
+        # 添加相机
+
+
+        # 为相机添加iewport
+
+        import isaacsim.core.utils.prims as prims_utils
+        from pxr import Usd, UsdGeom
+        import numpy as np
+
+        # 为相机添加iewport
+        from isaacsim.core.utils.viewports import create_viewport_for_camera
+        camera_prim_path = "/World/camera_test"
+        xform_path = camera_prim_path + "/xform_camera"
+        prims_utils.delete_prim(xform_path)
+        prims_utils.delete_prim(camera_prim_path)
+        prims_utils.create_prim(prim_path=camera_prim_path, prim_type="Camera", position=np.array([5, 0, 50.0]), )
+        # 创建一个 Xform 原始来控制相机的位置和旋转
+
+        xform_prim = prims_utils.create_prim(prim_path=xform_path, prim_type="Xform")
+        create_viewport_for_camera(
+            viewport_name="/test_camera",
+            camera_prim_path=camera_prim_path,
+            width=1280/2,
+            height=720/2,
+            position_x=0, ## 设置他在IsaacSimAPP中的相对的位置
+            position_y=0,
+        )
+
         # self.world.scene.stage.add() # 无法使用的
         # 寻找资源路径, 一定要是本地的路径
-        self.assets_root_path = get_assets_root_path()
-        if self.assets_root_path is None:
-            carb.log_error("Could not find nucleus server with /Isaac folder")
+        # self.assets_root_path = get_assets_root_path()
+        # if self.assets_root_path is None:
+        #     carb.log_error("Could not find nucleus server with /Isaac folder")
 
         # 用于存储所有机器人
-        self.robots = {}
+        # self.robots = {}
         # from grutopia.core.runner import SimulatorRunner  # noqa E402.
         #
         # self._runner = SimulatorRunner(simulator_runtime=simulator_runtime)
@@ -106,14 +169,44 @@ class Env(gym.Env):
                                                             usd_path=jet_robot_asset_path,
                                                         )
 
-        for robot in self.robots.values():
-            self.world.scene.add(robot)
+
+        self.world.scene.add(list(self.robots.values())[-1])
 
         if robot_name == 'jetbot':
             pass
         else:
             print("机器人名字错误")
         return
+
+    def add_jetbot(self):
+
+        assets_root_path = get_assets_root_path()
+        if assets_root_path is None:
+            carb.log_error("Could not find nucleus server with /Isaac folder")
+        jet_robot_asset_path = assets_root_path + "/Isaac/Robots/Jetbot/jetbot.usd"
+
+        self.jetbot_robot3 = WheeledRobot(
+            prim_path="/World/Fancy_Robot3",
+            name="fancy_robot3",
+            wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
+            create_robot=True,
+            usd_path=jet_robot_asset_path,
+            position=[-2, 0, 0],
+            # orientation =
+        )  # 参考：super().__init__(prim_path=prim_path, name=name, position=position, orientation=orientation, scale=scale)
+
+        # self.jetbot_robot2 = WheeledRobot(
+        #     prim_path="/World/Fancy_Robot2",
+        #     name="fancy_robot2",
+        #     wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
+        #     create_robot=True,
+        #     usd_path=jet_robot_asset_path,
+        #     position=[-2, -1, 0],
+        #     # orientation =
+        # )  # 参考：super().__init__(prim_path=prim_path, name=name, position=position, orientation=orientation, scale=scale)
+
+        self.world.scene.add(self.jetbot_robot3)
+
 
     def reset(self):
         self.world.reset()
