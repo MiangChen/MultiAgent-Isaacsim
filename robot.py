@@ -38,7 +38,6 @@ class RobotCfg(BaseCfg):
         controllers (Optional[List[ControllerCfg]], optional): List of controller configurations attached to the robot. Defaults to None.
         sensors (Optional[List[SensorCfg]], optional): List of sensor configurations attached to the robot. Defaults to None.
     """
-
     # meta info
     name: str
     type: str
@@ -48,9 +47,8 @@ class RobotCfg(BaseCfg):
 
     # common config
     position: Optional[Tuple[float, float, float]] = (0.0, 0.0, 0.0)
-    orientation: Optional[Tuple[float, float, float, float]] = None
-    scale: Optional[Tuple[float, float, float]] = None
-
+    orientation: Optional[Tuple[float, float, float, float]] = (0.0, 0.0, 0.0, 1.0)
+    scale: Optional[Tuple[float, float, float]] = (1.0, 1.0, 1.0)
     # controllers: Optional[List[ControllerCfg]] = None
     # sensors: Optional[List[SensorCfg]] = None
 
@@ -66,7 +64,7 @@ class BaseRobot:
         self.isaac_robot: IsaacRobot | None = None
         self.controllers = {}
         self.sensors = {}
-        self._scene = None
+        self.scene = scene
 
     def set_up_to_scene(self, scene: Scene):
         """Set up robot in the scene.
@@ -74,18 +72,18 @@ class BaseRobot:
         Args:
             scene (Scene): scene to set up.
         """
-        self._scene = scene
+        # self._scene = scene
         robot_cfg = self.config
         if self.isaac_robot:
             scene.add(self.isaac_robot)
-            log.debug('self.isaac_robot: ' + str(self.isaac_robot))
+            # log.debug('self.isaac_robot: ' + str(self.isaac_robot))
         for rigid_body in self.get_rigid_bodies():
             scene.add(rigid_body)
-        from grutopia.core.robot.controller import BaseController, create_controllers
-        from grutopia.core.robot.sensor import BaseSensor, create_sensors
-
-        self.controllers: Dict[str, BaseController] = create_controllers(robot_cfg, self, scene)
-        self.sensors: Dict[str, BaseSensor] = create_sensors(robot_cfg, self, scene)
+        # from grutopia.core.robot.controller import BaseController, create_controllers
+        # from grutopia.core.robot.sensor import BaseSensor, create_sensors
+        #
+        # self.controllers: Dict[str, BaseController] = create_controllers(robot_cfg, self, scene)
+        # self.sensors: Dict[str, BaseSensor] = create_sensors(robot_cfg, self, scene)
 
     def post_reset(self):
         """Set up things that happen after the world resets."""

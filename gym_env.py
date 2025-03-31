@@ -63,25 +63,25 @@ class Env(gym.Env):
             carb.log_error("Could not find nucleus server with /Isaac folder")
         jet_robot_asset_path = assets_root_path + "/Isaac/Robots/Jetbot/jetbot.usd"
 
-        self.jetbot_robot = WheeledRobot(
-            prim_path="/World/Fancy_Robot",
-            name="fancy_robot",
-            wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
-            create_robot=True,
-            usd_path=jet_robot_asset_path,
-            position=[-2, 0, 0],
-            # orientation =
-        )  # 参考：super().__init__(prim_path=prim_path, name=name, position=position, orientation=orientation, scale=scale)
+        # self.jetbot_robot = WheeledRobot(
+        #     prim_path="/World/Fancy_Robot",
+        #     name="fancy_robot",
+        #     wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
+        #     create_robot=True,
+        #     usd_path=jet_robot_asset_path,
+        #     position=[-2, 0, 0],
+        #     # orientation =
+        # )  # 参考：super().__init__(prim_path=prim_path, name=name, position=position, orientation=orientation, scale=scale)
 
-        self.jetbot_robot2 = WheeledRobot(
-            prim_path="/World/Fancy_Robot2",
-            name="fancy_robot2",
-            wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
-            create_robot=True,
-            usd_path=jet_robot_asset_path,
-            position=[-2, -1, 0],
-            # orientation =
-        )  # 参考：super().__init__(prim_path=prim_path, name=name, position=position, orientation=orientation, scale=scale)
+        # self.jetbot_robot2 = WheeledRobot(
+        #     prim_path="/World/Fancy_Robot2",
+        #     name="fancy_robot2",
+        #     wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
+        #     create_robot=True,
+        #     usd_path=jet_robot_asset_path,
+        #     position=[-2, -1, 0],
+        #     # orientation =
+        # )  # 参考：super().__init__(prim_path=prim_path, name=name, position=position, orientation=orientation, scale=scale)
 
         # 加载复杂场景
         # usd_path = './scene/CityDemopack/World_CityDemopack.usd'
@@ -99,13 +99,22 @@ class Env(gym.Env):
             # translation=[self.runtime.env.offset[idx] + i for idx, i in enumerate(self.runtime.scene_position)],
         )
 
-        # 加载jetbot机器人
-        self.world.scene.add(self.jetbot_robot)
+        from jetbot_config import JetbotRobotCfg, Jetbot
+        import numpy as np
+        self.robot = Jetbot(
+            JetbotRobotCfg(
+                position=np.array([-1, -1, 0]),
+                orientation=np.array([0, 0, 0, 1])
+            ),
+            scene=self.world.scene
+        )
 
-        self.add_jetbot()
+        # 加载jetbot机器人
+        # self.world.scene.add(self.jetbot_robot)
+        #
+        # self.add_jetbot()
 
         # 添加相机
-
 
         # 为相机添加iewport
 
@@ -114,22 +123,29 @@ class Env(gym.Env):
         import numpy as np
 
         # 为相机添加iewport
-        from isaacsim.core.utils.viewports import create_viewport_for_camera
-        camera_prim_path = "/World/camera_test"
-        xform_path = camera_prim_path + "/xform_camera"
-        prims_utils.delete_prim(xform_path)
-        prims_utils.delete_prim(camera_prim_path)
-        prims_utils.create_prim(prim_path=camera_prim_path, prim_type="Camera", position=np.array([5, 0, 50.0]), )
+        from isaacsim.core.utils.viewports import create_viewport_for_camera, set_camera_view
+        self.camera_prim_path = "/World/camera_test"
+        xform_path = self.camera_prim_path + "/xform_camera"
+        # prims_utils.delete_prim(xform_path) # 如果已经有了，要先删除
+        # prims_utils.delete_prim(camera_prim_path)
+        prims_utils.create_prim(prim_path=self.camera_prim_path, prim_type="Camera", position=np.array([5, 0, 50.0]), )
         # 创建一个 Xform 原始来控制相机的位置和旋转
 
         xform_prim = prims_utils.create_prim(prim_path=xform_path, prim_type="Xform")
         create_viewport_for_camera(
             viewport_name="/test_camera",
-            camera_prim_path=camera_prim_path,
-            width=1280/2,
-            height=720/2,
-            position_x=0, ## 设置他在IsaacSimAPP中的相对的位置
+            camera_prim_path=self.camera_prim_path,
+            width=1280 / 2,
+            height=720 / 2,
+            position_x=0,  ## 设置他在IsaacSimAPP中的相对的位置
             position_y=0,
+        )
+
+        ## 可以设置相机的观察位置
+        set_camera_view(
+            eye=np.array([5, 0, 50]),
+            target=np.array([5, 0, 0]),
+            camera_prim_path=self.camera_prim_path,
         )
 
         # self.world.scene.stage.add() # 无法使用的
@@ -162,16 +178,17 @@ class Env(gym.Env):
         jet_robot_asset_path = self.assets_root_path + "/Isaac/Robots" + name_dict[robot_name]
 
         self.robots[f'jetbot_{len(self.robots)}'] = WheeledRobot(
-                                                            prim_path="/World/Fancy_Robot",
-                                                            name=f"fancy_robot_{len(self.robots)}",
-                                                            wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
-                                                            create_robot=True,
-                                                            usd_path=jet_robot_asset_path,
-                                                        )
-
+            prim_path="/World/Fancy_Robot",
+            name=f"fancy_robot_{len(self.robots)}",
+            wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
+            create_robot=True,
+            usd_path=jet_robot_asset_path,
+        )
 
         self.world.scene.add(list(self.robots.values())[-1])
 
+        # from isaacsim.core.api.physics
+        print(self.world.get_physics_dt())
         if robot_name == 'jetbot':
             pass
         else:
@@ -207,7 +224,6 @@ class Env(gym.Env):
 
         self.world.scene.add(self.jetbot_robot3)
 
-
     def reset(self):
         self.world.reset()
         return
@@ -215,4 +231,3 @@ class Env(gym.Env):
     def step(self, action):
         self.world.step()
         return
-
