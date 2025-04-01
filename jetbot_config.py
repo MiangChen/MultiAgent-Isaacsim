@@ -11,6 +11,7 @@ from isaacsim.core.api.controllers import BaseController
 from isaacsim.core.utils.types import ArticulationAction
 from pid import PIDController
 
+
 class JetbotController(BaseController):
     def __init__(self):
         super().__init__(name="my_cool_controller")
@@ -77,7 +78,7 @@ class Jetbot(BaseRobot):
         import math
         alpha = 0.1
         norm = math.sqrt(sum(comp ** 2 for comp in orientation))
-        if abs(norm-1) > 0.1 :
+        if abs(norm - 1) > 0.1:
             print("没有归一")
         qw, qx, qy, qz = orientation
         # 计算方位角（绕 z 轴的旋转角度）
@@ -93,7 +94,7 @@ class Jetbot(BaseRobot):
         #     elif delta_yaw < -np.pi:
         #         delta_yaw += 2 * np.pi
 
-            # yaw = self.last_yaw + delta_yaw
+        # yaw = self.last_yaw + delta_yaw
 
         # yaw = alpha * yaw + (1 - alpha) * self.last_yaw
         # self.last_yaw = yaw
@@ -113,7 +114,6 @@ class Jetbot(BaseRobot):
         # 获取2D方向的小车朝向，逆时针是正
         car_yaw_angle = self.quaternion_to_yaw(car_orientation)
 
-
         # 获取机器人和目标连线的XY平面上的偏移角度
         car_to_target_angle = np.arctan2(target_postion[1] - car_position[1], target_postion[0] - car_position[0])
         # 差速, 和偏移角度成正比，通过pi归一化
@@ -122,15 +122,17 @@ class Jetbot(BaseRobot):
         #     delta_angle = delta_angle - 2 * np.pi
         if abs(delta_angle) < 0.017:  # 角度控制死区
             delta_angle = 0
+        if np.linalg.norm(target_postion[0:2] - car_position[0:2]) < 0.1:
+            v_forward = 0
+            self.apply_action([0, 0])
+            return True  # 已经到达目标点附近10cm, 停止运动
         # k1 = 1 / np.pi
         # v_rotation = k1 * delta_angle
-        v_rotation = self.pid_angle.compute(delta_angle, dt=1/60)
+        v_rotation = self.pid_angle.compute(delta_angle, dt=1 / 60)
         # 前进速度，和距离成正比
         k2 = 1
-        v_forward = 4# k2 * np.linalg.norm(target_postion[0:2] - car_position[0:2])
-        # v_forward = 0
-        if np.linalg.norm(target_postion[0:2] - car_position[0:2]) < 0.01:
-            v_forward = 0
+        v_forward = 4  # k2 * np.linalg.norm(target_postion[0:2] - car_position[0:2])
+
         # 合速度
         v_left = v_forward + v_rotation
         v_right = v_forward - v_rotation
@@ -147,4 +149,27 @@ class Jetbot(BaseRobot):
         # print(v_left, v_right)
         # print("v rotation", v_rotation, "v forward", v_forward)
         # print("yaw", car_yaw_angle, "target yaw", car_to_target_angle,"\tdelta angle", delta_angle, "\tdistance ", np.linalg.norm(target_postion[0:2] - car_position[0:2]))
-        return
+        return False  # 还没有到达
+
+    def move_along_path(self, path: list = None, reset_flag:bool = False):
+        """
+        让机器人沿着一个list的路径点运动
+        需求: 在while外面 能够记录已经到达的点, 每次到达某个目标点的 10cm附近,就认为到了, 然后准备下一个点
+
+        """
+        if reset_flag == True:
+            self.path_index = 0
+            self.path = path
+
+
+        # car_position, car_orientation = self.robot.get_world_pose()  ## type np.array
+        # # 获取2D方向的小车朝向，逆时针是正
+        # if np.linalg.norm(self.path[self.path_index][0:2] - car_position[0:2]) < 0.1:
+        #     self.path_index = self.path_index + 1
+        if self.path_index < len(self.path):  # 当index==len的时候, 就已经到达目标了
+            reach_flat = self.move_to(self.path[self.path_index])
+            if reach_flat == True:
+                self.path_index += 1
+            return False
+        else:
+            return True

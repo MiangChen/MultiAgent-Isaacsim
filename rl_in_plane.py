@@ -83,6 +83,7 @@ if __name__ == "__main__":
     env.world.scene.add(sphere)
     # env.add_jetbot()
     # env.add_robot('jetbot')
+    env.robot.move_along_path([[1,1], [1,2], [2,2], [2,1],[1,1]], reset_flag=True)
     for i in range(500000):
         # env.jetbot_robot.apply_action(controller.forward(command=[0.20, np.pi/4]))
         # env.jetbot_robot3.apply_action(controller.forward(command=[0.20, np.pi/4]))
@@ -102,7 +103,8 @@ if __name__ == "__main__":
             camera_prim_path=env.camera_prim_path,
         )
         # env.robot.apply_action([10.0, 9.0])
-        env.robot.move_to([3, 3])
+        # env.robot.move_to([3, 3])
+        env.robot.move_along_path()
         env.step(action=None) # execute one physics step and one rendering step
 
     simulation_app.close() # close Isaac Sim
