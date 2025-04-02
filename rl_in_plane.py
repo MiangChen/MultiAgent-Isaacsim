@@ -10,7 +10,9 @@ from gym_env import Env
 # from controller import CoolController
 
 from isaacsim.core.utils.nucleus import get_assets_root_path
-
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 # fancy_cube =  world.scene.add(
 #     DynamicCuboid(
 #         prim_path="/World/random_cube",
@@ -75,7 +77,8 @@ if __name__ == "__main__":
 
     from isaacsim.core.api.objects import VisualSphere
     sphere = VisualSphere(
-        prim_path="/World/red_point",
+        prim_path=f"{env.robot.robot.prim_path}/target_point",
+        name='jetbot_target',
         position=np.array([3.0, 3.0, 0.0], dtype=np.float32),
         radius=0.1,
         color=np.array([1.0, 0.0, 0.0], dtype=np.float32)
@@ -83,7 +86,28 @@ if __name__ == "__main__":
     env.world.scene.add(sphere)
     # env.add_jetbot()
     # env.add_robot('jetbot')
-    env.robot.move_along_path([[1,1], [1,2], [2,2], [2,1],[1,1]], reset_flag=True)
+    zone_corners = [[1, 1], [1, 10], [10, 10], [10, 1]]
+    path = env.robot.explore_zone(zone_corners)
+    env.robot.move_along_path(path, reset_flag=True)  # [[1,1], [1,2], [2,2], [2,1],[1,1]]g
+
+
+
+    x_coords = [point[0] for point in path]
+    y_coords = [point[1] for point in path]
+
+    plt.plot(x_coords, y_coords, marker='o', linestyle='-', color='blue')
+
+    # 绘制区域边界
+    zone_x = [corner[0] for corner in zone_corners] + [zone_corners[0][0]]
+    zone_y = [corner[1] for corner in zone_corners] + [zone_corners[0][1]]
+    # plt.plot(zone_x, zone_y, color='red', linestyle='--')
+
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.title("探索路径")
+    plt.grid(True)
+    # plt.show()
+
     for i in range(500000):
         # env.jetbot_robot.apply_action(controller.forward(command=[0.20, np.pi/4]))
         # env.jetbot_robot3.apply_action(controller.forward(command=[0.20, np.pi/4]))
@@ -106,6 +130,8 @@ if __name__ == "__main__":
         # env.robot.move_to([3, 3])
         env.robot.move_along_path()
         env.step(action=None) # execute one physics step and one rendering step
+        if i % 60 == 0: # 1s加一个轨迹
+            env.robot.traj.add_trajectory(env.robot.robot.get_world_pose()[0])
 
     simulation_app.close() # close Isaac Sim
 
