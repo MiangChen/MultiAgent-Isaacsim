@@ -93,29 +93,25 @@ class GridMap():
             free_position = self.generator.get_free_positions()  # 只是一个list, 表示空地的坐标
             value_map = self.generator.get_buffer()  # list, 表示各个点是障碍物还是空地, 但是没有坐标信息
 
-        print(type(free_position))
-        #        print(type(value_map)) # list
         x, y, z = self.generator.get_dimensions()
-        pos_map = np.empty((x, y, 3), dtype=np.float32)
+        self.pos_map = np.empty((x, y, 3), dtype=np.float32)
 
-        value_map = np.array(value_map).reshape((x, y))
-        print(pos_map.shape, value_map.shape)
-        print(f"x={x}, y = {y}")
-        #print(pos_map, '\n', value_map)
+        self.value_map = np.array(value_map).reshape((x, y))
         index_obs = 0
         index_free = 0
         for i in range(0, x):
             for j in range(0, y):
-                # print()
-                #print(f"i={i}, j = {j}")
-                if value_map[i][j] == self.occupied_cell:  # 障碍物
-                    pos_map[i][j] = obs_position[index_obs]
-                    index_obs += 1
-                elif value_map[i][j] == self.empty_cell or value_map[i][j] == self.invisible_cell:
-                    pos_map[i][j] = free_position[index_free]
-                    index_free += 1
-                # pass
 
+                if self.value_map[i][j] == self.occupied_cell:  # 障碍物
+                    self.pos_map[i][j] = obs_position[index_obs]
+                    index_obs += 1
+                elif self.value_map[i][j] == self.empty_cell or self.value_map[i][j] == self.invisible_cell:
+                    self.pos_map[i][j] = free_position[index_free]
+                    index_free += 1
+                else:
+                    print("special occasion, check manually")
+
+        return self.pos_map, self.value_map
 
     def get_image(self):
         colored_buffer = self.generator.get_colored_byte_buffer(
@@ -137,17 +133,23 @@ class GridMap():
 
 
 if __name__ == "__main__":
-    grid_map = GridMap(min_bounds=[-2, -2, 0], max_bounds=[0, 0, 0], cell_size=1)
+    grid_map = GridMap(min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=0.5)
 
     grid_map.generate2d()
-    point = grid_map.generator.get_occupied_positions()  # 仅仅为障碍物
-    point2 = grid_map.generator.get_free_positions()  # 包括空地 和 不可见的区域
+    point = grid_map.generator.get_occupied_positions()
+    point2 = grid_map.generator.get_free_positions()
     print(point[:10])
     print(point2[:10])
-    print(len(point) + len(point2))
+    print(len(point)+len(point2))
+    #print(point)
+    #print("len point", len(point))
 
     buffer = grid_map.generator.get_buffer()
-
+    print(buffer)
     # 创建并保存图像
-    image = grid_map.get_image()
-    image.save("occupancy_map.png")
+    # 创建并保存图像
+    #image = grid_map.get_image()
+    #image.save("occupancy_map.png")
+
+    #image.save("/home/ubuntu/Pictures/occupancy_map_3d_2.png")
+    grid_map.map_2d()
