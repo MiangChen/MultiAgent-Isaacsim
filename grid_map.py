@@ -94,22 +94,22 @@ class GridMap():
             value_map = self.generator.get_buffer()  # list, 表示各个点是障碍物还是空地, 但是没有坐标信息
 
         x, y, z = self.generator.get_dimensions()
-        self.pos_map = np.empty((x, y, 3), dtype=np.float32)
+        self.pos_map = np.empty((x, y, z, 3), dtype=np.float32)
 
-        self.value_map = np.array(value_map).reshape((x, y))
+        self.value_map = np.array(value_map).reshape((x, y, z))
         index_obs = 0
         index_free = 0
         for i in range(0, x):
             for j in range(0, y):
-
-                if self.value_map[i][j] == self.occupied_cell:  # 障碍物
-                    self.pos_map[i][j] = obs_position[index_obs]
-                    index_obs += 1
-                elif self.value_map[i][j] == self.empty_cell or self.value_map[i][j] == self.invisible_cell:
-                    self.pos_map[i][j] = free_position[index_free]
-                    index_free += 1
-                else:
-                    print("special occasion, check manually")
+                for k in range(0, z):
+                    if self.value_map[i][j][k] == self.occupied_cell:  # 障碍物
+                        self.pos_map[i][j][k] = obs_position[index_obs]
+                        index_obs += 1
+                    elif self.value_map[i][j][k] == self.empty_cell or self.value_map[i][j] == self.invisible_cell:
+                        self.pos_map[i][j][k] = free_position[index_free]
+                        index_free += 1
+                    else:
+                        print("special occasion, check manually")
 
         return self.pos_map, self.value_map
 
@@ -133,23 +133,48 @@ class GridMap():
 
 
 if __name__ == "__main__":
-    grid_map = GridMap(min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=0.5)
+    cell_size = 0.25
+    grid_map = GridMap(min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=cell_size)
 
     grid_map.generate2d()
     point = grid_map.generator.get_occupied_positions()
     point2 = grid_map.generator.get_free_positions()
     print(point[:10])
     print(point2[:10])
-    print(len(point)+len(point2))
-    #print(point)
-    #print("len point", len(point))
+    print(len(point) + len(point2))
+    # print(point)
+    # print("len point", len(point))
 
     buffer = grid_map.generator.get_buffer()
-    print(buffer)
+    # print(buffer)
     # 创建并保存图像
     # 创建并保存图像
-    #image = grid_map.get_image()
-    #image.save("occupancy_map.png")
+    # image = grid_map.get_image()
+    # image.save("occupancy_map.png")
 
-    #image.save("/home/ubuntu/Pictures/occupancy_map_3d_2.png")
+    # image.save("/home/ubuntu/Pictures/occupancy_map_3d_2.png")
     grid_map.map_2d()
+
+    index = 0
+    # 检查一下是否匹配, 障碍物再value map中的index和pos map中的是否一致
+    from isaacsim.core.api.objects import VisualCuboid
+
+    for x in range(grid_map.value_map.shape[0]):
+        for y in range(grid_map.value_map.shape[1]):
+            for z in range(grid_map.value_map.shape[2]):
+                if grid_map.value_map[x][y] == grid_map.occupied_cell:
+                    print(
+                        f"坐标 {x, y, z}, value map = {grid_map.value_map[x][y][z]}, pos map = {grid_map.pos_map[x][y][z]}")
+                    # 在对应的pos位置创建一个方块, 边长就是cell
+                    index += 1
+                    cube_path = f"/World/grid/cube{index}"
+                    pos = grid_map.pos_map[x][y][z]
+                    pos[1] -= 6
+                    cube = VisualCuboid(
+                        prim_path=cube_path,
+                        name=f"cube{index}",
+                        position=pos,
+                        size=cell_size,
+                        color=np.array([0.0, 0.5, 0.0], dtype=np.float32)
+                    )
+

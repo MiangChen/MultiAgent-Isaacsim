@@ -27,6 +27,6 @@ from grutopia.core.runtime import SimulatorRuntime
             {'headless': self.headless, 'anti_aliasing': 0, 'hide_ui': False, 'multi_gpu': False}
         )
 
-[![Lines of Code](https://img.shields.io/badge/LoC-1442-blue)](https://github.com/MiangChen/multiagent-isaacsim)
+[![Lines of Code](https://img.shields.io/badge/LoC-1642-blue)](https://github.com/MiangChen/multiagent-isaacsim)
 
 cloc . --exclude-dir=IsaacLab
