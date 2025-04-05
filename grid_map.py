@@ -38,12 +38,13 @@ class GridMap():
         self.occupied_cell = occupied_cell
         self.empty_cell = empty_cell
         self.invisible_cell = invisible_cell
+        self.path_robot = "/World/robot"  # 记录机器人的统一路径,后续要先deactivate再建立gridmap
         physx = omni.physx.acquire_physx_interface()
         if physx is None:
             print("Failed to acquire PhysX interface.")
         else:
             print("PhysX interface acquired successfully.")
-        stage_id = omni.usd.get_context().get_stage_id()
+        stage_id = omni.usd.get_context().get_stage_id()  # 这里要改进一下, 只对静态的场景进行grid world建模, 对于动态的机器人建立grid map是在别的地方来处理的
         if stage_id is None:
             print("Failed to get stage ID.")
         else:
@@ -65,7 +66,15 @@ class GridMap():
             return
         else:
             self.flag_generate2d = True
+            # 先把机器人层给deactivate
+            import isaacsim.core.utils.stage as stage_utils
+            stage = stage_utils.get_current_stage()
+            prim_robot = stage.GetPrimAtPath(self.path_robot)
+            prim_robot.SetActive(False)
+            # 给静态场景建图
             self.generator.generate2d()
+            # 重新activate机器人
+            prim_robot.SetActive(True)
 
     def generate3d(self):
         if self.flag_generate3d == False:

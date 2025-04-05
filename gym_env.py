@@ -17,6 +17,8 @@ from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 
 from isaacsim.core.utils.prims import create_prim
 
+from grid_map import GridMap
+
 
 def create_scene(config_json_path: str, prim_path_root: str = 'background'):
     """
@@ -148,6 +150,16 @@ class Env(gym.Env):
             camera_prim_path=self.camera_prim_path,
         )
 
+        # 网格世界的地图
+        self.grid_map = GridMap(
+            start_point=[0, 0, 0],
+            min_bounds=[-10, -10, 0],
+            max_bounds=[10, 10, 5],
+            cell_size=0.2,
+            occupied_cell=1,
+            empty_cell=0,
+            invisible_cell=2,
+        )
         # self.world.scene.stage.add() # 无法使用的
         # 寻找资源路径, 一定要是本地的路径
         # self.assets_root_path = get_assets_root_path()
