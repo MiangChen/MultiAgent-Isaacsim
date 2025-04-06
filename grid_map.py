@@ -2,6 +2,7 @@ import omni
 import carb
 from isaacsim.asset.gen.omap.bindings import _omap
 import numpy as np
+from typing import List
 
 
 class GridMap():
@@ -21,14 +22,20 @@ class GridMap():
         检测的原理应该是在根据某个点有没有发现 碰撞 collision单元, 仅返回该点是否有碰撞, 需要用户再根据这些点重建方格, 无法直接用于A*
         """
 
+        self.method = 2
+        # 因为地面是有collision属性的, 直接重建会把地面也当做障碍物, 导致整个地图都是障碍物, 为了解决这个问题, 有两个方式
+        # 方式1: 把重建的z轴高度提高一些, 经过测试, 最少要提高 cell_size /2
         self.start_point = start_point
-        if min_bounds[-1] < cell_size / 2:
-            min_bounds[-1] = cell_size / 2
-            start_point[-1] = cell_size / 2
-            print("当地面的高度低于cell size的时候, 算法会把地面全部当成障碍物, 自动将z轴的最低范围设置为cell_size")
-        if max_bounds[-1] <= min_bounds[-1]:
-            max_bounds[-1] = min_bounds[-1] + cell_size / 2
-            print("z轴范围不足, 自动调高cell size")
+        if self.method == 1:
+            if min_bounds[-1] < cell_size / 2:
+                min_bounds[-1] = cell_size / 2
+                start_point[-1] = cell_size / 2
+                print("当地面的高度低于cell size的时候, 算法会把地面全部当成障碍物, 自动将z轴的最低范围设置为cell_size")
+            if max_bounds[-1] <= min_bounds[-1]:
+                max_bounds[-1] = min_bounds[-1] + cell_size / 2
+                print("z轴范围不足, 自动调高cell size")
+        elif self.method == 2:
+            pass  # 方式2: 在重建的时候, 把地面相关的图层临时关闭collision,
 
         self.min_bounds = min_bounds
         self.max_bounds = max_bounds
@@ -39,6 +46,7 @@ class GridMap():
         self.empty_cell = empty_cell
         self.invisible_cell = invisible_cell
         self.path_robot = "/World/robot"  # 记录机器人的统一路径,后续要先deactivate再建立gridmap
+        self.path_ground = "/World/GroundPlane"
         physx = omni.physx.acquire_physx_interface()
         if physx is None:
             print("Failed to acquire PhysX interface.")
@@ -61,26 +69,120 @@ class GridMap():
         # Set location to map from and the min and max bounds to map to
         self.generator.set_transform(self.start_point, self.min_bounds, self.max_bounds)
 
-    def generate2d(self):
-        if self.flag_generate2d == True:
-            return
-        else:
-            self.flag_generate2d = True
+    def generate_grid_map(self, dimension: str = '2d'):
+        """
+        首先重建地图, 2d和3d只能选择一个状态
+        :param dimension:
+        :return:
+        """
+        if dimension == '2d' and self.flag_generate2d == False or dimension == '3d' and self.flag_generate3d == False:
             # 先把机器人层给deactivate
             import isaacsim.core.utils.stage as stage_utils
             stage = stage_utils.get_current_stage()
             prim_robot = stage.GetPrimAtPath(self.path_robot)
             prim_robot.SetActive(False)
+            # 避免地面碰撞的方式如果是2, 那么就把地面也关闭
+            if self.method == 2:
+                prim_ground = stage.GetPrimAtPath(self.path_ground)
+                prim_ground.SetActive(False)
             # 给静态场景建图
-            self.generator.generate2d()
+            if dimension == '2d':
+                self.generator.generate2d()
+                self.flag_generate2d = True
+                self.flag_generate3d = False
+                print("generate 2d")
+            elif dimension == '3d':
+                self.generator.generate3d()
+                self.flag_generate3d = True
+                self.flag_generate2d = False
+                print("generate 3d")
+            else:
+                print(f"Invalid dimension: {dimension}")
             # 重新activate机器人
             prim_robot.SetActive(True)
+            if self.method == 2:
+                prim_ground.SetActive(True)
 
-    def generate3d(self):
-        if self.flag_generate3d == False:
-            self.flag_generate3d = True
-            self.generator.generate3d()
-        return
+        # if self.flag_generate2d == True or self.flag_generate3d == True:
+        """
+        通过2d/3d矩阵数值来表示每个点是障碍物还是空地
+        同时给出一个对应的2d矩阵, 用于表示上面的矩阵的点对应的现实坐标
+        :return:
+        """
+        obs_position = self.generator.get_occupied_positions()  # 只是一个list,表示obs的坐标
+        free_position = self.generator.get_free_positions()  # 只是一个list, 表示空地的坐标
+        # value_map = self.generator.get_buffer()  # list, 表示各个点是障碍物还是空地, 但是没有坐标信息
+        print("len obs", len(obs_position), "len free ", len(free_position), "all",
+              len(obs_position) + len(free_position))
+        # print("len value map", len(value_map))
+        x, y, z = self.generator.get_dimensions()
+        self.pos_map = np.empty((x, y, z, 3), dtype=np.float32)  # 2d map会自动z=1, 无关紧要
+        # self.value_map = np.array(value_map).reshape((x, y, z))
+        self.value_map = np.empty((x, y, z), dtype=np.float32)
+        index_obs = 0
+        index_free = 0
+        max_b = self.generator.get_max_bound()
+        min_b = self.generator.get_min_bound()  # 返回的是grid map 存在的 最小的角落点
+        scale = self.cell_size
+
+        # 获取三个维度上的长度情况
+        size = [0, 0, 0]
+        size[0] = max_b[0] - min_b[0]
+        size[1] = max_b[1] - min_b[1]
+        size[2] = max_b[2] - min_b[2]
+
+        # 处理为numpy, 加速计算
+        obs_position = np.array(obs_position, dtype=np.float32)  # 确保数据类型一致，提高效率
+        free_position = np.array(free_position, dtype=np.float32)
+        min_b = np.array(min_b, dtype=np.float32)
+        max_b = np.array(max_b, dtype=np.float32)
+        # 计算索引
+        obs_indices = (obs_position / scale - min_b / scale).astype(int)
+        free_indices = (free_position / scale - min_b / scale).astype(int)
+        # 使用高级索引更新 self.value_map 和 self.pos_map
+        self.value_map[tuple(obs_indices.T)] = self.occupied_cell
+        self.pos_map[tuple(obs_indices.T)] = obs_position
+        self.value_map[tuple(free_indices.T)] = self.empty_cell
+        self.pos_map[tuple(free_indices.T)] = free_position
+        # for p in obs_position:
+        #     x = int((p[0] / scale - min_b[0] / scale))
+        #     y = int((p[1] / scale - min_b[1] / scale))
+        #     z = int((p[2] / scale - min_b[2] / scale))
+        #     self.value_map[x, y, z] = self.occupied_cell
+        #     self.pos_map[x, y, z] = p
+        # for p in free_position:
+        #     x = int((p[0] / scale - min_b[0] / scale))
+        #     y = int((p[1] / scale - min_b[1] / scale))
+        #     z = int((p[2] / scale - min_b[2] / scale))
+        #     self.value_map[x, y, z] = self.empty_cell
+        #     self.pos_map[x, y, z] = p
+
+            # int(p[1] / scale - min_b[1] / scale) * int(size[0] / scale) + int(p[0] / scale - min_b[0] / scale)
+        # print(min_corner)
+        # for i in range(0, x):
+        #     for j in range(0, y):
+        #         for k in range(0, z):
+        #             if self.value_map[i][j][k] == self.occupied_cell:  # 障碍物
+        #                 self.pos_map[i][j][k] = obs_position[index_obs]
+        #                 index_obs += 1
+        #             elif self.value_map[i][j][k] == self.empty_cell or self.value_map[i][j][k] == self.invisible_cell:
+        #                 self.pos_map[i][j][k] = free_position[index_free]
+        #                 index_free += 1
+        #             else:
+        #                 print("special occasion, check manually")
+
+        return self.pos_map, self.value_map
+
+    def continuous_to_grid(self, continuous_pos: List[float]):
+        """
+        这里将地图里的真实坐标, 变成grid map生成的matrix里的坐标, 并不是说把原来世界给变成gridmap后的坐标;
+        同一个真实坐标, 同一个cell size 返回的坐标可能因为min bound而不同
+
+        """
+        # 先检测可行性
+        if any(continuous_pos[i] < self.min_bounds[i] or continuous_pos[i] > self.max_bounds[i] for i in range(3)):
+            print("输入的坐标范围超过了 min bounds和 max bounds, 没有实用意义, 需要重新设置")
+        # 检测是否已经生成了matrix
 
     def reset(self):
         self.generator.update_settings(
@@ -91,36 +193,7 @@ class GridMap():
         )
         return
 
-    def map_2d(self):
-        """
-        通过2d矩阵数值来表示每个点是障碍物还是空地
-        同时给出一个对应的2d矩阵, 用于表示上面的矩阵的点对应的现实坐标
-        :return:
-        """
-        if self.flag_generate2d == True:
-            obs_position = self.generator.get_occupied_positions()  # 只是一个list,表示obs的坐标
-            free_position = self.generator.get_free_positions()  # 只是一个list, 表示空地的坐标
-            value_map = self.generator.get_buffer()  # list, 表示各个点是障碍物还是空地, 但是没有坐标信息
-
-        x, y, z = self.generator.get_dimensions()
-        self.pos_map = np.empty((x, y, z, 3), dtype=np.float32)
-
-        self.value_map = np.array(value_map).reshape((x, y, z))
-        index_obs = 0
-        index_free = 0
-        for i in range(0, x):
-            for j in range(0, y):
-                for k in range(0, z):
-                    if self.value_map[i][j][k] == self.occupied_cell:  # 障碍物
-                        self.pos_map[i][j][k] = obs_position[index_obs]
-                        index_obs += 1
-                    elif self.value_map[i][j][k] == self.empty_cell or self.value_map[i][j] == self.invisible_cell:
-                        self.pos_map[i][j][k] = free_position[index_free]
-                        index_free += 1
-                    else:
-                        print("special occasion, check manually")
-
-        return self.pos_map, self.value_map
+    # def map_2d(self):
 
     def get_image(self):
         colored_buffer = self.generator.get_colored_byte_buffer(
@@ -145,7 +218,7 @@ if __name__ == "__main__":
     cell_size = 0.25
     grid_map = GridMap(min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=cell_size)
 
-    grid_map.generate2d()
+    grid_map.generate_grid_map('3d')  # 渲染时间2分钟
     point = grid_map.generator.get_occupied_positions()
     point2 = grid_map.generator.get_free_positions()
     print(point[:10])
@@ -154,7 +227,7 @@ if __name__ == "__main__":
     # print(point)
     # print("len point", len(point))
 
-    buffer = grid_map.generator.get_buffer()
+    # buffer = grid_map.generator.get_buffer()
     # print(buffer)
     # 创建并保存图像
     # 创建并保存图像
@@ -162,18 +235,18 @@ if __name__ == "__main__":
     # image.save("occupancy_map.png")
 
     # image.save("/home/ubuntu/Pictures/occupancy_map_3d_2.png")
-    grid_map.map_2d()
+    # grid_map.map_2d()
 
     index = 0
     # 检查一下是否匹配, 障碍物再value map中的index和pos map中的是否一致
     from isaacsim.core.api.objects import VisualCuboid
-
+    #
     for x in range(grid_map.value_map.shape[0]):
         for y in range(grid_map.value_map.shape[1]):
             for z in range(grid_map.value_map.shape[2]):
-                if grid_map.value_map[x][y] == grid_map.occupied_cell:
-                    print(
-                        f"坐标 {x, y, z}, value map = {grid_map.value_map[x][y][z]}, pos map = {grid_map.pos_map[x][y][z]}")
+                if grid_map.value_map[x][y][z] == grid_map.occupied_cell:
+                    # print(
+                    #     f"坐标 {x, y, z}, value map = {grid_map.value_map[x][y][z]}, pos map = {grid_map.pos_map[x][y][z]}")
                     # 在对应的pos位置创建一个方块, 边长就是cell
                     index += 1
                     cube_path = f"/World/grid/cube{index}"
@@ -186,4 +259,3 @@ if __name__ == "__main__":
                         size=cell_size,
                         color=np.array([0.0, 0.5, 0.0], dtype=np.float32)
                     )
-
