@@ -215,10 +215,10 @@ class GridMap():
 
 
 if __name__ == "__main__":
-    cell_size = 0.25
+    cell_size = 0.2
     grid_map = GridMap(min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=cell_size)
 
-    grid_map.generate_grid_map('3d')  # 渲染时间2分钟
+    grid_map.generate_grid_map('3d')
     point = grid_map.generator.get_occupied_positions()
     point2 = grid_map.generator.get_free_positions()
     print(point[:10])
@@ -240,7 +240,7 @@ if __name__ == "__main__":
     index = 0
     # 检查一下是否匹配, 障碍物再value map中的index和pos map中的是否一致
     from isaacsim.core.api.objects import VisualCuboid
-    #
+    # 下面的这个比较耗时间 , 3d的0.25精度, 渲染时间2分钟
     for x in range(grid_map.value_map.shape[0]):
         for y in range(grid_map.value_map.shape[1]):
             for z in range(grid_map.value_map.shape[2]):
