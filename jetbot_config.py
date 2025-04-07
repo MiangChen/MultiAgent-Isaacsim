@@ -45,7 +45,7 @@ class JetbotRobotCfg(RobotCfg):
     # meta info
     name: Optional[str] = 'jetbot'
     type: Optional[str] = 'JetbotRobot'
-    prim_path: Optional[str] = '/World/jetbot'
+    prim_path: Optional[str] = '/World/robot/jetbot'
     create_robot: Optional[bool] = True
 
     usd_path: Optional[str] = assets_root_path + "/Isaac/Robots/Jetbot/jetbot.usd"
@@ -63,6 +63,7 @@ class Jetbot(BaseRobot):
             orientation=np.array(config.orientation),
             usd_path=config.usd_path,
         )
+        self.robot_prim = config.prim_path
         self.scale = config.scale
         self.controller = JetbotController()
         self.scene.add(self.robot)
@@ -87,6 +88,20 @@ class Jetbot(BaseRobot):
     def apply_action(self, action):
         self.robot.apply_action(self.controller.velocity(action))
         return
+
+    def get_world_pose(self):
+        from pxr import UsdGeom
+
+        import isaacsim.core.utils.stage as stage_utils
+        stage = stage_utils.get_current_stage()
+        prim_robot = stage.GetPrimAtPath(self.robot_prim)
+        # 检查是否是 Xformable（可变换对象）
+        if prim_robot.IsA(UsdGeom.Xformable):
+            xform = UsdGeom.Xformable(prim_robot)
+            local_transform = xform.GetLocalTransformation()  # 返回 Gf.Matrix4d
+            local_position = local_transform.ExtractTranslation()  # 提取平移部分
+            local_rotation = local_transform.ExtractRotationQuat()
+            return local_position, [local_rotation.real] + list(local_rotation.imaginary)
 
     def quaternion_to_yaw(self, orientation):
         import math
@@ -125,7 +140,10 @@ class Jetbot(BaseRobot):
         缺点：不适合3D，无法避障，地面要是平的
         速度有两个分两，自转的分量 + 前进的分量
         """
-        car_position, car_orientation = self.robot.get_world_pose()  ## type np.array
+        car_position, car_orientation = self.robot.get_world_pose()#self.get_world_pose()  ## type np.array
+        # print(car_orientation)
+        # print(type(car_orientation))
+        # car_position, car_orientation = self.robot.get_world_pose()  ## type np.array
         # 获取2D方向的小车朝向，逆时针是正
         car_yaw_angle = self.quaternion_to_yaw(car_orientation)
 

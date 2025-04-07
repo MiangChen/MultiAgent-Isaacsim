@@ -80,8 +80,28 @@ class GridMap():
             import isaacsim.core.utils.stage as stage_utils
             stage = stage_utils.get_current_stage()
             prim_robot = stage.GetPrimAtPath(self.path_robot)
-            prim_robot.SetActive(False)
-            # 避免地面碰撞的方式如果是2, 那么就把地面也关闭
+            print("get property at prim", stage.GetPropertyAtPath(self.path_robot))
+            print("get attribute at prim", stage.GetAttributeAtPath(self.path_robot))
+
+            def disable_collision(prim):
+                # 遍历当前原始体的所有子原始体
+                for child in prim.GetChildren():
+                    # 检查子原始体是否是碰撞体
+                    print("child name", child.GetName())
+                    print("child type", child.GetTypeName())
+                    if child.GetName() == "Collisions" or child.GetName() == "collisions":
+                        # 设置碰撞体为非可碰撞
+                        try:
+                            child.GetAttribute("collisionEnabled").Set(False)
+                            print("set false")
+                        except:
+                            print("没有collision属性")
+                    # 递归调用以遍历子原始体的子原始体
+                    disable_collision(child)
+
+            # prim_robot.SetActive(False)   # 这个办法不可以, 会导致机器人的prim 无法get world pose以及无法获取DOF position,
+            # print(dir(prim_robot))
+            # 避免地面碰撞的方式如果是2, 那么就把地面也关闭  似乎机器人的问题不会在这里遇到
             if self.method == 2:
                 prim_ground = stage.GetPrimAtPath(self.path_ground)
                 prim_ground.SetActive(False)
@@ -99,7 +119,7 @@ class GridMap():
             else:
                 print(f"Invalid dimension: {dimension}")
             # 重新activate机器人
-            prim_robot.SetActive(True)
+            # prim_robot.SetActive(True) ## 用了就会爆炸
             if self.method == 2:
                 prim_ground.SetActive(True)
 
@@ -117,28 +137,17 @@ class GridMap():
         # print("len value map", len(value_map))
         x, y, z = self.generator.get_dimensions()
         self.pos_map = np.empty((x, y, z, 3), dtype=np.float32)  # 2d map会自动z=1, 无关紧要
-        # self.value_map = np.array(value_map).reshape((x, y, z))
         self.value_map = np.empty((x, y, z), dtype=np.float32)
-        index_obs = 0
-        index_free = 0
-        max_b = self.generator.get_max_bound()
-        min_b = self.generator.get_min_bound()  # 返回的是grid map 存在的 最小的角落点
-        scale = self.cell_size
-
-        # 获取三个维度上的长度情况
-        size = [0, 0, 0]
-        size[0] = max_b[0] - min_b[0]
-        size[1] = max_b[1] - min_b[1]
-        size[2] = max_b[2] - min_b[2]
-
-        # 处理为numpy, 加速计算
-        obs_position = np.array(obs_position, dtype=np.float32)  # 确保数据类型一致，提高效率
-        free_position = np.array(free_position, dtype=np.float32)
-        min_b = np.array(min_b, dtype=np.float32)
-        max_b = np.array(max_b, dtype=np.float32)
+        # self.value_map = np.array(value_map).reshape((x, y, z))
+        # index_obs = 0
+        # index_free = 0
+        # max_b = np.array(max_b, dtype=np.float32)
         # 计算索引
-        obs_indices = (obs_position / scale - min_b / scale).astype(int)
-        free_indices = (free_position / scale - min_b / scale).astype(int)
+        # obs_indices = (obs_position / self.cell_size - min_b / self.cell_size).astype(int)
+
+        # free_indices = (free_position / self.cell_size - min_b / self.cell_size).astype(int)
+        obs_indices = self.compute_index(obs_position)
+        free_indices = self.compute_index(free_position)
         # 使用高级索引更新 self.value_map 和 self.pos_map
         self.value_map[tuple(obs_indices.T)] = self.occupied_cell
         self.pos_map[tuple(obs_indices.T)] = obs_position
@@ -157,7 +166,7 @@ class GridMap():
         #     self.value_map[x, y, z] = self.empty_cell
         #     self.pos_map[x, y, z] = p
 
-            # int(p[1] / scale - min_b[1] / scale) * int(size[0] / scale) + int(p[0] / scale - min_b[0] / scale)
+        # int(p[1] / scale - min_b[1] / scale) * int(size[0] / scale) + int(p[0] / scale - min_b[0] / scale)
         # print(min_corner)
         # for i in range(0, x):
         #     for j in range(0, y):
@@ -213,12 +222,29 @@ class GridMap():
         image = Image.fromarray(buffer_np)
         return image
 
+    def compute_index(self, position: List = [0, 0, 0]):
+        # 获取角点
+        max_b = self.generator.get_max_bound()
+        min_b = self.generator.get_min_bound()  # 返回的是grid map 存在的 最小的角落点
+        # 获取三个维度上的长度情况
+        size = [0, 0, 0]
+        size[0] = max_b[0] - min_b[0]
+        size[1] = max_b[1] - min_b[1]
+        size[2] = max_b[2] - min_b[2]
+
+        # 处理为numpy, 加速计算
+        position = np.array(position, dtype=np.float32)  # 确保数据类型一致，提高效率
+        min_b = np.array(min_b, dtype=np.float32)
+
+        return (position / self.cell_size - min_b / self.cell_size).astype(int)
+
+
 
 if __name__ == "__main__":
     cell_size = 0.2
     grid_map = GridMap(min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=cell_size)
 
-    grid_map.generate_grid_map('3d')
+    grid_map.generate_grid_map('2d')
     point = grid_map.generator.get_occupied_positions()
     point2 = grid_map.generator.get_free_positions()
     print(point[:10])
@@ -240,7 +266,9 @@ if __name__ == "__main__":
     index = 0
     # 检查一下是否匹配, 障碍物再value map中的index和pos map中的是否一致
     from isaacsim.core.api.objects import VisualCuboid
+
     # 下面的这个比较耗时间 , 3d的0.25精度, 渲染时间2分钟
+    k = 0.99
     for x in range(grid_map.value_map.shape[0]):
         for y in range(grid_map.value_map.shape[1]):
             for z in range(grid_map.value_map.shape[2]):
@@ -257,5 +285,34 @@ if __name__ == "__main__":
                         name=f"cube{index}",
                         position=pos,
                         size=cell_size,
-                        color=np.array([0.0, 0.5, 0.0], dtype=np.float32)
+                        color=np.array([0.0, 0.5*k, 0.0], dtype=np.float32)
                     )
+                    k *= 0.99
+
+    import isaacsim.core.utils.stage as stage_utils
+    stage = stage_utils.get_current_stage()
+    prim_robot = stage.GetPrimAtPath(grid_map.path_robot)
+    # print(dir(prim_robot))
+    # print(prim_robot.get_world_pose())
+    # property = stage.GetProperty(grid_map.path_robot)
+    # print(prim_robot.GetAttribute())
+
+    from pxr import UsdGeom
+
+    # 获取 prim
+    prim_robot = stage.GetPrimAtPath(grid_map.path_robot)
+
+    # 检查是否是 Xformable（可变换对象）
+    if prim_robot.IsA(UsdGeom.Xformable):
+        xform = UsdGeom.Xformable(prim_robot)
+        local_transform = xform.GetLocalTransformation()  # 返回 Gf.Matrix4d
+        local_position = local_transform.ExtractTranslation()  # 提取平移部分
+        print("Local Position:", local_position)
+        index =grid_map.compute_index(local_position)
+        print(index)
+        print(grid_map.pos_map.shape)
+        pos_grid_map = grid_map.pos_map[47, 50, 0, :]
+        print("pos_grid_map:", pos_grid_map)
+        # print(pos_grid_map[index])
+    else:
+        print("Prim is not transformable (not a UsdGeom.Xformable)")

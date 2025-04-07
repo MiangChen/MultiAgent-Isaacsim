@@ -90,7 +90,7 @@ class Env(gym.Env):
         usd_path = './scene/simple_city.usd'
         source, prim_path = create_scene(
             os.path.abspath(usd_path),
-            prim_path_root=f'World/env_test_first/scene',
+            prim_path_root=f'World',  ## 注意前面不要有/
         )
 
         create_prim(
@@ -100,6 +100,10 @@ class Env(gym.Env):
             scale=[1, 1, 1],
             # translation=[self.runtime.env.offset[idx] + i for idx, i in enumerate(self.runtime.scene_position)],
         )
+
+        from grid_map import GridMap
+
+        cell_size = 0.2
 
         from jetbot_config import JetbotRobotCfg, Jetbot
         import numpy as np
@@ -149,17 +153,17 @@ class Env(gym.Env):
             target=np.array([5, 0, 0]),
             camera_prim_path=self.camera_prim_path,
         )
-
-        # 网格世界的地图
-        self.grid_map = GridMap(
-            start_point=[0, 0, 0],
-            min_bounds=[-10, -10, 0],
-            max_bounds=[10, 10, 5],
-            cell_size=0.2,
-            occupied_cell=1,
-            empty_cell=0,
-            invisible_cell=2,
-        )
+        #
+        # # 网格世界的地图
+        # self.grid_map = GridMap(
+        #     start_point=[0, 0, 0],
+        #     min_bounds=[-10, -10, 0],
+        #     max_bounds=[10, 10, 5],
+        #     cell_size=0.2,
+        #     occupied_cell=1,
+        #     empty_cell=0,
+        #     invisible_cell=2,
+        # )
         # self.world.scene.stage.add() # 无法使用的
         # 寻找资源路径, 一定要是本地的路径
         # self.assets_root_path = get_assets_root_path()
@@ -238,6 +242,10 @@ class Env(gym.Env):
 
     def reset(self):
         self.world.reset()
+        cell_size = 0.2
+        self.grid_map = GridMap(min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=cell_size)
+        print("init grid map success")
+
         return
 
     def step(self, action):

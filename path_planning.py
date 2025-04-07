@@ -9,7 +9,7 @@ def main():
     [0, 0, 0, 1, 1, 1],
     [0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0],
-    ]
+    ]  # 空地是>=1的, 空地是0,
     grid = Grid(matrix=matrix)
     start = grid.node(0, 0)
     end = grid.node(2, 0)
