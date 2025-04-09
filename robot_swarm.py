@@ -1,7 +1,9 @@
 from typing import Dict, List, Type
 import numpy as np
+from isaacsim.core.api.scenes import Scene
 
 from jetbot_config import Jetbot
+from robot import BaseRobot
 
 class RobotSwarmManager:
     """
@@ -13,8 +15,8 @@ class RobotSwarmManager:
     第四个,需要能中途加入机器人和删除机器人(但是前期试过, 好像在加入机器人后, 必须要reset world, 那么世界也就完全重置了, 所以我们可以定一个机器人仓库, 比如已经有这么多机器人了, 我们现在要一些新的机器人, 那么仓库里的机器人会加入行动, 非常合理)
     """
 
-    def __init__(self, world_scene):
-        self.world_scene = world_scene  # 保留世界场景引用
+    def __init__(self, scene:Scene):
+        self.scene = scene  # 保留世界场景引用
         self.active_robots: Dict[str, List[Jetbot]] = {}  # 激活的机器人 {type: [instances]}
         self.robot_warehouse: List[Jetbot] = []  # 待激活机器人仓库
         self.robot_classes = {  # 可扩展的机器人类注册
@@ -42,7 +44,7 @@ class RobotSwarmManager:
 
         robot = self.robot_classes[robot_type](
             cfg,
-            scene=self.world_scene
+            scene=self.scene
         )
         robot.name = name  # 确保每个机器人有唯一标识
         robot.is_active = False

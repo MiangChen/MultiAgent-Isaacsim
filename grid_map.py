@@ -241,6 +241,9 @@ class GridMap():
 
 
 if __name__ == "__main__":
+    """
+    记得 先 Play 运行环境, 才能跑起来
+    """
     cell_size = 0.2
     grid_map = GridMap(min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=cell_size)
 
