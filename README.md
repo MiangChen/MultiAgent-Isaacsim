@@ -2,10 +2,14 @@
 
 根据isaaclab要求，使用python 3.10
 
+按照官方文档来安装:
+https://docs.robotsfan.com/isaaclab/source/setup/installation/pip_installation.html
+还需要安装一下IsaacLab
 
-
-pip install -r requirements.txt
-
+运行
+```
+python main.py --enable isaacsim.asset.gen.omap
+```
 
 ***
 随手记录 开发记录
