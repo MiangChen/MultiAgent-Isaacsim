@@ -41,7 +41,7 @@ if assets_root_path is None:
     print("Could not find nucleus server with /Isaac folder")
 
 
-class JetbotRobotCfg(RobotCfg):
+class JetbotCfg(RobotCfg):
     # meta info
     name: Optional[str] = 'jetbot'
     type: Optional[str] = 'JetbotRobot'
@@ -52,7 +52,7 @@ class JetbotRobotCfg(RobotCfg):
 
 
 class Jetbot(BaseRobot):
-    def __init__(self, config: JetbotRobotCfg, scene: Scene):
+    def __init__(self, config: JetbotCfg, scene: Scene):
         super().__init__(config, scene)
         self.robot = WheeledRobot(
             prim_path=config.prim_path,

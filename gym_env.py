@@ -105,10 +105,10 @@ class Env(gym.Env):
 
         cell_size = 0.2
 
-        from jetbot_config import JetbotRobotCfg, Jetbot
+        from jetbot_config import JetbotCfg, Jetbot
         import numpy as np
         self.robot = Jetbot(
-            JetbotRobotCfg(
+            JetbotCfg(
                 position=np.array([-1, -1, 0]),
                 orientation=np.array([0, 0, 0, 1])
             ),
