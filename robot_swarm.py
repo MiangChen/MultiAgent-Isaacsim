@@ -2,7 +2,7 @@ from typing import Dict, List, Type
 import numpy as np
 from isaacsim.core.api.scenes import Scene
 
-from jetbot_config import Jetbot
+from jetbot import Jetbot
 from robot import RobotBase, RobotCfg
 import yaml
 

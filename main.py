@@ -7,7 +7,7 @@ import asyncio
 import numpy as np
 import carb
 
-from gym_env import Env
+from env import Env
 # from controller import CoolController
 
 from isaacsim.core.utils.nucleus import get_assets_root_path

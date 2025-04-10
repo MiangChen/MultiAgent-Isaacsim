@@ -19,7 +19,7 @@ from isaacsim.core.utils.prims import create_prim
 
 from grid_map import GridMap
 
-from jetbot_config import JetbotCfg, Jetbot
+from jetbot import JetbotCfg, Jetbot
 import numpy as np
 
 from robot_swarm import RobotSwarmManager
