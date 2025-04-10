@@ -1,7 +1,7 @@
 from typing import Optional
 
 from pid import PIDController
-from robot import RobotCfg, BaseRobot
+from robot import RobotCfg, RobotBase
 from isaacsim.core.api.scenes import Scene
 
 from isaacsim.robot.wheeled_robots.robots import WheeledRobot
@@ -43,40 +43,44 @@ if assets_root_path is None:
 
 class JetbotCfg(RobotCfg):
     # meta info
-    name: Optional[str] = 'jetbot'
+    name_prefix: Optional[str] = 'jetbot'
     type: Optional[str] = 'JetbotRobot'
     prim_path: Optional[str] = '/World/robot/jetbot'
-    create_robot: Optional[bool] = True
 
+    id: int = 0
     usd_path: Optional[str] = assets_root_path + "/Isaac/Robots/Jetbot/jetbot.usd"
 
 
-class Jetbot(BaseRobot):
+class Jetbot(RobotBase):
     def __init__(self, config: JetbotCfg, scene: Scene):
         super().__init__(config, scene)
-        self.robot = WheeledRobot(
-            prim_path=config.prim_path,
-            name=config.name,
+        self.robot_entity = WheeledRobot(
+            prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
+            name=config.name_prefix + f'_{config.id}',
             wheel_dof_names=['left_wheel_joint', 'right_wheel_joint'],
             create_robot=True,
             position=np.array(config.position),
             orientation=np.array(config.orientation),
             usd_path=config.usd_path,
         )
+        self.config = config
+        self.flag_active = False
         self.robot_prim = config.prim_path
-        self.scale = config.scale
+        # self.scale = config.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以
         self.controller = JetbotController()
-        self.scene.add(self.robot)
+        # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
         self.pid_distance = PIDController(1, 0.1, 0.01, target=0)
         self.pid_angle = PIDController(10, 0, 0.1, target=0)
 
         self.traj = Trajectory(
-            robot_prim_path=config.prim_path,
+            robot_prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
+            # name='traj' + f'_{config.id}',
+            id = config.id,
             max_points=100,
             color=(0.3, 1.0, 0.3),
             scene=self.scene,
             radius=0.05,
-       )
+        )
         # self.history_traj = []  # 历史轨迹
         # self.last_yaw = 0
 
@@ -86,22 +90,24 @@ class Jetbot(BaseRobot):
         return
 
     def apply_action(self, action):
-        self.robot.apply_action(self.controller.velocity(action))
+        self.robot_entity.apply_action(self.controller.velocity(action))
         return
 
     def get_world_pose(self):
-        from pxr import UsdGeom
-
-        import isaacsim.core.utils.stage as stage_utils
-        stage = stage_utils.get_current_stage()
-        prim_robot = stage.GetPrimAtPath(self.robot_prim)
-        # 检查是否是 Xformable（可变换对象）
-        if prim_robot.IsA(UsdGeom.Xformable):
-            xform = UsdGeom.Xformable(prim_robot)
-            local_transform = xform.GetLocalTransformation()  # 返回 Gf.Matrix4d
-            local_position = local_transform.ExtractTranslation()  # 提取平移部分
-            local_rotation = local_transform.ExtractRotationQuat()
-            return local_position, [local_rotation.real] + list(local_rotation.imaginary)
+        # 下面的方式是基于pxr方式获取pose的
+        # from pxr import UsdGeom
+        #
+        # import isaacsim.core.utils.stage as stage_utils
+        # stage = stage_utils.get_current_stage()
+        # prim_robot = stage.GetPrimAtPath(self.robot_prim)
+        # # 检查是否是 Xformable（可变换对象）
+        # if prim_robot.IsA(UsdGeom.Xformable):
+        #     xform = UsdGeom.Xformable(prim_robot)
+        #     local_transform = xform.GetLocalTransformation()  # 返回 Gf.Matrix4d
+        #     local_position = local_transform.ExtractTranslation()  # 提取平移部分
+        #     local_rotation = local_transform.ExtractRotationQuat()
+        #     return local_position, [local_rotation.real] + list(local_rotation.imaginary)
+        return self.robot_entity.get_world_pose()
 
     def quaternion_to_yaw(self, orientation):
         import math
@@ -140,7 +146,7 @@ class Jetbot(BaseRobot):
         缺点：不适合3D，无法避障，地面要是平的
         速度有两个分两，自转的分量 + 前进的分量
         """
-        car_position, car_orientation = self.robot.get_world_pose()#self.get_world_pose()  ## type np.array
+        car_position, car_orientation = self.robot_entity.get_world_pose()  # self.get_world_pose()  ## type np.array
         # print(car_orientation)
         # print(type(car_orientation))
         # car_position, car_orientation = self.robot.get_world_pose()  ## type np.array

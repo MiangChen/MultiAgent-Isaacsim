@@ -25,7 +25,7 @@ class RobotCfg(BaseCfg):
     simulation initialization and control.
 
     Attributes:
-        name (str): The name identifier for the robot.
+        name (str): The name_prefix identifier for the robot.
         type (str): The type or category of the robot.
         prim_path (str): The USD prim path where the robot is located or should be instantiated within a scene.
         create_robot (bool, optional): Flag indicating whether to create the robot instance during simulation setup. Defaults to True.
@@ -39,10 +39,9 @@ class RobotCfg(BaseCfg):
         sensors (Optional[List[SensorCfg]], optional): List of sensor configurations attached to the robot. Defaults to None.
     """
     # meta info
-    name: str
+    name_prefix: str
     type: str
     prim_path: str
-    create_robot: bool = True
     usd_path: Optional[str] = None  # If Optional, use default usd_path
 
     # common config
@@ -53,15 +52,13 @@ class RobotCfg(BaseCfg):
     # sensors: Optional[List[SensorCfg]] = None
 
 
-class BaseRobot:
+class RobotBase:
     """Base class of robot."""
 
-    robots = {}
-
     def __init__(self, config: RobotCfg, scene: Scene):
-        self.name = config.name
+
         self.config = config
-        self.isaac_robot: IsaacRobot | None = None
+        self.robot_entity: IsaacRobot | None = None  # 代表机器人的实体
         self.controllers = {}
         self.sensors = {}
         self.scene = scene
@@ -74,9 +71,9 @@ class BaseRobot:
         """
         # self._scene = scene
         robot_cfg = self.config
-        if self.isaac_robot:
-            scene.add(self.isaac_robot)
-            # log.debug('self.isaac_robot: ' + str(self.isaac_robot))
+        if self.robot_entity:
+            scene.add(self.robot_entity)
+            # log.debug('self.robot_entity: ' + str(self.robot_entity))
         for rigid_body in self.get_rigid_bodies():
             scene.add(rigid_body)
         # from grutopia.core.robot.controller import BaseController, create_controllers
@@ -96,7 +93,7 @@ class BaseRobot:
         for sensor in self.sensors.values():
             sensor.cleanup()
         for rigid_body in self.get_rigid_bodies():
-            self._scene.remove_object(rigid_body.name)
+            self._scene.remove_object(rigid_body.name_prefix)
             log.debug(f'rigid body {rigid_body} removed')
         log.debug(f'robot {self.name} clean up')
 
@@ -105,7 +102,7 @@ class BaseRobot:
 
         Args:
             action (dict): action dict.
-              key: controller name.
+              key: controller name_prefix.
               value: corresponding action array.
         """
         raise NotImplementedError()
@@ -133,7 +130,7 @@ class BaseRobot:
         Returns:
             np.ndarray: robot scale in (x, y, z).
         """
-        return self.isaac_robot.get_local_scale()
+        return self.robot_entity.get_local_scale()
 
     def get_robot_articulation(self) -> IsaacRobot:
         """Get isaac robots instance (articulation).
@@ -141,7 +138,7 @@ class BaseRobot:
         Returns:
             Robot: robot articulation.
         """
-        return self.isaac_robot
+        return self.robot_entity
 
     def get_controllers(self):
         return self.controllers
@@ -151,10 +148,10 @@ class BaseRobot:
 
     @classmethod
     def register(cls, name: str):
-        """Register a robot class with its name(decorator).
+        """Register a robot class with its name_prefix(decorator).
 
         Args:
-            name(str): name of the robot class.
+            name(str): name_prefix of the robot class.
         """
 
         def decorator(robot_class):
@@ -169,7 +166,7 @@ class BaseRobot:
         return decorator
 
 #
-# def create_robots(runtime: TaskRuntime, scene: Scene) -> Dict[str, BaseRobot]:
+# def create_robots(runtime: TaskRuntime, scene: Scene) -> Dict[str, RobotBase]:
 #     """Create robot instances in runtime.
 #
 #     Args:
@@ -177,22 +174,22 @@ class BaseRobot:
 #         scene (Scene): isaac scene.
 #
 #     Returns:
-#         Dict[str, BaseRobot]: robot instances dictionary.
+#         Dict[str, RobotBase]: robot instances dictionary.
 #     """
 #     robot_map = {}
 #     for robot in runtime.robots:
-#         if robot.type not in BaseRobot.robots:
+#         if robot.type not in RobotBase.robots:
 #             raise KeyError(f'unknown robot type "{robot.type}"')
-#         robot_cls = BaseRobot.robots[robot.type]
-#         robot_ins: BaseRobot = robot_cls(robot, scene)
-#         robot_map[robot.name] = robot_ins
+#         robot_cls = RobotBase.robots[robot.type]
+#         robot_ins: RobotBase = robot_cls(robot, scene)
+#         robot_map[robot.name_prefix] = robot_ins
 #         robot_ins.set_up_to_scene(scene)
-#         log.debug(f'===== {robot.name} loaded =====')
+#         log.debug(f'===== {robot.name_prefix} loaded =====')
 #     return robot_map
 
 if __name__ == "__main__":
     config = {
-        'name': 'jetbot3',
+        'name_prefix': 'jetbot3',
         'prim_path':'/World/Fancy_Robot3',
 
     # 'wheel_dof_names': ["left_wheel_joint", "right_wheel_joint"],

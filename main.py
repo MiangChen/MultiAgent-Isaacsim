@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 # fancy_cube =  world.scene.add(
 #     DynamicCuboid(
 #         prim_path="/World/random_cube",
-#         name="fancy_cube",
+#         name_prefix="fancy_cube",
 #         position=np.array([1, 1, 1.0]),
 #         scale=np.array([0.5015, 0.5015, 0.5015]),
 #         color=np.array([0, 0, 1.0]),
@@ -44,36 +44,36 @@ env = Env(simulation_app)
 
 
 if __name__ == "__main__":
-    from robot import BaseRobot
+    from robot import RobotBase
 
     env.reset()
 
-    assets_root_path = get_assets_root_path()
-    if assets_root_path is None:
-        carb.log_error("Could not find nucleus server with /Isaac folder")
+    # assets_root_path = get_assets_root_path()
+    # if assets_root_path is None:
+    #     carb.log_error("Could not find nucleus server with /Isaac folder")
     # jet_robot_asset_path = assets_root_path + "/Isaac/Robots/Jetbot/jetbot.usd"
 
     # from isaacsim.robot.wheeled_robots.robots import WheeledRobot
     #
     # jetbot_robot = WheeledRobot(
     #     prim_path="/World/Fancy_Robot",
-    #     name="fancy_robot",
+    #     name_prefix="fancy_robot",
     #     wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
     #     create_robot=True,
     #     usd_path=jet_robot_asset_path,
     #     position=[-2, 0, 0],
     #     # orientation =
-    # )  #  参考：super().__init__(prim_path=prim_path, name=name, position=position, orientation=orientation, scale=scale)
+    # )  #  参考：super().__init__(prim_path=prim_path, name_prefix=name_prefix, position=position, orientation=orientation, scale=scale)
     #
     # jetbot_robot2 = WheeledRobot(
     #     prim_path="/World/Fancy_Robot2",
-    #     name="fancy_robot2",
+    #     name_prefix="fancy_robot2",
     #     wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
     #     create_robot=True,
     #     usd_path=jet_robot_asset_path,
     #     position=[-2, -1, 0],
     #     # orientation =
-    # )  # 参考：super().__init__(prim_path=prim_path, name=name, position=position, orientation=orientation, scale=scale)
+    # )  # 参考：super().__init__(prim_path=prim_path, name_prefix=name_prefix, position=position, orientation=orientation, scale=scale)
 
     # env.world.scene.add(jetbot_robot2)
 
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     #
     # sphere = VisualSphere(
     #     prim_path=f"{env.robot.robot.prim_path}/target_point",
-    #     name='jetbot_target',
+    #     name_prefix='jetbot_target',
     #     position=np.array([3.0, 3.0, 0.0], dtype=np.float32),
     #     radius=0.1,
     #     color=np.array([1.0, 0.0, 0.0], dtype=np.float32)
@@ -110,6 +110,7 @@ if __name__ == "__main__":
     # plt.show()
 
     from astar import AStar
+
     # import time
     # # time.sleep(10)
     # print(type(env.robot.robot))
@@ -117,40 +118,20 @@ if __name__ == "__main__":
     # print("*******************************")
     # print(type(env.robot.robot))
     # print(dir(env.robot.robot))
-    # robot_pos = env.robot.robot.get_world_pose()[0]  # x y z 坐标
-    def get_robot_pos(robot_prim_path = "/World/robot/jetbot"):
-        from pxr import UsdGeom
 
-        import isaacsim.core.utils.stage as stage_utils
-        stage = stage_utils.get_current_stage()
-        prim_robot = stage.GetPrimAtPath(robot_prim_path)
-        # 获取 prim
-        # prim_robot = stage.GetPrimAtPath(robot_prim_path)
-
-        # 检查是否是 Xformable（可变换对象）
-        if prim_robot.IsA(UsdGeom.Xformable):
-            xform = UsdGeom.Xformable(prim_robot)
-            local_transform = xform.GetLocalTransformation()  # 返回 Gf.Matrix4d
-            local_position = local_transform.ExtractTranslation()  # 提取平移部分
-            return local_position
-            # print("Local Position:", local_position)
-            # index =grid_map.compute_index(local_position)
-            # print(index)
-            # print(grid_map.pos_map.shape)
-            # pos_grid_map = grid_map.pos_map[47, 50, 0, :]
-            # print("pos_grid_map:", pos_grid_map)
-            # print(pos_grid_map[index])
     env.grid_map.generate_grid_map('2d')
-    robot_pos = get_robot_pos()
-
+    # robot_pos = get_robot_pos()
+    robot_pos = env.robot_swarm.robot_active['jetbot'][0].get_world_pose()[0]  # x y z 坐标
+    robot_pos1 = env.robot_swarm.robot_active['jetbot'][1].get_world_pose()[0]  # x y z 坐标
     index_robot = env.grid_map.compute_index(robot_pos)
+    index_robot1 = env.grid_map.compute_index(robot_pos1)
 
-    env.grid_map.generate_grid_map('2d')
-
-    print(index_robot)
+    # print(index_robot)
     target_pos = [9, 9, 0]
+    target_pos1 = [8, 6, 0]
 
     index_target = env.grid_map.compute_index(target_pos)
+    index_target1 = env.grid_map.compute_index(target_pos1)
     print("target index", index_target)
 
     # 初始化astar规划器
@@ -160,16 +141,27 @@ if __name__ == "__main__":
     ]
     grid_map = env.grid_map.value_map
     grid_map[index_robot] = env.grid_map.empty_cell
+    grid_map1 = env.grid_map.value_map
+    grid_map1[index_robot1] = env.grid_map.empty_cell
     planner = AStar(env.grid_map.value_map, obs_value=1.0, free_value=0.0, directions=directions)
     path = planner.find_path(tuple(index_robot), tuple(index_target))
+    path1 = planner.find_path(tuple(index_robot1), tuple(index_target1))
+
     real_path = np.zeros_like(path, dtype=np.float32)
-    for i in range(path.shape[0]): # 把index变成连续实际世界的坐标
+    for i in range(path.shape[0]):  # 把index变成连续实际世界的坐标
         real_path[i] = env.grid_map.pos_map[tuple(path[i])]
         real_path[i][-1] = 0
-    print("start", robot_pos, "end", target_pos)
-    print(real_path)
-    env.robot.move_along_path(real_path, reset_flag=True)  # [[1,1], [1,2], [2,2], [2,1],[1,1]]g
+    real_path1 = np.zeros_like(path1, dtype=np.float32)
+    for i in range(path1.shape[0]):  # 把index变成连续实际世界的坐标
+        real_path1[i] = env.grid_map.pos_map[tuple(path1[i])]
+        real_path1[i][-1] = 0
+    # print("start", robot_pos, "end", target_pos)
+    # print(real_path)
+    env.robot_swarm.robot_active['jetbot'][0].move_along_path(real_path,
+                                                              reset_flag=True)  # [[1,1], [1,2], [2,2], [2,1],[1,1]]
 
+    env.robot_swarm.robot_active['jetbot'][1].move_along_path(real_path1,
+                                                              reset_flag=True)
     for i in range(500000):
         # env.jetbot_robot.apply_action(controller.forward(command=[0.20, np.pi/4]))
         # env.jetbot_robot3.apply_action(controller.forward(command=[0.20, np.pi/4]))
@@ -179,23 +171,30 @@ if __name__ == "__main__":
         # env.robots['jetbot_0'].apply_action(controller.forward(command=[0.20, np.pi/4]))
         from isaacsim.core.utils.viewports import create_viewport_for_camera, set_camera_view
 
-        result = np.zeros(3)  # 创建一个包含三个0.0的数组
-        xy_coords = env.robot.robot.get_world_pose()[0][:2]
+        # 设置相机的位置
+        camera_pose = np.zeros(3)  # 创建一个包含三个0.0的数组
+        pos = env.robot_swarm.robot_active['jetbot'][0].get_world_pose()[0]  # x y z 坐标
+        pos1 = env.robot_swarm.robot_active['jetbot'][1].get_world_pose()[0]  # x y z 坐标
         # xy_coords = get_robot_pos()[:2]
-        result[:2] = xy_coords  # 将xy坐标赋值给result的前两个元素
-        result[2] = 10
+        camera_pose[:2] = pos[:2]  # 将xy坐标赋值给result的前两个元素
+        camera_pose[2] = 10
         set_camera_view(
-            eye=result,  # np.array([5+i*0.001, 0, 50]),
-            target=env.robot.robot.get_world_pose()[0],  # np.array([5+i*0.001, 0, 0]),
+            eye=camera_pose,  # np.array([5+i*0.001, 0, 50]),
+            target=pos,  # np.array([5+i*0.001, 0, 0]),
             # target=get_robot_pos(),  # np.array([5+i*0.001, 0, 0]),
             camera_prim_path=env.camera_prim_path,
         )
+
+        # 让机器人运动
         # env.robot.apply_action([10.0, 9.0])
         # env.robot.move_to([3, 3])
-        env.robot.move_along_path()
+        env.robot_swarm.robot_active['jetbot'][0].move_along_path()
+        env.robot_swarm.robot_active['jetbot'][1].move_along_path()
         env.step(action=None)  # execute one physics step and one rendering step
         if i % 60 == 0:  # 1s加一个轨迹
-            env.robot.traj.add_trajectory(env.robot.robot.get_world_pose()[0])
+            env.robot_swarm.robot_active['jetbot'][0].traj.add_trajectory(pos)
+            env.robot_swarm.robot_active['jetbot'][1].traj.add_trajectory(pos1)
+
             # env.robot.traj.add_trajectory(get_robot_pos())
 
     simulation_app.close()  # close Isaac Sim

@@ -14,7 +14,7 @@ class Trajectory:
     Manages and displays the historical trajectory of a specified robot prim.
     """
 
-    def __init__(self, robot_prim_path: str, max_points: int = 500,
+    def __init__(self, robot_prim_path: str, max_points: int = 500, id: int = 0,
                  color: tuple = (0.0, 1.0, 0.0), thickness: float = 2.0, scene: Scene = None, radius: float = 0.05):
         """
         Initializes the trajectory tracker.
@@ -29,7 +29,7 @@ class Trajectory:
         self.trajectory = [[0, 0, 0] for i in range(self.max_points)]  # 历史轨迹
         self.index = 0  # 用于表示当前指针指向新的轨迹要被插入的位置
         self.scene = scene
-
+        self.id = id
         # 先提前把历史轨迹的点都加载好, 但是颜色都不可见
         from isaacsim.core.api.objects import VisualSphere
         self.visual_sphere = []
@@ -43,7 +43,7 @@ class Trajectory:
             self.visual_sphere.append(
                 VisualSphere(
                     prim_path=f"{robot_prim_path}/traj/pos_{i}",
-                    name=f"pos_{i}",
+                    name=f"robot_{id}pos_{i}",
                     position=np.array([0.0, 0.0, 0.0], dtype=np.float32),
                     radius=radius,
                     color=np.array(color),

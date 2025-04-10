@@ -87,7 +87,7 @@ class GridMap():
                 # 遍历当前原始体的所有子原始体
                 for child in prim.GetChildren():
                     # 检查子原始体是否是碰撞体
-                    print("child name", child.GetName())
+                    print("child name_prefix", child.GetName())
                     print("child type", child.GetTypeName())
                     if child.GetName() == "Collisions" or child.GetName() == "collisions":
                         # 设置碰撞体为非可碰撞

@@ -16,7 +16,7 @@ class SensorCfg(BaseCfg):
     """
     Represents a model for sensors, encapsulating their attributes and providing a structured approach to handling sensor data within a base model framework.
 
-    This SensorModel class extends the BaseModel, inheriting its functionality while adding specific fields tailored for describing sensors. It includes attributes for the sensor's name, primary path (optional), and type, offering a standardized way to organize and access sensor information across various parts of an application.
+    This SensorModel class extends the BaseModel, inheriting its functionality while adding specific fields tailored for describing sensors. It includes attributes for the sensor's name_prefix, primary path (optional), and type, offering a standardized way to organize and access sensor information across various parts of an application.
 
     Attributes:
         name (str): The unique identifier for the sensor.
@@ -33,7 +33,7 @@ class ControllerCfg(BaseCfg, extra='allow'):
     """
     A specialized model representing controllers within a system, inheriting from BaseModel with an extended configuration to allow additional keys.
 
-    This class serves as a data structure to encapsulate controller-related information crucial for configuring and managing control systems, particularly in robotic applications. It provides a structured way to define controllers, including their name, type, sub-controllers (if any), and a reference frame.
+    This class serves as a data structure to encapsulate controller-related information crucial for configuring and managing control systems, particularly in robotic applications. It provides a structured way to define controllers, including their name_prefix, type, sub-controllers (if any), and a reference frame.
 
     Attributes:
         name (str): The unique identifier for the controller.
@@ -44,7 +44,7 @@ class ControllerCfg(BaseCfg, extra='allow'):
         Instantiate a `ControllerModel` to define a controller configuration. Optionally, nest other `ControllerModel` instances within the `sub_controllers` attribute to model complex controller hierarchies.
 
     Example Type Hints Usage:
-        - `name`: Always a string.
+        - `name_prefix`: Always a string.
         - `type`: String defining controller type.
         - `sub_controllers`: A list of `ControllerModel` instances or None.
     """
@@ -97,7 +97,7 @@ move_along_path_cfg = MoveAlongPathPointsControllerCfg(
 #
 # class CoolController(BaseController):
 #     def __init__(self):
-#         super().__init__(name="my_cool_controller")
+#         super().__init__(name_prefix="my_cool_controller")
 #         # An open loop controller that uses a unicycle model
 #         self._wheel_radius = 0.03
 #         self._wheel_base = 0.1125

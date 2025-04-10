@@ -19,6 +19,10 @@ from isaacsim.core.utils.prims import create_prim
 
 from grid_map import GridMap
 
+from jetbot_config import JetbotCfg, Jetbot
+import numpy as np
+
+from robot_swarm import RobotSwarmManager
 
 def create_scene(config_json_path: str, prim_path_root: str = 'background'):
     """
@@ -59,32 +63,6 @@ class Env(gym.Env):
         self._runner = simulation_app
         self.world = World()
         # self.world.scene.add_default_ground_plane()
-
-        assets_root_path = get_assets_root_path()
-        if assets_root_path is None:
-            carb.log_error("Could not find nucleus server with /Isaac folder")
-        jet_robot_asset_path = assets_root_path + "/Isaac/Robots/Jetbot/jetbot.usd"
-
-        # self.jetbot_robot = WheeledRobot(
-        #     prim_path="/World/Fancy_Robot",
-        #     name="fancy_robot",
-        #     wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
-        #     create_robot=True,
-        #     usd_path=jet_robot_asset_path,
-        #     position=[-2, 0, 0],
-        #     # orientation =
-        # )  # 参考：super().__init__(prim_path=prim_path, name=name, position=position, orientation=orientation, scale=scale)
-
-        # self.jetbot_robot2 = WheeledRobot(
-        #     prim_path="/World/Fancy_Robot2",
-        #     name="fancy_robot2",
-        #     wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
-        #     create_robot=True,
-        #     usd_path=jet_robot_asset_path,
-        #     position=[-2, -1, 0],
-        #     # orientation =
-        # )  # 参考：super().__init__(prim_path=prim_path, name=name, position=position, orientation=orientation, scale=scale)
-
         # 加载复杂场景
         # usd_path = './scene/CityDemopack/World_CityDemopack.usd'
         usd_path = './scene/simple_city.usd'
@@ -101,19 +79,27 @@ class Env(gym.Env):
             # translation=[self.runtime.env.offset[idx] + i for idx, i in enumerate(self.runtime.scene_position)],
         )
 
-        from grid_map import GridMap
+        # assets_root_path = get_assets_root_path()
+        # if assets_root_path is None:
+        #     carb.log_error("Could not find nucleus server with /Isaac folder")
+        # jet_robot_asset_path = assets_root_path + "/Isaac/Robots/Jetbot/jetbot.usd"
 
-        cell_size = 0.2
+        self.robot_swarm = RobotSwarmManager(self.world.scene)
+        self.robot_swarm.register_robot_class(robot_class_name='jetbot', robot_class=Jetbot, robot_class_cfg=JetbotCfg)  # 注册jetbot机器人
+        self.robot_swarm.load_robot_swarm_cfg("./robot_swarm_cfg.yaml")
+        # self.robot_swarm.create_robot(robot_class_name='jetbot', id=0, position=(0.0, 0.0, 0.0),
+        #                               orientation=(0.0, 0.0, 0.0, 1),
+        #                               robot_class_cfg=JetbotCfg)  # 机器人名字和cfg是对应的, 所以直接输入一个cfg就可以了
 
-        from jetbot_config import JetbotCfg, Jetbot
-        import numpy as np
-        self.robot = Jetbot(
-            JetbotCfg(
-                position=np.array([-1, -1, 0]),
-                orientation=np.array([0, 0, 0, 1])
-            ),
-            scene=self.world.scene
-        )
+        self.robot_swarm.activate_robot("./robot_swarm_active_flag.yaml") # 统一在这里加入机器人
+
+        # self.robot = Jetbot(
+        #     JetbotCfg(
+        #         position=np.array([-1, -1, 0]),
+        #         orientation=np.array([0, 0, 0, 1])
+        #     ),
+        #     scene=self.world.scene
+        # )
 
         # 加载jetbot机器人
         # self.world.scene.add(self.jetbot_robot)
@@ -226,17 +212,17 @@ class Env(gym.Env):
             usd_path=jet_robot_asset_path,
             position=[-2, 0, 0],
             # orientation =
-        )  # 参考：super().__init__(prim_path=prim_path, name=name, position=position, orientation=orientation, scale=scale)
+        )  # 参考：super().__init__(prim_path=prim_path, name_prefix=name_prefix, position=position, orientation=orientation, scale=scale)
 
         # self.jetbot_robot2 = WheeledRobot(
         #     prim_path="/World/Fancy_Robot2",
-        #     name="fancy_robot2",
+        #     name_prefix="fancy_robot2",
         #     wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
         #     create_robot=True,
         #     usd_path=jet_robot_asset_path,
         #     position=[-2, -1, 0],
         #     # orientation =
-        # )  # 参考：super().__init__(prim_path=prim_path, name=name, position=position, orientation=orientation, scale=scale)
+        # )  # 参考：super().__init__(prim_path=prim_path, name_prefix=name_prefix, position=position, orientation=orientation, scale=scale)
 
         self.world.scene.add(self.jetbot_robot3)
 

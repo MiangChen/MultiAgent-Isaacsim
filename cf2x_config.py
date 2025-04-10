@@ -1,7 +1,7 @@
 from typing import Optional
 
 from pid import PIDController
-from robot import RobotCfg, BaseRobot
+from robot import RobotCfg, RobotBase
 from isaacsim.core.api.scenes import Scene
 
 #from isaacsim.robot.wheeled_robots.robots import WheeledRobot
@@ -49,7 +49,7 @@ class JetbotRobotCfg(RobotCfg):
     usd_path: Optional[str] = assets_root_path + "/Isaac/Robots/Jetbot/jetbot.usd"
 
 
-class Jetbot(BaseRobot):
+class Jetbot(RobotBase):
     def __init__(self, config: JetbotRobotCfg, scene: Scene):
         super().__init__(config, scene)
         self.robot = WheeledRobot(
