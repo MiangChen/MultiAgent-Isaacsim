@@ -5,7 +5,7 @@ simulation_app = SimulationApp({"headless": False})  # we can also run as headle
 
 import asyncio
 import numpy as np
-import carb
+import carb  # 在启动sim后才能发现
 
 from env import Env
 # from controller import CoolController
