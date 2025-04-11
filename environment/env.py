@@ -3,7 +3,7 @@ import os
 from alg.alg_path_planning_grid_map import GridMap
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.robot_swarm_manager import RobotSwarmManager
-from simulator import Simulator
+from environment.simulator import Simulator
 
 import gymnasium as gym
 import numpy as np
@@ -34,7 +34,7 @@ def create_scene(config_json_path: str, prim_path_root: str = 'background'):
 
 class Env(gym.Env):
 
-    def __init__(self, simulation_app: Simulator) -> None:
+    def __init__(self, simulation_app, usd_path:str=None) -> None:
         self._render = None
         self._robot_name = None
         self._current_task_name = None
@@ -47,11 +47,8 @@ class Env(gym.Env):
         self.world = World()
         # self.world.scene.add_default_ground_plane()  # 添加地面
 
-        # 加载复杂场景
-        # usd_path = './scene/CityDemopack/World_CityDemopack.usd'
-        usd_path = '../scene/simple_city.usd'
         source, prim_path = create_scene(
-            os.path.abspath(usd_path),
+            usd_path,
             prim_path_root=f'World',  ## 注意前面不要有/
         )
 

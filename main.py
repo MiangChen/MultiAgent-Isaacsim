@@ -1,5 +1,6 @@
-from isaacsim import SimulationApp
+import os
 
+from isaacsim import SimulationApp
 simulation_app = SimulationApp({"headless": False})  # we can also run as headless.
 
 from environment.env import Env
@@ -29,8 +30,11 @@ zero_velocities = np.array([0, 0], dtype=np.float64)  # 零速度
 num_env = 1
 
 if __name__ == "__main__":
-
-    env = Env(simulation_app)
+    # 加载复杂场景
+    # usd_path = './scene/CityDemopack/World_CityDemopack.usd'
+    usd_path = './scene/simple_city.usd'
+    usd_abs_path = os.path.abspath(usd_path)
+    env = Env(simulation_app, usd_abs_path)
     env.reset()
 
     # assets_root_path = get_assets_root_path()
