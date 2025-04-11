@@ -18,7 +18,7 @@ from isaacsim.core.api.controllers.base_controller import BaseController
 from isaacsim.core.prims import SingleArticulation
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 
-# from .config_loader import get_articulation_props, get_physics_properties, get_robot_joint_properties, #parse_env_config
+from controller.controller_cfg_loader import get_articulation_props, get_physics_properties, get_robot_joint_properties, parse_env_config
 
 
 class PolicyController(BaseController):
