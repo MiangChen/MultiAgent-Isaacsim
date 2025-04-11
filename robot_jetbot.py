@@ -2,7 +2,7 @@ import numpy as np
 from isaacsim.core.api.scenes import Scene
 from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 
-from controller_pid import PIDController
+from controller.controller_pid import PIDController
 from robot import RobotBase
 from robot_trajectory import Trajectory
 from robot_cfg_jetbot import RobotCfgJetbot
@@ -24,7 +24,7 @@ class RobotJetbot(RobotBase):
         self.flag_active = False
         self.robot_prim = config.prim_path
         # self.scale = config.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以
-        from controller_pid_jetbot import ControllerJetbot
+        from controller.controller_pid_jetbot import ControllerJetbot
         self.controller = ControllerJetbot()
         # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
         self.pid_distance = PIDController(1, 0.1, 0.01, target=0)

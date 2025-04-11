@@ -1,9 +1,8 @@
 from typing import Optional
 
-from controller_pid import PIDController
 from robot import RobotBase
 from robot_cfg import RobotCfg
-from controller_pid import PIDController
+from controller.controller_pid import PIDController
 
 
 import numpy as np
