@@ -1,7 +1,7 @@
 from typing import Optional
 
-from robot import RobotBase
-from robot_cfg import RobotCfg
+from robot.robot_base import RobotBase
+from robot.robot_cfg import RobotCfg
 from controller.controller_pid import PIDController
 
 

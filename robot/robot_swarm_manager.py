@@ -1,8 +1,8 @@
 from typing import Dict, List, Type
 import yaml
 
-from robot import RobotBase
-from robot_cfg import RobotCfg
+from robot.robot_base import RobotBase
+from robot.robot_cfg import RobotCfg
 
 import numpy as np
 from isaacsim.core.api.scenes import Scene

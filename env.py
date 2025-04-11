@@ -1,8 +1,8 @@
 import os
 
 from alg.alg_path_planning_grid_map import GridMap
-from robot_jetbot import RobotCfgJetbot, RobotJetbot
-from robot_swarm_manager import RobotSwarmManager
+from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
+from robot.robot_swarm_manager import RobotSwarmManager
 from simulator import Simulator
 
 import gymnasium as gym
@@ -66,12 +66,12 @@ class Env(gym.Env):
         self.robot_swarm = RobotSwarmManager(self.world.scene)
         self.robot_swarm.register_robot_class(robot_class_name='jetbot', robot_class=RobotJetbot,
                                               robot_class_cfg=RobotCfgJetbot)  # 注册jetbot机器人
-        self.robot_swarm.load_robot_swarm_cfg("./robot_swarm_cfg.yaml")
+        self.robot_swarm.load_robot_swarm_cfg("./robot/robot_swarm_cfg.yaml")
         # self.robot_swarm.create_robot(robot_class_name='jetbot', id=0, position=(0.0, 0.0, 0.0),
         #                               orientation=(0.0, 0.0, 0.0, 1),
         #                               robot_class_cfg=JetbotCfg)  # 机器人名字和cfg是对应的, 所以直接输入一个cfg就可以了
 
-        self.robot_swarm.activate_robot("./robot_swarm_active_flag.yaml")  # 统一在这里加入机器人
+        self.robot_swarm.activate_robot("./robot/robot_swarm_active_flag.yaml")  # 统一在这里加入机器人
 
         # 添加相机, 为相机添加viewport
         self.camera_prim_path = "/World/camera_test"

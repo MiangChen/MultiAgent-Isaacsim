@@ -1,5 +1,3 @@
-from controller import BaseController
-
 from isaacsim.core.api.controllers import BaseController
 from isaacsim.core.utils.types import ArticulationAction
 

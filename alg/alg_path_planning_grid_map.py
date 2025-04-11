@@ -1,9 +1,8 @@
-import omni
-import carb
-from isaacsim.asset.gen.omap.bindings import _omap
-import numpy as np
 from typing import List
 
+import numpy as np
+import omni
+from isaacsim.asset.gen.omap.bindings import _omap
 
 class GridMap():
     def __init__(self,

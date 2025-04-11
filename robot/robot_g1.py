@@ -1,9 +1,9 @@
 from typing import Optional
 
-from robot import RobotBase
-from robot import RobotCfg
 from controller.controller_pid import PIDController
-from robot_trajectory import Trajectory
+from robot.robot_base import RobotBase
+from robot.robot_cfg import RobotCfg
+from robot.robot_trajectory import Trajectory
 
 import numpy as np
 from isaacsim.core.api.scenes import Scene

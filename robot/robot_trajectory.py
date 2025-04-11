@@ -4,9 +4,8 @@
 # import omni.usd
 # import carb  # For color definitions
 
-from isaacsim.core.api.scenes import Scene
 import numpy as np
-from collections import deque
+from isaacsim.core.api.scenes import Scene
 
 
 class Trajectory:

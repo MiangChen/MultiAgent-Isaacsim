@@ -1,6 +1,6 @@
 from typing import List, Optional, Tuple
 
-from robot_cfg import RobotCfg
+from robot.robot_cfg import RobotCfg
 
 import numpy as np
 from isaacsim.core.prims import RigidPrim

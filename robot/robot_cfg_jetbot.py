@@ -1,6 +1,6 @@
 from typing import Optional
 
-from robot_cfg import RobotCfg, assets_root_path
+from robot.robot_cfg import RobotCfg, assets_root_path
 
 
 class RobotCfgJetbot(RobotCfg):
