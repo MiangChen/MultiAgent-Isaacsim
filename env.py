@@ -1,15 +1,13 @@
 import os
 
-from alg_path_planning_grid_map import GridMap
+from alg.alg_path_planning_grid_map import GridMap
 from robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot_swarm_manager import RobotSwarmManager
 from simulator import Simulator
 
 import gymnasium as gym
 import numpy as np
-from pxr import Usd, UsdGeom
 from isaacsim.core.api import World
-from isaacsim.core.utils.nucleus import get_assets_root_path
 from isaacsim.core.utils.viewports import create_viewport_for_camera, set_camera_view
 import isaacsim.core.utils.prims as prims_utils
 from isaacsim.core.utils.prims import create_prim

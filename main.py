@@ -2,16 +2,12 @@ from isaacsim import SimulationApp
 
 simulation_app = SimulationApp({"headless": False})  # we can also run as headless.
 
-import asyncio
-import carb  # 在启动sim后才能
-
 from env import Env
 import numpy as np
 import matplotlib
-import matplotlib.pyplot as plt
 
 #  import omni.usd  # 从4.5开始就无法使用了
-from isaacsim.core.utils.viewports import create_viewport_for_camera, set_camera_view
+from isaacsim.core.utils.viewports import set_camera_view
 
 matplotlib.use('TkAgg')
 
@@ -98,7 +94,7 @@ if __name__ == "__main__":
     # plt.grid(True)
     # plt.show()
 
-    from alg_path_planning_astar import AStar
+    from alg.alg_path_planning_astar import AStar
 
     # import time
     # # time.sleep(10)
