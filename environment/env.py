@@ -1,6 +1,6 @@
 import os
 
-from alg.alg_path_planning_grid_map import GridMap
+from path_planning.alg_path_planning_grid_map import GridMap
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.robot_swarm_manager import RobotSwarmManager
 from environment.simulator import Simulator
