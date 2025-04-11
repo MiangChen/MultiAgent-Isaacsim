@@ -98,7 +98,7 @@ if __name__ == "__main__":
     # plt.grid(True)
     # plt.show()
 
-    from astar import AStar
+    from alg_path_planning_astar import AStar
 
     # import time
     # # time.sleep(10)

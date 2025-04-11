@@ -1,2 +1,0 @@
-from scene import Simulator
-

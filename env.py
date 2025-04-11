@@ -3,7 +3,7 @@ import os
 from grid_map import GridMap
 from robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot_swarm_manager import RobotSwarmManager
-from scene import Simulator
+from simulator import Simulator
 
 import gymnasium as gym
 import numpy as np

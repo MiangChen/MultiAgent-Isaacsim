@@ -4,7 +4,7 @@ from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 
 from controller_pid import PIDController
 from robot import RobotBase
-from trajectory import Trajectory
+from robot_trajectory import Trajectory
 from robot_cfg_jetbot import RobotCfgJetbot
 
 

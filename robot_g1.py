@@ -4,7 +4,7 @@ from controller_pid import PIDController
 from robot import RobotBase
 from robot import RobotCfg
 from controller_pid import PIDController
-from trajectory import Trajectory
+from robot_trajectory import Trajectory
 
 import numpy as np
 from isaacsim.core.api.scenes import Scene
