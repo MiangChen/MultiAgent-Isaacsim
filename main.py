@@ -38,30 +38,6 @@ if __name__ == "__main__":
     #     carb.log_error("Could not find nucleus server with /Isaac folder")
     # jet_robot_asset_path = assets_root_path + "/Isaac/Robots/Jetbot/jetbot.usd"
 
-    # from isaacsim.robot.wheeled_robots.robots import WheeledRobot
-    #
-    # jetbot_robot = WheeledRobot(
-    #     prim_path="/World/Fancy_Robot",
-    #     name_prefix="fancy_robot",
-    #     wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
-    #     create_robot=True,
-    #     usd_path=jet_robot_asset_path,
-    #     position=[-2, 0, 0],
-    #     # orientation =
-    # )  #  参考：super().__init__(prim_path=prim_path, name_prefix=name_prefix, position=position, orientation=orientation, scale=scale)
-    #
-    # jetbot_robot2 = WheeledRobot(
-    #     prim_path="/World/Fancy_Robot2",
-    #     name_prefix="fancy_robot2",
-    #     wheel_dof_names=["left_wheel_joint", "right_wheel_joint"],
-    #     create_robot=True,
-    #     usd_path=jet_robot_asset_path,
-    #     position=[-2, -1, 0],
-    #     # orientation =
-    # )  # 参考：super().__init__(prim_path=prim_path, name_prefix=name_prefix, position=position, orientation=orientation, scale=scale)
-
-    # env.world.scene.add(jetbot_robot2)
-
     # from isaacsim.core.api.objects import VisualSphere
     #
     # sphere = VisualSphere(
