@@ -1,55 +1,12 @@
-import numpy as np
-# from omni.isaac.core.prims import RigidPrim
-# from omni.isaac.core.robots.robot import Robot as IsaacRobot
-# from omni.isaac.core.scenes import Scene
 from typing import List, Optional, Tuple
 
+from robot_cfg import RobotCfg
+
+import numpy as np
 from isaacsim.core.prims import RigidPrim
-# from isaacsim.core.robots.robot import Robot as IsaacRobot
+# from isaacsim.core.robots.robot import Robot as IsaacRobot  # 已经在4.5中取消了
 from isaacsim.core.api.robots import Robot as IsaacRobot
 from isaacsim.core.api.scenes import Scene
-from pydantic import BaseModel
-
-
-class BaseCfg(BaseModel):
-    def update(self, **kwargs):
-        return self.model_copy(update=kwargs, deep=True)
-
-class RobotCfg(BaseCfg):
-    """
-    Represents a robot configuration with customizable attributes and optional components like controllers and sensors.
-
-    This RobotCfg class is designed to store metadata and common configurations for robotic models. It inherits from BaseCfg,
-    providing a structured way to define a robot's properties within a simulation or robotic application context. The model includes
-    details about the robot's USD (Universal Scene Description) path, initial position, orientation, and other settings crucial for
-    simulation initialization and control.
-
-    Attributes:
-        name (str): The name_prefix identifier for the robot.
-        type (str): The type or category of the robot.
-        prim_path (str): The USD prim path where the robot is located or should be instantiated within a scene.
-        create_robot (bool, optional): Flag indicating whether to create the robot instance during simulation setup. Defaults to True.
-        usd_path (Optional[str], optional): The file path to the USD containing the robot definition. If None, a default path is used.
-
-        position (Optional[List[float]], optional): Initial position of the robot in world frame. Defaults to (0.0, 0.0, 0.0).
-        orientation (Optional[List[float]], optional): Initial orientation of the robot in quaternion. Defaults to None.
-        scale (Optional[List[float]], optional): Scaling factor for the robot. Defaults to None.
-
-        controllers (Optional[List[ControllerCfg]], optional): List of controller configurations attached to the robot. Defaults to None.
-        sensors (Optional[List[SensorCfg]], optional): List of sensor configurations attached to the robot. Defaults to None.
-    """
-    # meta info
-    name_prefix: str
-    type: str
-    prim_path: str
-    usd_path: Optional[str] = None  # If Optional, use default usd_path
-
-    # common config
-    position: Optional[Tuple[float, float, float]] = (0.0, 0.0, 0.0)
-    orientation: Optional[Tuple[float, float, float, float]] = (0.0, 0.0, 0.0, 1.0)
-    scale: Optional[Tuple[float, float, float]] = (1.0, 1.0, 1.0)
-    # controllers: Optional[List[ControllerCfg]] = None
-    # sensors: Optional[List[SensorCfg]] = None
 
 
 class RobotBase:
@@ -165,34 +122,13 @@ class RobotBase:
 
         return decorator
 
-#
-# def create_robots(runtime: TaskRuntime, scene: Scene) -> Dict[str, RobotBase]:
-#     """Create robot instances in runtime.
-#
-#     Args:
-#         runtime (TaskRuntime): task runtime.
-#         scene (Scene): isaac scene.
-#
-#     Returns:
-#         Dict[str, RobotBase]: robot instances dictionary.
-#     """
-#     robot_map = {}
-#     for robot in runtime.robots:
-#         if robot.type not in RobotBase.robots:
-#             raise KeyError(f'unknown robot type "{robot.type}"')
-#         robot_cls = RobotBase.robots[robot.type]
-#         robot_ins: RobotBase = robot_cls(robot, scene)
-#         robot_map[robot.name_prefix] = robot_ins
-#         robot_ins.set_up_to_scene(scene)
-#         log.debug(f'===== {robot.name_prefix} loaded =====')
-#     return robot_map
 
 if __name__ == "__main__":
     config = {
         'name_prefix': 'jetbot3',
-        'prim_path':'/World/Fancy_Robot3',
+        'prim_path': '/World/Fancy_Robot3',
 
-    # 'wheel_dof_names': ["left_wheel_joint", "right_wheel_joint"],
+        # 'wheel_dof_names': ["left_wheel_joint", "right_wheel_joint"],
     }
     # create_robot=True,
     # usd_path=jet_robot_asset_path,

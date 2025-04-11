@@ -2,9 +2,12 @@
 
 根据isaaclab要求，使用python 3.10
 
-按照官方文档来安装:
-https://docs.robotsfan.com/isaaclab/source/setup/installation/pip_installation.html
-还需要安装一下IsaacLab
+按照官方文档来安装IsaacSim和IsaacLab:
+https://docs.robotsfan.com/isaaclab/source/setup/installation/pip_installation.
+
+```
+pip install -r requirements.txt
+```
 
 运行
 ```

@@ -1,10 +1,11 @@
 from typing import Dict, List, Type
+import yaml
+
+from robot import RobotBase
+from robot_cfg import RobotCfg
+
 import numpy as np
 from isaacsim.core.api.scenes import Scene
-
-from jetbot import Jetbot
-from robot import RobotBase, RobotCfg
-import yaml
 
 
 class RobotSwarmManager:
@@ -48,7 +49,7 @@ class RobotSwarmManager:
         if dict is None:
             print("No configuration file or dictionary found")
         for robot_class_name in dict.keys():
-            for robot in dict[robot_class_name]: # 可能有多个机器人  这里可以优化一下 让yaml的格式就和robot cfg一样
+            for robot in dict[robot_class_name]:  # 可能有多个机器人  这里可以优化一下 让yaml的格式就和robot cfg一样
                 self.create_robot(robot_class_name, id=robot['id'], position=robot['position'],
                                   orientation=robot['orientation'], robot_class_cfg=self.robot_cfg[robot_class_name])
 
@@ -80,9 +81,6 @@ class RobotSwarmManager:
     def activate_robot(self, flag_file_path: str = None, flag_dict: Dict = None) -> None:
         # 两种寄存器配置模式, 一个是从文件读取, 适合初始化时后加载大量机器人, 另一个是通过dict来配置, 时候后续少量的处理;
         if flag_file_path is not None:
-            import yaml
-
-            # 读取 YAML 文件
             with open(flag_file_path, "r") as file:
                 flag_dict = yaml.safe_load(file)  # 返回字典
 
@@ -97,23 +95,6 @@ class RobotSwarmManager:
                     self.scene.add(robot.robot_entity)
                     pass
         return
-
-        # for i, robot in enumerate(self.robot_warehouse):
-        #     if robot.name == name:
-        #         robot.is_active = True
-        #         robot_type = robot.__class__.__name__.lower()
-        #
-        #         if robot_type not in self.active_robots:
-        #             self.active_robots[robot_type] = []
-        #
-        #         self.active_robots[robot_type].append(robot)
-        #         # self.robot_warehouse.pop(i)
-        #         self.scene.add(robot)
-        #         # 初始化轨迹记录
-        #         if not hasattr(robot, 'traj'):
-        #             robot.traj = TrajectoryRecorder()
-        #         return True
-        # return False
 
     def deactivate_robot(self, name: str):
         """停用机器人并返回仓库"""
@@ -161,19 +142,6 @@ class RobotSwarmManager:
     def _is_name_unique(self, name: str):
         """检查名称是否唯一"""
         return self._find_robot(name) is None
-
-
-class TrajectoryRecorder:
-    """机器人轨迹记录器"""
-
-    def __init__(self):
-        self.history = []
-
-    def add_trajectory(self, position):
-        self.history.append(position.copy())
-
-    def get_full_trajectory(self):
-        return np.array(self.history)
 
 
 if __name__ == '__main__':

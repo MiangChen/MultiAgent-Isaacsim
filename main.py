@@ -1,20 +1,19 @@
-#  import omni.usd  # 从4.5开始就无法使用了
 from isaacsim import SimulationApp
 
 simulation_app = SimulationApp({"headless": False})  # we can also run as headless.
 
 import asyncio
-import numpy as np
-import carb  # 在启动sim后才能发现
+import carb  # 在启动sim后才能
 
 from env import Env
-# from controller import CoolController
-
-from isaacsim.core.utils.nucleus import get_assets_root_path
+import numpy as np
 import matplotlib
+import matplotlib.pyplot as plt
+
+#  import omni.usd  # 从4.5开始就无法使用了
+from isaacsim.core.utils.viewports import create_viewport_for_camera, set_camera_view
 
 matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
 
 # fancy_cube =  world.scene.add(
 #     DynamicCuboid(
@@ -31,21 +30,11 @@ simulation_time = 0.0  # 记录模拟时间
 duration = 5.0  # 目标时间 (5 秒)
 initial_velocities = np.array([3, 4], dtype=np.float64)  # 初始速度
 zero_velocities = np.array([0, 0], dtype=np.float64)  # 零速度
-
 num_env = 1
 
-env = Env(simulation_app)
-
-# usd_path = './scene/CityDemopack/World_CityDemopack.usd'
-# stage = omni.usd.get_context().open_stage(usd_path)
-
-# from pxr import Usd, UsdGeom # 不可以使用pxr记载场景
-# stage = Usd.Stage.Open(usd_path)
-
-
 if __name__ == "__main__":
-    from robot import RobotBase
 
+    env = Env(simulation_app)
     env.reset()
 
     # assets_root_path = get_assets_root_path()
@@ -155,33 +144,23 @@ if __name__ == "__main__":
     for i in range(path1.shape[0]):  # 把index变成连续实际世界的坐标
         real_path1[i] = env.grid_map.pos_map[tuple(path1[i])]
         real_path1[i][-1] = 0
-    # print("start", robot_pos, "end", target_pos)
-    # print(real_path)
+
     env.robot_swarm.robot_active['jetbot'][0].move_along_path(real_path,
                                                               reset_flag=True)  # [[1,1], [1,2], [2,2], [2,1],[1,1]]
 
     env.robot_swarm.robot_active['jetbot'][1].move_along_path(real_path1,
                                                               reset_flag=True)
     for i in range(500000):
-        # env.jetbot_robot.apply_action(controller.forward(command=[0.20, np.pi/4]))
-        # env.jetbot_robot3.apply_action(controller.forward(command=[0.20, np.pi/4]))
-
-        # jetbot_robot2.apply_action(controller.forward(command=[0.20, np.pi/4]))
-
-        # env.robots['jetbot_0'].apply_action(controller.forward(command=[0.20, np.pi/4]))
-        from isaacsim.core.utils.viewports import create_viewport_for_camera, set_camera_view
 
         # 设置相机的位置
         camera_pose = np.zeros(3)  # 创建一个包含三个0.0的数组
         pos = env.robot_swarm.robot_active['jetbot'][0].get_world_pose()[0]  # x y z 坐标
         pos1 = env.robot_swarm.robot_active['jetbot'][1].get_world_pose()[0]  # x y z 坐标
-        # xy_coords = get_robot_pos()[:2]
         camera_pose[:2] = pos[:2]  # 将xy坐标赋值给result的前两个元素
         camera_pose[2] = 10
         set_camera_view(
             eye=camera_pose,  # np.array([5+i*0.001, 0, 50]),
             target=pos,  # np.array([5+i*0.001, 0, 0]),
-            # target=get_robot_pos(),  # np.array([5+i*0.001, 0, 0]),
             camera_prim_path=env.camera_prim_path,
         )
 
@@ -194,7 +173,5 @@ if __name__ == "__main__":
         if i % 60 == 0:  # 1s加一个轨迹
             env.robot_swarm.robot_active['jetbot'][0].traj.add_trajectory(pos)
             env.robot_swarm.robot_active['jetbot'][1].traj.add_trajectory(pos1)
-
-            # env.robot.traj.add_trajectory(get_robot_pos())
 
     simulation_app.close()  # close Isaac Sim

@@ -1,6 +1,6 @@
 # python-pid # pid控制，后来自己写pid了，不需要了
 # pathfinding # 一个A*的包，后来也自己写了
-
+pydantic
 pyyaml  # 用于读取robot swarm的配置文件
 usd-core  # pixar的官方库，处理usd文件
 

@@ -1,19 +1,20 @@
 from typing import Optional
 
-from pid import PIDController
-from robot import RobotCfg, RobotBase
-from isaacsim.core.api.scenes import Scene
-
-from isaacsim.robot.wheeled_robots.robots import WheeledRobot
-import numpy as np
-from isaacsim.core.api.controllers import BaseController
-
-from isaacsim.core.utils.types import ArticulationAction
-from pid import PIDController
+from controller_pid import PIDController
+from robot import RobotBase
+from robot import RobotCfg
+from controller_pid import PIDController
 from trajectory import Trajectory
 
+import numpy as np
+from isaacsim.core.api.scenes import Scene
+# from isaacsim.core.api.controllers.base_controller import BaseController
+from isaacsim.core.api.controllers import BaseController
+from isaacsim.core.utils.types import ArticulationAction
+from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 
-class JetbotController(BaseController):
+
+class G1Controller(BaseController):
     def __init__(self):
         super().__init__(name="my_cool_controller")
         # An open loop controller that uses a unicycle model
@@ -75,7 +76,7 @@ class Jetbot(RobotBase):
         self.traj = Trajectory(
             robot_prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
             # name='traj' + f'_{config.id}',
-            id = config.id,
+            id=config.id,
             max_points=100,
             color=(0.3, 1.0, 0.3),
             scene=self.scene,
