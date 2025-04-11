@@ -49,7 +49,7 @@ class Env(gym.Env):
 
         # 加载复杂场景
         # usd_path = './scene/CityDemopack/World_CityDemopack.usd'
-        usd_path = './scene/simple_city.usd'
+        usd_path = '../scene/simple_city.usd'
         source, prim_path = create_scene(
             os.path.abspath(usd_path),
             prim_path_root=f'World',  ## 注意前面不要有/

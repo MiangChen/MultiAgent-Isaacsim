@@ -2,7 +2,7 @@ from isaacsim import SimulationApp
 
 simulation_app = SimulationApp({"headless": False})  # we can also run as headless.
 
-from env import Env
+from environment.env import Env
 import numpy as np
 import matplotlib
 
