@@ -1,4 +1,5 @@
-class PIDController:
+
+class ControllerPID:
     """
     一个简单的 PID 控制器。
     """
@@ -72,7 +73,7 @@ class PIDController:
 # 示例用法
 if __name__ == '__main__':
     # 创建 PID 控制器
-    pid = PIDController(Kp=1.0, Ki=0.1, Kd=0.01, target=10.0)
+    pid = ControllerPID(Kp=1.0, Ki=0.1, Kd=0.01, target=10.0)
 
     # 设置输出限制 (可选)
     pid.set_output_limits(min_val=-10.0, max_val=10.0)

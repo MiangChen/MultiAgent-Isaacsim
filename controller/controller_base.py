@@ -12,22 +12,6 @@ class BaseCfg(BaseModel):
         return self.model_copy(update=kwargs, deep=True)
 
 
-class SensorCfg(BaseCfg):
-    """
-    Represents a model for sensors, encapsulating their attributes and providing a structured approach to handling sensor data within a base model framework.
-
-    This SensorModel class extends the BaseModel, inheriting its functionality while adding specific fields tailored for describing sensors. It includes attributes for the sensor's name_prefix, primary path (optional), and type, offering a standardized way to organize and access sensor information across various parts of an application.
-
-    Attributes:
-        name (str): The unique identifier for the sensor.
-        prim_path (Optional[str], optional): The primary path associated with the sensor, if any. Defaults to None.
-        type (str): The type of the sensor, specifying its functionality or category.
-    """
-
-    name: str
-    prim_path: Optional[str] = None
-    type: str
-
 
 class ControllerCfg(BaseCfg, extra='allow'):
     """
@@ -74,25 +58,25 @@ class MoveToPointBySpeedControllerCfg(ControllerCfg):
     rotation_speed: Optional[float] = None
     threshold: Optional[float] = None
 
-
-move_by_speed_cfg = DifferentialDriveControllerCfg(name='move_by_speed', wheel_base=0.1125, wheel_radius=0.03)
-
-move_to_point_cfg = MoveToPointBySpeedControllerCfg(
-    name='move_to_point',
-    forward_speed=1.0,
-    rotation_speed=1.0,
-    threshold=0.1,
-    sub_controllers=[move_by_speed_cfg],
-)
-
-move_along_path_cfg = MoveAlongPathPointsControllerCfg(
-    name='move_along_path',
-    forward_speed=1.0,
-    rotation_speed=1.0,
-    threshold=0.1,
-    sub_controllers=[move_to_point_cfg],
-)
-
+#
+# move_by_speed_cfg = DifferentialDriveControllerCfg(name='move_by_speed', wheel_base=0.1125, wheel_radius=0.03)
+#
+# move_to_point_cfg = MoveToPointBySpeedControllerCfg(
+#     name='move_to_point',
+#     forward_speed=1.0,
+#     rotation_speed=1.0,
+#     threshold=0.1,
+#     sub_controllers=[move_by_speed_cfg],
+# )
+#
+# move_along_path_cfg = MoveAlongPathPointsControllerCfg(
+#     name='move_along_path',
+#     forward_speed=1.0,
+#     rotation_speed=1.0,
+#     threshold=0.1,
+#     sub_controllers=[move_to_point_cfg],
+# )
+#
 
 #
 # class CoolController(BaseController):

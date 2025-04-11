@@ -2,7 +2,7 @@ from typing import Optional
 
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
-from controller.controller_pid import PIDController
+from controller.controller_pid import ControllerPID
 
 
 import numpy as np
@@ -63,8 +63,8 @@ class Jetbot(RobotBase):
         self.scale = config.scale
         self.controller = JetbotController()
         self.scene.add(self.robot)
-        self.pid_distance = PIDController(1, 0.1, 0.01, target=0)
-        self.pid_angle = PIDController(10, 0, 0.1, target=0)
+        self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
+        self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
         self.last_yaw = 0
         return
 

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from controller.controller_pid import PIDController
+from controller.controller_pid import ControllerPID
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
 from robot.robot_trajectory import Trajectory
@@ -69,8 +69,8 @@ class Jetbot(RobotBase):
         # self.scale = config.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以
         self.controller = JetbotController()
         # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
-        self.pid_distance = PIDController(1, 0.1, 0.01, target=0)
-        self.pid_angle = PIDController(10, 0, 0.1, target=0)
+        self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
+        self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
 
         self.traj = Trajectory(
             robot_prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
