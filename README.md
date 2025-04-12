@@ -5,6 +5,8 @@
 按照官方文档来安装IsaacSim和IsaacLab:
 https://docs.robotsfan.com/isaaclab/source/setup/installation/pip_installation.
 
+更新MVP的城市场景，说明在```scene```文件夹里，下载链接为：https://pan.quark.cn/s/0694d8c27c6c
+
 ```
 pip install -r requirements.txt
 ```
