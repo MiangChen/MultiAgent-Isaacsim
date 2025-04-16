@@ -23,15 +23,15 @@ from controller.controller_cfg_loader import get_articulation_props, get_physics
 
 class PolicyController(BaseController):
     """
-    A controller that loads and executes a policy from a file.
+    策略控制器基类，支持加载预训练策略模型。
 
     Args:
-        name (str): The name of the controller.
-        prim_path (str): The path to the prim in the stage.
-        root_path (Optional[str], None): The path to the articulation root of the robot
-        usd_path (Optional[str], optional): The path to the USD file. Defaults to None.
-        position (Optional[np.ndarray], optional): The initial position of the robot. Defaults to None.
-        orientation (Optional[np.ndarray], optional): The initial orientation of the robot. Defaults to None.
+        name (str): 控制器的名称。
+        prim_path (str): 场景中的prim地址。
+        root_path (Optional[str], None): 机器人的根节点。
+        usd_path (Optional[str], optional):USD文件地址，默认为None。
+        position (Optional[np.ndarray], optional): 机器人初始位置，默认为None.
+        orientation (Optional[np.ndarray], optional): 机器人初始姿态，默认为None.
 
     Attributes:
         robot (SingleArticulation): The robot articulation.
@@ -46,15 +46,15 @@ class PolicyController(BaseController):
         position: Optional[np.ndarray] = None,
         orientation: Optional[np.ndarray] = None,
     ) -> None:
-        prim = get_prim_at_path(prim_path)
+        prim = get_prim_at_path(prim_path) # 获取prim地址
 
         if not prim.IsValid():
             prim = define_prim(prim_path, "Xform")
             if usd_path:
-                prim.GetReferences().AddReference(usd_path)
+                prim.GetReferences().AddReference(usd_path) # 加载机器人USD模型
             else:
                 carb.log_error("unable to add robot usd, usd_path not provided")
-
+		# 初始化机器人关节树
         if root_path == None:
             self.robot = SingleArticulation(prim_path=prim_path, name=name, position=position, orientation=orientation)
         else:
@@ -62,17 +62,19 @@ class PolicyController(BaseController):
 
     def load_policy(self, policy_file_path, policy_env_path) -> None:
         """
-        Loads a policy from a file.
+        加载策略。
 
         Args:
-            policy_file_path (str): The path to the policy file.
-            policy_env_path (str): The path to the environment configuration file.
+            policy_file_path (str): 策略文件地址.
+            policy_env_path (str): 环境配置文件地址.
         """
+        # 读取策略
         file_content = omni.client.read_file(policy_file_path)[2]
         file = io.BytesIO(memoryview(file_content).tobytes())
         self.policy = torch.jit.load(file)
+        # 读取环境配置
         self.policy_env_params = parse_env_config(policy_env_path)
-
+        # 获取物理参数
         self._decimation, self._dt, self.render_interval = get_physics_properties(self.policy_env_params)
 
     def initialize(
@@ -85,42 +87,47 @@ class PolicyController(BaseController):
         set_articulation_props: bool = True,
     ) -> None:
         """
-        Initializes the robot and sets up the controller.
+        初始化机器人并创建控制器.
 
         Args:
-            physics_sim_view (optional): The physics simulation view.
-            effort_modes (str, optional): The effort modes. Defaults to "force".
-            control_mode (str, optional): The control mode. Defaults to "position".
-            set_gains (bool, optional): Whether to set the joint gains. Defaults to True.
-            set_limits (bool, optional): Whether to set the limits. Defaults to True.
-            set_articulation_props (bool, optional): Whether to set the articulation properties. Defaults to True.
+            physics_sim_view (optional): 物理仿真试图.
+            effort_modes (str, optional): 关节力模式（force/acceleration）. 默认 "force".
+            control_mode (str, optional): 控制模式（position/velocity）. 默认 "position".
+            set_gains (bool, optional): 是否设置关节PD参数. 默认 True.
+            set_limits (bool, optional): 是否设置关节限制. 默认 True.
+            set_articulation_props (bool, optional): 是否设置关节属性. 默认 True.
         """
+        # 初始化机器人物理实体
         self.robot.initialize(physics_sim_view=physics_sim_view)
+        # 设置关节力模式和控制模式
         self.robot.get_articulation_controller().set_effort_modes(effort_modes)
         self.robot.get_articulation_controller().switch_control_mode(control_mode)
+        # 从配置文件加载关节属性
         max_effort, max_vel, stiffness, damping, self.default_pos, self.default_vel = get_robot_joint_properties(
             self.policy_env_params, self.robot.dof_names
         )
+        # 应用参数到机器人
         if set_gains:
-            self.robot._articulation_view.set_gains(stiffness, damping)
+            self.robot._articulation_view.set_gains(stiffness, damping) # 设置PD参数
         if set_limits:
-            self.robot._articulation_view.set_max_efforts(max_effort)
-            self.robot._articulation_view.set_max_joint_velocities(max_vel)
+            self.robot._articulation_view.set_max_efforts(max_effort) # 力矩限制
+            self.robot._articulation_view.set_max_joint_velocities(max_vel) # 力矩限制
         if set_articulation_props:
-            self._set_articulation_props()
+            self._set_articulation_props() # 设置高级物理属性
 
     def _set_articulation_props(self) -> None:
         """
-        Sets the articulation root properties from the policy environment parameters.
+        高级关节属性设置.
         """
+        # 从配置文件读取高级属性
         articulation_prop = get_articulation_props(self.policy_env_params)
-
-        solver_position_iteration_count = articulation_prop.get("solver_position_iteration_count")
-        solver_velocity_iteration_count = articulation_prop.get("solver_velocity_iteration_count")
-        stabilization_threshold = articulation_prop.get("stabilization_threshold")
-        enabled_self_collisions = articulation_prop.get("enabled_self_collisions")
-        sleep_threshold = articulation_prop.get("sleep_threshold")
-
+		# 物理求解器参数
+        solver_position_iteration_count = articulation_prop.get("solver_position_iteration_count") # 位置迭代次数
+        solver_velocity_iteration_count = articulation_prop.get("solver_velocity_iteration_count") # 速度迭代次数
+        stabilization_threshold = articulation_prop.get("stabilization_threshold") # 稳定阈值
+        enabled_self_collisions = articulation_prop.get("enabled_self_collisions") # 自碰撞开关
+        sleep_threshold = articulation_prop.get("sleep_threshold") # 休眠阈值
+		# 应用参数到机器人
         if solver_position_iteration_count not in [None, float("inf")]:
             self.robot.set_solver_position_iteration_count(solver_position_iteration_count)
         if solver_velocity_iteration_count not in [None, float("inf")]:
@@ -134,22 +141,22 @@ class PolicyController(BaseController):
 
     def _compute_action(self, obs: np.ndarray) -> np.ndarray:
         """
-        Computes the action from the observation using the loaded policy.
+       策略推理方法.
 
         Args:
-            obs (np.ndarray): The observation.
+            obs (np.ndarray): 观测值.
 
         Returns:
-            np.ndarray: The action.
+            np.ndarray: 动作.
         """
         with torch.no_grad():
-            obs = torch.from_numpy(obs).view(1, -1).float()
-            action = self.policy(obs).detach().view(-1).numpy()
+            obs = torch.from_numpy(obs).view(1, -1).float() # 转换为PyTorch张量
+            action = self.policy(obs).detach().view(-1).numpy() # 策略推理
         return action
 
     def _compute_observation(self) -> NotImplementedError:
         """
-        Computes the observation. Not implemented.
+        计算观测空间，暂未使用
         """
 
         raise NotImplementedError(
@@ -158,7 +165,7 @@ class PolicyController(BaseController):
 
     def forward(self) -> NotImplementedError:
         """
-        Forwards the controller. Not implemented.
+        前进控制器，暂未使用
         """
         raise NotImplementedError(
             "Forward needs to be implemented to compute and apply robot control from observations"
@@ -166,6 +173,6 @@ class PolicyController(BaseController):
 
     def post_reset(self) -> None:
         """
-        Called after the controller is reset.
+        重置
         """
         self.robot.post_reset()

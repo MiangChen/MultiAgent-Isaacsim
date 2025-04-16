@@ -1,58 +1,15 @@
-from typing import Optional
+import numpy as np
+from isaacsim.core.api.scenes import Scene
+from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 
 from controller.controller_pid import ControllerPID
 from robot.robot_base import RobotBase
-from robot.robot_cfg import RobotCfg
 from robot.robot_trajectory import Trajectory
-
-import numpy as np
-from isaacsim.core.api.scenes import Scene
-# from isaacsim.core.api.controllers.base_controller import BaseController
-from isaacsim.core.api.controllers import BaseController
-from isaacsim.core.utils.types import ArticulationAction
-from isaacsim.robot.wheeled_robots.robots import WheeledRobot
+from robot.robot_cfg_jetbot import RobotCfgJetbot
 
 
-class G1Controller(BaseController):
-    def __init__(self):
-        super().__init__(name="my_cool_controller")
-        # An open loop controller that uses a unicycle model
-        self._wheel_radius = 0.03
-        self._wheel_base = 0.1125
-        return
-
-    def forward(self, command):
-        # command will have two elements, first element is the forward velocity
-        # second element is the angular velocity (yaw only).
-        joint_velocities = [0.0, 0.0]
-        joint_velocities[0] = ((2 * command[0]) - (command[1] * self._wheel_base)) / (2 * self._wheel_radius)
-        joint_velocities[1] = ((2 * command[0]) + (command[1] * self._wheel_base)) / (2 * self._wheel_radius)
-        # A controller has to return an ArticulationAction
-        return ArticulationAction(joint_velocities=joint_velocities)
-
-    def velocity(self, command):
-        return ArticulationAction(joint_velocities=command)
-
-
-from isaacsim.core.utils.nucleus import get_assets_root_path
-
-assets_root_path = get_assets_root_path()
-if assets_root_path is None:
-    print("Could not find nucleus server with /Isaac folder")
-
-
-class JetbotCfg(RobotCfg):
-    # meta info
-    name_prefix: Optional[str] = 'jetbot'
-    type: Optional[str] = 'JetbotRobot'
-    prim_path: Optional[str] = '/World/robot/jetbot'
-
-    id: int = 0
-    usd_path: Optional[str] = assets_root_path + "/Isaac/Robots/Jetbot/jetbot.usd"
-
-
-class Jetbot(RobotBase):
-    def __init__(self, config: JetbotCfg, scene: Scene):
+class RobotJetbot(RobotBase):
+    def __init__(self, config: RobotCfgJetbot, scene: Scene):
         super().__init__(config, scene)
         self.robot_entity = WheeledRobot(
             prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
@@ -67,7 +24,8 @@ class Jetbot(RobotBase):
         self.flag_active = False
         self.robot_prim = config.prim_path
         # self.scale = config.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以
-        self.controller = JetbotController()
+        from controller.controller_pid_jetbot import ControllerJetbot
+        self.controller = ControllerJetbot()
         # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
         self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
         self.pid_angle = ControllerPID(10, 0, 0.1, target=0)

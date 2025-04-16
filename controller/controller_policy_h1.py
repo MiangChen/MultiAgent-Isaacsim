@@ -9,27 +9,29 @@
 
 from typing import Optional
 
+from controller.controller_policy import PolicyController
+
 import numpy as np
 import omni
 import omni.kit.commands
-from isaacsim.core.utils.nucleus import get_assets_root_path
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
 from isaacsim.core.utils.types import ArticulationAction
-from isaacsim.robot.policy.examples.controllers import PolicyController
-# from isaacsim.storage.native import get_assets_root_path  #  暂不清除和nuclues的区别
+# from isaacsim.robot.policy.examples.controllers import PolicyController
+# from isaacsim.storage.native import get_assets_root_path
+from isaacsim.core.utils.nucleus import get_assets_root_path
 
 
 class H1FlatTerrainPolicy(PolicyController):
     """The H1 Humanoid running Flat Terrain Policy Locomotion Policy"""
 
     def __init__(
-            self,
-            prim_path: str,
-            root_path: Optional[str] = None,
-            name: str = "h1",
-            usd_path: Optional[str] = None,
-            position: Optional[np.ndarray] = None,
-            orientation: Optional[np.ndarray] = None,
+        self,
+        prim_path: str,
+        root_path: Optional[str] = None,
+        name: str = "h1",
+        usd_path: Optional[str] = None,
+        position: Optional[np.ndarray] = None,
+        orientation: Optional[np.ndarray] = None,
     ) -> None:
         """
         Initialize H1 robot and import flat terrain policy.
@@ -48,12 +50,16 @@ class H1FlatTerrainPolicy(PolicyController):
             usd_path = assets_root_path + "/Isaac/Robots/Unitree/H1/h1.usd"
         super().__init__(name, prim_path, root_path, usd_path, position, orientation)
         self.load_policy(
-            assets_root_path + "/Isaac/Samples/Policies/H1_Policies/h1_policy.pt",
-            assets_root_path + "/Isaac/Samples/Policies/H1_Policies/h1_env.yaml",
+            # assets_root_path + "/Isaac/Samples/Policies/H1_Policies/h1_policy.pt",
+            # assets_root_path + "/Isaac/Samples/Policies/H1_Policies/h1_env.yaml",
+
+            "/home/ubuntu/PycharmProjects/multiagent-isaacsim/IsaacLab/logs/rsl_rl/h1_flat/2025-04-14_19-39-24/exported/policy.pt",
+            "/home/ubuntu/PycharmProjects/multiagent-isaacsim/IsaacLab/logs/rsl_rl/h1_flat/2025-04-14_19-39-24/params/env.yaml",
         )
         self._action_scale = 0.5
         self._previous_action = np.zeros(19)
         self._policy_counter = 0
+        self.base_command = np.zeros(3)
 
     def _compute_observation(self, command):
         """
@@ -118,3 +124,20 @@ class H1FlatTerrainPolicy(PolicyController):
         Overloads the default initialize function to use default articulation root properties in the USD
         """
         return super().initialize(set_articulation_props=False)
+
+    def on_physics_step(self, step_size) -> None:
+        # global first_step
+        # global reset_needed
+        # if first_step:
+        #     for robot in robots:
+        #         robot.initialize()
+        #     first_step = False
+        # elif reset_needed:
+        #     my_world.reset(True)
+        #     reset_needed = False
+        #     first_step = True
+        # else:
+        #     for robot in robots:
+        #         robot.forward(step_size, base_command)
+        #
+        self.forward(step_size, self.base_command)

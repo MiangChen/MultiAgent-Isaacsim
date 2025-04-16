@@ -44,7 +44,7 @@ class Env(gym.Env):
         print("init success")
 
         self._runner = simulation_app
-        self.world = World()
+        self.world = World(physics_dt=1/200)
         # self.world.scene.add_default_ground_plane()  # 添加地面
 
         source, prim_path = create_scene(
@@ -81,10 +81,10 @@ class Env(gym.Env):
         create_viewport_for_camera(
             viewport_name="/test_camera",
             camera_prim_path=self.camera_prim_path,
-            width=1280 / 2,
+            width=720 / 2,
             height=720 / 2,
-            position_x=0,  ## 设置他在IsaacSimAPP中的相对的位置
-            position_y=0,
+            position_x=800,  ## 设置他在IsaacSimAPP中的相对的位置
+            position_y=400,
         )
 
         ## 可以设置相机的观察位置
