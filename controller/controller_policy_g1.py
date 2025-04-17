@@ -9,7 +9,6 @@
 
 from typing import Optional
 
-from controller.controller_policy_playpy import PolicyController
 
 import numpy as np
 import omni
@@ -123,3 +122,6 @@ class G1FlatTerrainPolicy(PolicyController):
         Overloads the default initialize function to use default articulation root properties in the USD
         """
         return super().initialize(set_articulation_props=False)
+
+if __name__ == "__main__":
+    pass

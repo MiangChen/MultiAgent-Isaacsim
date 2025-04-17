@@ -7,3 +7,16 @@ jetbot:
     position: [0.0, 1.0, 0.0]
     orientation: [0.0, 0.0, 0.0, 1.0]
     alias: Bob
+  - id: 2
+    position: [ 1.0, 1.0, 0.0 ]
+    orientation: [ 0.0, 0.0, 0.0, 1.0 ]
+    alias: Candy
+
+
+h1:
+  - id: 0
+    position: [-1.0, 0.0, 1.05]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    alias: Hellen
+
+

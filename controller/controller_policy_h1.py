@@ -25,13 +25,13 @@ class H1FlatTerrainPolicy(PolicyController):
     """The H1 Humanoid running Flat Terrain Policy Locomotion Policy"""
 
     def __init__(
-        self,
-        prim_path: str,
-        root_path: Optional[str] = None,
-        name: str = "h1",
-        usd_path: Optional[str] = None,
-        position: Optional[np.ndarray] = None,
-        orientation: Optional[np.ndarray] = None,
+            self,
+            prim_path: str,
+            root_path: Optional[str] = None,
+            name: str = "h1",
+            usd_path: Optional[str] = None,
+            position: Optional[np.ndarray] = None,
+            orientation: Optional[np.ndarray] = None,
     ) -> None:
         """
         Initialize H1 robot and import flat terrain policy.
@@ -49,11 +49,12 @@ class H1FlatTerrainPolicy(PolicyController):
         if usd_path == None:
             usd_path = assets_root_path + "/Isaac/Robots/Unitree/H1/h1.usd"
         super().__init__(name, prim_path, root_path, usd_path, position, orientation)
+
         self.load_policy(
-            # assets_root_path + "/Isaac/Samples/Policies/H1_Policies/h1_policy.pt",
+            assets_root_path + "/Isaac/Samples/Policies/H1_Policies/h1_policy.pt",
             # assets_root_path + "/Isaac/Samples/Policies/H1_Policies/h1_env.yaml",
 
-            "/home/ubuntu/PycharmProjects/multiagent-isaacsim/IsaacLab/logs/rsl_rl/h1_flat/2025-04-14_19-39-24/exported/policy.pt",
+            # "/home/ubuntu/PycharmProjects/multiagent-isaacsim/IsaacLab/logs/rsl_rl/h1_flat/2025-04-14_19-39-24/exported/policy.pt",
             "/home/ubuntu/PycharmProjects/multiagent-isaacsim/IsaacLab/logs/rsl_rl/h1_flat/2025-04-14_19-39-24/params/env.yaml",
         )
         self._action_scale = 0.5
@@ -61,7 +62,7 @@ class H1FlatTerrainPolicy(PolicyController):
         self._policy_counter = 0
         self.base_command = np.zeros(3)
 
-    def _compute_observation(self, command):
+    def _compute_observation(self, command, robot):
         """
         Compute the observation vector for the policy.
 
@@ -72,9 +73,9 @@ class H1FlatTerrainPolicy(PolicyController):
         np.ndarray -- The observation vector.
 
         """
-        lin_vel_I = self.robot.get_linear_velocity()
-        ang_vel_I = self.robot.get_angular_velocity()
-        pos_IB, q_IB = self.robot.get_world_pose()
+        lin_vel_I = robot.get_linear_velocity()
+        ang_vel_I = robot.get_angular_velocity()
+        pos_IB, q_IB = robot.get_world_pose()
 
         R_IB = quat_to_rot_matrix(q_IB)
         R_BI = R_IB.transpose()
@@ -92,15 +93,15 @@ class H1FlatTerrainPolicy(PolicyController):
         # Command
         obs[9:12] = command
         # Joint states
-        current_joint_pos = self.robot.get_joint_positions()
-        current_joint_vel = self.robot.get_joint_velocities()
+        current_joint_pos = robot.get_joint_positions()
+        current_joint_vel = robot.get_joint_velocities()
         obs[12:31] = current_joint_pos - self.default_pos
         obs[31:50] = current_joint_vel
         # Previous Action
         obs[50:69] = self._previous_action
         return obs
 
-    def forward(self, dt, command):
+    def forward(self, dt, command, robot):
         """
         Compute the desired articulation action and apply them to the robot articulation.
 
@@ -110,20 +111,22 @@ class H1FlatTerrainPolicy(PolicyController):
 
         """
         if self._policy_counter % self._decimation == 0:
-            obs = self._compute_observation(command)
+            obs = self._compute_observation(command, robot)
             self.action = self._compute_action(obs)
             self._previous_action = self.action.copy()
 
         action = ArticulationAction(joint_positions=self.default_pos + (self.action * self._action_scale))
-        self.robot.apply_action(action)
+        # self.robot.apply_action(action)
 
         self._policy_counter += 1
 
-    def initialize(self):
+        return action
+
+    def initialize(self, robot):
         """
         Overloads the default initialize function to use default articulation root properties in the USD
         """
-        return super().initialize(set_articulation_props=False)
+        return super().initialize(set_articulation_props=False, robot=robot)
 
     def on_physics_step(self, step_size) -> None:
         # global first_step

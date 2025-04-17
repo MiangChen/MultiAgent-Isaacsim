@@ -2,6 +2,7 @@ import os
 
 from path_planning.path_planning_grid_map import GridMap
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
+from robot.robot_h1 import RobotH1, RobotCfgH1
 from robot.robot_swarm_manager import RobotSwarmManager
 from environment.simulator import Simulator
 
@@ -34,7 +35,7 @@ def create_scene(config_json_path: str, prim_path_root: str = 'background'):
 
 class Env(gym.Env):
 
-    def __init__(self, simulation_app, usd_path:str=None) -> None:
+    def __init__(self, simulation_app, usd_path: str = None) -> None:
         self._render = None
         self._robot_name = None
         self._current_task_name = None
@@ -44,7 +45,7 @@ class Env(gym.Env):
         print("init success")
 
         self._runner = simulation_app
-        self.world = World(physics_dt=1/200)
+        self.world = World(physics_dt=1 / 200)
         # self.world.scene.add_default_ground_plane()  # 添加地面
 
         source, prim_path = create_scene(
@@ -63,6 +64,8 @@ class Env(gym.Env):
         self.robot_swarm = RobotSwarmManager(self.world.scene)
         self.robot_swarm.register_robot_class(robot_class_name='jetbot', robot_class=RobotJetbot,
                                               robot_class_cfg=RobotCfgJetbot)  # 注册jetbot机器人
+        self.robot_swarm.register_robot_class(robot_class_name='h1', robot_class=RobotH1,
+                                              robot_class_cfg=RobotCfgH1)  # 注册jetbot机器人
         self.robot_swarm.load_robot_swarm_cfg("./robot/robot_swarm_cfg.yaml")
         # self.robot_swarm.create_robot(robot_class_name='jetbot', id=0, position=(0.0, 0.0, 0.0),
         #                               orientation=(0.0, 0.0, 0.0, 1),
@@ -93,15 +96,23 @@ class Env(gym.Env):
             target=np.array([5, 0, 0]),
             camera_prim_path=self.camera_prim_path,
         )
+
+        self.cell_size = 0.2
         return
 
     def reset(self):
         self.world.reset()
-        cell_size = 0.2
-        self.grid_map = GridMap(min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=cell_size)
+        self.grid_map = GridMap(min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=self.cell_size)
+        self.init_robot()
         print("reset env & init grid map success")
+
         return
 
     def step(self, action):
         self.world.step()
         return
+
+    def init_robot(self):
+        for robot_class in self.robot_swarm.robot_active.keys():
+            for robot in self.robot_swarm.robot_active[robot_class]:
+                robot.initialize()

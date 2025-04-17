@@ -5,7 +5,7 @@ from robot.robot_cfg import RobotCfg
 import numpy as np
 from isaacsim.core.prims import RigidPrim
 # from isaacsim.core.robots.robot import Robot as IsaacRobot  # 已经在4.5中取消了
-from isaacsim.core.api.robots import Robot as IsaacRobot
+# from isaacsim.core.api.robots import Robot as IsaacRobot
 from isaacsim.core.api.scenes import Scene
 
 
@@ -15,7 +15,7 @@ class RobotBase:
     def __init__(self, config: RobotCfg, scene: Scene):
 
         self.config = config
-        self.robot_entity: IsaacRobot | None = None  # 代表机器人的实体
+        # self.robot_entity: IsaacRobot | None = None  # 代表机器人的实体
         self.controllers = {}
         self.sensors = {}
         self.scene = scene
@@ -89,7 +89,7 @@ class RobotBase:
         """
         return self.robot_entity.get_local_scale()
 
-    def get_robot_articulation(self) -> IsaacRobot:
+    def get_robot_articulation(self):
         """Get isaac robots instance (articulation).
 
         Returns:

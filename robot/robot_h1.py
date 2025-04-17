@@ -1,3 +1,4 @@
+from typing import Optional
 import numpy as np
 from isaacsim.core.api.scenes import Scene
 from isaacsim.robot.wheeled_robots.robots import WheeledRobot
@@ -5,76 +6,83 @@ from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 from controller.controller_pid import ControllerPID
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
-from robot.robot_cfg_jetbot import RobotCfgJetbot
+from robot.robot_cfg_h1 import RobotCfgH1
+from controller.controller_policy_h1 import   H1FlatTerrainPolicy
 
+import carb
+import numpy as np
 
-class RobotJetbot(RobotBase):
-    def __init__(self, config: RobotCfgJetbot, scene: Scene):
+from isaacsim.core.utils.prims import define_prim, get_prim_at_path
+from isaacsim.core.prims import SingleArticulation
+
+class RobotH1(RobotBase):
+    def __init__(self, config: RobotCfgH1,
+                 scene: Scene = None) -> None:
         super().__init__(config, scene)
-        self.robot_entity = WheeledRobot(
-            prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
+        prim_path = config.prim_path + f'/{config.name_prefix}_{config.id}'
+
+        prim = get_prim_at_path(prim_path)
+        if not prim.IsValid():
+            prim = define_prim(prim_path, "Xform")
+
+            if config.usd_path:
+                prim.GetReferences().AddReference(config.usd_path)  # 加载机器人USD模型
+            else:
+                carb.log_error("unable to add robot usd, usd_path not provided")
+        # 初始化机器人关节树
+        self.robot_entity = SingleArticulation(
+            prim_path=prim_path,
             name=config.name_prefix + f'_{config.id}',
-            wheel_dof_names=['left_wheel_joint', 'right_wheel_joint'],
-            create_robot=True,
             position=np.array(config.position),
             orientation=np.array(config.orientation),
-            usd_path=config.usd_path,
         )
-        self.config = config
+
+        # self.config = config
         self.flag_active = False
-        self.robot_prim = config.prim_path
-        # self.scale = config.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以
-        from controller.controller_pid_jetbot import ControllerJetbot
-        self.controller = ControllerJetbot()
+        self.robot_prim = config.prim_path + f'/{config.name_prefix}_{config.id}'
+        # self.scale = config.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以, 所以注释掉了
+        # from controller.controller_pid_jetbot import ControllerJetbot
+        # self.controller = ControllerJetbot()
         # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
         self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
         self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
 
-        self.traj = Trajectory(
-            robot_prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
-            # name='traj' + f'_{config.id}',
-            id=config.id,
-            max_points=100,
-            color=(0.3, 1.0, 0.3),
-            scene=self.scene,
-            radius=0.05,
-        )
-        # self.history_traj = []  # 历史轨迹
+        # self.traj = Trajectory(
+        #     robot_prim_path=self.robot_prim,
+        #     # name='traj' + f'_{config.id}',
+        #     id=config.id,
+        #     max_points=100,
+        #     color=(0.3, 1.0, 0.3),
+        #     scene=self.scene,
+        #     radius=0.05,
+        # )
+
         # self.last_yaw = 0
 
         self.view_angle = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius = 2  # 感知半径 米
 
+        # 神经网络控制器
+        # prim_path = "/World/h1"
+        self.controller_policy = H1FlatTerrainPolicy(prim_path=prim_path)
+        self.base_command = np.zeros(3)
         return
 
     def initialize(self):
-        return
+        self.controller_policy.initialize(self.robot_entity)  # 初始化配置
 
-    def apply_action(self, action):
-        self.robot_entity.apply_action(self.controller.velocity(action))
+    def forward(self, dt, command):
+        action = self.controller_policy.forward(dt, command, self.robot_entity)
+        # self.robot_entity.apply_action(self.controller.velocity(action))
+        self.robot_entity.apply_action(action)
         return
-
 
 
     def on_physics_step(self, step_size):
-        self.apply_action(action=[5,5])
-
-
+        self.forward(step_size, self.base_command)
 
     def get_world_pose(self):
-        # 下面的方式是基于pxr方式获取pose的
-        # from pxr import UsdGeom
-        #
-        # import isaacsim.core.utils.stage as stage_utils
-        # stage = stage_utils.get_current_stage()
-        # prim_robot = stage.GetPrimAtPath(self.robot_prim)
-        # # 检查是否是 Xformable（可变换对象）
-        # if prim_robot.IsA(UsdGeom.Xformable):
-        #     xform = UsdGeom.Xformable(prim_robot)
-        #     local_transform = xform.GetLocalTransformation()  # 返回 Gf.Matrix4d
-        #     local_position = local_transform.ExtractTranslation()  # 提取平移部分
-        #     local_rotation = local_transform.ExtractRotationQuat()
-        #     return local_position, [local_rotation.real] + list(local_rotation.imaginary)
+
         return self.robot_entity.get_world_pose()
 
     def quaternion_to_yaw(self, orientation):
@@ -243,29 +251,4 @@ class RobotJetbot(RobotBase):
 
 
 if __name__ == '__main__':
-    explorer = Explorer()
-    zone_corners = [[1, 1], [1, 10], [10, 10], [10, 1]]
-    path = explorer.explore_zone(zone_corners)
-
-    print("生成的路径点:")
-    for point in path:
-        print(point)
-
-    # 可视化路径 (需要 matplotlib)
-    import matplotlib.pyplot as plt
-
-    x_coords = [point[0] for point in path]
-    y_coords = [point[1] for point in path]
-
-    plt.plot(x_coords, y_coords, marker='o', linestyle='-', color='blue')
-
-    # 绘制区域边界
-    zone_x = [corner[0] for corner in zone_corners] + [zone_corners[0][0]]
-    zone_y = [corner[1] for corner in zone_corners] + [zone_corners[0][1]]
-    plt.plot(zone_x, zone_y, color='red', linestyle='--')
-
-    plt.xlabel("X")
-    plt.ylabel("Y")
-    plt.title("探索路径")
-    plt.grid(True)
-    plt.show()
+    h1 = RobotH1()

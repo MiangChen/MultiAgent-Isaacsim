@@ -21,24 +21,26 @@ class RobotSwarmManager:
     def __init__(self, scene: Scene):
         self.scene = scene  # 保留世界场景引用
         self.robot_warehouse: Dict[str, List[RobotBase]] = {}  # 激活的机器人 {type: [instances]}
-        self.flag_active: Dict[str, str] = {}  # 机器人激活状态的寄存器, 有名字的就是激活的
+        self.flag_active: Dict[str, List[int]] = {}  # 机器人激活状态的寄存器, 有id的就是激活的
         self.robot_active: Dict[str, List[RobotBase]] = {}
         self.robot_class = {  # 可扩展的机器人类注册
             # 'jetbot': Jetbot,
             # 'g1': G1,  # 可以后续添加
             # 'go2': Go2
         }
-        self.robot_cfg = {  # 对应的机器人
+        self.robot_class_cfg = {  # 对应的机器人
 
         }
 
     def register_robot_class(self, robot_class_name: str, robot_class: Type[RobotBase],
                              robot_class_cfg: Type[RobotCfg]) -> None:
         """注册新的机器人类型"""
-        self.robot_class[robot_class_name] = robot_class
-        self.robot_cfg[robot_class_name] = robot_class_cfg
         self.robot_warehouse[robot_class_name] = []
         self.robot_active[robot_class_name] = []
+        self.flag_active[robot_class_name] = []
+        self.robot_class[robot_class_name] = robot_class
+        self.robot_class_cfg[robot_class_name] = robot_class_cfg
+
 
     def load_robot_swarm_cfg(self, robot_swarm_cfg_file: str = None, dict: Dict = None) -> None:
 
@@ -51,7 +53,7 @@ class RobotSwarmManager:
         for robot_class_name in dict.keys():
             for robot in dict[robot_class_name]:  # 可能有多个机器人  这里可以优化一下 让yaml的格式就和robot cfg一样
                 self.create_robot(robot_class_name, id=robot['id'], position=robot['position'],
-                                  orientation=robot['orientation'], robot_class_cfg=self.robot_cfg[robot_class_name])
+                                  orientation=robot['orientation'], robot_class_cfg=self.robot_class_cfg[robot_class_name])
 
     def create_robot(self, robot_class_name: str = None, id: int = None, position=None, orientation=None,
                      robot_class_cfg: Type[RobotCfg] = None):
