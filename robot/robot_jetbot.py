@@ -54,12 +54,8 @@ class RobotJetbot(RobotBase):
         self.robot_entity.apply_action(self.controller.velocity(action))
         return
 
-
-
     def on_physics_step(self, step_size):
-        self.apply_action(action=[5,5])
-
-
+        self.apply_action(action=[5, 5])
 
     def get_world_pose(self):
         # 下面的方式是基于pxr方式获取pose的
