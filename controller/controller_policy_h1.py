@@ -52,10 +52,10 @@ class H1FlatTerrainPolicy(PolicyController):
 
         self.load_policy(
             assets_root_path + "/Isaac/Samples/Policies/H1_Policies/h1_policy.pt",
-            # assets_root_path + "/Isaac/Samples/Policies/H1_Policies/h1_env.yaml",
-
+            assets_root_path + "/Isaac/Samples/Policies/H1_Policies/h1_env.yaml",
+            # 本地的
             # "/home/ubuntu/PycharmProjects/multiagent-isaacsim/IsaacLab/logs/rsl_rl/h1_flat/2025-04-14_19-39-24/exported/policy.pt",
-            "/home/ubuntu/PycharmProjects/multiagent-isaacsim/IsaacLab/logs/rsl_rl/h1_flat/2025-04-14_19-39-24/params/env.yaml",
+            # "/home/ubuntu/PycharmProjects/multiagent-isaacsim/IsaacLab/logs/rsl_rl/h1_flat/2025-04-14_19-39-24/params/env.yaml",
         )
         self._action_scale = 0.5
         self._previous_action = np.zeros(19)
