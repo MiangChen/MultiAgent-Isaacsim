@@ -1,10 +1,7 @@
-import os
-
-from path_planning.path_planning_grid_map import GridMap
+from map.map_grid_map import GridMap
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.robot_h1 import RobotH1, RobotCfgH1
 from robot.robot_swarm_manager import RobotSwarmManager
-from environment.simulator import Simulator
 
 import gymnasium as gym
 import numpy as np
