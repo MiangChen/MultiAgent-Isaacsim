@@ -1,4 +1,10 @@
+安装方法: 
+sudo apt update
+sudo apt install default-jre
+pip install -r ./pddl/requirements.txt
+
 调用solver_p 中的 plan
+
 
 plan的数据结构如下：
 
