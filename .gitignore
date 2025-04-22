@@ -73,7 +73,7 @@ dmypy.json
 # JetBrains IDEs
 .idea/
 
-config/llm_config.yaml
+files/llm_cfg.yaml
 # MacOS
 .DS_Store
 
