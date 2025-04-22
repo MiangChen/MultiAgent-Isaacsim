@@ -78,15 +78,7 @@ if __name__ == "__main__":
 
     from path_planning.path_planning_astar import AStar
 
-    # import time
-    # # time.sleep(10)
-    # print(type(env.robot.robot))
-    # print(dir(env.robot.robot))
-    # print("*******************************")
-    # print(type(env.robot.robot))
-    # print(dir(env.robot.robot))
-
-
+    # 下面的内容,就是一个navigate to 的实现方法, 需要实例化一个全局的gridmap, 然后每一个jetbot都可以调用这个gridmap, 不要重复调用;
     env.grid_map.generate_grid_map('2d')
     # robot_pos = get_robot_pos()
     robot_pos = env.robot_swarm.robot_active['jetbot'][0].get_world_pose()[0]  # x y z 坐标
@@ -129,7 +121,9 @@ if __name__ == "__main__":
 
     env.robot_swarm.robot_active['jetbot'][1].move_along_path(real_path1,
                                                               reset_flag=True)
-
+    env.robot_swarm.robot_active['jetbot'][0].flag_action_navigation = True
+    env.robot_swarm.robot_active['jetbot'][1].flag_action_navigation = True
+    # 添加回调函数, 每一个world step都会执行其中的内容
     env.world.add_physics_callback("physics_step_jetbot_0", callback_fn=env.robot_swarm.robot_active['jetbot'][0].on_physics_step)
     env.world.add_physics_callback("physics_step_jetbot_1", callback_fn=env.robot_swarm.robot_active['jetbot'][1].on_physics_step)
     env.world.add_physics_callback("physics_step_jetbot_2", callback_fn=env.robot_swarm.robot_active['jetbot'][2].on_physics_step)
@@ -149,14 +143,11 @@ if __name__ == "__main__":
             camera_prim_path=env.camera_prim_path,
         )
 
-        # 让机器人运动
-        # env.robot.apply_action([10.0, 9.0])
-        # env.robot.move_to([3, 3])
-        env.robot_swarm.robot_active['jetbot'][0].move_along_path()
-        env.robot_swarm.robot_active['jetbot'][1].move_along_path()
+
         env.step(action=None)  # execute one physics step and one rendering step
         if i % 60 == 0:  # 1s加一个轨迹
             env.robot_swarm.robot_active['jetbot'][0].traj.add_trajectory(pos)
             env.robot_swarm.robot_active['jetbot'][1].traj.add_trajectory(pos1)
+
 
     simulation_app.close()  # close Isaac Sim

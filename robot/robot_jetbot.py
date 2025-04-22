@@ -45,6 +45,8 @@ class RobotJetbot(RobotBase):
         self.view_angle = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius = 2  # 感知半径 米
         self.velocity = [0, 0]
+
+
         return
 
     def initialize(self):
@@ -55,7 +57,10 @@ class RobotJetbot(RobotBase):
         return
 
     def on_physics_step(self, step_size):
-        self.apply_action(action=self.velocity)
+        if self.flag_world_reset == True:
+            if self.flag_action_navigation == True:
+                self.move_along_path() # 每一次都计算下速度
+            self.apply_action(action=self.velocity)  # 把速度传输给机器人本体
 
     def get_world_pose(self):
         # 下面的方式是基于pxr方式获取pose的
@@ -182,6 +187,22 @@ class RobotJetbot(RobotBase):
             return False
         else:
             return True
+
+    def navigate_to(self, target_pos, reset_flag: bool = False):
+        """
+        让机器人导航到某一个位置,
+        不需要输入机器人的起始位置, 因为机器人默认都是从当前位置出发的
+
+        Args:
+            target_pos:
+            reset_flag:
+
+        Returns:
+
+        """
+
+
+
 
     def explore_zone(self, zone_corners: list = None, scane_direction: str = "horizontal", reset_flag: bool = False):
         """

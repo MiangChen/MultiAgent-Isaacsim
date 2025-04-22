@@ -113,3 +113,4 @@ class Env(gym.Env):
         for robot_class in self.robot_swarm.robot_active.keys():
             for robot in self.robot_swarm.robot_active[robot_class]:
                 robot.initialize()
+                robot.flag_world_reset = True

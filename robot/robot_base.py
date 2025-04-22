@@ -19,6 +19,8 @@ class RobotBase:
         self.controllers = {}
         self.sensors = {}
         self.scene = scene
+        self.flag_world_reset = False  # 用来记录下世界是不是被初始化了
+        self.flag_action_navigation = False  # 用来记录是不是启动导航了
 
     def set_up_to_scene(self, scene: Scene):
         """Set up robot in the scene.
@@ -63,6 +65,12 @@ class RobotBase:
               value: corresponding action array.
         """
         raise NotImplementedError()
+
+    def navigate_to(self, target_pos, reset_flag: bool = False):
+        """
+        让机器人导航到某一个位置,
+        不需要输入机器人的起始位置, 因为机器人默认都是从当前位置出发的
+        """
 
     def get_obs(self) -> dict:
         """Get observation of robot, including controllers, sensors, and world pose.
