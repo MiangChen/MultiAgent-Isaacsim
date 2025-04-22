@@ -44,7 +44,7 @@ class RobotJetbot(RobotBase):
 
         self.view_angle = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius = 2  # 感知半径 米
-
+        self.velocity = [0, 0]
         return
 
     def initialize(self):
@@ -55,7 +55,7 @@ class RobotJetbot(RobotBase):
         return
 
     def on_physics_step(self, step_size):
-        self.apply_action(action=[5, 5])
+        self.apply_action(action=self.velocity)
 
     def get_world_pose(self):
         # 下面的方式是基于pxr方式获取pose的
@@ -130,8 +130,8 @@ class RobotJetbot(RobotBase):
         elif delta_angle > np.pi:
             delta_angle -= 2 * np.pi
         if np.linalg.norm(target_postion[0:2] - car_position[0:2]) < 0.1:
-            v_forward = 0
-            self.apply_action([0, 0])
+            self.velocity = [0, 0]
+            # self.apply_action([0, 0])
             return True  # 已经到达目标点附近10cm, 停止运动
 
         # k1 = 1 / np.pi
@@ -153,7 +153,8 @@ class RobotJetbot(RobotBase):
             v_right = v_max
         elif v_right < -v_max:
             v_right = -v_max
-        self.apply_action([v_left, v_right])
+        self.velocity = [v_left, v_right]
+        # self.apply_action([v_left, v_right])  # 尝试删掉这个, 用于在中断中执行速度指令;
         # print(v_left, v_right)
         # print("v rotation", v_rotation, "v forward", v_forward)
         # print("yaw", car_yaw_angle, "target yaw", car_to_target_angle,"\tdelta angle", delta_angle, "\tdistance ", np.linalg.norm(target_postion[0:2] - car_position[0:2]))

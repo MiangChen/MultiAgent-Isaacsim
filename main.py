@@ -130,6 +130,8 @@ if __name__ == "__main__":
     env.robot_swarm.robot_active['jetbot'][1].move_along_path(real_path1,
                                                               reset_flag=True)
 
+    env.world.add_physics_callback("physics_step_jetbot_0", callback_fn=env.robot_swarm.robot_active['jetbot'][0].on_physics_step)
+    env.world.add_physics_callback("physics_step_jetbot_1", callback_fn=env.robot_swarm.robot_active['jetbot'][1].on_physics_step)
     env.world.add_physics_callback("physics_step_jetbot_2", callback_fn=env.robot_swarm.robot_active['jetbot'][2].on_physics_step)
     env.world.add_physics_callback("physics_step_h1_0", callback_fn=env.robot_swarm.robot_active['h1'][0].on_physics_step)
     env.robot_swarm.robot_active['h1'][0].base_command = [0.1, 0, 0.5]

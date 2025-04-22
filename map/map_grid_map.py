@@ -135,9 +135,9 @@ class GridMap():
               len(obs_position) + len(free_position))
         # print("len value map", len(value_map))
         x, y, z = self.generator.get_dimensions()
-        self.pos_map = np.empty((x, y, z, 3), dtype=np.float32)  # 2d map会自动z=1, 无关紧要
-        self.value_map = np.empty((x, y, z), dtype=np.float32)
-        self.semantic_map = np.full((x, y, z), fill_value=-1, dtype=np.int32)   # 语义地图
+        self.pos_map = np.empty((x, y, z, 3), dtype=np.float16)  # 2d map会自动z=1, 无关紧要
+        self.value_map = np.empty((x, y, z), dtype=np.uint8)
+        # self.semantic_map = np.full((x, y, z), fill_value=-1, dtype=np.int32)   # 语义地图
         # self.value_map = np.array(value_map).reshape((x, y, z))
         # index_obs = 0
         # index_free = 0
