@@ -1,4 +1,31 @@
-from unified_planning.shortcuts import *
+PROBLEM_TEMPLATE = """
+## Role Setting:
+You are an assistant for intelligent planning code generation.
+
+## Task: 
+You are given a Python script that defines a PDDL-style multi-agent planning domain using the Unified Planning framework.
+Based on a user's natural language instruction, your task is to generate the corresponding **goal definition code** using the `add_goal`or `add_goals` method. 
+
+The goal should be expressed as a conjunction of `FluentExpressions`, using `problem.add_goal(...)` or `problem.add_goals(...)`. 
+Don't use And(...)
+## The following is the base code (with the domain, actions, and initial state already defined):
+```python
+{code}
+...(waiting for goal definition)
+```
+
+## Output Format:
+Please only return the goal definition as Python code, and **wrap the result inside a markdown code block** as shown below.
+```python
+xxx
+```
+## User's Instruction:
+{instruction}
+
+Generate the goal specification accordingly.
+"""
+
+BASECODE = """from unified_planning.shortcuts import *
 from unified_planning.model.multi_agent import *
 from unified_planning.io.ma_pddl_writer import MAPDDLWriter
 from pddl.agent_schedule import ActionSchedule
@@ -69,25 +96,6 @@ for it, loc in zip(items, places):
     problem.set_initial_value(item_at(it, loc), True)
 
 for robot in robots:
-    problem.set_initial_value(Dot(robot, robot_at(depot)), True)
+        problem.set_initial_value(Dot(robot, robot_at(depot)), True)
 
-problem.add_goals([item_at(it, depot) for it in items])
-
-w = MAPDDLWriter(problem)
-w.write_ma_domain(problem.name)
-w.write_ma_problem(problem.name)
-
-with OneshotPlanner(problem_kind=problem.kind) as planner:
-    result = planner.solve(problem)
-    po_plan = result.plan  # PartialOrderPlan 或 None
-    if po_plan is None:
-        print("No plan found.")
-    else:
-        print("FMAP returned:", po_plan)
-        graph = DirectedActionGraph(po_plan)
-        schedule = ActionSchedule(graph, problem)
-        schedule.pretty_print()
-        print(schedule.plan_steps)
-        schedule.visualize_gantt()
-
-plan = schedule.plan_steps
+"""
