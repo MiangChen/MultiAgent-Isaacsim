@@ -76,54 +76,11 @@ if __name__ == "__main__":
     # plt.grid(True)
     # plt.show()
 
-    from path_planning.path_planning_astar import AStar
-
     # 下面的内容,就是一个navigate to 的实现方法, 需要实例化一个全局的gridmap, 然后每一个jetbot都可以调用这个gridmap, 不要重复调用;
-    env.grid_map.generate_grid_map('2d')
-    # robot_pos = get_robot_pos()
-    robot_pos = env.robot_swarm.robot_active['jetbot'][0].get_world_pose()[0]  # x y z 坐标
-    robot_pos1 = env.robot_swarm.robot_active['jetbot'][1].get_world_pose()[0]  # x y z 坐标
-    index_robot = env.grid_map.compute_index(robot_pos)
-    index_robot1 = env.grid_map.compute_index(robot_pos1)
+    env.map_grid.generate_grid_map('2d')
 
-    # print(index_robot)
-    target_pos = [9, 9, 0]
-    target_pos1 = [8, 6, 0]
-
-    index_target = env.grid_map.compute_index(target_pos)
-    index_target1 = env.grid_map.compute_index(target_pos1)
-    print("target index", index_target)
-
-    # 初始化astar规划器
-    directions = [
-        [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0],
-        [1, 1, 0], [1, -1, 0], [-1, 1, 0], [-1, -1, 0],
-    ]
-    grid_map = env.grid_map.value_map
-    grid_map[index_robot] = env.grid_map.empty_cell
-    grid_map1 = env.grid_map.value_map
-    grid_map1[index_robot1] = env.grid_map.empty_cell
-    planner = AStar(env.grid_map.value_map, obs_value=1.0, free_value=0.0, directions=directions)
-    path = planner.find_path(tuple(index_robot), tuple(index_target))
-    path1 = planner.find_path(tuple(index_robot1), tuple(index_target1))
-
-    real_path = np.zeros_like(path, dtype=np.float32)
-    for i in range(path.shape[0]):  # 把index变成连续实际世界的坐标
-        real_path[i] = env.grid_map.pos_map[tuple(path[i])]
-        real_path[i][-1] = 0
-    real_path1 = np.zeros_like(path1, dtype=np.float32)
-    for i in range(path1.shape[0]):  # 把index变成连续实际世界的坐标
-        real_path1[i] = env.grid_map.pos_map[tuple(path1[i])]
-        real_path1[i][-1] = 0
-
-    env.robot_swarm.robot_active['jetbot'][0].move_along_path(real_path,
-                                                              reset_flag=True)  # [[1,1], [1,2], [2,2], [2,1],[1,1]]
-
-    env.robot_swarm.robot_active['jetbot'][1].move_along_path(real_path1,
-                                                              reset_flag=True)
-    env.robot_swarm.robot_active['jetbot'][0].flag_action_navigation = True
-    env.robot_swarm.robot_active['jetbot'][1].flag_action_navigation = True
     # 添加回调函数, 每一个world step都会执行其中的内容
+    env.robot_swarm.robot_active['jetbot'][0].navigate_to()
     env.world.add_physics_callback("physics_step_jetbot_0", callback_fn=env.robot_swarm.robot_active['jetbot'][0].on_physics_step)
     env.world.add_physics_callback("physics_step_jetbot_1", callback_fn=env.robot_swarm.robot_active['jetbot'][1].on_physics_step)
     env.world.add_physics_callback("physics_step_jetbot_2", callback_fn=env.robot_swarm.robot_active['jetbot'][2].on_physics_step)
@@ -142,6 +99,8 @@ if __name__ == "__main__":
             target=pos,  # np.array([5+i*0.001, 0, 0]),
             camera_prim_path=env.camera_prim_path,
         )
+
+        # 使用pddl进行规划
 
 
         env.step(action=None)  # execute one physics step and one rendering step

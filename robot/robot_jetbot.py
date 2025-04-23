@@ -3,14 +3,16 @@ from isaacsim.core.api.scenes import Scene
 from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 
 from controller.controller_pid import ControllerPID
+from map.map_grid_map import GridMap
+from path_planning.path_planning_astar import AStar
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_jetbot import RobotCfgJetbot
 
 
 class RobotJetbot(RobotBase):
-    def __init__(self, config: RobotCfgJetbot, scene: Scene):
-        super().__init__(config, scene)
+    def __init__(self, config: RobotCfgJetbot, scene: Scene, map_grid: GridMap):
+        super().__init__(config, scene, map_grid)
         self.robot_entity = WheeledRobot(
             prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
             name=config.name_prefix + f'_{config.id}',
@@ -46,6 +48,7 @@ class RobotJetbot(RobotBase):
         self.view_radius = 2  # 感知半径 米
         self.velocity = [0, 0]
 
+        self.map_grid = map_grid  # 用于存储一个实例化的gridmap
 
         return
 
@@ -59,7 +62,7 @@ class RobotJetbot(RobotBase):
     def on_physics_step(self, step_size):
         if self.flag_world_reset == True:
             if self.flag_action_navigation == True:
-                self.move_along_path() # 每一次都计算下速度
+                self.move_along_path()  # 每一次都计算下速度
             self.apply_action(action=self.velocity)  # 把速度传输给机器人本体
 
     def get_world_pose(self):
@@ -188,7 +191,7 @@ class RobotJetbot(RobotBase):
         else:
             return True
 
-    def navigate_to(self, target_pos, reset_flag: bool = False):
+    def navigate_to(self, pos_target: np.array = None, reset_flag: bool = False):
         """
         让机器人导航到某一个位置,
         不需要输入机器人的起始位置, 因为机器人默认都是从当前位置出发的
@@ -200,9 +203,31 @@ class RobotJetbot(RobotBase):
         Returns:
 
         """
+        # 小车的导航只能使用2d的
+        pos_target = [9, 9, 0]
+        pos_robot = self.get_world_pose()[0]
 
+        pos_index_target = self.map_grid.compute_index(pos_target)
+        pos_index_robot = self.map_grid.compute_index(pos_robot)
 
+        # 用于把机器人对应位置的设置为空的, 不然会找不到路线
+        grid_map = self.map_grid.value_map
+        grid_map[pos_index_robot] = self.map_grid.empty_cell
 
+        planner = AStar(self.map_grid.value_map, obs_value=1.0, free_value=0.0, directions="eight")
+        path = planner.find_path(tuple(pos_index_robot), tuple(pos_index_target))
+
+        real_path = np.zeros_like(path, dtype=np.float32)
+        for i in range(path.shape[0]):  # 把index变成连续实际世界的坐标
+            real_path[i] = self.map_grid.pos_map[tuple(path[i])]
+            real_path[i][-1] = 0
+
+        self.move_along_path(real_path, reset_flag=True)  # [[1,1], [1,2], [2,2], [2,1],[1,1]]
+
+        # 标记一下, 开始运动
+        self.flag_action_navigation = True
+        #
+        return
 
     def explore_zone(self, zone_corners: list = None, scane_direction: str = "horizontal", reset_flag: bool = False):
         """

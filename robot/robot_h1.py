@@ -3,11 +3,12 @@ import numpy as np
 from isaacsim.core.api.scenes import Scene
 from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 
+from map.map_grid_map import GridMap
 from controller.controller_pid import ControllerPID
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_h1 import RobotCfgH1
-from controller.controller_policy_h1 import   H1FlatTerrainPolicy
+from controller.controller_policy_h1 import H1FlatTerrainPolicy
 
 import carb
 import numpy as np
@@ -15,10 +16,10 @@ import numpy as np
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.prims import SingleArticulation
 
+
 class RobotH1(RobotBase):
-    def __init__(self, config: RobotCfgH1,
-                 scene: Scene = None) -> None:
-        super().__init__(config, scene)
+    def __init__(self, config: RobotCfgH1, scene: Scene = None, map_grid: GridMap = None) -> None:
+        super().__init__(config, scene, map_grid)
         prim_path = config.prim_path + f'/{config.name_prefix}_{config.id}'
 
         prim = get_prim_at_path(prim_path)
@@ -76,7 +77,6 @@ class RobotH1(RobotBase):
         # self.robot_entity.apply_action(self.controller.velocity(action))
         self.robot_entity.apply_action(action)
         return
-
 
     def on_physics_step(self, step_size):
         self.forward(step_size, self.base_command)

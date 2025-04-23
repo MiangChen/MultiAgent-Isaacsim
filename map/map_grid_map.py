@@ -4,6 +4,7 @@ import numpy as np
 import omni
 from isaacsim.asset.gen.omap.bindings import _omap
 
+
 class GridMap():
     def __init__(self,
                  start_point: list = [0, 0, 0],
@@ -46,6 +47,19 @@ class GridMap():
         self.invisible_cell = invisible_cell
         self.path_robot = "/World/robot"  # 记录机器人的统一路径,后续要先deactivate再建立gridmap
         self.path_ground = "/World/GroundPlane"
+        import carb
+        self.occupied_color = carb.Int4(128, 128, 128, 255)  # 灰色，表示障碍物
+        self.unoccupied_color = carb.Int4(255, 255, 255, 255)  # 白色，表示可行走区域
+        self.unknown_color = carb.Int4(0, 0, 255, 255)  # 蓝色，表示不可见区域
+
+
+
+    def initialize(self):
+        """
+        这个函数必须再world reset后使用
+        Returns:
+
+        """
         physx = omni.physx.acquire_physx_interface()
         if physx is None:
             print("Failed to acquire PhysX interface.")
@@ -56,11 +70,6 @@ class GridMap():
             print("Failed to get stage ID.")
         else:
             print("Stage ID acquired successfully.")
-
-        import carb
-        self.occupied_color = carb.Int4(128, 128, 128, 255)  # 灰色，表示障碍物
-        self.unoccupied_color = carb.Int4(255, 255, 255, 255)  # 白色，表示可行走区域
-        self.unknown_color = carb.Int4(0, 0, 255, 255)  # 蓝色，表示不可见区域
 
         self.generator = _omap.Generator(physx, stage_id)
         self.reset()
@@ -239,7 +248,6 @@ class GridMap():
         return (position / self.cell_size - min_b / self.cell_size).astype(int)
 
 
-
 if __name__ == "__main__":
     """
     记得 先 Play 运行环境, 才能跑起来
@@ -288,11 +296,12 @@ if __name__ == "__main__":
                         name=f"cube{index}",
                         position=pos,
                         size=cell_size,
-                        color=np.array([0.0, 0.5*k, 0.0], dtype=np.float32)
+                        color=np.array([0.0, 0.5 * k, 0.0], dtype=np.float32)
                     )
                     k *= 0.99
 
     import isaacsim.core.utils.stage as stage_utils
+
     stage = stage_utils.get_current_stage()
     prim_robot = stage.GetPrimAtPath(grid_map.path_robot)
     # print(dir(prim_robot))
@@ -311,7 +320,7 @@ if __name__ == "__main__":
         local_transform = xform.GetLocalTransformation()  # 返回 Gf.Matrix4d
         local_position = local_transform.ExtractTranslation()  # 提取平移部分
         print("Local Position:", local_position)
-        index =grid_map.compute_index(local_position)
+        index = grid_map.compute_index(local_position)
         print(index)
         print(grid_map.pos_map.shape)
         pos_grid_map = grid_map.pos_map[47, 50, 0, :]

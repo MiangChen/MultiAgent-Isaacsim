@@ -1,6 +1,8 @@
 from typing import List, Optional, Tuple
 
+from map.map_grid_map import GridMap
 from robot.robot_cfg import RobotCfg
+
 
 import numpy as np
 from isaacsim.core.prims import RigidPrim
@@ -12,13 +14,14 @@ from isaacsim.core.api.scenes import Scene
 class RobotBase:
     """Base class of robot."""
 
-    def __init__(self, config: RobotCfg, scene: Scene):
+    def __init__(self, config: RobotCfg, scene: Scene, map_grid: GridMap=None):
 
         self.config = config
+        self.scene = scene
+        self.map_grid = GridMap
         # self.robot_entity: IsaacRobot | None = None  # 代表机器人的实体
         self.controllers = {}
         self.sensors = {}
-        self.scene = scene
         self.flag_world_reset = False  # 用来记录下世界是不是被初始化了
         self.flag_action_navigation = False  # 用来记录是不是启动导航了
 

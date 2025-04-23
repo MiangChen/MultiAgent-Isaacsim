@@ -1,8 +1,10 @@
 from typing import Dict, List, Type
 import yaml
 
+from map.map_grid_map import GridMap
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
+
 
 import numpy as np
 from isaacsim.core.api.scenes import Scene
@@ -18,7 +20,7 @@ class RobotSwarmManager:
     第四个,需要能中途加入机器人和删除机器人(但是前期试过, 好像在加入机器人后, 必须要reset world, 那么世界也就完全重置了, 所以我们可以定一个机器人仓库, 比如已经有这么多机器人了, 我们现在要一些新的机器人, 那么仓库里的机器人会加入行动, 非常合理)
     """
 
-    def __init__(self, scene: Scene):
+    def __init__(self, scene: Scene, map_grid:GridMap=None):
         self.scene = scene  # 保留世界场景引用
         self.robot_warehouse: Dict[str, List[RobotBase]] = {}  # 激活的机器人 {type: [instances]}
         self.flag_active: Dict[str, List[int]] = {}  # 机器人激活状态的寄存器, 有id的就是激活的
@@ -31,6 +33,7 @@ class RobotSwarmManager:
         self.robot_class_cfg = {  # 对应的机器人
 
         }
+        self.map_grid = map_grid
 
     def register_robot_class(self, robot_class_name: str, robot_class: Type[RobotBase],
                              robot_class_cfg: Type[RobotCfg]) -> None:
@@ -75,7 +78,8 @@ class RobotSwarmManager:
         # 实例化一个对应的机器人
         robot = self.robot_class[robot_class_name](
             cfg,
-            scene=self.scene
+            scene=self.scene,
+            map_grid = self.map_grid
         )
         self.robot_warehouse[robot_class_name].append(robot)
         return robot

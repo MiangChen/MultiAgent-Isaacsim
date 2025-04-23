@@ -8,7 +8,7 @@ class AStar:
                  map_3d: np.ndarray,
                  obs_value: float = 1.0,
                  free_value: float = 0.0,
-                 directions: List[List[int]] = None):
+                 directions: str = 'eight'):
         """
         Initialize the A* path planner.
 
@@ -21,14 +21,25 @@ class AStar:
         self.map = map_3d
         self.obs_value = obs_value
         self.free_value = free_value
-        self.directions = directions
+
+        self.x_size, self.y_size, self.z_size = map_3d.shape
+
+        if directions == 'eight':
+            self.directions = [
+                [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0],
+                [1, 1, 0], [1, -1, 0], [-1, 1, 0], [-1, -1, 0],
+            ]
+        elif directions == 'four':
+            self.directions = [
+                [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0]
+            ]
+        else:
+            raise ValueError("not support directions")
 
         # Check if directions are valid (non-zero)
         for direction in self.directions:
             if direction == [0, 0, 0]:
                 raise ValueError("Direction [0, 0, 0] is not allowed")
-
-        self.x_size, self.y_size, self.z_size = map_3d.shape
 
     def _heuristic(self, a: Tuple[int, int, int], b: Tuple[int, int, int]) -> float:
         """

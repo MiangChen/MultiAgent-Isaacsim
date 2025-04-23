@@ -58,7 +58,10 @@ class Env(gym.Env):
             # translation=[self.runtime.env.offset[idx] + i for idx, i in enumerate(self.runtime.scene_position)],
         )
 
-        self.robot_swarm = RobotSwarmManager(self.world.scene)
+        self.cell_size = 0.2
+        self.map_grid = GridMap(min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=self.cell_size)  #  gridmap需要再robot swarm之前使用
+
+        self.robot_swarm = RobotSwarmManager(self.world.scene, self.map_grid)
         self.robot_swarm.register_robot_class(robot_class_name='jetbot', robot_class=RobotJetbot,
                                               robot_class_cfg=RobotCfgJetbot)  # 注册jetbot机器人
         self.robot_swarm.register_robot_class(robot_class_name='h1', robot_class=RobotH1,
@@ -94,12 +97,11 @@ class Env(gym.Env):
             camera_prim_path=self.camera_prim_path,
         )
 
-        self.cell_size = 0.2
         return
 
     def reset(self):
         self.world.reset()
-        self.grid_map = GridMap(min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=self.cell_size)
+        self.map_grid.initialize()
         self.init_robot()
         print("reset env & init grid map success")
 
