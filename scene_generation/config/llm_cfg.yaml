@@ -1,0 +1,8 @@
+api_base:
+  QWEN: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+api_key:
+  QWEN: "sk-ed9f88bdffc74ceaabb2c699d5489174"
+
+model:
+  QWEN: "qwen-max"
