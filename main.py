@@ -28,9 +28,7 @@ duration = 5.0  # 目标时间 (5 秒)
 initial_velocities = np.array([3, 4], dtype=np.float64)  # 初始速度
 zero_velocities = np.array([0, 0], dtype=np.float64)  # 零速度
 num_env = 1
-from robot.robot_h1 import RobotH1, RobotCfgH1
 
-# h1 = RobotH1(RobotCfgH1())
 if __name__ == "__main__":
     # 加载复杂场景
     # usd_path = './scene/CityDemopack/World_CityDemopack.usd'
