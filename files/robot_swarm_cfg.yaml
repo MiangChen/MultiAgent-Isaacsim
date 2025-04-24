@@ -1,16 +1,20 @@
 jetbot:
   - id: 0  # 激活jetbot中的0号机器人
-    position: [0.0, 0.0, 0.0]
+    position: [4.3, -1, 0.0]
     orientation: [0.0, 0.0, 0.0, 1.0]
     alias: Allen
   - id: 1
-    position: [0.0, 1.0, 0.0]
+    position: [4.3, -0.5, 0.0]
     orientation: [0.0, 0.0, 0.0, 1.0]
     alias: Bob
   - id: 2
-    position: [ 1.0, 1.0, 0.0 ]
+    position: [ 4.3, 0, 0.0 ]
     orientation: [ 0.0, 0.0, 0.0, 1.0 ]
     alias: Candy
+  - id: 3
+    position: [ 4.3, 0.5, 0.0 ]
+    orientation: [ 0.0, 0.0, 0.0, 1.0 ]
+    alias: David
 
 
 h1:

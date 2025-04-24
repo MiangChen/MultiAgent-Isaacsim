@@ -184,11 +184,13 @@ class RobotJetbot(RobotBase):
         #     self.path_index = self.path_index + 1
         if self.path_index < len(self.path):  # 当index==len的时候, 就已经到达目标了
             reach_flat = self.move_to(self.path[self.path_index])
-            print(self.path[self.path_index])
+            # print(self.path[self.path_index])
             if reach_flat == True:
                 self.path_index += 1
             return False
         else:
+            self.flag_action_navigation = False
+            self.state_skill_complete = True
             return True
 
     def navigate_to(self, pos_target: np.array = None, reset_flag: bool = False):
@@ -204,7 +206,11 @@ class RobotJetbot(RobotBase):
 
         """
         # 小车的导航只能使用2d的
-        pos_target = [9, 9, 0]
+        # pos_target = [9, 9, 0]
+        if pos_target == None:
+            raise ValueError("no target position")
+        elif pos_target[2] != 0:
+            raise ValueError("小车的z轴高度得在平面上")
         pos_robot = self.get_world_pose()[0]
 
         pos_index_target = self.map_grid.compute_index(pos_target)
@@ -226,8 +232,21 @@ class RobotJetbot(RobotBase):
 
         # 标记一下, 开始运动
         self.flag_action_navigation = True
-        #
+
+        # 标记当前的动作
+        self.state_skill = 'navigate_to'
+        self.state_skill_complete = False
+
+
         return
+
+    def pick_up(self):
+        """
+        让机器人拿起来某一个东西, 需要指定物品的名称, 并且在操作范围内
+        Returns:
+        """
+
+
 
     def explore_zone(self, zone_corners: list = None, scane_direction: str = "horizontal", reset_flag: bool = False):
         """

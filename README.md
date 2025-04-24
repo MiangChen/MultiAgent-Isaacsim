@@ -35,6 +35,11 @@ from grutopia.core.runtime import SimulatorRuntime
             {'headless': self.headless, 'anti_aliasing': 0, 'hide_ui': False, 'multi_gpu': False}
         )
 
+
+之所以用skill, 是为了和action区分, action一般是底层的关节动作, gym里就是用action表示电机或者铰链的控制量
+skill是上层用的
+
+
 [![Lines of Code](https://img.shields.io/badge/LoC-2055-blue)](https://github.com/MiangChen/multiagent-isaacsim)
 
 cloc . --exclude-dir=IsaacLab

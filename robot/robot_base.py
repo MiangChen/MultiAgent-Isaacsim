@@ -3,7 +3,6 @@ from typing import List, Optional, Tuple
 from map.map_grid_map import GridMap
 from robot.robot_cfg import RobotCfg
 
-
 import numpy as np
 from isaacsim.core.prims import RigidPrim
 # from isaacsim.core.robots.robot import Robot as IsaacRobot  # 已经在4.5中取消了
@@ -14,7 +13,7 @@ from isaacsim.core.api.scenes import Scene
 class RobotBase:
     """Base class of robot."""
 
-    def __init__(self, config: RobotCfg, scene: Scene, map_grid: GridMap=None):
+    def __init__(self, config: RobotCfg, scene: Scene, map_grid: GridMap = None):
 
         self.config = config
         self.scene = scene
@@ -22,8 +21,12 @@ class RobotBase:
         # self.robot_entity: IsaacRobot | None = None  # 代表机器人的实体
         self.controllers = {}
         self.sensors = {}
+        # 用于回调函数中的
         self.flag_world_reset = False  # 用来记录下世界是不是被初始化了
         self.flag_action_navigation = False  # 用来记录是不是启动导航了
+        # 用于PDDL, 记录当前用的 skill, 之所以用skill, 是为了和action区分, action一般是底层的关节动作
+        self.state_skill: str = None
+        self.state_skill_complete: bool = True  # 默认状态, 没有skill要做, 所以是True
 
     def set_up_to_scene(self, scene: Scene):
         """Set up robot in the scene.
@@ -73,6 +76,18 @@ class RobotBase:
         """
         让机器人导航到某一个位置,
         不需要输入机器人的起始位置, 因为机器人默认都是从当前位置出发的
+        """
+
+    def pick_up(self):
+        """
+        让机器人拿起来某一个东西, 需要指定物品的名称, 并且在操作范围内
+        Returns:
+        """
+
+    def put_down(self):
+        """
+        让机器人把一个东西放下, 可以指定
+        Returns:
         """
 
     def get_obs(self) -> dict:

@@ -101,8 +101,8 @@ class Env(gym.Env):
 
     def reset(self):
         self.world.reset()
+        self.init_robot()  # 似乎要在这里先初始化机器人, 才能在grid map中找到机器人的障碍
         self.map_grid.initialize()
-        self.init_robot()
         print("reset env & init grid map success")
 
         return
