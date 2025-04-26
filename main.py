@@ -4,6 +4,12 @@ from isaacsim import SimulationApp
 
 simulation_app = SimulationApp({"headless": False})  # we can also run as headless.
 
+import carb
+carb.settings.get_settings().set(
+    "/presitent/isaac/asset_root/default",
+    "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5",
+)
+
 from environment.env import Env
 import numpy as np
 import matplotlib
