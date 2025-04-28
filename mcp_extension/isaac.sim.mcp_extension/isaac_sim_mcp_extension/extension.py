@@ -1,3 +1,5 @@
+import os
+import sys
 import gc
 from typing import Dict, Any, List, Optional, Union
 import threading
@@ -10,11 +12,13 @@ import numpy as np
 
 import carb
 import omni
-import sys
 
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+files_parent_dir = os.path.abspath(os.path.join(current_dir, "../../../"))
+sys.path.append(files_parent_dir) # 将项目根目录添加到 sys.path 中
 from files.variables import PATH_PROJECT, PATH_ISAACSIM_ASSETS
-
-sys.path.append(f"{PATH_PROJECT}")  # 将项目根目录添加到 sys.path 中
 
 
 # TODO： import 需要整理一下

@@ -11,3 +11,5 @@ numpy == 1.26.4  # 科学计算基础
 scipy == 1.15.2 # 建立在numpy上的科学计算库
 pyttsx3 >=2.98 # 文本转语音
 openpyxl >= 3.1.5 # 读写excel文件
+langchain
+langchain_openai
