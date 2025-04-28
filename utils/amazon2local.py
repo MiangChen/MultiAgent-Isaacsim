@@ -1,11 +1,15 @@
 # ubuntu的用户名字
-name_user = 'ubuntu'
+NAME_USR = 'ubuntu'
+# 项目的地址
+PATH_PROJECT = f'/home/{NAME_USR}/PycharmProjects/multiagent-isaacsim'
+# ISAACSIM资产包的位置
+PATH_ISAACSIM_ASSETS = f'/home/{NAME_USR}/isaacsim_assets/'
 # conda环境的名字
-name_conda_env = 'env_isaaclab'
+NAME_CONDA_ENV = 'env_isaaclab'
 # isaacsim的位置, 这里以通过pip安装在conda中的isaacsim为例子
-path_isaacsim = f'/home/{name_user}/anaconda3/envs/{name_conda_env}/lib/python3.10/site-packages/isaacsim'
+PATH_ISAACSIM = f'/home/{NAME_USR}/anaconda3/envs/{NAME_CONDA_ENV}/lib/python3.10/site-packages/isaacsim'
 # isaaclab的位置, 这里以本地项目中git clone下来的isaaclab为例子
-path_isaaclab = f'/home/{name_user}/PycharmProjects/multiagent-isaacim/IsaacLab'
+PATH_ISAACLAB = f'/home/{NAME_USR}/PycharmProjects/multiagent-isaacim/IsaacLab'
 
 # 本地解压后的IsaacSim的资产位置
 replacement_string = '/home/ubuntu/isaacsim_assets/'
@@ -13,52 +17,52 @@ replacement_string = '/home/ubuntu/isaacsim_assets/'
 string_to_find = 'https://omniverse-content-production.s3-us-west-2.amazonaws.com/'
 
 file_path_list = [
-    f'/home/{name_user}/.local/share/ov/data/Kit/Isaac-Sim Full/4.5/user.config.json',  # 这个文件容易被遗漏
-    f'{path_isaaclab}/source/isaaclab/isaaclab/utils/assets.py',
-    f'{path_isaacsim}/exts/isaacsim.util.clash_detection/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.robot_setup.assembler/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.asset.gen.conveyor.ui/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.robot.wheeled_robots/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.sensors.physx/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.sensors.camera.ui/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.benchmark.services/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.benchmark.examples/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.sensors.physics/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.gui.components/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.gui.menu/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.ros2.bridge/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.asset.gen.omap/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.sensors.physx.examples/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.examples.interactive/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.ros1.bridge/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.sensors.camera/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.replicator.domain_randomization/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.core.utils/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.sensors.rtx.ui/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.storage.native/docs/index.rst',
-    f'{path_isaacsim}/exts/isaacsim.storage.native/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.ros2.tf_viewer/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.robot.wheeled_robots.ui/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.sensors.physics.examples/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.robot_setup.grasp_editor/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.core.nodes/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.core.prims/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.robot.policy.examples/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.asset.browser/cache/isaacsim.asset.browser.cache.json',
-    f'{path_isaacsim}/exts/isaacsim.asset.browser/docs/index.rst',
-    f'{path_isaacsim}/exts/isaacsim.asset.browser/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.core.cloner/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.replicator.behavior/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.sensors.rtx/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.test.collection/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.robot_motion.motion_generation/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.core.api/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.robot.manipulators.examples/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.replicator.examples/config/extension.toml',
-    f'{path_isaacsim}/exts/isaacsim.robot.manipulators/config/extension.toml',
-    f'{path_isaacsim}/extsDeprecated/omni.isaac.dynamic_control/config/extension.toml',
-    f'{path_isaacsim}/extsDeprecated/omni.replicator.isaac/config/extension.toml',
-    f'{path_isaacsim}/extscache/omni.kit.browser.asset-1.3.11/config/extension.toml',
+    f'/home/{NAME_USR}/.local/share/ov/data/Kit/Isaac-Sim Full/4.5/user.config.json',  # 这个文件容易被遗漏
+    f'{PATH_ISAACLAB}/source/isaaclab/isaaclab/utils/assets.py',
+    f'{PATH_ISAACSIM}/exts/isaacsim.util.clash_detection/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.robot_setup.assembler/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.asset.gen.conveyor.ui/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.robot.wheeled_robots/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.sensors.physx/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.sensors.camera.ui/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.benchmark.services/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.benchmark.examples/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.sensors.physics/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.gui.components/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.gui.menu/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.ros2.bridge/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.asset.gen.omap/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.sensors.physx.examples/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.examples.interactive/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.ros1.bridge/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.sensors.camera/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.replicator.domain_randomization/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.core.utils/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.sensors.rtx.ui/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.storage.native/docs/index.rst',
+    f'{PATH_ISAACSIM}/exts/isaacsim.storage.native/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.ros2.tf_viewer/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.robot.wheeled_robots.ui/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.sensors.physics.examples/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.robot_setup.grasp_editor/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.core.nodes/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.core.prims/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.robot.policy.examples/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.asset.browser/cache/isaacsim.asset.browser.cache.json',
+    f'{PATH_ISAACSIM}/exts/isaacsim.asset.browser/docs/index.rst',
+    f'{PATH_ISAACSIM}/exts/isaacsim.asset.browser/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.core.cloner/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.replicator.behavior/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.sensors.rtx/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.test.collection/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.robot_motion.motion_generation/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.core.api/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.robot.manipulators.examples/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.replicator.examples/config/extension.toml',
+    f'{PATH_ISAACSIM}/exts/isaacsim.robot.manipulators/config/extension.toml',
+    f'{PATH_ISAACSIM}/extsDeprecated/omni.isaac.dynamic_control/config/extension.toml',
+    f'{PATH_ISAACSIM}/extsDeprecated/omni.replicator.isaac/config/extension.toml',
+    f'{PATH_ISAACSIM}/extscache/omni.kit.browser.asset-1.3.11/config/extension.toml',
 ]
 
 for file_path in file_path_list:
