@@ -31,5 +31,5 @@
 # path_isaacsim_assets = data.get('PATH_ISAACSIM_ASSETS')
 
 NAME_USR = 'ubuntu'
-PATH_PROJECT = '/home/ubuntu/PycharmProjects/multiagent-isaacsim'
-PATH_ISAACSIM_ASSETS = '/home/ubuntu/isaacsim_assets/'
+PATH_PROJECT = f'/home/{NAME_USR}/PycharmProjects/multiagent-isaacsim'
+PATH_ISAACSIM_ASSETS = f'/home/{NAME_USR}/isaacsim_assets/'
