@@ -1,6 +1,7 @@
 from typing import Dict, List, Type
 import yaml
 
+
 from map.map_grid_map import GridMap
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg

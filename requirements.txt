@@ -5,3 +5,9 @@ pydantic  #
 pyyaml  # 用于读取robot swarm的配置文件
 usd-core  # pixar的官方库，处理usd文件
 
+faster-whisper  # openai的whisper语音转录模型, 输入音频, 可以输出文本
+sounddevice  # 提供对计算机音频硬件的访问
+numpy == 1.26.4  # 科学计算基础
+scipy == 1.15.2 # 建立在numpy上的科学计算库
+pyttsx3 >=2.98 # 文本转语音
+openpyxl >= 3.1.5 # 读写excel文件

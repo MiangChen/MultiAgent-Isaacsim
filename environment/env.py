@@ -2,6 +2,7 @@ from map.map_grid_map import GridMap
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.robot_h1 import RobotH1, RobotCfgH1
 from robot.robot_swarm_manager import RobotSwarmManager
+from files.variables import PATH_PROJECT, PATH_ISAACSIM_ASSETS
 
 import gymnasium as gym
 import numpy as np
@@ -77,14 +78,15 @@ class Env(gym.Env):
         )  # 注册jetbot机器人
         # TODO 更新路径的设置，
         self.robot_swarm.load_robot_swarm_cfg(
-            "/home/yons/multiagent-isaacsim/files/robot_swarm_cfg.yaml"
+            f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml"
         )
+
         # self.robot_swarm.create_robot(robot_class_name='jetbot', id=0, position=(0.0, 0.0, 0.0),
         #                               orientation=(0.0, 0.0, 0.0, 1),
         #                               robot_class_cfg=JetbotCfg)  # 机器人名字和cfg是对应的, 所以直接输入一个cfg就可以了
 
         self.robot_swarm.activate_robot(
-            "/home/yons/multiagent-isaacsim/files/robot_swarm_active_flag.yaml"
+            f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml"
         )  # 统一在这里加入机器人
 
         # 添加相机, 为相机添加viewport

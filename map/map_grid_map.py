@@ -22,7 +22,7 @@ class GridMap():
         检测的原理应该是在根据某个点有没有发现 碰撞 collision单元, 仅返回该点是否有碰撞, 需要用户再根据这些点重建方格, 无法直接用于A*
         """
 
-        self.method = 2
+        self.method = 1
         # 因为地面是有collision属性的, 直接重建会把地面也当做障碍物, 导致整个地图都是障碍物, 为了解决这个问题, 有两个方式
         # 方式1: 把重建的z轴高度提高一些, 经过测试, 最少要提高 cell_size /2
         self.start_point = start_point

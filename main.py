@@ -1,13 +1,13 @@
 import os
 
 from isaacsim import SimulationApp
-
 simulation_app = SimulationApp({"headless": False})  # we can also run as headless.
+from files.variables import NAME_USR, PATH_PROJECT, PATH_ISAACSIM_ASSETS
 
 import carb
 carb.settings.get_settings().set(
     "/presitent/isaac/asset_root/default",
-    "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5",
+    f"{PATH_ISAACSIM_ASSETS}/Assets/Isaac/4.5",
 )
 
 from environment.env import Env
@@ -38,7 +38,7 @@ num_env = 1
 if __name__ == "__main__":
     # 加载复杂场景
     # usd_path = './scene/CityDemopack/World_CityDemopack.usd'
-    usd_path = './scene/simple_city.usd'
+    usd_path = f'{PATH_PROJECT}/scene/simple_city.usd'
     usd_abs_path = os.path.abspath(usd_path)
     env = Env(simulation_app, usd_abs_path)
     env.reset()

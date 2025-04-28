@@ -1,18 +1,20 @@
-import carb
+import gc
+from typing import Dict, Any, List, Optional, Union
 import threading
 import time
 import socket
 import json
 import traceback
 
-import gc
-
-import omni
-from typing import Dict, Any, List, Optional, Union
 import numpy as np
+
+import carb
+import omni
 import sys
 
-sys.path.append("/home/yons/multiagent-isaacsim")  # 将项目根目录添加到 sys.path 中
+from files.variables import PATH_PROJECT, PATH_ISAACSIM_ASSETS
+
+sys.path.append(f"{PATH_PROJECT}")  # 将项目根目录添加到 sys.path 中
 
 
 # TODO： import 需要整理一下
@@ -52,11 +54,11 @@ class MCPExtension(omni.ext.IExt):
         print("settings: ", self._settings.get("/exts/omni.kit.pipapi"))
         self._settings.set(
             "/persistent/isaac/asset_root/default",
-            "/home/yons/isaacsim_assets/Assets/Isaac/4.5",
+            f"{PATH_ISAACSIM_ASSETS}/Assets/Isaac/4.5",
         )
         self.assert_repository_path = (
             self._settings.get("/exts/isaac.sim.mcp/repository")
-            or "/home/yons/multiagent-isaacsim/scene"
+            or f"{PATH_PROJECT}/scene"
         )
         self.port = self._settings.get("/exts/isaac.sim.mcp/server, port") or 8766
         self.host = self._settings.get("/exts/isaac.sim.mcp/server.host") or "localhost"
