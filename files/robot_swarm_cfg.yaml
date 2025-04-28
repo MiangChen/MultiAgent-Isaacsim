@@ -16,11 +16,11 @@ jetbot:
     orientation: [ 0.0, 0.0, 0.0, 1.0 ]
     alias: David
 
-
-h1:
-  - id: 0
-    position: [-1.0, 0.0, 1.05]
-    orientation: [0.0, 0.0, 0.0, 1.0]
-    alias: Hellen
-
+#
+#h1:
+#  - id: 0
+#    position: [-1.0, 0.0, 1.05]
+#    orientation: [0.0, 0.0, 0.0, 1.0]
+#    alias: Hellen
+#
 

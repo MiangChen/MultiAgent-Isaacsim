@@ -1,5 +1,3 @@
-import os
-
 # ubuntu的用户名字
 name_user = 'ubuntu'
 # conda环境的名字
@@ -8,6 +6,11 @@ name_conda_env = 'env_isaaclab'
 path_isaacsim = f'/home/{name_user}/anaconda3/envs/{name_conda_env}/lib/python3.10/site-packages/isaacsim'
 # isaaclab的位置, 这里以本地项目中git clone下来的isaaclab为例子
 path_isaaclab = f'/home/{name_user}/PycharmProjects/multiagent-isaacim/IsaacLab'
+
+# 本地解压后的IsaacSim的资产位置
+replacement_string = '/home/ubuntu/isaacsim_assets/'
+# 替换的目标是amazon网址
+string_to_find = 'https://omniverse-content-production.s3-us-west-2.amazonaws.com/'
 
 file_path_list = [
     f'/home/{name_user}/.local/share/ov/data/Kit/Isaac-Sim Full/4.5/user.config.json',  # 这个文件容易被遗漏
@@ -57,8 +60,6 @@ file_path_list = [
     f'{path_isaacsim}/extsDeprecated/omni.replicator.isaac/config/extension.toml',
     f'{path_isaacsim}/extscache/omni.kit.browser.asset-1.3.11/config/extension.toml',
 ]
-string_to_find = 'https://omniverse-content-production.s3-us-west-2.amazonaws.com/'
-replacement_string = '/home/ubuntu/isaacsim_assets/'
 
 for file_path in file_path_list:
     try:
@@ -80,4 +81,3 @@ for file_path in file_path_list:
         print(f"文件已成功更新: {file_path}")
     else:
         print(f"在文件中未找到需要替换的字符串: {file_path}")
-

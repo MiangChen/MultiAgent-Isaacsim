@@ -32,8 +32,7 @@ matplotlib.use('TkAgg')
 
 simulation_time = 0.0  # 记录模拟时间
 duration = 5.0  # 目标时间 (5 秒)
-initial_velocities = np.array([3, 4], dtype=np.float64)  # 初始速度
-zero_velocities = np.array([0, 0], dtype=np.float64)  # 零速度
+
 num_env = 1
 
 if __name__ == "__main__":
@@ -93,9 +92,9 @@ if __name__ == "__main__":
                                    callback_fn=env.robot_swarm.robot_active['jetbot'][2].on_physics_step)
     env.world.add_physics_callback("physics_step_jetbot_3",
                                    callback_fn=env.robot_swarm.robot_active['jetbot'][3].on_physics_step)
-    env.world.add_physics_callback("physics_step_h1_0",
-                                   callback_fn=env.robot_swarm.robot_active['h1'][0].on_physics_step)
-    env.robot_swarm.robot_active['h1'][0].base_command = [0.1, 0, 0.5]
+    # env.world.add_physics_callback("physics_step_h1_0",
+    #                                callback_fn=env.robot_swarm.robot_active['h1'][0].on_physics_step)
+    # env.robot_swarm.robot_active['h1'][0].base_command = [0.1, 0, 0.5]
 
     # 进行任务规划,
     from pddl.solver_p import plan

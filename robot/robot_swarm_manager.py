@@ -95,12 +95,12 @@ class RobotSwarmManager:
 
         for key in self.robot_class.keys():
             for robot in self.robot_warehouse[key]:
-                if robot.config.id in flag_dict[key]:
-                    robot.flag_active = True  # 机器人自身记录一份
-
-                    self.robot_active[key].append(robot)
-                    self.scene.add(robot.robot_entity)
-                    pass
+                if robot.config.type in flag_dict.keys():
+                    if robot.config.id in flag_dict[key]:
+                        robot.flag_active = True  # 机器人自身记录一份
+                        self.robot_active[key].append(robot)
+                        self.scene.add(robot.robot_entity)
+                        pass
         return
 
     def deactivate_robot(self, name: str):

@@ -6,7 +6,7 @@ from robot.robot_cfg import RobotCfg, assets_root_path
 class RobotCfgH1(RobotCfg):
     # meta info
     name_prefix: Optional[str] = 'h1'
-    type: Optional[str] = 'H1'
+    type: Optional[str] = 'h1'
     prim_path: Optional[str] = '/World/robot/h1'
 
     id: int = 0
