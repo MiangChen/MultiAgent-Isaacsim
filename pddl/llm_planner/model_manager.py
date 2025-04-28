@@ -33,7 +33,7 @@ class ModelManager:
         if cls._instance is None:
             cls._instance = super(ModelManager, cls).__new__(cls)
             _current_dir = os.path.dirname(os.path.abspath(__file__))
-            _config_path = os.path.join(_current_dir, "../../config/llm_cfg.yaml")
+            _config_path = os.path.join(_current_dir, "../../files/llm_cfg.yaml")
             try:
                 with open(_config_path, "r") as config_file:
                     cls._config = yaml.safe_load(config_file)

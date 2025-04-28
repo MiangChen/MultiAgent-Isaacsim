@@ -10,9 +10,14 @@ import gc
 import omni
 from typing import Dict, Any, List, Optional, Union
 import numpy as np
+import sys
 
-from isaac_sim_mcp_extension.gen3d import Beaver3d
-from isaac_sim_mcp_extension.usd import USDLoader
+sys.path.append("/home/yons/multiagent-isaacsim")  # 将项目根目录添加到 sys.path 中
+
+
+# TODO： import 需要整理一下
+
+from environment import Env
 
 
 # Extension Methods required by Omniverse Kit
@@ -28,6 +33,7 @@ class MCPExtension(omni.ext.IExt):
         self.host = None
         self.port = None
         self.socket = None
+        self.assert_repository_path = None
         self.server_thread = None
         self._usd_context = None
         self._physx_interface = None
@@ -44,9 +50,13 @@ class MCPExtension(omni.ext.IExt):
         """Initialize extension and UI elements"""
         print("trigger  on_startup for: ", ext_id)
         print("settings: ", self._settings.get("/exts/omni.kit.pipapi"))
-        carb.settings.get_settings().set(
+        self._settings.set(
             "/persistent/isaac/asset_root/default",
             "/home/yons/isaacsim_assets/Assets/Isaac/4.5",
+        )
+        self.assert_repository_path = (
+            self._settings.get("/exts/isaac.sim.mcp/repository")
+            or "/home/yons/multiagent-isaacsim/scene"
         )
         self.port = self._settings.get("/exts/isaac.sim.mcp/server, port") or 8766
         self.host = self._settings.get("/exts/isaac.sim.mcp/server.host") or "localhost"
@@ -55,14 +65,7 @@ class MCPExtension(omni.ext.IExt):
 
         self.ext_id = ext_id
         self._usd_context = omni.usd.get_context()
-        # omni.kit.commands.execute("CreatePrim", prim_type="Sphere")
-
-        # print("sphere created")
-        # result = self.execute_script('omni.kit.commands.execute("CreatePrim", prim_type="Cube")')
-        # print("script executed", result)
         self._start()
-        # result = self.execute_script('omni.kit.commands.execute("CreatePrim", prim_type="Cube")')
-        # print("script executed", result)
 
     def on_shutdown(self):
         print("trigger  on_shutdown for: ", self.ext_id)
@@ -232,6 +235,67 @@ class MCPExtension(omni.ext.IExt):
                 pass
             print("Client handler stopped")
 
+    # TODO: This is a temporary function to execute commands in the main thread
+    def execute_command(self, command):
+        """Execute a command in the main thread"""
+        try:
+            cmd_type = command.get("type")
+            params = command.get("params", {})
+
+            # TODO: Ensure we're in the right context
+            if cmd_type in ["create_object", "modify_object", "delete_object"]:
+                self._usd_context = omni.usd.get_context()
+                self._execute_command_internal(command)
+            else:
+                return self._execute_command_internal(command)
+
+        except Exception as e:
+            print(f"Error executing command: {str(e)}")
+            traceback.print_exc()
+            return {"status": "error", "message": str(e)}
+
+    def _execute_command_internal(self, command):
+        """Internal command execution with proper context"""
+        cmd_type = command.get("type")
+        params = command.get("params", {})
+
+        # todo: add a handler for extend simulation method if necessary
+        handlers = {
+            # "get_scene_info": self.get_scene_info,
+            # "create_object": self.create_object,
+            # "modify_object": self.modify_object,
+            # "delete_object": self.delete_object,
+            # "get_object_info": self.get_object_info,
+            # "execute_script": self.execute_script,
+            "get_scene_info": self.get_scene_info,
+            "create_physics_scene": self.create_physics_scene,
+            "create_robot": self.create_robot,
+            "browse_scene_repository": self.browse_scene_repository,
+            "load_scene": self.load_scene,
+            "save_scene": self.save_scene,
+        }
+
+        handler = handlers.get(cmd_type)
+        if handler:
+            try:
+                print(f"Executing handler for {cmd_type}")
+                result = handler(**params)
+                print(f"Handler execution complete: /n", result)
+                # return result
+                if result and result.get("status") == "success":
+                    return {"status": "success", "result": result}
+                else:
+                    return {
+                        "status": "error",
+                        "message": result.get("message", "Unknown error"),
+                    }
+            except Exception as e:
+                print(f"Error in handler: {str(e)}")
+                traceback.print_exc()
+                return {"status": "error", "message": str(e)}
+        else:
+            return {"status": "error", "message": f"Unknown command type: {cmd_type}"}
+
     def get_scene_info(self):
 
         self._stage = omni.usd.get_context().get_stage()
@@ -304,11 +368,11 @@ class MCPExtension(omni.ext.IExt):
         return {"status": "success", "message": f"{robot_type} robot created"}
 
     def create_physics_scene(
-            self,
-            objects: List[Dict[str, Any]] = [],
-            floor: bool = True,
-            gravity: List[float] = (0.0, -9.81, 0.0),
-            scene_name: str = "physics_scene",
+        self,
+        objects: List[Dict[str, Any]] = [],
+        floor: bool = True,
+        gravity: List[float] = (0.0, -9.81, 0.0),
+        scene_name: str = "physics_scene",
     ) -> Dict[str, Any]:
         """Create a physics scene with multiple objects."""
         try:
@@ -389,5 +453,87 @@ class MCPExtension(omni.ext.IExt):
             return {
                 "status": "error",
                 "message": f"Failed to create physics scene: {e}",
+                "result": None,
+            }
+
+    # TODO:扩展到isaacsim官方Assets,支持更多的场景，或者使用Asset browser mcp的resource 功能。
+    def browse_scene_repository(
+        self,
+    ) -> Dict[str, Any]:
+        """Browse the scene repository and return a list of files."""
+        try:
+            import os
+
+            # 获取场景目录
+            scene_dir = self.assert_repository_path
+            print("scene_dir: ", scene_dir)
+
+            # 获取目录下的所有文件和子目录
+            items = os.listdir(scene_dir)
+            # 过滤出所有 usd 文件以及其绝对路径
+            usd_files = [
+                os.path.join(scene_dir, item)
+                for item in items
+                if item.endswith(".usd") or item.endswith(".usda")
+            ]
+            print("usd_files: ", usd_files)
+
+            return {
+                "status": "success",
+                "message": "Scene repository browsed successfully",
+                "result": usd_files,
+            }
+
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Failed to browse scene repository: {e}",
+                "result": None,
+            }
+
+    def load_scene(
+        self,
+        scene_path: str = None,
+    ) -> Dict[str, Any]:
+        """Load a scene from the repository."""
+        try:
+            # from isaacsim import SimulationApp
+
+            # simulation_app = SimulationApp(
+            #     {"headless": False}
+            # )  # we can also run as headless.
+            self.env = Env(simulation_app=None, usd_path=scene_path)
+            self.env.reset()
+            return {
+                "status": "success",
+                "message": f"Scene loaded successfully from {scene_path}",
+                "result": None,
+            }
+        except Exception as e:
+            traceback.print_exc()
+            return {
+                "status": "error",
+                "message": f"Failed to load scene: {e}",
+                "result": None,
+            }
+
+    def save_scene(
+        self,
+        scene_name: str = None,
+    ) -> Dict[str, Any]:
+        """Save the current scene to the repository."""
+        try:
+            omni.usd.get_context().save_as_stage(
+                f"{self.assert_repository_path}/{scene_name}.usd", None
+            )
+            return {
+                "status": "success",
+                "message": f"Scene saved successfully as {scene_name}",
+                "result": None,
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Failed to save scene: {e}",
                 "result": None,
             }
