@@ -1,10 +1,12 @@
 import os
 
 from isaacsim import SimulationApp
+
 simulation_app = SimulationApp({"headless": False})  # we can also run as headless.
 from files.variables import NAME_USR, PATH_PROJECT, PATH_ISAACSIM_ASSETS
 
 import carb
+
 carb.settings.get_settings().set(
     "/presitent/isaac/asset_root/default",
     f"{PATH_ISAACSIM_ASSETS}/Assets/Isaac/4.5",
@@ -92,11 +94,26 @@ if __name__ == "__main__":
                                    callback_fn=env.robot_swarm.robot_active['jetbot'][2].on_physics_step)
     env.world.add_physics_callback("physics_step_jetbot_3",
                                    callback_fn=env.robot_swarm.robot_active['jetbot'][3].on_physics_step)
-    # env.world.add_physics_callback("physics_step_h1_0",
-    #                                callback_fn=env.robot_swarm.robot_active['h1'][0].on_physics_step)
-    # env.robot_swarm.robot_active['h1'][0].base_command = [0.1, 0, 0.5]
+    env.world.add_physics_callback("physics_step_h1_0",
+                                   callback_fn=env.robot_swarm.robot_active['h1'][0].on_physics_step)
+    env.robot_swarm.robot_active['h1'][0].base_command = [0.1, 0.1, 0.5]
 
-    # 进行任务规划,
+    from isaacsim.core.utils.types import ArticulationAction, ArticulationActions
+
+    effort = np.array([0.1, 0.1, 0.1, 0.1])
+    target_velocity = np.array([1000, 1000, 1000, 1000])
+    articulation_action = ArticulationAction(
+
+        # joint_positions=target_positions,
+        joint_velocities=target_velocity,
+
+        joint_efforts=effort,
+        # joint_indices=np.concatenate([position_indices, velocity_indices, effort_indices])
+    )
+    env.robot_swarm.robot_active['cf2x'][0].robot_entity.apply_action(articulation_action)
+
+
+    # 进行任务规划
     from pddl.solver_p import plan
     from map.map_semantic_map import MapSemantic
 
@@ -121,11 +138,12 @@ if __name__ == "__main__":
         camera_pose = np.zeros(3)  # 创建一个包含三个0.0的数组
         pos = env.robot_swarm.robot_active['jetbot'][0].get_world_pose()[0]  # x y z 坐标
         pos1 = env.robot_swarm.robot_active['jetbot'][1].get_world_pose()[0]  # x y z 坐标
-        camera_pose[:2] = pos[:2]  # 将xy坐标赋值给result的前两个元素
-        camera_pose[2] = 10
+        pos_cf2x = env.robot_swarm.robot_active['cf2x'][0].get_world_pose()[0]  # x y z 坐标
+        camera_pose[:2] = pos_cf2x[:2]  # 将xy坐标赋值给result的前两个元素
+        camera_pose[2] = pos_cf2x[-1] + 1
         set_camera_view(
             eye=camera_pose,  # np.array([5+i*0.001, 0, 50]),
-            target=pos,  # np.array([5+i*0.001, 0, 0]),
+            target=pos_cf2x,  # np.array([5+i*0.001, 0, 0]),
             camera_prim_path=env.camera_prim_path,
         )
 
@@ -160,13 +178,12 @@ if __name__ == "__main__":
                             object_semantic_name = plan[f"step_{state_step}"][robot][robot_action]['it']
                             object_semantics_pos = plan[f"step_{state_step}"][robot][robot_action]['loc']
 
-
-
         env.step(action=None)  # execute one physics step and one rendering step
         if i % 60 == 0:  # 1s加一个轨迹
             env.robot_swarm.robot_active['jetbot'][0].traj.add_trajectory(pos)
             env.robot_swarm.robot_active['jetbot'][1].traj.add_trajectory(pos1)
             env.robot_swarm.robot_active['jetbot'][2].traj.add_trajectory(pos1)
             env.robot_swarm.robot_active['jetbot'][3].traj.add_trajectory(pos1)
+            print(env.robot_swarm.robot_active['cf2x'][0].robot_entity.get_joint_velocities())
 
     simulation_app.close()  # close Isaac Sim

@@ -85,3 +85,5 @@ files/llm_cfg.yaml
 *.swp
 *.swo
 *~
+/PX4-Autopilot/
+/IsaacLab/

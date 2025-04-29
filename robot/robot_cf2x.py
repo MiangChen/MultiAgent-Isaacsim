@@ -5,49 +5,70 @@ from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 from controller.controller_pid import ControllerPID
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
+from controller.controller_cf2x import ControllerCf2x
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
-from robot.robot_cfg_jetbot import RobotCfgJetbot
+from robot.robot_cfg_drone_cf2x import RobotCfgCf2x
+
+import carb
+from isaacsim.core.utils.prims import define_prim, get_prim_at_path
+from isaacsim.core.prims import SingleArticulation
 
 
-class RobotJetbot(RobotBase):
-    def __init__(self, config: RobotCfgJetbot, scene: Scene, map_grid: GridMap):
+class RobotCf2x(RobotBase):
+    def __init__(self, config: RobotCfgCf2x, scene: Scene, map_grid: GridMap):
         super().__init__(config, scene, map_grid)
+
         prim_path = config.prim_path + f'/{config.name_prefix}_{config.id}'
-        self.robot_entity = WheeledRobot(
+        prim = get_prim_at_path(prim_path)
+        if not prim.IsValid():
+            prim = define_prim(prim_path, "Xform")
+
+            if config.usd_path:
+                prim.GetReferences().AddReference(config.usd_path)  # 加载机器人USD模型
+            else:
+                carb.log_error("unable to add robot usd, usd_path not provided")
+
+        self.robot_entity = SingleArticulation(
             prim_path=prim_path,
             name=config.name_prefix + f'_{config.id}',
-            wheel_dof_names=['left_wheel_joint', 'right_wheel_joint'],
-            create_robot=True,
             position=np.array(config.position),
             orientation=np.array(config.orientation),
-            usd_path=config.usd_path,
         )
+        #
+        # self.robot_entity = WheeledRobot(
+        #     prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
+        #     name=config.name_prefix + f'_{config.id}',
+        #     wheel_dof_names=['left_wheel_joint', 'right_wheel_joint'],
+        #     create_robot=True,
+        #     position=np.array(config.position),
+        #     orientation=np.array(config.orientation),
+        #     usd_path=config.usd_path,
+        # )
         self.flag_active = False
         self.robot_prim = prim_path
         # self.scale = config.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以
-        from controller.controller_pid_jetbot import ControllerJetbot
-        self.controller = ControllerJetbot()
-        # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
-        self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
-        self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
-
-        self.traj = Trajectory(
-            robot_prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
-            # name='traj' + f'_{config.id}',
-            id=config.id,
-            max_points=100,
-            color=(0.3, 1.0, 0.3),
-            scene=self.scene,
-            radius=0.05,
-        )
-        # self.history_traj = []  # 历史轨迹
-        # self.last_yaw = 0
-
-        self.view_angle = 2 * np.pi / 3  # 感知视野 弧度
-        self.view_radius = 2  # 感知半径 米
-        self.velocity = [0, 0]
-
+        # from controller.controller_pid_jetbot import ControllerJetbot
+        self.controller = ControllerCf2x()
+        # # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
+        # self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
+        # self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
+        #
+        # self.traj = Trajectory(
+        #     robot_prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
+        #     # name='traj' + f'_{config.id}',
+        #     id=config.id,
+        #     max_points=100,
+        #     color=(0.3, 1.0, 0.3),
+        #     scene=self.scene,
+        #     radius=0.05,
+        # )
+        # # self.history_traj = []  # 历史轨迹
+        # # self.last_yaw = 0
+        #
+        # self.view_angle = 2 * np.pi / 3  # 感知视野 弧度
+        # self.view_radius = 2  # 感知半径 米
+        self.velocity = [0, 0, 0]  # 表示无人机的x y z方向上的速度
         self.map_grid = map_grid  # 用于存储一个实例化的gridmap
 
         return
@@ -57,6 +78,11 @@ class RobotJetbot(RobotBase):
 
     def apply_action(self, action):
         self.robot_entity.apply_action(self.controller.velocity(action))
+        # self.robot_entity.apply_action(self.velocity)
+        return
+
+    def forward(self, velocity):
+        self.robot_entity.apply_action(self.controller.forward(velocity))
         return
 
     def on_physics_step(self, step_size):

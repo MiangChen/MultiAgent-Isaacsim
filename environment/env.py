@@ -1,6 +1,7 @@
 from map.map_grid_map import GridMap
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.robot_h1 import RobotH1, RobotCfgH1
+from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
 from robot.robot_swarm_manager import RobotSwarmManager
 from files.variables import PATH_PROJECT, PATH_ISAACSIM_ASSETS
 
@@ -75,7 +76,10 @@ class Env(gym.Env):
         )  # 注册jetbot机器人
         self.robot_swarm.register_robot_class(
             robot_class_name="h1", robot_class=RobotH1, robot_class_cfg=RobotCfgH1
-        )  # 注册jetbot机器人
+        )  # 注册h1机器人
+        self.robot_swarm.register_robot_class(
+            robot_class_name="cf2x", robot_class=RobotCf2x, robot_class_cfg=RobotCfgCf2x
+        )  # 注册cf2x机器人
         # TODO 更新路径的设置，
         self.robot_swarm.load_robot_swarm_cfg(
             f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml"
