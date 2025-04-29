@@ -13,7 +13,7 @@ class ControllerCf2x(BaseController):
     def forward(self, command):
         # command will have two elements, first element is the forward velocity
         # second element is the angular velocity (yaw only).
-        joint_efforts = np.tile(np.array([0.1, 0.1, 0.1, 0.1]), (1,1))
+        joint_efforts = np.tile(np.array([0.15, 0.15, 0.15, 0.15]), (1,1))
         # A controller has to return an ArticulationAction
         return ArticulationActions(joint_efforts=joint_efforts)
 
