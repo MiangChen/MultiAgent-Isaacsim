@@ -100,17 +100,8 @@ if __name__ == "__main__":
 
     from isaacsim.core.utils.types import ArticulationAction, ArticulationActions
 
-    effort = np.array([0.1, 0.1, 0.1, 0.1])
-    target_velocity = np.array([1000, 1000, 1000, 1000])
-    articulation_action = ArticulationAction(
 
-        # joint_positions=target_positions,
-        joint_velocities=target_velocity,
-
-        joint_efforts=effort,
-        # joint_indices=np.concatenate([position_indices, velocity_indices, effort_indices])
-    )
-    env.robot_swarm.robot_active['cf2x'][0].robot_entity.apply_action(articulation_action)
+    env.robot_swarm.robot_active['cf2x'][0].forward()
 
 
     # 进行任务规划

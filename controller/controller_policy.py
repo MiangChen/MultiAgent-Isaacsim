@@ -107,8 +107,10 @@ class PolicyController(BaseController):
         # 设置关节力模式和控制模式
         # self.robot.get_articulation_controller().set_effort_modes(effort_modes)
         # self.robot.get_articulation_controller().switch_control_mode(control_mode)
-        robot.get_articulation_controller().set_effort_modes(effort_modes)
-        robot.get_articulation_controller().switch_control_mode(control_mode)
+        # robot.get_articulation_controller().set_effort_modes(effort_modes)
+        robot.set_effort_modes(effort_modes)  # 'force'
+        # robot.get_articulation_controller().switch_control_mode(control_mode)
+        robot.switch_control_mode(control_mode)  # 'position'
 
         # 从配置文件加载关节属性
         max_effort, max_vel, stiffness, damping, self.default_pos, self.default_vel = get_robot_joint_properties(
@@ -116,10 +118,13 @@ class PolicyController(BaseController):
         )
         # 应用参数到机器人
         if set_gains:
-            robot._articulation_view.set_gains(stiffness, damping) # 设置PD参数
+            # robot._articulation_view.set_gains(stiffness, damping) # 设置PD参数
+            robot.set_gains(stiffness, damping) # 设置PD参数
         if set_limits:
-            robot._articulation_view.set_max_efforts(max_effort) # 力矩限制
-            robot._articulation_view.set_max_joint_velocities(max_vel) # 力矩限制
+            # robot._articulation_view.set_max_efforts(max_effort) # 力矩限制
+            robot.set_max_efforts(max_effort) # 力矩限制
+            # robot._articulation_view.set_max_joint_velocities(max_vel) # 力矩限制
+            robot.set_max_joint_velocities(max_vel) # 力矩限制
         if set_articulation_props:
             self._set_articulation_props(robot) # 设置高级物理属性
 
@@ -137,15 +142,16 @@ class PolicyController(BaseController):
         sleep_threshold = articulation_prop.get("sleep_threshold") # 休眠阈值
 		# 应用参数到机器人
         if solver_position_iteration_count not in [None, float("inf")]:
-            robot.set_solver_position_iteration_count(solver_position_iteration_count)
+            # robot.set_solver_position_iteration_count(solver_position_iteration_count)
+            robot.set_solver_position_iteration_counts([solver_position_iteration_count])
         if solver_velocity_iteration_count not in [None, float("inf")]:
-            robot.set_solver_velocity_iteration_count(solver_velocity_iteration_count)
+            robot.set_solver_velocity_iteration_counts([solver_velocity_iteration_count])
         if stabilization_threshold not in [None, float("inf")]:
-            robot.set_stabilization_threshold(stabilization_threshold)
+            robot.set_stabilization_thresholds([stabilization_threshold])
         if isinstance(enabled_self_collisions, bool):
-            robot.set_enabled_self_collisions(enabled_self_collisions)
+            robot.set_enabled_self_collisions([enabled_self_collisions])
         if sleep_threshold not in [None, float("inf")]:
-            robot.set_sleep_threshold(sleep_threshold)
+            robot.set_sleep_thresholds([sleep_threshold])
 
     def _compute_action(self, obs: np.ndarray) -> np.ndarray:
         """

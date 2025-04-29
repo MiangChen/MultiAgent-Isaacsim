@@ -12,7 +12,7 @@ from robot.robot_cfg_drone_cf2x import RobotCfgCf2x
 
 import carb
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
-from isaacsim.core.prims import SingleArticulation
+from isaacsim.core.prims import Articulation
 
 
 class RobotCf2x(RobotBase):
@@ -29,22 +29,13 @@ class RobotCf2x(RobotBase):
             else:
                 carb.log_error("unable to add robot usd, usd_path not provided")
 
-        self.robot_entity = SingleArticulation(
-            prim_path=prim_path,
+        self.robot_entity = Articulation(
+            prim_paths_expr=prim_path,
             name=config.name_prefix + f'_{config.id}',
-            position=np.array(config.position),
-            orientation=np.array(config.orientation),
+            positions=np.array([config.position]),
+            orientations=np.array([config.orientation]),
         )
-        #
-        # self.robot_entity = WheeledRobot(
-        #     prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
-        #     name=config.name_prefix + f'_{config.id}',
-        #     wheel_dof_names=['left_wheel_joint', 'right_wheel_joint'],
-        #     create_robot=True,
-        #     position=np.array(config.position),
-        #     orientation=np.array(config.orientation),
-        #     usd_path=config.usd_path,
-        # )
+
         self.flag_active = False
         self.robot_prim = prim_path
         # self.scale = config.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以
@@ -76,12 +67,11 @@ class RobotCf2x(RobotBase):
     def initialize(self):
         return
 
-    def apply_action(self, action):
+    def apply_action(self, action=None):
         self.robot_entity.apply_action(self.controller.velocity(action))
-        # self.robot_entity.apply_action(self.velocity)
         return
 
-    def forward(self, velocity):
+    def forward(self, velocity=None):
         self.robot_entity.apply_action(self.controller.forward(velocity))
         return
 
@@ -105,7 +95,9 @@ class RobotCf2x(RobotBase):
         #     local_position = local_transform.ExtractTranslation()  # 提取平移部分
         #     local_rotation = local_transform.ExtractRotationQuat()
         #     return local_position, [local_rotation.real] + list(local_rotation.imaginary)
-        return self.robot_entity.get_world_pose()
+        pos_IB, q_IB = self.robot_entity.get_world_poses()
+        pos_IB, q_IB = pos_IB[0], q_IB[0]
+        return pos_IB, q_IB
 
     def quaternion_to_yaw(self, orientation):
         import math

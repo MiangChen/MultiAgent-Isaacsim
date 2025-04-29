@@ -8,7 +8,7 @@ from isaacsim.core.prims import RigidPrim
 # from isaacsim.core.robots.robot import Robot as IsaacRobot  # 已经在4.5中取消了
 # from isaacsim.core.api.robots import Robot as IsaacRobot
 from isaacsim.core.api.scenes import Scene
-
+from isaacsim.core.prims import Articulation
 
 class RobotBase:
     """Base class of robot."""
@@ -18,7 +18,7 @@ class RobotBase:
         self.config = config
         self.scene = scene
         self.map_grid = GridMap
-        # self.robot_entity: IsaacRobot | None = None  # 代表机器人的实体
+        self.robot_entity: Articulation = None# 代表机器人的实体
         self.controllers = {}
         self.sensors = {}
         # 用于回调函数中的
@@ -61,6 +61,11 @@ class RobotBase:
             self._scene.remove_object(rigid_body.name_prefix)
             log.debug(f'rigid body {rigid_body} removed')
         log.debug(f'robot {self.name} clean up')
+
+    def get_world_pose(self):
+        pos_IB, q_IB = self.robot_entity.get_world_poses()
+        pos_IB, q_IB = pos_IB[0], q_IB[0]
+        return pos_IB, q_IB
 
     def apply_action(self, action: dict):
         """Apply actions of controllers to robot.

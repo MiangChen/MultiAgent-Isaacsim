@@ -1,5 +1,7 @@
+import numpy as np
+
 from isaacsim.core.api.controllers import BaseController
-from isaacsim.core.utils.types import ArticulationAction
+from isaacsim.core.utils.types import ArticulationActions
 
 
 class ControllerCf2x(BaseController):
@@ -11,9 +13,10 @@ class ControllerCf2x(BaseController):
     def forward(self, command):
         # command will have two elements, first element is the forward velocity
         # second element is the angular velocity (yaw only).
-        joint_velocities = [10000, 10000, 10000, 10000]
+        joint_efforts = np.tile(np.array([0.1, 0.1, 0.1, 0.1]), (1,1))
         # A controller has to return an ArticulationAction
-        return ArticulationAction(joint_velocities=joint_velocities)
+        return ArticulationActions(joint_efforts=joint_efforts)
 
     def velocity(self, command):
-        return ArticulationAction(joint_velocities=command)
+        command = np.tile(np.array(command), (1, 1))
+        return ArticulationActions(joint_velocities=command)

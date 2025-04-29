@@ -14,7 +14,7 @@ import carb
 import numpy as np
 
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
-from isaacsim.core.prims import SingleArticulation
+from isaacsim.core.prims import Articulation
 
 
 class RobotH1(RobotBase):
@@ -31,11 +31,11 @@ class RobotH1(RobotBase):
             else:
                 carb.log_error("unable to add robot usd, usd_path not provided")
         # 初始化机器人关节树
-        self.robot_entity = SingleArticulation(
-            prim_path=prim_path,
+        self.robot_entity = Articulation(
+            prim_paths_expr=prim_path,
             name=config.name_prefix + f'_{config.id}',
-            position=np.array(config.position),
-            orientation=np.array(config.orientation),
+            positions=np.array([config.position]),
+            orientations=np.array([config.orientation]),
         )
 
         # self.config = config
@@ -82,8 +82,9 @@ class RobotH1(RobotBase):
         self.forward(step_size, self.base_command)
 
     def get_world_pose(self):
-
-        return self.robot_entity.get_world_pose()
+        pos_IB, q_IB = self.robot_entity.get_world_poses()
+        pos_IB, q_IB = pos_IB[0], q_IB[0]
+        return pos_IB, q_IB
 
     def quaternion_to_yaw(self, orientation):
         import math

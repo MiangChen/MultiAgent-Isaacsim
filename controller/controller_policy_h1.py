@@ -15,7 +15,7 @@ import numpy as np
 import omni
 import omni.kit.commands
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
-from isaacsim.core.utils.types import ArticulationAction
+from isaacsim.core.utils.types import ArticulationActions
 # from isaacsim.robot.policy.examples.controllers import PolicyController
 # from isaacsim.storage.native import get_assets_root_path
 from isaacsim.core.utils.nucleus import get_assets_root_path
@@ -73,9 +73,10 @@ class H1FlatTerrainPolicy(PolicyController):
         np.ndarray -- The observation vector.
 
         """
-        lin_vel_I = robot.get_linear_velocity()
-        ang_vel_I = robot.get_angular_velocity()
-        pos_IB, q_IB = robot.get_world_pose()
+        lin_vel_I = robot.get_linear_velocities()[0]  # shape(1,3) -> shape(3)
+        ang_vel_I = robot.get_angular_velocities()[0]
+        pos_IB, q_IB = robot.get_world_poses()
+        pos_IB, q_IB = pos_IB[0], q_IB[0]
 
         R_IB = quat_to_rot_matrix(q_IB)
         R_BI = R_IB.transpose()
@@ -93,8 +94,8 @@ class H1FlatTerrainPolicy(PolicyController):
         # Command
         obs[9:12] = command
         # Joint states
-        current_joint_pos = robot.get_joint_positions()
-        current_joint_vel = robot.get_joint_velocities()
+        current_joint_pos = robot.get_joint_positions()[0]
+        current_joint_vel = robot.get_joint_velocities()[0]
         obs[12:31] = current_joint_pos - self.default_pos
         obs[31:50] = current_joint_vel
         # Previous Action
@@ -114,12 +115,9 @@ class H1FlatTerrainPolicy(PolicyController):
             obs = self._compute_observation(command, robot)
             self.action = self._compute_action(obs)
             self._previous_action = self.action.copy()
-
-        action = ArticulationAction(joint_positions=self.default_pos + (self.action * self._action_scale))
-        # self.robot.apply_action(action)
-
+        position = np.tile(np.array(self.default_pos + (self.action * self._action_scale)), (1,1))
+        action = ArticulationActions(joint_positions=position)
         self._policy_counter += 1
-
         return action
 
     def initialize(self, robot):
