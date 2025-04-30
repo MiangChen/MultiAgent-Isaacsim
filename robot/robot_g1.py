@@ -51,21 +51,6 @@ class RobotJetbot(RobotBase):
         self.robot_entity.apply_action(self.controller.velocity(action))
         return
 
-    def get_world_pose(self):
-        # 下面的方式是基于pxr方式获取pose的
-        # from pxr import UsdGeom
-        #
-        # import isaacsim.core.utils.stage as stage_utils
-        # stage = stage_utils.get_current_stage()
-        # prim_robot = stage.GetPrimAtPath(self.robot_prim)
-        # # 检查是否是 Xformable（可变换对象）
-        # if prim_robot.IsA(UsdGeom.Xformable):
-        #     xform = UsdGeom.Xformable(prim_robot)
-        #     local_transform = xform.GetLocalTransformation()  # 返回 Gf.Matrix4d
-        #     local_position = local_transform.ExtractTranslation()  # 提取平移部分
-        #     local_rotation = local_transform.ExtractRotationQuat()
-        #     return local_position, [local_rotation.real] + list(local_rotation.imaginary)
-        return self.robot_entity.get_world_pose()
 
     def quaternion_to_yaw(self, orientation):
         import math
@@ -153,13 +138,13 @@ class RobotJetbot(RobotBase):
         # print("yaw", car_yaw_angle, "target yaw", car_to_target_angle,"\tdelta angle", delta_angle, "\tdistance ", np.linalg.norm(target_postion[0:2] - car_position[0:2]))
         return False  # 还没有到达
 
-    def move_along_path(self, path: list = None, reset_flag: bool = False):
+    def move_along_path(self, path: list = None, flag_reset: bool = False):
         """
         让机器人沿着一个list的路径点运动
         需求: 在while外面 能够记录已经到达的点, 每次到达某个目标点的 10cm附近,就认为到了, 然后准备下一个点
 
         """
-        if reset_flag == True:
+        if flag_reset == True:
             self.path_index = 0
             self.path = path
 

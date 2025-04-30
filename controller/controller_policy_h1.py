@@ -102,7 +102,7 @@ class H1FlatTerrainPolicy(PolicyController):
         obs[50:69] = self._previous_action
         return obs
 
-    def forward(self, dt, command, robot):
+    def forward(self, dt, command, robot) -> np.ndarray:
         """
         Compute the desired articulation action and apply them to the robot articulation.
 
@@ -116,9 +116,8 @@ class H1FlatTerrainPolicy(PolicyController):
             self.action = self._compute_action(obs)
             self._previous_action = self.action.copy()
         position = np.tile(np.array(self.default_pos + (self.action * self._action_scale)), (1,1))
-        action = ArticulationActions(joint_positions=position)
         self._policy_counter += 1
-        return action
+        return position
 
     def initialize(self, robot):
         """

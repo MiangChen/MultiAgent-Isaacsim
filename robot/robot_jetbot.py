@@ -1,33 +1,41 @@
 import numpy as np
-from isaacsim.core.api.scenes import Scene
-from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 
 from controller.controller_pid import ControllerPID
+from controller.controller_pid_jetbot import ControllerJetbot
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_jetbot import RobotCfgJetbot
 
+import carb
+from isaacsim.core.api.scenes import Scene
+from isaacsim.core.prims import Articulation
+from isaacsim.core.utils.prims import define_prim, get_prim_at_path
+from isaacsim.core.utils.types import ArticulationActions
+
 
 class RobotJetbot(RobotBase):
     def __init__(self, config: RobotCfgJetbot, scene: Scene, map_grid: GridMap):
         super().__init__(config, scene, map_grid)
-        prim_path = config.prim_path + f'/{config.name_prefix}_{config.id}'
-        self.robot_entity = WheeledRobot(
-            prim_path=prim_path,
+        self.prim_path = config.prim_path + f'/{config.name_prefix}_{config.id}'
+        prim = get_prim_at_path(self.prim_path)
+        if not prim.IsValid():
+            prim = define_prim(self.prim_path, "Xform")
+            if config.usd_path:
+                prim.GetReferences().AddReference(config.usd_path)  # 加载机器人USD模型
+            else:
+                carb.log_error("unable to add robot usd, usd_path not provided")
+        self.robot_entity = Articulation(
+            prim_paths_expr=self.prim_path,
             name=config.name_prefix + f'_{config.id}',
-            wheel_dof_names=['left_wheel_joint', 'right_wheel_joint'],
-            create_robot=True,
-            position=np.array(config.position),
-            orientation=np.array(config.orientation),
-            usd_path=config.usd_path,
+            positions=np.array([config.position]),
+            orientations=np.array([config.orientation]),
         )
         self.flag_active = False
-        self.robot_prim = prim_path
-        # self.scale = config.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以
-        from controller.controller_pid_jetbot import ControllerJetbot
+
         self.controller = ControllerJetbot()
+        self.control_mode = 'joint_velocities'
         # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
         self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
         self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
@@ -41,75 +49,7 @@ class RobotJetbot(RobotBase):
             scene=self.scene,
             radius=0.05,
         )
-        # self.history_traj = []  # 历史轨迹
-        # self.last_yaw = 0
-
-        self.view_angle = 2 * np.pi / 3  # 感知视野 弧度
-        self.view_radius = 2  # 感知半径 米
-        self.velocity = [0, 0]
-
-        self.map_grid = map_grid  # 用于存储一个实例化的gridmap
-
         return
-
-    def initialize(self):
-        return
-
-    def apply_action(self, action):
-        self.robot_entity.apply_action(self.controller.velocity(action))
-        return
-
-    def on_physics_step(self, step_size):
-        if self.flag_world_reset == True:
-            if self.flag_action_navigation == True:
-                self.move_along_path()  # 每一次都计算下速度
-            self.apply_action(action=self.velocity)  # 把速度传输给机器人本体
-
-    def get_world_pose(self):
-        # 下面的方式是基于pxr方式获取pose的
-        # from pxr import UsdGeom
-        #
-        # import isaacsim.core.utils.stage as stage_utils
-        # stage = stage_utils.get_current_stage()
-        # prim_robot = stage.GetPrimAtPath(self.robot_prim)
-        # # 检查是否是 Xformable（可变换对象）
-        # if prim_robot.IsA(UsdGeom.Xformable):
-        #     xform = UsdGeom.Xformable(prim_robot)
-        #     local_transform = xform.GetLocalTransformation()  # 返回 Gf.Matrix4d
-        #     local_position = local_transform.ExtractTranslation()  # 提取平移部分
-        #     local_rotation = local_transform.ExtractRotationQuat()
-        #     return local_position, [local_rotation.real] + list(local_rotation.imaginary)
-        return self.robot_entity.get_world_pose()
-
-    def quaternion_to_yaw(self, orientation):
-        import math
-        alpha = 0.1
-        norm = math.sqrt(sum(comp ** 2 for comp in orientation))
-        if abs(norm - 1) > 0.1:
-            print("没有归一")
-        qw, qx, qy, qz = orientation
-        # 计算方位角（绕 z 轴的旋转角度）
-        sinr_cosp = 2.0 * (qw * qz + qx * qy)
-        cosr_cosp = 1.0 - 2.0 * (qy ** 2 + qz ** 2)
-        # 转换为 [-π, π] 范围，逆时针为正
-        yaw = math.atan2(sinr_cosp, cosr_cosp)
-
-        # 本来要做连续性, 避免pi -pi这个奇异点的, 但是实际测试完后发现并不需要了
-        # if self.last_yaw is not None:
-        #     delta_yaw = yaw - self.last_yaw
-        #     if delta_yaw > np.pi:
-        #         delta_yaw -= 2 * np.pi
-        #     elif delta_yaw < -np.pi:
-        #         delta_yaw += 2 * np.pi
-
-        # yaw = self.last_yaw + delta_yaw
-
-        # yaw = alpha * yaw + (1 - alpha) * self.last_yaw
-        # self.last_yaw = yaw
-        # 转换为 [0, 2π] 范围
-        # if yaw < 0:
-        #     yaw += 2 * math.pi
-        return yaw
 
     def move_to(self, target_postion):
         import numpy as np
@@ -118,7 +58,7 @@ class RobotJetbot(RobotBase):
         缺点：不适合3D，无法避障，地面要是平的
         速度有两个分两，自转的分量 + 前进的分量
         """
-        car_position, car_orientation = self.robot_entity.get_world_pose()  # self.get_world_pose()  ## type np.array
+        car_position, car_orientation = self.get_world_poses()  # self.get_world_pose()  ## type np.array
         # print(car_orientation)
         # print(type(car_orientation))
         # car_position, car_orientation = self.robot.get_world_pose()  ## type np.array
@@ -138,8 +78,7 @@ class RobotJetbot(RobotBase):
         elif delta_angle > np.pi:
             delta_angle -= 2 * np.pi
         if np.linalg.norm(target_postion[0:2] - car_position[0:2]) < 0.1:
-            self.velocity = [0, 0]
-            # self.apply_action([0, 0])
+            self.action = [0, 0]
             return True  # 已经到达目标点附近10cm, 停止运动
 
         # k1 = 1 / np.pi
@@ -161,37 +100,8 @@ class RobotJetbot(RobotBase):
             v_right = v_max
         elif v_right < -v_max:
             v_right = -v_max
-        self.velocity = [v_left, v_right]
-        # self.apply_action([v_left, v_right])  # 尝试删掉这个, 用于在中断中执行速度指令;
-        # print(v_left, v_right)
-        # print("v rotation", v_rotation, "v forward", v_forward)
-        # print("yaw", car_yaw_angle, "target yaw", car_to_target_angle,"\tdelta angle", delta_angle, "\tdistance ", np.linalg.norm(target_postion[0:2] - car_position[0:2]))
+        self.action = [v_left, v_right]
         return False  # 还没有到达
-
-    def move_along_path(self, path: list = None, reset_flag: bool = False):
-        """
-        让机器人沿着一个list的路径点运动
-        需求: 在while外面 能够记录已经到达的点, 每次到达某个目标点的 10cm附近,就认为到了, 然后准备下一个点
-
-        """
-        if reset_flag == True:
-            self.path_index = 0
-            self.path = path
-
-        # car_position, car_orientation = self.robot.get_world_pose()  ## type np.array
-        # # 获取2D方向的小车朝向，逆时针是正
-        # if np.linalg.norm(self.path[self.path_index][0:2] - car_position[0:2]) < 0.1:
-        #     self.path_index = self.path_index + 1
-        if self.path_index < len(self.path):  # 当index==len的时候, 就已经到达目标了
-            reach_flat = self.move_to(self.path[self.path_index])
-            # print(self.path[self.path_index])
-            if reach_flat == True:
-                self.path_index += 1
-            return False
-        else:
-            self.flag_action_navigation = False
-            self.state_skill_complete = True
-            return True
 
     def navigate_to(self, pos_target: np.array = None, reset_flag: bool = False):
         """
@@ -211,7 +121,7 @@ class RobotJetbot(RobotBase):
             raise ValueError("no target position")
         elif pos_target[2] != 0:
             raise ValueError("小车的z轴高度得在平面上")
-        pos_robot = self.get_world_pose()[0]
+        pos_robot = self.get_world_poses()[0]
 
         pos_index_target = self.map_grid.compute_index(pos_target)
         pos_index_robot = self.map_grid.compute_index(pos_robot)
@@ -228,7 +138,7 @@ class RobotJetbot(RobotBase):
             real_path[i] = self.map_grid.pos_map[tuple(path[i])]
             real_path[i][-1] = 0
 
-        self.move_along_path(real_path, reset_flag=True)  # [[1,1], [1,2], [2,2], [2,1],[1,1]]
+        self.move_along_path(real_path, flag_reset=True)  # [[1,1], [1,2], [2,2], [2,1],[1,1]]
 
         # 标记一下, 开始运动
         self.flag_action_navigation = True
@@ -237,71 +147,38 @@ class RobotJetbot(RobotBase):
         self.state_skill = 'navigate_to'
         self.state_skill_complete = False
 
+        return
 
+    def on_physics_step(self, step_size):
+        if self.flag_world_reset == True:
+            if self.flag_action_navigation == True:
+                self.move_along_path()  # 每一次都计算下速度
+                # self.action = self.controller.forward()
+                self.step(self.action)
         return
 
     def pick_up(self):
-        """
-        让机器人拿起来某一个东西, 需要指定物品的名称, 并且在操作范围内
-        Returns:
-        """
+        pass
+        return
 
+    def put_down(self):
+        pass
+        return
 
+    def step(self, action):
+        if self.control_mode == 'joint_position':
+            action = ArticulationActions(joint_positions=action)
+        elif self.control_mode == 'joint_velocities':
+            action = ArticulationActions(joint_velocities=action)
+        elif self.control_mode == 'joint_efforts':
+            action = ArticulationActions(joint_efforts=action)
+        else:
+            raise NotImplementedError
+        self.robot_entity.apply_action(action)
 
-    def explore_zone(self, zone_corners: list = None, scane_direction: str = "horizontal", reset_flag: bool = False):
-        """
-        用户输入一个方形区域的四个角落点, 需要根据感知范围来探索这个区域, 感知范围是一个扇形的区域, 假设视野为120, 半径为2m,
-        输入一个[[1,1], [1,10], [10,10], [10,1]]的方形区域, 该如何规划路径?
-
-        """
-        # 1. 计算区域的边界
-        min_x = min(corner[0] for corner in zone_corners)
-        max_x = max(corner[0] for corner in zone_corners)
-        min_y = min(corner[1] for corner in zone_corners)
-        max_y = max(corner[1] for corner in zone_corners)
-
-        # 2. 确定扫描线的方向 (这里选择水平扫描)
-        scan_direction = scane_direction  # 可以选择 "horizontal" 或 "vertical"
-
-        # 3. 计算扫描线之间的距离，保证覆盖整个区域
-        #    使用视野半径和视野角度来计算有效覆盖宽度
-        import math
-        effective_width = 2 * self.view_radius * math.sin(self.view_angle / 2)
-        scan_line_spacing = effective_width * 0.8  # 稍微重叠，确保覆盖
-
-        # 4. 生成扫描线
-        scan_lines = []
-        if scan_direction == "horizontal":
-            y = min_y
-        while y <= max_y:
-            scan_lines.append(y)
-            y += scan_line_spacing
-        else:  # vertical
-            x = min_x
-            while x <= max_x:
-                scan_lines.append(x)
-                x += scan_line_spacing
-
-        # 5. 生成路径点
-        path_points = []
-        if scan_direction == "horizontal":
-            for i, y in enumerate(scan_lines):
-                if i % 2 == 0:  # 偶数行，从左到右
-                    path_points.append([min_x, y])
-                    path_points.append([max_x, y])
-                else:  # 奇数行，从右到左
-                    path_points.append([max_x, y])
-                    path_points.append([min_x, y])
-        else:  # vertical
-            for i, x in enumerate(scan_lines):
-                if i % 2 == 0:  # 偶数列，从下到上
-                    path_points.append([x, min_y])
-                    path_points.append([x, max_y])
-                else:  # 奇数列，从上到下
-                    path_points.append([x, max_y])
-                    path_points.append([x, min_y])
-
-        return path_points
+        # obs暂时未实现
+        obs = None
+        return obs
 
 
 if __name__ == '__main__':

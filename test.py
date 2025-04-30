@@ -26,7 +26,7 @@ def on_physics_step(step_size) -> None:
     #     first_step = True
     else:
         for robot in robots:
-            robot.forward(step_size, base_command)
+            robot.step(step_size, base_command)
 
 if __name__ == "__main__":
     # 加载复杂场景

@@ -15,16 +15,17 @@ import numpy as np
 
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.prims import Articulation
+from isaacsim.core.utils.types import ArticulationActions
 
 
 class RobotH1(RobotBase):
     def __init__(self, config: RobotCfgH1, scene: Scene = None, map_grid: GridMap = None) -> None:
         super().__init__(config, scene, map_grid)
-        prim_path = config.prim_path + f'/{config.name_prefix}_{config.id}'
+        self.prim_path = config.prim_path + f'/{config.name_prefix}_{config.id}'
 
-        prim = get_prim_at_path(prim_path)
+        prim = get_prim_at_path(self.prim_path)
         if not prim.IsValid():
-            prim = define_prim(prim_path, "Xform")
+            prim = define_prim(self.prim_path, "Xform")
 
             if config.usd_path:
                 prim.GetReferences().AddReference(config.usd_path)  # 加载机器人USD模型
@@ -32,7 +33,7 @@ class RobotH1(RobotBase):
                 carb.log_error("unable to add robot usd, usd_path not provided")
         # 初始化机器人关节树
         self.robot_entity = Articulation(
-            prim_paths_expr=prim_path,
+            prim_paths_expr=self.prim_path,
             name=config.name_prefix + f'_{config.id}',
             positions=np.array([config.position]),
             orientations=np.array([config.orientation]),
@@ -41,6 +42,7 @@ class RobotH1(RobotBase):
         # self.config = config
         self.flag_active = False
         self.robot_prim = config.prim_path + f'/{config.name_prefix}_{config.id}'
+        self.control_mode = 'joint_positions'
         # self.scale = config.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以, 所以注释掉了
         # from controller.controller_pid_jetbot import ControllerJetbot
         # self.controller = ControllerJetbot()
@@ -65,56 +67,35 @@ class RobotH1(RobotBase):
 
         # 神经网络控制器
         # prim_path = "/World/h1"
-        self.controller_policy = H1FlatTerrainPolicy(prim_path=prim_path)
+        self.controller_policy = H1FlatTerrainPolicy(prim_path=self.prim_path)
         self.base_command = np.zeros(3)
         return
 
     def initialize(self):
         self.controller_policy.initialize(self.robot_entity)  # 初始化配置
 
-    def forward(self, dt, command):
-        action = self.controller_policy.forward(dt, command, self.robot_entity)
-        # self.robot_entity.apply_action(self.controller.velocity(action))
+    def step(self, action):
+        if self.control_mode == 'joint_position':
+            action = ArticulationActions(joint_positions=action)
+        elif self.control_mode == 'joint_velocities':
+            action = ArticulationActions(joint_velocities=action)
+        elif self.control_mode == 'joint_efforts':
+            action = ArticulationActions(joint_efforts=action)
+        else:
+            raise NotImplementedError
         self.robot_entity.apply_action(action)
-        return
+
+        # obs暂时未实现
+        obs = None
+        return obs
 
     def on_physics_step(self, step_size):
-        self.forward(step_size, self.base_command)
-
-    def get_world_pose(self):
-        pos_IB, q_IB = self.robot_entity.get_world_poses()
-        pos_IB, q_IB = pos_IB[0], q_IB[0]
-        return pos_IB, q_IB
-
-    def quaternion_to_yaw(self, orientation):
-        import math
-        alpha = 0.1
-        norm = math.sqrt(sum(comp ** 2 for comp in orientation))
-        if abs(norm - 1) > 0.1:
-            print("没有归一")
-        qw, qx, qy, qz = orientation
-        # 计算方位角（绕 z 轴的旋转角度）
-        sinr_cosp = 2.0 * (qw * qz + qx * qy)
-        cosr_cosp = 1.0 - 2.0 * (qy ** 2 + qz ** 2)
-        # 转换为 [-π, π] 范围，逆时针为正
-        yaw = math.atan2(sinr_cosp, cosr_cosp)
-
-        # 本来要做连续性, 避免pi -pi这个奇异点的, 但是实际测试完后发现并不需要了
-        # if self.last_yaw is not None:
-        #     delta_yaw = yaw - self.last_yaw
-        #     if delta_yaw > np.pi:
-        #         delta_yaw -= 2 * np.pi
-        #     elif delta_yaw < -np.pi:
-        #         delta_yaw += 2 * np.pi
-
-        # yaw = self.last_yaw + delta_yaw
-
-        # yaw = alpha * yaw + (1 - alpha) * self.last_yaw
-        # self.last_yaw = yaw
-        # 转换为 [0, 2π] 范围
-        # if yaw < 0:
-        #     yaw += 2 * math.pi
-        return yaw
+        if self.flag_world_reset == True:
+            if self.flag_action_navigation == True:
+                self.move_along_path()  # 每一次都计算下速度
+                self.action = self.controller_policy.forward(step_size, self.base_command, self.robot_entity)
+                self.step(self.action)
+        return
 
     def move_to(self, target_postion):
         import numpy as np
@@ -172,13 +153,13 @@ class RobotH1(RobotBase):
         # print("yaw", car_yaw_angle, "target yaw", car_to_target_angle,"\tdelta angle", delta_angle, "\tdistance ", np.linalg.norm(target_postion[0:2] - car_position[0:2]))
         return False  # 还没有到达
 
-    def move_along_path(self, path: list = None, reset_flag: bool = False):
+    def move_along_path(self, path: list = None, flag_reset: bool = False):
         """
         让机器人沿着一个list的路径点运动
         需求: 在while外面 能够记录已经到达的点, 每次到达某个目标点的 10cm附近,就认为到了, 然后准备下一个点
 
         """
-        if reset_flag == True:
+        if flag_reset == True:
             self.path_index = 0
             self.path = path
 

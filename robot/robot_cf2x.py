@@ -81,53 +81,6 @@ class RobotCf2x(RobotBase):
                 self.move_along_path()  # 每一次都计算下速度
             self.apply_action(action=self.velocity)  # 把速度传输给机器人本体
 
-    def get_world_pose(self):
-        # 下面的方式是基于pxr方式获取pose的
-        # from pxr import UsdGeom
-        #
-        # import isaacsim.core.utils.stage as stage_utils
-        # stage = stage_utils.get_current_stage()
-        # prim_robot = stage.GetPrimAtPath(self.robot_prim)
-        # # 检查是否是 Xformable（可变换对象）
-        # if prim_robot.IsA(UsdGeom.Xformable):
-        #     xform = UsdGeom.Xformable(prim_robot)
-        #     local_transform = xform.GetLocalTransformation()  # 返回 Gf.Matrix4d
-        #     local_position = local_transform.ExtractTranslation()  # 提取平移部分
-        #     local_rotation = local_transform.ExtractRotationQuat()
-        #     return local_position, [local_rotation.real] + list(local_rotation.imaginary)
-        pos_IB, q_IB = self.robot_entity.get_world_poses()
-        pos_IB, q_IB = pos_IB[0], q_IB[0]
-        return pos_IB, q_IB
-
-    def quaternion_to_yaw(self, orientation):
-        import math
-        alpha = 0.1
-        norm = math.sqrt(sum(comp ** 2 for comp in orientation))
-        if abs(norm - 1) > 0.1:
-            print("没有归一")
-        qw, qx, qy, qz = orientation
-        # 计算方位角（绕 z 轴的旋转角度）
-        sinr_cosp = 2.0 * (qw * qz + qx * qy)
-        cosr_cosp = 1.0 - 2.0 * (qy ** 2 + qz ** 2)
-        # 转换为 [-π, π] 范围，逆时针为正
-        yaw = math.atan2(sinr_cosp, cosr_cosp)
-
-        # 本来要做连续性, 避免pi -pi这个奇异点的, 但是实际测试完后发现并不需要了
-        # if self.last_yaw is not None:
-        #     delta_yaw = yaw - self.last_yaw
-        #     if delta_yaw > np.pi:
-        #         delta_yaw -= 2 * np.pi
-        #     elif delta_yaw < -np.pi:
-        #         delta_yaw += 2 * np.pi
-
-        # yaw = self.last_yaw + delta_yaw
-
-        # yaw = alpha * yaw + (1 - alpha) * self.last_yaw
-        # self.last_yaw = yaw
-        # 转换为 [0, 2π] 范围
-        # if yaw < 0:
-        #     yaw += 2 * math.pi
-        return yaw
 
     def move_to(self, target_postion):
         import numpy as np
@@ -186,13 +139,13 @@ class RobotCf2x(RobotBase):
         # print("yaw", car_yaw_angle, "target yaw", car_to_target_angle,"\tdelta angle", delta_angle, "\tdistance ", np.linalg.norm(target_postion[0:2] - car_position[0:2]))
         return False  # 还没有到达
 
-    def move_along_path(self, path: list = None, reset_flag: bool = False):
+    def move_along_path(self, path: list = None, flag_reset: bool = False):
         """
         让机器人沿着一个list的路径点运动
         需求: 在while外面 能够记录已经到达的点, 每次到达某个目标点的 10cm附近,就认为到了, 然后准备下一个点
 
         """
-        if reset_flag == True:
+        if flag_reset == True:
             self.path_index = 0
             self.path = path
 
@@ -246,7 +199,7 @@ class RobotCf2x(RobotBase):
             real_path[i] = self.map_grid.pos_map[tuple(path[i])]
             real_path[i][-1] = 0
 
-        self.move_along_path(real_path, reset_flag=True)  # [[1,1], [1,2], [2,2], [2,1],[1,1]]
+        self.move_along_path(real_path)  # [[1,1], [1,2], [2,2], [2,1],[1,1]]
 
         # 标记一下, 开始运动
         self.flag_action_navigation = True

@@ -55,9 +55,7 @@ if __name__ == "__main__":
 
     for i in range(5000):
         position, orientation = jetbot_robot.get_world_pose()
-        jetbot_robot.apply_action(controller.forward(start_position=position,
-                                                     start_orientation=orientation,
-                                                     goal_position=np.array([0.8, 0.8])))
+        jetbot_robot.apply_action(controller.step(,)
         world.step(render=True) # execute one physics step and one rendering step
 
     simulation_app.close() # close Isaac Sim

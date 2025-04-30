@@ -127,9 +127,9 @@ if __name__ == "__main__":
 
         # 设置相机的位置
         camera_pose = np.zeros(3)  # 创建一个包含三个0.0的数组
-        pos = env.robot_swarm.robot_active['jetbot'][0].get_world_pose()[0]  # x y z 坐标
-        pos1 = env.robot_swarm.robot_active['jetbot'][1].get_world_pose()[0]  # x y z 坐标
-        pos_cf2x = env.robot_swarm.robot_active['cf2x'][0].get_world_pose()[0]  # x y z 坐标
+        pos = env.robot_swarm.robot_active['jetbot'][0].get_world_poses()[0]  # x y z 坐标
+        pos1 = env.robot_swarm.robot_active['jetbot'][1].get_world_poses()[0]  # x y z 坐标
+        pos_cf2x = env.robot_swarm.robot_active['cf2x'][0].get_world_poses()[0]  # x y z 坐标
         camera_pose[:2] = pos_cf2x[:2]  # 将xy坐标赋值给result的前两个元素
         camera_pose[2] = pos_cf2x[-1] + 1
         set_camera_view(
