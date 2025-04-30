@@ -279,6 +279,7 @@ class MCPExtension(omni.ext.IExt):
             "browse_scene_repository": self.browse_scene_repository,
             "load_scene": self.load_scene,
             "save_scene": self.save_scene,
+            "create_pddl": self.create_pddl,
         }
 
         handler = handlers.get(cmd_type)
@@ -321,7 +322,8 @@ class MCPExtension(omni.ext.IExt):
         from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
         from isaacsim.storage.native import get_assets_root_path
         from isaacsim.core.prims import Articulation
-
+        # print("over")
+        # return {"status": "success", "message": f"robot created"}
         ROBOT_CONFIGS = {
             "franka": {
                 "usd_path": "/Isaac/Robots/Franka/franka.usd",
@@ -372,6 +374,20 @@ class MCPExtension(omni.ext.IExt):
         robot.set_world_poses(positions=np.array([position]) / get_stage_units())
 
         return {"status": "success", "message": f"{robot_type} robot created"}
+
+    def create_pddl(self, usr_query: str) -> Dict[str, Any]:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+
+        files_parent_dir = os.path.abspath(os.path.join(current_dir, "../../../"))
+        # sys.path.append(files_parent_dir)  # 将项目根目录添加到 sys.path 中
+        from files.variables import PATH_PROJECT, PATH_ISAACSIM_ASSETS
+        print(files_parent_dir)
+
+        return {
+            "status": "success",
+            "message": f"generate pddl success",
+            "result": "result",
+        }
 
     def create_physics_scene(
         self,

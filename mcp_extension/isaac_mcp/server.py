@@ -331,6 +331,23 @@ def create_robot(robot_type: str = "g1", position: List[float] = [0, 0, 0]) -> s
     )
     return f"create_robot successfully: {result.get('result', '')}, {result.get('message', '')}"
 
+@mcp.tool("create_pddl")
+def create_pddl(usr_query: str = "") ->Dict[str, Any]:
+    """
+    用户输入一个需求, 然后调用PDDL, 得到一个字典存储的规划方案
+    The user enters a requirement, then calls PDDL to get a planning solution stored in a dictionary.
+    Args:
+        usr_query: The user input
+
+    Returns:
+        dict with pddl planning solution
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "create_pddl", {"usr_query": usr_query}
+    )
+    return f"create_pddl successfully: {result.get('result', '')}, {result.get('message', '')}"
+
 
 @mcp.tool("load_scene")
 def load_scene(
