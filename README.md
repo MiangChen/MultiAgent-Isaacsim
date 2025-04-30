@@ -1,11 +1,11 @@
+## files/variables.py里存了PATH_ISAACSIM等全局变量，不同人使用应及时修改
+
 开发阶段，使用中文来进行记录, 集群和AI都基本是华人在做，基于中文发布README，最后再提供一个english翻译
 
 根据isaaclab要求，使用python 3.10
 
 按照官方文档来安装IsaacSim和IsaacLab:
 https://docs.robotsfan.com/isaaclab/source/setup/installation/pip_installation.
-
-## files/variables.py里存了PATH_ISAACSIM等全局变量，不同人使用应及时修改
 
 更新MVP的城市场景，说明在```scene```文件夹里，下载链接为：https://pan.quark.cn/s/0694d8c27c6c
 
