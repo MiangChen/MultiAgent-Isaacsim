@@ -11,14 +11,12 @@ PATH_ISAACSIM = f'C:\\ProgramData\\anaconda3\\envs\\env_isaaclab\\Lib\\site-pack
 # isaaclab的位置, 这里以本地项目中git clone下来的isaaclab为例子
 PATH_ISAACLAB = f'C:\\Users\\{NAME_USR}\\PycharmProjects\\multiagent-isaacsim\\IsaacLab'
 # 本地解压后的IsaacSim的资产位置
-replacement_string = f'D:\\isaac-sim-assets\\'
-# 替换的目标是amazon网址
-string_to_find = 'https://omniverse-content-production.s3-us-west-2.amazonaws.com/'
-# string_to_find = 'D:\\isaacsim_assets\\'
+target_str = f'D:\\isaac-sim-assets\\'
 
 file_path_list = [
     f'C:\\Users\\{NAME_USR}\\AppData\\Local\\ov\\data\\Kit\\Isaac-Sim Full\\4.5\\user.config.json',  # 这个文件容易被遗漏
     f'{PATH_ISAACLAB}\\source\\isaaclab\\isaaclab\\utils\\assets.py',
+    f'{PATH_ISAACSIM}\\..\\..\\site-packages\\omni\\data\\Kit\\Isaac-Sim\\4.5\\user.config.json',  # win暂时找不到
     f'{PATH_ISAACSIM}\\exts\\isaacsim.util.clash_detection\\config\\extension.toml',
     f'{PATH_ISAACSIM}\\exts\\isaacsim.robot_setup.assembler\\config\\extension.toml',
     f'{PATH_ISAACSIM}\\exts\\isaacsim.asset.gen.conveyor.ui\\config\\extension.toml',
@@ -48,7 +46,6 @@ file_path_list = [
     f'{PATH_ISAACSIM}\\exts\\isaacsim.core.nodes\\config\\extension.toml',
     f'{PATH_ISAACSIM}\\exts\\isaacsim.core.prims\\config\\extension.toml',
     f'{PATH_ISAACSIM}\\exts\\isaacsim.robot.policy.examples\\config\\extension.toml',
-    # f'{PATH_ISAACSIM}\\exts\\isaacsim.asset.browser\\cache\\isaacsim.asset.browser.cache.json',  #  cache不要管
     f'{PATH_ISAACSIM}\\exts\\isaacsim.asset.browser\\docs\\index.rst',
     f'{PATH_ISAACSIM}\\exts\\isaacsim.asset.browser\\config\\extension.toml',
     f'{PATH_ISAACSIM}\\exts\\isaacsim.core.cloner\\config\\extension.toml',
@@ -62,34 +59,49 @@ file_path_list = [
     f'{PATH_ISAACSIM}\\exts\\isaacsim.robot.manipulators\\config\\extension.toml',
     f'{PATH_ISAACSIM}\\extsDeprecated\\omni.isaac.dynamic_control\\config\\extension.toml',
     f'{PATH_ISAACSIM}\\extsDeprecated\\omni.replicator.isaac\\config\\extension.toml',
-    f"{PATH_ISAACSIM}\\extscache\\omni.kit.browser.asset-1.3.11\\config\\extension.toml",
-    f"{PATH_ISAACSIM}\\extscache\\omni.kit.browser.asset-1.3.11\\config\\extension.toml",
-    f"{PATH_ISAACSIM}\\extscache\\omni.kit.browser.asset-1.3.11\\config\\extension.toml",
-    f"{PATH_ISAACSIM}\\extscache\\omni.kit.browser.asset-1.3.11\\config\\extension.toml",
-    f"{PATH_ISAACSIM}\\extscache\\omni.kit.browser.asset-1.3.11\\config\\extension.toml",
-    f"{PATH_ISAACSIM}\\extscache\\omni.kit.browser.asset-1.3.11\\config\\extension.toml",
-    f"{PATH_ISAACSIM}\\extscache\\omni.kit.browser.asset-1.3.11\\config\\extension.toml",
-    f"{PATH_ISAACSIM}\\extscache\\omni.kit.browser.asset-1.3.11\\config\\extension.toml",
-    # f'{PATH_ISAACSIM}\\exts\\cache\\omni.kit.browser.asset-1.3.11\\config\\extension.toml',   # cache不要管
+    # f"{PATH_ISAACSIM}\\extscache\\omni.kit.browser.asset-1.3.11\\config\\extension.toml", # 这个比较特殊
+    # f'{PATH_ISAACSIM}\\exts\\cache\\omni.kit.browser.asset-1.3.11\\config\\extension.toml',  # cache
 ]
 
-for file_path in file_path_list:
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f_read:
-            content = f_read.read()
-        print(f"加载文件 {file_path}, 开始处理")
-    except Exception as e:
-        print(f"错误：文件未找到 - {file_path}\n {e}")
-        break
 
-    # 执行替换
-    new_content = content.replace(string_to_find, replacement_string)
+def replace(origin_str, target_str, file_path_list):
+    count = 0
+    flag = True
+    for file_path in file_path_list:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f_read:
+                content = f_read.read()
+            print(f"加载文件 {file_path}, 开始处理")
+        except Exception as e:
+            print(f"错误：文件未找到 - {file_path}\n {e}")
+            flag = False
+            break
 
-    # 检查是否有内容被替换
-    if new_content != content:
-        # 写回修改后的内容
-        with open(file_path, 'w', encoding='utf-8') as f_write:
-            f_write.write(new_content)
-        print(f"文件已成功更新: {file_path}")
+        # 执行替换
+        new_content = content.replace(origin_str, target_str)
+
+        # 检查是否有内容被替换
+        if new_content != content:
+            # 写回修改后的内容
+            with open(file_path, 'w', encoding='utf-8') as f_write:
+                f_write.write(new_content)
+            print(f"文件已成功更新: {file_path}")
+            count += 1
+        else:
+            print(f"在文件中未找到需要替换的字符串: {file_path}")
+        print('')
+    if flag:
+        print("成功完成")
     else:
-        print(f"在文件中未找到需要替换的字符串: {file_path}")
+        print("有文件失败, 无法处理")
+    return count
+
+if __name__ == "__main__":
+    # 替换的目标是amazon网址
+    origin_str = 'https://omniverse-content-production.s3-us-west-2.amazonaws.com/'
+    count1 = replace(origin_str, target_str, file_path_list)
+    # 有时候会是http网址
+    print("*for i in range(100)")
+    origin_str = 'http://omniverse-content-production.s3-us-west-2.amazonaws.com/'
+    count2 = replace(origin_str, target_str, file_path_list)
+    print(f"count1: {count1}, count2: {count2}")
