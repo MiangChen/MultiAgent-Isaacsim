@@ -64,7 +64,12 @@ class MCPExtension(omni.ext.IExt):
             self._settings.get("/exts/isaac.sim.mcp/repository")
             or f"{PATH_PROJECT}/scene"
         )
-        print("repository path: ", self._settings)
+        try:
+            available_paths = self._settings.get_setting_keys("")  # 获取根路径下的所有键
+            print("Available paths:", available_paths)
+        except AttributeError:
+            print("self._settings does not have a get_setting_keys() method.")
+            print("Its type is:", type(self._settings))
         self.port = self._settings.get("/exts/isaac.sim.mcp/server, port") or 8766
         self.host = self._settings.get("/exts/isaac.sim.mcp/server.host") or "localhost"
         if not hasattr(self, "running"):
