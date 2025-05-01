@@ -2,21 +2,21 @@
 NAME_USR = 'Administrator'
 # conda环境的位置
 NAME_CONDA_ENV = 'env_isaaclab'
-# ISAACSIM资产包的位置
-PATH_ISAACSIM_ASSETS = f'D:\\isaac-sim-assets'
+
 # 项目的地址
 PATH_PROJECT = f'C:\\Users\\{NAME_USR}\\PycharmProjects\\multiagent-isaacsim'
 # isaacsim的位置, 这里以通过pip安装在conda中的isaacsim为例子
 PATH_ISAACSIM = f'C:\\ProgramData\\anaconda3\\envs\\env_isaaclab\\Lib\\site-packages\\isaacsim'
 # isaaclab的位置, 这里以本地项目中git clone下来的isaaclab为例子
 PATH_ISAACLAB = f'C:\\Users\\{NAME_USR}\\PycharmProjects\\multiagent-isaacsim\\IsaacLab'
-# 本地解压后的IsaacSim的资产位置
-target_str = f'D:\\isaac-sim-assets\\'
+
+# ISAACSIM资产包的位置
+PATH_ISAACSIM_ASSETS = f'D:\\isaac-sim-assets'
 
 file_path_list = [
     f'C:\\Users\\{NAME_USR}\\AppData\\Local\\ov\\data\\Kit\\Isaac-Sim Full\\4.5\\user.config.json',  # 这个文件容易被遗漏
     f'{PATH_ISAACLAB}\\source\\isaaclab\\isaaclab\\utils\\assets.py',
-    f'{PATH_ISAACSIM}\\..\\..\\site-packages\\omni\\data\\Kit\\Isaac-Sim\\4.5\\user.config.json',  # win暂时找不到
+    f'{PATH_ISAACSIM}\\..\\..\\site-packages\\omni\\data\\Kit\\Isaac-Sim\\4.5\\user.config.json',
     f'{PATH_ISAACSIM}\\exts\\isaacsim.util.clash_detection\\config\\extension.toml',
     f'{PATH_ISAACSIM}\\exts\\isaacsim.robot_setup.assembler\\config\\extension.toml',
     f'{PATH_ISAACSIM}\\exts\\isaacsim.asset.gen.conveyor.ui\\config\\extension.toml',
@@ -59,8 +59,7 @@ file_path_list = [
     f'{PATH_ISAACSIM}\\exts\\isaacsim.robot.manipulators\\config\\extension.toml',
     f'{PATH_ISAACSIM}\\extsDeprecated\\omni.isaac.dynamic_control\\config\\extension.toml',
     f'{PATH_ISAACSIM}\\extsDeprecated\\omni.replicator.isaac\\config\\extension.toml',
-    # f"{PATH_ISAACSIM}\\extscache\\omni.kit.browser.asset-1.3.11\\config\\extension.toml", # 这个比较特殊
-    # f'{PATH_ISAACSIM}\\exts\\cache\\omni.kit.browser.asset-1.3.11\\config\\extension.toml',  # cache
+    # f"{PATH_ISAACSIM}\\extscache\\omni.kit.browser.asset-1.3.11\\config\\extension.toml", # 这个比较特殊, 不能直接填资产包的一级路径, 很复杂
 ]
 
 
@@ -99,9 +98,9 @@ def replace(origin_str, target_str, file_path_list):
 if __name__ == "__main__":
     # 替换的目标是amazon网址
     origin_str = 'https://omniverse-content-production.s3-us-west-2.amazonaws.com/'
-    count1 = replace(origin_str, target_str, file_path_list)
+    count1 = replace(origin_str, target_str=PATH_ISAACSIM_ASSETS, file_path_list=file_path_list)
     # 有时候会是http网址
     print("*for i in range(100)")
     origin_str = 'http://omniverse-content-production.s3-us-west-2.amazonaws.com/'
-    count2 = replace(origin_str, target_str, file_path_list)
+    count2 = replace(origin_str, target_str=PATH_ISAACSIM_ASSETS, file_path_list=file_path_list)
     print(f"count1: {count1}, count2: {count2}")
