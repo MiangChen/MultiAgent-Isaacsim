@@ -1,6 +1,7 @@
 from typing import List, Optional, Tuple
 
 from map.map_grid_map import GridMap
+from path_planning.path_planning_astar import AStar
 from robot.robot_cfg import RobotCfg
 from robot.robot_trajectory import Trajectory
 
@@ -8,8 +9,8 @@ import numpy as np
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import RigidPrim
 from isaacsim.core.prims import Articulation
+from isaacsim.core.utils.rotations import quat_to_rot_matrix
 from isaacsim.core.utils.types import ArticulationActions
-
 
 class RobotBase:
     """Base class of robot."""
@@ -40,15 +41,6 @@ class RobotBase:
         self.sensors: dict = {}
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
-
-    # def apply_action(self, action: ArticulationActions) -> None:
-    #     """Apply actions of controllers to robot.
-    #
-    #     Args:
-    #         action (ArticulationActions):
-    #     """
-    #     self.robot_entity.apply_action(action)
-    #     raise NotImplementedError()
 
     def cleanup(self):
         for controller in self.controllers.values():
@@ -108,7 +100,7 @@ class RobotBase:
         return pos_IB, q_IB
 
     def initialize(self) -> None:
-        return
+        raise NotImplementedError()
 
     def move_to(self, target_position: np.ndarray, target_orientation: np.ndarray) -> bool:
         """
@@ -141,13 +133,53 @@ class RobotBase:
             self.state_skill_complete = True
             return True
 
-    def navigate_to(self, target_pos, reset_flag: bool = False):
+    def navigate_to(self, pos_target: np.ndarray = None, orientation_target: np.ndarray = None,
+                    reset_flag: bool = False) -> None:
         """
         让机器人导航到某一个位置,
         不需要输入机器人的起始位置, 因为机器人默认都是从当前位置出发的;
         本质是使用A*等算法, 规划一系列的路径
+        Args:
+            target_pos: 机器人的目标位置
+            target_orientaton: 机器人的目标方向
+            reset_flag:
+
+        Returns:
         """
-        raise NotImplementedError()
+        # 小车/人形机器人的导航只能使用2d的
+        # todo: 未来能够爬坡
+        if pos_target == None:
+            raise ValueError("no target position")
+        elif pos_target[2] != 0:
+            raise ValueError("小车的z轴高度得在平面上")
+        pos_robot = self.get_world_poses()[0]
+
+        pos_index_target = self.map_grid.compute_index(pos_target)
+        pos_index_robot = self.map_grid.compute_index(pos_robot)
+        pos_index_robot[-1] = 0  # todo : 这也是因为机器人限制导致的
+
+        # 用于把机器人对应位置的设置为空的, 不然会找不到路线
+        grid_map = self.map_grid.value_map
+        grid_map[pos_index_robot] = self.map_grid.empty_cell
+
+        planner = AStar(grid_map, obs_value=1.0, free_value=0.0, directions="eight")
+        path = planner.find_path(tuple(pos_index_robot), tuple(pos_index_target))
+
+        real_path = np.zeros_like(path, dtype=np.float32)
+        for i in range(path.shape[0]):  # 把index变成连续实际世界的坐标
+            real_path[i] = self.map_grid.pos_map[tuple(path[i])]
+            real_path[i][-1] = 0
+
+        self.move_along_path(real_path, flag_reset=True)
+
+        # 标记一下, 开始运动
+        self.flag_action_navigation = True
+
+        # 标记当前的动作
+        self.state_skill = 'navigate_to'
+        self.state_skill_complete = False
+
+        return
 
     def on_physics_step(self, step_size) -> None:
         """
@@ -156,66 +188,40 @@ class RobotBase:
         """
         raise NotImplementedError()
 
-    def post_reset(self):
+    def post_reset(self) -> None:
         """Set up things that happen after the world resets."""
         for sensor in self.sensors.values():
             sensor.post_reset()
         return
 
-    def put_down(self):
+    def put_down(self) -> None:
         """
         让机器人把一个东西放下, 可以指定
         Returns:
         """
         raise NotImplementedError()
 
-    def pick_up(self):
+    def pick_up(self) -> None:
         """
         让机器人拿起来某一个东西, 需要指定物品的名称, 并且在操作范围内
         Returns:
         """
         raise NotImplementedError()
 
-    def quaternion_to_yaw(self, orientation: Tuple[float, float, float, float]) -> float:
+    def quaternion_to_yaw(self, quaternion: Tuple[float, float, float, float]) -> float:
         """
-
         Args:
-            orientation: 四元数存储的朝向
-
-
+            quaternion: 四元数
         Returns:
             yaw: 绕着z轴的旋转角度
         """
-        import math
-        alpha = 0.1
-        norm = math.sqrt(sum(comp ** 2 for comp in orientation))
-        if abs(norm - 1) > 0.1:
-            print("没有归一")
-        qw, qx, qy, qz = orientation
-        # 计算方位角（绕 z 轴的旋转角度）
-        sinr_cosp = 2.0 * (qw * qz + qx * qy)
-        cosr_cosp = 1.0 - 2.0 * (qy ** 2 + qz ** 2)
-        # 转换为 [-π, π] 范围，逆时针为正
-        yaw = math.atan2(sinr_cosp, cosr_cosp)
-        # 本来要做连续性, 避免pi -pi这个奇异点的, 但是实际测试完后发现并不需要了
-        # if self.last_yaw is not None:
-        #     delta_yaw = yaw - self.last_yaw
-        #     if delta_yaw > np.pi:
-        #         delta_yaw -= 2 * np.pi
-        #     elif delta_yaw < -np.pi:
-        #         delta_yaw += 2 * np.pi
-
-        # yaw = self.last_yaw + delta_yaw
-
-        # yaw = alpha * yaw + (1 - alpha) * self.last_yaw
-        # self.last_yaw = yaw
-        # 转换为 [0, 2π] 范围
-        # if yaw < 0:
-        #     yaw += 2 * math.pi
+        from math import atan2
+        matrix = quat_to_rot_matrix(quaternion)
+        yaw = atan2(matrix[1, 0], matrix[0, 0])
         return yaw
 
     @classmethod
-    def register(cls, name: str):
+    def register(cls, name: str) -> None:
         """Register a robot class with its name_prefix(decorator).
 
         Args:
@@ -224,16 +230,14 @@ class RobotBase:
 
         def decorator(robot_class):
             cls.robots[name] = robot_class
-
             @wraps(robot_class)
             def wrapped_function(*args, **kwargs):
                 return robot_class(*args, **kwargs)
 
             return wrapped_function
-
         return decorator
 
-    def set_up_to_scene(self, scene: Scene):
+    def set_up_to_scene(self, scene: Scene) -> None:
         """Set up robot in the scene.
 
         Args:
@@ -260,7 +264,8 @@ class RobotBase:
         """
         raise NotImplementedError
 
-    def explore_zone(self, zone_corners: list = None, scane_direction: str = "horizontal", reset_flag: bool = False):
+    def explore_zone(self, zone_corners: list = None, scane_direction: str = "horizontal",
+                     reset_flag: bool = False) -> None:
         """
         用户输入一个方形区域的四个角落点, 需要根据感知范围来探索这个区域, 感知范围是一个扇形的区域, 假设视野为120, 半径为2m,
         输入一个[[1,1], [1,10], [10,10], [10,1]]的方形区域, 该如何规划路径?
@@ -317,24 +322,4 @@ class RobotBase:
 
 
 if __name__ == "__main__":
-    config = {
-        'name_prefix': 'jetbot3',
-        'prim_path': '/World/Fancy_Robot3',
-
-        # 'wheel_dof_names': ["left_wheel_joint", "right_wheel_joint"],
-    }
-    # create_robot=True,
-    # usd_path=jet_robot_asset_path,
-    # position=[-2, 0, 0],
-    # }
-    # type: str
-    # prim_path: str
-    # create_robot: bool = True
-    # usd_path: Optional[str] = None  # If Optional, use default usd_path
-
-    # common config
-    position: Optional[Tuple[float, float, float]] = (0.0, 0.0, 0.0)
-    orientation: Optional[Tuple[float, float, float, float]] = None
-    scale: Optional[Tuple[float, float, float]] = None
-
-    jetbot_config = RobotCfg()
+    pass

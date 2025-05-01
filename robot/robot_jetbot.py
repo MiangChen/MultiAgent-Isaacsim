@@ -51,42 +51,38 @@ class RobotJetbot(RobotBase):
         )
         return
 
-    def move_to(self, target_postion):
+    def initialize(self) -> None:
+        return
+
+    def move_to(self, target_pos):
         import numpy as np
         """
         让2轮差速小车在一个2D平面上运动到目标点
         缺点：不适合3D，无法避障，地面要是平的
         速度有两个分两，自转的分量 + 前进的分量
         """
-        car_position, car_orientation = self.get_world_poses()  # self.get_world_pose()  ## type np.array
-        # print(car_orientation)
-        # print(type(car_orientation))
-        # car_position, car_orientation = self.robot.get_world_pose()  ## type np.array
-        # 获取2D方向的小车朝向，逆时针是正
-        car_yaw_angle = self.quaternion_to_yaw(car_orientation)
-
+        pos, quat = self.get_world_poses()  # self.get_world_pose()  ## type np.array
+        # 获取2D方向的朝向，逆时针是正
+        yaw = self.quaternion_to_yaw(quat)
         # 获取机器人和目标连线的XY平面上的偏移角度
-        car_to_target_angle = np.arctan2(target_postion[1] - car_position[1], target_postion[0] - car_position[0])
+        robot_to_target_angle = np.arctan2(target_pos[1] - pos[1], target_pos[0] - pos[0])
         # 差速, 和偏移角度成正比，通过pi归一化
-        delta_angle = car_to_target_angle - car_yaw_angle
-        # if abs(car_to_target_angle - car_yaw_angle) > np.pi * 11/10:  # 超过pi，那么用另一个旋转方向更好， 归一化到 -pi ～ pi区间, 以及一个滞回，防止振荡
-        #     delta_angle = delta_angle - 2 * np.pi
+        delta_angle = robot_to_target_angle - yaw
         if abs(delta_angle) < 0.017:  # 角度控制死区
             delta_angle = 0
         elif delta_angle < -np.pi:  # 当差距abs超过pi后, 就代表从这个方向转弯不好, 要从另一个方向转弯
             delta_angle += 2 * np.pi
         elif delta_angle > np.pi:
             delta_angle -= 2 * np.pi
-        if np.linalg.norm(target_postion[0:2] - car_position[0:2]) < 0.1:
+        if np.linalg.norm(target_pos[0:2] - pos[0:2]) < 0.1:
             self.action = [0, 0]
             return True  # 已经到达目标点附近10cm, 停止运动
 
-        # k1 = 1 / np.pi
-        # v_rotation = k1 * delta_angle
+        k_rotate = 1 / np.pi
         v_rotation = self.pid_angle.compute(delta_angle, dt=1 / 60)
         # 前进速度，和距离成正比
-        k2 = 1
-        v_forward = 15  # k2 * np.linalg.norm(target_postion[0:2] - car_position[0:2])
+        k_forward = 1
+        v_forward = 15
 
         # 合速度
         v_left = v_forward + v_rotation
@@ -103,57 +99,10 @@ class RobotJetbot(RobotBase):
         self.action = [v_left, v_right]
         return False  # 还没有到达
 
-    def navigate_to(self, pos_target: np.array = None, reset_flag: bool = False):
-        """
-        让机器人导航到某一个位置,
-        不需要输入机器人的起始位置, 因为机器人默认都是从当前位置出发的
-
-        Args:
-            target_pos:
-            reset_flag:
-
-        Returns:
-
-        """
-        # 小车的导航只能使用2d的
-        # pos_target = [9, 9, 0]
-        if pos_target == None:
-            raise ValueError("no target position")
-        elif pos_target[2] != 0:
-            raise ValueError("小车的z轴高度得在平面上")
-        pos_robot = self.get_world_poses()[0]
-
-        pos_index_target = self.map_grid.compute_index(pos_target)
-        pos_index_robot = self.map_grid.compute_index(pos_robot)
-
-        # 用于把机器人对应位置的设置为空的, 不然会找不到路线
-        grid_map = self.map_grid.value_map
-        grid_map[pos_index_robot] = self.map_grid.empty_cell
-
-        planner = AStar(self.map_grid.value_map, obs_value=1.0, free_value=0.0, directions="eight")
-        path = planner.find_path(tuple(pos_index_robot), tuple(pos_index_target))
-
-        real_path = np.zeros_like(path, dtype=np.float32)
-        for i in range(path.shape[0]):  # 把index变成连续实际世界的坐标
-            real_path[i] = self.map_grid.pos_map[tuple(path[i])]
-            real_path[i][-1] = 0
-
-        self.move_along_path(real_path, flag_reset=True)  # [[1,1], [1,2], [2,2], [2,1],[1,1]]
-
-        # 标记一下, 开始运动
-        self.flag_action_navigation = True
-
-        # 标记当前的动作
-        self.state_skill = 'navigate_to'
-        self.state_skill_complete = False
-
-        return
-
     def on_physics_step(self, step_size):
         if self.flag_world_reset == True:
             if self.flag_action_navigation == True:
                 self.move_along_path()  # 每一次都计算下速度
-                # self.action = self.controller.forward()
                 self.step(self.action)
         return
 

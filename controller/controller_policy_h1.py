@@ -16,7 +16,6 @@ import omni
 import omni.kit.commands
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
 from isaacsim.core.utils.types import ArticulationActions
-# from isaacsim.robot.policy.examples.controllers import PolicyController
 # from isaacsim.storage.native import get_assets_root_path
 from isaacsim.core.utils.nucleus import get_assets_root_path
 
@@ -71,7 +70,6 @@ class H1FlatTerrainPolicy(PolicyController):
 
         Returns:
         np.ndarray -- The observation vector.
-
         """
         lin_vel_I = robot.get_linear_velocities()[0]  # shape(1,3) -> shape(3)
         ang_vel_I = robot.get_angular_velocities()[0]

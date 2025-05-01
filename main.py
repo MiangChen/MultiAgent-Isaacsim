@@ -96,10 +96,6 @@ if __name__ == "__main__":
                                    callback_fn=env.robot_swarm.robot_active['jetbot'][3].on_physics_step)
     env.world.add_physics_callback("physics_step_h1_0",
                                    callback_fn=env.robot_swarm.robot_active['h1'][0].on_physics_step)
-    env.robot_swarm.robot_active['h1'][0].base_command = [0.1, 0.1, 0.5]
-
-    from isaacsim.core.utils.types import ArticulationAction, ArticulationActions
-
 
     env.robot_swarm.robot_active['cf2x'][0].forward()
 
@@ -123,6 +119,7 @@ if __name__ == "__main__":
                 object_semantic_name = plan[f"step_{state_step}"][robot][robot_action]['it']
                 object_semantics_pos = plan[f"step_{state_step}"][robot][robot_action]['loc']
 
+    env.robot_swarm.robot_active['h1'][0].navigate_to([5, 5, 0])
     for i in range(500000):
 
         # 设置相机的位置
@@ -175,6 +172,7 @@ if __name__ == "__main__":
             env.robot_swarm.robot_active['jetbot'][1].traj.add_trajectory(pos1)
             env.robot_swarm.robot_active['jetbot'][2].traj.add_trajectory(pos1)
             env.robot_swarm.robot_active['jetbot'][3].traj.add_trajectory(pos1)
-            print(env.robot_swarm.robot_active['cf2x'][0].robot_entity.get_joint_velocities())
+            # print(len(env.robot_swarm.robot_active['h1'][0].path), env.robot_swarm.robot_active['h1'][0].path_index)
+            # print(env.robot_swarm.robot_active['cf2x'][0].robot_entity.get_joint_velocities())
 
     simulation_app.close()  # close Isaac Sim
