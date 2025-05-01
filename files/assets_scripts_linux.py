@@ -100,7 +100,7 @@ if __name__ == "__main__":
     origin_str = 'https://omniverse-content-production.s3-us-west-2.amazonaws.com/'
     count1 = replace(origin_str, target_str=PATH_ISAACSIM_ASSETS, file_path_list=file_path_list)
     # 有时候会是http网址
-    print("*for i in range(100)")
+    print("*" * 100)
     origin_str = 'http://omniverse-content-production.s3-us-west-2.amazonaws.com/'
     count2 = replace(origin_str, target_str=PATH_ISAACSIM_ASSETS, file_path_list=file_path_list)
     print(f"count1: {count1}, count2: {count2}")
