@@ -1,7 +1,7 @@
 [package]
-name = "isaac_sim_mcp_extension"
+name = "isaacsim_mcp_extension"
 version = "0.2.1"
-title = "Isaac Sim MCP Server"
+title = "Isaacsim MCP Server"
 description = "MCP server extension for Isaac Sim to enable communication with Claude and other AI assistants"
 category = "Robotics"
 keywords = ["mcp", "server", "socket", "simulation", "robotics"]
@@ -13,9 +13,9 @@ keywords = ["mcp", "server", "socket", "simulation", "robotics"]
 
 
 
-# Main python module this extension provides, it will be publicly available as "import isaac_sim_mcp_extension".
+# Main python module this extension provides, it will be publicly available as "import isaacsim_mcp_extension".
 [[python.module]]
-name = "isaac_sim_mcp_extension"
+name = "isaacsim_mcp_extension"
 
 
 

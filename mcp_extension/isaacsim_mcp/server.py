@@ -1,4 +1,4 @@
-# isaac_sim_mcp_server.py
+# isaacsim_mcp_server.py
 import time
 from mcp.server.fastmcp import FastMCP, Context, Image
 import socket
@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-logger = logging.getLogger("IsaacMCPServer")
+logger = logging.getLogger("IsaacsimMCPServer")
 
 
 @dataclass
@@ -68,7 +68,7 @@ class IsaacConnection:
                     if not chunk:
                         # If we get an empty chunk, the connection might be closed
                         if (
-                                not chunks
+                            not chunks
                         ):  # If we haven't received anything yet, this is an error
                             raise Exception(
                                 "Connection closed before receiving any data"
@@ -116,7 +116,7 @@ class IsaacConnection:
             raise Exception("No data received")
 
     def send_command(
-            self, command_type: str, params: Dict[str, Any] = None
+        self, command_type: str, params: Dict[str, Any] = None
     ) -> Dict[str, Any]:
         """Send a command to Isaac and return the response"""
         if not self.sock and not self.connect():
@@ -207,8 +207,8 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[Dict[str, Any]]:
 
 # Create the MCP server with lifespan support
 mcp = FastMCP(
-    "IsaacSimMCP",
-    description="Isaac Sim integration through the Model Context Protocol",
+    "IsaacsimMCP",
+    description="Isaacsim integration through the Model Context Protocol",
     lifespan=server_lifespan,
 )
 _isaac_connection = None
@@ -246,31 +246,31 @@ def get_isaac_connection():
     return _isaac_connection
 
 
-@mcp.tool()
-def get_scene_info(ctx: Context) -> str:
-    """Ping status of Isaac Sim Extension Server"""
-    try:
-        isaac = get_isaac_connection()
-        result = isaac.send_command("get_scene_info")
-        print("result: ", result)
+# @mcp.tool()
+# def get_scene_info(ctx: Context) -> str:
+#     """Ping status of Isaac Sim Extension Server"""
+#     try:
+#         isaac = get_isaac_connection()
+#         result = isaac.send_command("get_scene_info")
+#         print("result: ", result)
 
-        # Just return the JSON representation of what Isaac sent us
-        return json.dumps(result, indent=2)
-    except Exception as e:
-        logger.error(f"Error getting scene info from Isaac: {str(e)}")
-        return {
-            "status": "error",
-            "error": str(e),
-            "message": "Error getting scene info",
-        }
+#         # Just return the JSON representation of what Isaac sent us
+#         return json.dumps(result, indent=2)
+#     except Exception as e:
+#         logger.error(f"Error getting scene info from Isaac: {str(e)}")
+#         return {
+#             "status": "error",
+#             "error": str(e),
+#             "message": "Error getting scene info",
+#         }
 
 
 @mcp.tool("create_physics_scene")
 def create_physics_scene(
-        objects: List[Dict[str, Any]] = [],
-        floor: bool = True,
-        gravity: List[float] = [0, -0.981, 0],
-        scene_name: str = "physics_scene",
+    objects: List[Dict[str, Any]] = [],
+    floor: bool = True,
+    gravity: List[float] = [0, -0.981, 0],
+    scene_name: str = "physics_scene",
 ) -> Dict[str, Any]:
     """Create a physics scene with multiple objects. Before create physics scene, you need to call get_scene_info() first to verify availability of connection.
 
@@ -331,9 +331,8 @@ def create_robot(robot_type: str = "g1", position: List[float] = [0, 0, 0]) -> s
     )
     return f"create_robot successfully: {result.get('result', '')}, {result.get('message', '')}"
 
-
 @mcp.tool("create_pddl")
-def create_pddl(usr_query: str = "") -> Dict[str, Any]:
+def create_pddl(usr_query: str = "") ->Dict[str, Any]:
     """
     用户输入一个需求, 然后调用PDDL, 得到一个字典存储的规划方案
     The user enters a requirement, then calls PDDL to get a planning solution stored in a dictionary.
@@ -352,10 +351,9 @@ def create_pddl(usr_query: str = "") -> Dict[str, Any]:
 
 @mcp.tool("load_scene")
 def load_scene(
-        scene_path: str = "",
+    scene_path: str = "",
 ) -> str:
-    """Load a scene in Isaac Sim. You need to call get_scene_info() first to verify availability of connection.
-
+    """Load a scene in Isaac Sim. You need to call browse_scene_repository() first to get the scene path. The scene_path should be a valid USD file path.
     Args:
         scene_path: The path to the scene file to load.
             Example: "path/to/your/scene.usd"
@@ -376,7 +374,7 @@ def browse_scene_repository() -> str:
         String with result information.
     """
     isaac = get_isaac_connection()
-    result = isaac.send_command("browse_scene")
+    result = isaac.send_command("browse_scene_repository")
     return f"browse_scene successfully: {result.get('result', '')}, {result.get('message', '')}"
 
 
@@ -395,13 +393,11 @@ def save_scene(scene_name: str = "default_scene") -> str:
     return f"save_scene successfully: {result.get('result', '')}, {result.get('message', '')}"
 
 
-@mcp.prompt()
-def asset_creation_strategy() -> str:
-    """Defines the preferred strategy for creating assets in Isaac Sim"""
-    return """
-    0. Before anything, always check the scene from get_scene_info(), retrive rool path of assset through return value of assets_root_path.
-    1. If the scene is empty, create a physics scene with create_physics_scene()
-    """
+# @mcp.prompt()
+# def asset_creation_strategy() -> str:
+#     """Defines the preferred strategy for creating assets in Isaac Sim"""
+#     return """
+#     """
 
 
 def main():

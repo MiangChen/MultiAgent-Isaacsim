@@ -64,6 +64,7 @@ class MCPExtension(omni.ext.IExt):
             self._settings.get("/exts/isaac.sim.mcp/repository")
             or f"{PATH_PROJECT}/scene"
         )
+        print("repository path: ", self._settings)
         self.port = self._settings.get("/exts/isaac.sim.mcp/server, port") or 8766
         self.host = self._settings.get("/exts/isaac.sim.mcp/server.host") or "localhost"
         if not hasattr(self, "running"):
@@ -98,7 +99,7 @@ class MCPExtension(omni.ext.IExt):
             self.server_thread.daemon = True
             self.server_thread.start()
 
-            print(f"Isaac Sim MCP server started on {self.host}:{self.port}")
+            print(f"Isaacsim MCP server started on {self.host}:{self.port}")
         except Exception as e:
             print(f"Failed to start server: {str(e)}")
             self.stop()
@@ -123,7 +124,7 @@ class MCPExtension(omni.ext.IExt):
                 pass
             self.server_thread = None
 
-        print("Isaac Sim MCP server stopped")
+        print("Isaacsim MCP server stopped")
 
     def _server_loop(self):
         """Main server loop in a separate thread"""
@@ -180,7 +181,7 @@ class MCPExtension(omni.ext.IExt):
                         command = json.loads(buffer.decode("utf-8"))
                         buffer = b""
 
-                        # Execute command in Isaac Sim's main thread
+                        # Execute command in Isaacsim's main thread
                         async def execute_wrapper():
                             try:
                                 response = self.execute_command(command)
