@@ -3,7 +3,7 @@ import os
 from isaacsim import SimulationApp
 
 simulation_app = SimulationApp({"headless": False})  # we can also run as headless.
-from files.variables import NAME_USR, PATH_PROJECT, PATH_ISAACSIM_ASSETS
+from files.assets_scripts_linux import NAME_USR, PATH_PROJECT, PATH_ISAACSIM_ASSETS
 
 import carb
 

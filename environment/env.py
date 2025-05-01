@@ -3,7 +3,7 @@ from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.robot_h1 import RobotH1, RobotCfgH1
 from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
 from robot.robot_swarm_manager import RobotSwarmManager
-from files.variables import PATH_PROJECT, PATH_ISAACSIM_ASSETS
+from files.assets_scripts_linux import PATH_PROJECT, PATH_ISAACSIM_ASSETS
 
 import gymnasium as gym
 import numpy as np

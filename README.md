@@ -7,11 +7,74 @@ https://docs.robotsfan.com/isaaclab/source/setup/installation/pip_installation.
 
 更新MVP的城市场景，说明在```scene```文件夹里，下载链接为：https://pan.quark.cn/s/0694d8c27c6c
 
+
+
+# 安装环境
+
+这部分参考了官方的Isaaclab和Isaacsim的安装过程, 如果按照官方的安装完了环境, 可以跳过, 如果没安装成功, 可以参考下面的代码(已经修复过): 
+
+```
+conda create -n env_isaaclab python=3.10
+conda activate env_isaaclab
+```
+
+安装torch的cuda版本
+
+```
+
+pip install --upgrade pip # ubuntu
+conda install pip==24 # windows
+pip cache purge
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+```
+
+安装isaacsim
+
+```
+pip install 'isaacsim[all,extscache]==4.5.0' --extra-index-url https://pypi.nvidia.com
+```
+
+验证isaacsim安装成功, 首次启动约10min内:
+
+```
+isaacsim
+```
+
+安装Isaaclab
+
+```
+cd <项目的位置>
+git clone https://github.com/isaac-sim/IsaacLab.git
+
+sudo apt install cmake build-essential # ubuntu 系统
+
+cd IsaacLab
+./isaaclab.sh --install # or "./isaaclab.sh -i" # ubuntu系统
+isaaclab.bat --install :: or "isaaclab.bat -i" # windows系统
+```
+
+验证Isaaclab安装
+
+```
+./isaaclab.sh -p scripts/tutorials/00_sim/create_empty.py # ubuntu系统
+
+isaaclab.bat -p scripts\tutorials\00_sim\create_empty.py # windows系统
+```
+
+
+
+安装本次项目的其他依赖:
+
 ```
 pip install -r requirements.txt
 ```
 
-运行
+
+
+# 运行
+
+
+
 ```
 python main.py --enable isaacsim.asset.gen.omap
 ```

@@ -18,7 +18,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 files_parent_dir = os.path.abspath(os.path.join(current_dir, "../../../"))
 sys.path.append(files_parent_dir) # 将项目根目录添加到 sys.path 中
-from files.variables import PATH_PROJECT, PATH_ISAACSIM_ASSETS
+from files.assets_scripts_linux import PATH_PROJECT, PATH_ISAACSIM_ASSETS
 
 
 # TODO： import 需要整理一下
@@ -386,7 +386,7 @@ class MCPExtension(omni.ext.IExt):
 
         files_parent_dir = os.path.abspath(os.path.join(current_dir, "../../../"))
         # sys.path.append(files_parent_dir)  # 将项目根目录添加到 sys.path 中
-        from files.variables import PATH_PROJECT, PATH_ISAACSIM_ASSETS
+        from files.assets_scripts_linux import PATH_PROJECT, PATH_ISAACSIM_ASSETS
         print(files_parent_dir)
 
         return {
