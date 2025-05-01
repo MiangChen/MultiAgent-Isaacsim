@@ -68,7 +68,7 @@ class IsaacConnection:
                     if not chunk:
                         # If we get an empty chunk, the connection might be closed
                         if (
-                            not chunks
+                                not chunks
                         ):  # If we haven't received anything yet, this is an error
                             raise Exception(
                                 "Connection closed before receiving any data"
@@ -116,7 +116,7 @@ class IsaacConnection:
             raise Exception("No data received")
 
     def send_command(
-        self, command_type: str, params: Dict[str, Any] = None
+            self, command_type: str, params: Dict[str, Any] = None
     ) -> Dict[str, Any]:
         """Send a command to Isaac and return the response"""
         if not self.sock and not self.connect():
@@ -267,10 +267,10 @@ def get_scene_info(ctx: Context) -> str:
 
 @mcp.tool("create_physics_scene")
 def create_physics_scene(
-    objects: List[Dict[str, Any]] = [],
-    floor: bool = True,
-    gravity: List[float] = [0, -0.981, 0],
-    scene_name: str = "physics_scene",
+        objects: List[Dict[str, Any]] = [],
+        floor: bool = True,
+        gravity: List[float] = [0, -0.981, 0],
+        scene_name: str = "physics_scene",
 ) -> Dict[str, Any]:
     """Create a physics scene with multiple objects. Before create physics scene, you need to call get_scene_info() first to verify availability of connection.
 
@@ -332,9 +332,27 @@ def create_robot(robot_type: str = "g1", position: List[float] = [0, 0, 0]) -> s
     return f"create_robot successfully: {result.get('result', '')}, {result.get('message', '')}"
 
 
+@mcp.tool("create_pddl")
+def create_pddl(usr_query: str = "") -> Dict[str, Any]:
+    """
+    用户输入一个需求, 然后调用PDDL, 得到一个字典存储的规划方案
+    The user enters a requirement, then calls PDDL to get a planning solution stored in a dictionary.
+    Args:
+        usr_query: The user input
+
+    Returns:
+        dict with pddl planning solution
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "create_pddl", {"usr_query": usr_query}
+    )
+    return f"create_pddl successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
 @mcp.tool("load_scene")
 def load_scene(
-    scene_path: str = "",
+        scene_path: str = "",
 ) -> str:
     """Load a scene in Isaac Sim. You need to call get_scene_info() first to verify availability of connection.
 
