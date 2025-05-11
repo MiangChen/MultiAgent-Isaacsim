@@ -30,7 +30,8 @@ if __name__ == "__main__":
     # 加载复杂场景
     # usd_path = './scene/CityDemopack/World_CityDemopack.usd'
     # usd_path = f'{PATH_PROJECT}/scene/simple_city.usd'
-    usd_path = f'{PATH_PROJECT}/scene/flatroom4.usd'
+    # usd_path = f'{PATH_PROJECT}/scene/flatroom4.usd'
+    usd_path = f'{PATH_PROJECT}/scene/room6floor.usd'
     usd_abs_path = os.path.abspath(usd_path)
     env = Env(simulation_app, usd_abs_path)
     env.reset()

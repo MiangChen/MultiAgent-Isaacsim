@@ -60,7 +60,8 @@ class Env(gym.Env):
             usd_path=source,
             # scale=self.simulation.scene_scale,
             scale=[1, 1, 1],
-            # translation=[self.runtime.env.offset[idx] + i for idx, i in enumerate(self.runtime.scene_position)],
+            translation=[2.34, -1.89, 0.81],
+            orientation=[-102.7, -14.22, -2.32]
         )
 
         self.cell_size = 0.2
