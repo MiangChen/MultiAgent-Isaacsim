@@ -19,7 +19,7 @@ jetbot:
 #
 h1:
   - id: 0
-    position: [-10, 0.0, 1.05]
+    position: [1.8, 2.36, 1.05]
     orientation: [0.0, 0.0, 0.0, 1.0]
     alias: Hellen
 

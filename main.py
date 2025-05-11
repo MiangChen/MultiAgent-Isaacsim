@@ -40,7 +40,8 @@ num_env = 1
 if __name__ == "__main__":
     # 加载复杂场景
     # usd_path = './scene/CityDemopack/World_CityDemopack.usd'
-    usd_path = f'{PATH_PROJECT}/scene/simple_city.usd'
+    # usd_path = f'{PATH_PROJECT}/scene/simple_city.usd'
+    usd_path = f'{PATH_PROJECT}/scene/simple_city2.usd'
     usd_abs_path = os.path.abspath(usd_path)
     env = Env(simulation_app, usd_abs_path)
     env.reset()
@@ -119,7 +120,7 @@ if __name__ == "__main__":
                 object_semantic_name = plan[f"step_{state_step}"][robot][robot_action]['it']
                 object_semantics_pos = plan[f"step_{state_step}"][robot][robot_action]['loc']
 
-    env.robot_swarm.robot_active['h1'][0].navigate_to([5, 5, 0])
+    env.robot_swarm.robot_active['h1'][0].navigate_to([0, 2, 0])
     for i in range(500000):
 
         # 设置相机的位置
