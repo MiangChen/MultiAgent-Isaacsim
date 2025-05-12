@@ -84,8 +84,8 @@ def extract_bracket_content(text):
 def run_once(file_path: str=None):
     if file_path is None:
         record_audio()
-        file_path = f"{PATH_PROJECT}/llm/recording.wav"
-    text = transcribe_audio(PATH_PROJECT + file_path)
+        file_path = f"recording.wav"
+    text = transcribe_audio(f'{PATH_PROJECT}/llm/{file_path}')
     print("📝 你说的是：", text)
     if not text:
         print("❌ 没听清")

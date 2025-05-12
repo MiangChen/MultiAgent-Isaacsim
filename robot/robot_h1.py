@@ -90,7 +90,7 @@ class RobotH1(RobotBase):
         if np.linalg.norm(target_pos[0:2] - pos[0:2]) < 1:
             self.action = [0, 0]
             return True  # 已经到达目标点附近10cm, 停止运动
-        print(delta_angle, np.linalg.norm(target_pos[0:2] - pos[0:2]))
+        # print(delta_angle, np.linalg.norm(target_pos[0:2] - pos[0:2]))
         k_rotate = 1 / np.pi
         v_rotation = self.pid_angle.compute(delta_angle, dt=1 / 200)
         if v_rotation > 1:

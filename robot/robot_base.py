@@ -134,7 +134,7 @@ class RobotBase:
             return True
 
     def navigate_to(self, pos_target: np.ndarray = None, orientation_target: np.ndarray = None,
-                    reset_flag: bool = False) -> None:
+                    reset_flag: bool = False, load_from_file: bool=False) -> None:
         """
         让机器人导航到某一个位置,
         不需要输入机器人的起始位置, 因为机器人默认都是从当前位置出发的;
@@ -159,7 +159,12 @@ class RobotBase:
         pos_index_robot[-1] = 0  # todo : 这也是因为机器人限制导致的
 
         # 用于把机器人对应位置的设置为空的, 不然会找不到路线
-        grid_map = self.map_grid.value_map
+        if load_from_file == True:
+            grid_map = np.load("./floor6_value_map.npy")
+        else:
+            grid_map = self.map_grid.value_map
+
+
         grid_map[pos_index_robot] = self.map_grid.empty_cell
 
         planner = AStar(grid_map, obs_value=1.0, free_value=0.0, directions="eight")
