@@ -26,6 +26,12 @@ duration = 5.0  # 目标时间 (5 秒)
 
 num_env = 1
 
+desired_position = (200.0, 200.0, 200.0)
+desired_rotation_deg = (-30.0, 45.0, 0.0) # 示例：绕X轴向下30度，绕Y轴旋转45度
+desired_focal_length = 35.0 # 示例：35mm 焦距
+desired_focus_distance = 300.0 # 示例：对焦到距离相机300个单位的地方
+
+
 if __name__ == "__main__":
     # 加载复杂场景
     # usd_path = './scene/CityDemopack/World_CityDemopack.usd'
@@ -45,8 +51,8 @@ if __name__ == "__main__":
     from llm.proj import run_once
 
     input("按下 Enter 开始一次录音（5秒）...")
-    x, y, z = run_once(file_path="coffee.wav")
-    # x, y, z = -1.2, 3.78, 0
+    # x, y, z = run_once(file_path="coffee.wav")
+    x, y, z = -1.2, 3.78, 0
     print(f"导航到{x, y,z}点")
     env.robot_swarm.robot_active['h1'][0].navigate_to([x, y, z], load_from_file=True)
     for i in range(500000):

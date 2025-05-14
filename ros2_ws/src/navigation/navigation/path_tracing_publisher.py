@@ -15,7 +15,7 @@ class PathTracingPublisher(Node):
         # Create a publisher for the PathTracingCmd message type on the /path_tracing topic
         # QoS history depth is set to 10
         self.publisher_ = self.create_publisher(PathTracingCmd, '/path_tracing', 10)
-        timer_period = 5  # seconds - publish every 0.5 seconds
+        timer_period = 1/60  # seconds - publish 60hz
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.current_index = 0
         self.path_length = 10  # Example path length
@@ -25,8 +25,8 @@ class PathTracingPublisher(Node):
 
         # Populate the message fields
         msg.index = self.current_index
-        msg.velocity = 0.5  # Example velocity
-        msg.omega = 0.1  # Example angular velocity
+        msg.velocity = 1.0  # Example velocity
+        msg.omega = 0.0  # Example angular velocity
 
         # Determine if the path is complete
         if self.current_index < self.path_length - 1:
@@ -66,3 +66,4 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+
