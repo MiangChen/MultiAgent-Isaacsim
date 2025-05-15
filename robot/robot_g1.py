@@ -23,7 +23,7 @@ class RobotJetbot(RobotBase):
         self.config = config
         self.flag_active = False
         self.robot_prim = config.prim_path
-        # self.scale = config.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以
+        # self.scale = cfg_body.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以
         from controller.controller_pid_jetbot import ControllerJetbot
         self.controller = ControllerJetbot()
         # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
@@ -32,7 +32,7 @@ class RobotJetbot(RobotBase):
 
         self.traj = Trajectory(
             robot_prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
-            # name='traj' + f'_{config.id}',
+            # name='traj' + f'_{cfg_body.id}',
             id=config.id,
             max_points=100,
             color=(0.3, 1.0, 0.3),

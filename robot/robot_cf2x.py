@@ -10,35 +10,13 @@ from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_drone_cf2x import RobotCfgCf2x
 
-import carb
-from isaacsim.core.utils.prims import define_prim, get_prim_at_path
-from isaacsim.core.prims import Articulation
 
 
 class RobotCf2x(RobotBase):
     def __init__(self, config: RobotCfgCf2x, scene: Scene, map_grid: GridMap):
         super().__init__(config, scene, map_grid)
 
-        prim_path = config.prim_path + f'/{config.name_prefix}_{config.id}'
-        prim = get_prim_at_path(prim_path)
-        if not prim.IsValid():
-            prim = define_prim(prim_path, "Xform")
-
-            if config.usd_path:
-                prim.GetReferences().AddReference(config.usd_path)  # 加载机器人USD模型
-            else:
-                carb.log_error("unable to add robot usd, usd_path not provided")
-
-        self.robot_entity = Articulation(
-            prim_paths_expr=prim_path,
-            name=config.name_prefix + f'_{config.id}',
-            positions=np.array([config.position]),
-            orientations=np.array([config.orientation]),
-        )
-
-        self.flag_active = False
-        self.robot_prim = prim_path
-        # self.scale = config.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以
+        # self.scale = cfg_body.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以
         # from controller.controller_pid_jetbot import ControllerJetbot
         self.controller = ControllerCf2x()
         # # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
@@ -46,9 +24,9 @@ class RobotCf2x(RobotBase):
         # self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
         #
         # self.traj = Trajectory(
-        #     robot_prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
-        #     # name='traj' + f'_{config.id}',
-        #     id=config.id,
+        #     robot_prim_path=cfg_body.prim_path + f'/{cfg_body.name_prefix}_{cfg_body.id}',
+        #     # name='traj' + f'_{cfg_body.id}',
+        #     id=cfg_body.id,
         #     max_points=100,
         #     color=(0.3, 1.0, 0.3),
         #     scene=self.scene,

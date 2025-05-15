@@ -81,7 +81,7 @@ class Env(gym.Env):
         self.robot_swarm.register_robot_class(
             robot_class_name="cf2x", robot_class=RobotCf2x, robot_class_cfg=RobotCfgCf2x
         )  # 注册cf2x机器人
-        # TODO 更新路径的设置，
+        # TODO 更新路径的设置
         self.robot_swarm.load_robot_swarm_cfg(
             f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml"
         )

@@ -1,0 +1,24 @@
+from typing import Optional, Tuple
+from pydantic import BaseModel
+
+
+class BaseCfg(BaseModel):
+    def update(self, **kwargs):
+        return self.model_copy(update=kwargs, deep=True)
+
+
+class CameraCfg(BaseCfg):
+
+    name_prefix: Optional[str] = 'camera'
+    type: Optional[str] = 'camera'
+    prim_path: Optional[str] = '/World/robot/camera'
+
+    position: Tuple[float, float, float] = (0.0, 0.0, 0.0)  # 相对于机器人中心的偏移距离
+    euler_degree: Optional[Tuple[float, float, float]] = (0, 0, 90)  # 相对于机器人中心朝向偏移
+    quat: Optional[Tuple[float, float, float, float]] = (0.0, 0.0, 0.0, 1.0)  # 使用4元数的方法. euler_degree优先级更高
+    scale: Optional[Tuple[float, float, float]] = (1.0, 1.0, 1.0)
+    frequency: Optional[int] = 30  # 相机帧率
+    resolution: Optional[Tuple[int, int]] = (1920, 1080)  # 相机分辨率
+    focal_length: Optional[int] = 30  # 相机的焦段 mm
+    lens_aperture: Optional[float] = 0.0  # 相机的光圈 0 表示没有景深 全部清晰
+    focus_distance: Optional[float] = 0.0  # 相机的对焦距离
