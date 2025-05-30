@@ -63,7 +63,9 @@ class RobotSwarmManager:
         for robot_class_name in dict.keys():
             for robot_cfg in dict[robot_class_name]:  # 可能有多个机器人  这里可以优化一下 让yaml的格式就和robot cfg一样
                 cfg_body_dict = robot_cfg['body']
-                cfg_camera_dict = robot_cfg['camera']
+                cfg_camera_dict = None
+                if 'camera' in robot_cfg.keys():
+                    cfg_camera_dict = robot_cfg['camera']
                 self.create_robot(
                     robot_class_name=robot_class_name,
                     robot_class_cfg=self.robot_class_cfg[robot_class_name],

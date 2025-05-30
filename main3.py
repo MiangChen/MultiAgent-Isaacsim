@@ -31,7 +31,7 @@ if __name__ == "__main__":
     # usd_path = './scene/CityDemopack/World_CityDemopack.usd'
     # usd_path = f'{PATH_PROJECT}/scene/simple_city.usd'
     # usd_path = f'{PATH_PROJECT}/scene/flatroom4.usd'
-    usd_path = f'{PATH_PROJECT}/scene/flatroom2.usd'
+    usd_path = f'{PATH_PROJECT}/scene/simple_road.usd'
     usd_abs_path = os.path.abspath(usd_path)
     env = Env(simulation_app, usd_abs_path)
     env.reset()
@@ -44,11 +44,11 @@ if __name__ == "__main__":
 
     from llm.proj import run_once
 
-    input("按下 Enter 开始一次录音（5秒）...")
+    # input("按下 Enter 开始一次录音（5秒）...")
     # x, y, z = run_once(file_path="coffee.wav")
-    x, y, z = -1.2, 3.78, 0
-    print(f"导航到{x, y,z}点")
-    env.robot_swarm.robot_active['h1'][0].navigate_to([x, y, z], load_from_file=True)
+    # x, y, z = -1.2, 3.78, 0
+    # print(f"导航到{x, y,z}点")
+    # env.robot_swarm.robot_active['h1'][0].navigate_to([x, y, z], load_from_file=True)
     for i in range(500000):
 
         # 设置相机的位置
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         env.step(action=None)  # execute one physics step and one rendering step
         if i % 60 == 0:  # 1s加一个轨迹
             pass
-            print(len(env.robot_swarm.robot_active['h1'][0].path), env.robot_swarm.robot_active['h1'][0].path_index)
+            # print(len(env.robot_swarm.robot_active['h1'][0].path), env.robot_swarm.robot_active['h1'][0].path_index)
             # print(env.robot_swarm.robot_active['cf2x'][0].robot_entity.get_joint_velocities())
 
     simulation_app.close()  # close Isaac Sim

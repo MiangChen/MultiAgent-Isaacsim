@@ -13,27 +13,30 @@ import isaacsim.core.utils.prims as prims_utils
 from isaacsim.core.utils.prims import create_prim
 
 
-def create_scene(config_json_path: str, prim_path_root: str = "background"):
+def create_scene(usd_path: str, prim_path_root: str = "/World"):
     """
 
     Create a scene from config.(But just input usd file yet.)
     Args:
-        config_json_path (str): path to scene config file(use to be a .usd file)
+        usd_path (str): path to scene config file(use to be a .usd file)
         prim_path_root (str): path to root prim
-
-    Returns:
-        config_json_path (str): path to config file
-        world_prim_path (str): path to world prim
     """
-    world_prim_path = "/" + prim_path_root
     if (
-        config_json_path.endswith("usd")
-        or config_json_path.endswith("usda")
-        or config_json_path.endswith("usdc")
+            usd_path.endswith("usd")
+            or usd_path.endswith("usda")
+            or usd_path.endswith("usdc")
     ):
-        # Add usd directly
-        return config_json_path, world_prim_path
-    raise RuntimeError("Env file path needs to end with .usd, .usda or .usdc .")
+        create_prim(
+            prim_path=prim_path_root,
+            usd_path=usd_path,
+            # scale=self.simulation.scene_scale,
+            scale=[1, 1, 1],
+            # translation=[0, 0, 0.81],
+            # orientation=[0.62, -0.774, -0.09, 0.08]
+        )
+    else:
+        raise RuntimeError("Env file path needs to end with .usd, .usda or .usdc .")
+    return
 
 
 class Env(gym.Env):
@@ -48,26 +51,12 @@ class Env(gym.Env):
 
         self._runner = simulation_app
         self.world = World(physics_dt=1 / 200)
-        self.world.scene.add_default_ground_plane()  # 添加地面
-
-        source, prim_path = create_scene(
-            usd_path,
-            # prim_path_root=f"World",  ## 注意前面不要有/
-        )
-
-        create_prim(
-            prim_path,
-            usd_path=source,
-            # scale=self.simulation.scene_scale,
-            scale=[1, 1, 1],
-            # translation=[0, 0, 0.81],
-            # orientation=[0.62, -0.774, -0.09, 0.08]
-        )
-
+        # self.world.scene.add_default_ground_plane()  # 添加地面
+        create_scene(usd_path=usd_path)
         self.cell_size = 0.2
         self.map_grid = GridMap(
             min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=self.cell_size
-        )  #  gridmap需要再robot swarm之前使用
+        )  # gridmap需要再robot swarm之前使用
 
         self.robot_swarm = RobotSwarmManager(self.world.scene, self.map_grid)
         self.robot_swarm.register_robot_class(

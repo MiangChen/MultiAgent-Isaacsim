@@ -37,14 +37,13 @@ class RobotH1(RobotBase):
         # )
 
         # 神经网络控制器
-        # prim_path = "/World/h1"
-        self.controller_policy = H1FlatTerrainPolicy(prim_path=self.prim_path)
+        self.controller_policy = H1FlatTerrainPolicy(prim_path=self.cfg_body.prim_path)
         self.base_command = np.zeros(3)
         return
 
     def initialize(self):
+        super().initialize()
         self.controller_policy.initialize(self.robot_entity)  # 初始化配置
-        self.camera.initialize()
 
     def move_to(self, target_pos):
         import numpy as np

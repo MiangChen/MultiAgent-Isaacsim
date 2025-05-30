@@ -1,4 +1,6 @@
 from typing import List
+import logging
+import coloredlogs
 
 import numpy as np
 import omni
@@ -51,8 +53,6 @@ class GridMap():
         self.occupied_color = carb.Int4(128, 128, 128, 255)  # 灰色，表示障碍物
         self.unoccupied_color = carb.Int4(255, 255, 255, 255)  # 白色，表示可行走区域
         self.unknown_color = carb.Int4(0, 0, 255, 255)  # 蓝色，表示不可见区域
-
-
 
     def initialize(self):
         """
@@ -158,10 +158,12 @@ class GridMap():
         obs_indices = self.compute_index(obs_position)
         free_indices = self.compute_index(free_position)
         # 使用高级索引更新 self.value_map 和 self.pos_map
-        self.value_map[tuple(obs_indices.T)] = self.occupied_cell
-        self.pos_map[tuple(obs_indices.T)] = obs_position
-        self.value_map[tuple(free_indices.T)] = self.empty_cell
-        self.pos_map[tuple(free_indices.T)] = free_position
+        if obs_indices is not None:
+            self.value_map[tuple(obs_indices.T)] = self.occupied_cell
+            self.pos_map[tuple(obs_indices.T)] = obs_position
+        if free_indices is not None:
+            self.value_map[tuple(free_indices.T)] = self.empty_cell
+            self.pos_map[tuple(free_indices.T)] = free_position
         # for p in obs_position:
         #     x = int((p[0] / scale - min_b[0] / scale))
         #     y = int((p[1] / scale - min_b[1] / scale))
@@ -231,7 +233,10 @@ class GridMap():
         image = Image.fromarray(buffer_np)
         return image
 
-    def compute_index(self, position: List = [0, 0, 0]):
+    def compute_index(self, position: List = None) -> np.ndarray:
+        if position is None or (isinstance(position, np.ndarray) and position.size == 0) or isinstance(position, List) and len(position) == 0 :
+            logging.warning("compute index的输入position = None")
+            return None
         # 获取角点
         max_b = self.generator.get_max_bound()
         min_b = self.generator.get_min_bound()  # 返回的是grid map 存在的 最小的角落点

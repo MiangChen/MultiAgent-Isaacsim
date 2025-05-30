@@ -1,4 +1,4 @@
-# import isaacsim.core.api.utils.prims as prim_utils
+# import isaacsim.core.utils.prims as prims_utils
 # from isaacsim.core.api.simulation_context import SimulationContext
 # from omni.isaac.debug_draw import _debug_draw  # Use the singleton instance
 # import omni.usd

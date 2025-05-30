@@ -6,9 +6,10 @@ from camera.camera_base import CameraBase
 from camera.camera_cfg import CameraCfg
 from robot.robot_cfg import RobotCfg
 from robot.robot_trajectory import Trajectory
-
+from pxr import Usd, UsdGeom
 import numpy as np
 import carb
+from isaacsim.core.utils.numpy import rotations
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import RigidPrim
 from isaacsim.core.prims import Articulation
@@ -18,6 +19,7 @@ from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 
 class RobotBase:
     """Base class of robot."""
+
     def __init__(self, cfg_body: RobotCfg = None, cfg_camera: CameraCfg = None, scene: Scene = None,
                  map_grid: GridMap = None):
         self.cfg_body = cfg_body
@@ -25,7 +27,53 @@ class RobotBase:
         self.scene = scene
         # 代表机器人的实体
         self.robot_entity: Articulation = None
-        self.prim_path: str = ''
+        # 通用的机器人本体初始化代码
+        self.cfg_body.prim_path = cfg_body.prim_path + f'/{cfg_body.type}' + f'/{cfg_body.name_prefix}_{cfg_body.id}'
+        prim = get_prim_at_path(self.cfg_body.prim_path)
+        if not prim.IsValid():
+            prim = define_prim(self.cfg_body.prim_path, "Xform")
+            if cfg_body.usd_path:
+                prim.GetReferences().AddReference(cfg_body.usd_path)  # 加载机器人USD模型
+            else:
+                carb.log_error("unable to add robot usd, usd_path not provided")
+        elif prim.IsA(UsdGeom.Xformable):
+                # Convert the prim to an Xformable object
+                xformable = UsdGeom.Xformable(prim)
+
+                # Get the local-to-world transformation matrix
+                # CORRECTED METHOD NAME: ComputeLocalToWorldTransform
+                # You need to specify a time code.
+                timecode = Usd.TimeCode.Default()  # Use default time or simulation time
+                local_to_world_matrix = xformable.ComputeLocalToWorldTransform(timecode)
+
+                # The local_to_world_matrix is a Gf.Matrix4d
+                # Extract the translation (position) from the matrix
+                cfg_body.position = list(local_to_world_matrix.ExtractTranslation())  # Returns a Gf.Vec3d
+
+                # Extract the rotation from the matrix
+                quat = local_to_world_matrix.ExtractRotationQuat()  # Returns a Gf.Quatd
+                cfg_body.quat = [quat.real] + list(quat.imaginary)
+                cfg_body.euler_degree = None
+        else:
+            if prim:
+                print(f"Prim at {prim.GetPath()} is not Xformable or does not exist.")
+            else:
+                print(f"Prim not found at path {prim.GetPath()}")
+
+        # 角度和4元数转化
+        if cfg_body.euler_degree is not None:
+            # 注意角度和弧度模式
+            cfg_body.quat = rotations.euler_angles_to_quats(np.array(cfg_body.euler_degree), degrees=True)
+        else:
+            cfg_body.euler_degree = rotations.quats_to_euler_angles(np.array(cfg_body.quat), degrees=True)
+
+        # 初始化机器人关节树
+        self.robot_entity = Articulation(
+            prim_paths_expr=self.cfg_body.prim_path,
+            name=cfg_body.name_prefix + f'_{cfg_body.id}',
+            positions=np.array([cfg_body.position]),
+            orientations=np.array([cfg_body.quat]),
+        )
         # 机器人的历史轨迹
         self.trajectory: Trajectory = None
         # 机器人的控制器
@@ -43,23 +91,6 @@ class RobotBase:
         # 用于PDDL, 记录当前用的 skill, 之所以用skill, 是为了和action区分, action一般是底层的关节动作
         self.state_skill: str = ''
         self.state_skill_complete: bool = True  # 默认状态, 没有skill要做, 所以是True
-        # 通用的机器人本体初始化代码
-        self.prim_path = cfg_body.prim_path + f'/{cfg_body.name_prefix}_{cfg_body.id}'
-        self.robot_prim = self.prim_path
-        prim = get_prim_at_path(self.prim_path)
-        if not prim.IsValid():
-            prim = define_prim(self.prim_path, "Xform")
-            if cfg_body.usd_path:
-                prim.GetReferences().AddReference(cfg_body.usd_path)  # 加载机器人USD模型
-            else:
-                carb.log_error("unable to add robot usd, usd_path not provided")
-        # 初始化机器人关节树
-        self.robot_entity = Articulation(
-            prim_paths_expr=self.prim_path,
-            name=cfg_body.name_prefix + f'_{cfg_body.id}',
-            positions=np.array([cfg_body.position]),
-            orientations=np.array([cfg_body.orientation]),
-        )
         # 布置机器人的相机, 目前机器人一个相机
         # 机器人的感知范围
         self.cameras: dict = {}
@@ -128,7 +159,8 @@ class RobotBase:
         return pos_IB, q_IB
 
     def initialize(self) -> None:
-        raise NotImplementedError()
+        if self.cfg_camera is not None:
+            self.camera.initialize()
 
     def move_to(self, target_position: np.ndarray, target_orientation: np.ndarray) -> bool:
         """

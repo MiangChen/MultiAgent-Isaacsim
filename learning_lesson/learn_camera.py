@@ -12,6 +12,11 @@ import matplotlib.pyplot as plt
 import isaacsim.core.utils.prims as prims_utils
 my_world = World(stage_units_in_meters=1.0)
 from isaacsim.core.utils.semantics import  add_update_semantics
+from pxr import Usd, UsdGeom, Gf
+
+from isaacsim.core.utils.numpy import rotations
+from isaacsim.core.utils.prims import define_prim, get_prim_at_path
+
 
 prim_path = '/new_cube_2'
 cube_2 = my_world.scene.add(
@@ -43,13 +48,18 @@ cube_3 = my_world.scene.add(
     )
 )
 
+camera_axes = 'usd'
 camera = Camera(
     prim_path="/World/camera",
     position=np.array([0.0, 0.0, 25.0]),
     frequency=20,
     resolution=(256, 256),
     orientation=rot_utils.euler_angles_to_quats(np.array([0, 90, 0]), degrees=True), ## 角度到4元数
+    # camera_axes = camera_axes,
+    # orientation=[0.5, 0.5, -0.5, -0.5]# rot_utils.euler_angles_to_quats(np.array([0, 90, 0]), degrees=True), ## 角度到4元数
 )
+
+camera.set_local_pose(translation=np.array([0.0, 0.0, 0.0]), orientation=rot_utils.euler_angles_to_quats(np.array([0, 90, 0]), degrees=True), camera_axes= camera_axes )
 
 my_world.scene.add_default_ground_plane()
 my_world.reset()
@@ -61,12 +71,42 @@ i = 0
 # camera.add_distance_to_camera_to_frame()
 # camera.add_distance_to_image_plane_to_frame()
 camera.add_bounding_box_2d_loose_to_frame()
+print(camera.get_local_pose())
+
 while simulation_app.is_running():
+
+    # 获取值（默认时间或指定时间）
+    timecode = Usd.TimeCode.Default()
+    prim = get_prim_at_path("/World/camera")
+    translate_attr = prim.GetAttribute('xformOp:translate')
+    if not translate_attr:
+        print("Prim 未定义 xformOp:translate 属性")
+    else:  # 静态用默认时间，动态用 Usd.TimeCode(frame)
+        translate_value: Gf.Vec3d = translate_attr.Get(timecode)
+        # print(f"平移值: {tra/slate_value}")  # 例如 (1.0, 2.0, 3.0)
+        position = list(translate_value)
+    print("translate", translate_value)
+    quat_attr = prim.GetAttribute('xformOp:orient')
+    if not quat_attr:
+        print("Prim 未定义 xformOp:orient 属性")
+    else:
+        quat_value = quat_attr.Get(timecode)
+        quat = [quat_value.real] + list(quat_value.imaginary)
+        euler_degree = None
+        print("quat", quat)
+
+    # camera.set_world_pose(orientation=rot_utils.euler_angles_to_quats(np.array([0, 90, 0]), degrees=True)), ## 角度到4元数
+    print(rot_utils.euler_angles_to_quats(np.array([0, 90, 0])))
+    print(camera.get_local_pose(camera_axes='world'))
+    print(camera.get_local_pose(camera_axes='ros'))
+    print(camera.get_local_pose(camera_axes='usd'))
+    # print(camera.get_world_pose(camera_axes=camera_axes))
+    print('*' * 100)
+
     my_world.step(render=True)
     # print(camera.get_current_frame())
     if i == 100:
         import os
-
         # 在保存前确保目录存在
         os.makedirs("output", exist_ok=True)
         points_2d = camera.get_image_coords_from_world_points(
