@@ -2,25 +2,78 @@ from typing import List, Optional, Tuple
 
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
+from camera.camera_base import CameraBase
+from camera.camera_cfg import CameraCfg
 from robot.robot_cfg import RobotCfg
 from robot.robot_trajectory import Trajectory
-
+from pxr import Usd, UsdGeom
 import numpy as np
+import carb
+from isaacsim.core.utils.numpy import rotations
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import RigidPrim
 from isaacsim.core.prims import Articulation
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
-from isaacsim.core.utils.types import ArticulationActions
+from isaacsim.core.utils.prims import define_prim, get_prim_at_path
+
 
 class RobotBase:
     """Base class of robot."""
 
-    def __init__(self, config: RobotCfg, scene: Scene, map_grid: GridMap = None):
-        self.config = config
+    def __init__(self, cfg_body: RobotCfg = None, cfg_camera: CameraCfg = None, scene: Scene = None,
+                 map_grid: GridMap = None):
+        self.cfg_body = cfg_body
+        self.cfg_camera = cfg_camera
         self.scene = scene
         # 代表机器人的实体
         self.robot_entity: Articulation = None
-        self.prim_path: str = ''
+        # 通用的机器人本体初始化代码
+        self.cfg_body.prim_path = cfg_body.prim_path + f'/{cfg_body.type}' + f'/{cfg_body.name_prefix}_{cfg_body.id}'
+        prim = get_prim_at_path(self.cfg_body.prim_path)
+        if not prim.IsValid():
+            prim = define_prim(self.cfg_body.prim_path, "Xform")
+            if cfg_body.usd_path:
+                prim.GetReferences().AddReference(cfg_body.usd_path)  # 加载机器人USD模型
+            else:
+                carb.log_error("unable to add robot usd, usd_path not provided")
+        elif prim.IsA(UsdGeom.Xformable):
+                # Convert the prim to an Xformable object
+                xformable = UsdGeom.Xformable(prim)
+
+                # Get the local-to-world transformation matrix
+                # CORRECTED METHOD NAME: ComputeLocalToWorldTransform
+                # You need to specify a time code.
+                timecode = Usd.TimeCode.Default()  # Use default time or simulation time
+                local_to_world_matrix = xformable.ComputeLocalToWorldTransform(timecode)
+
+                # The local_to_world_matrix is a Gf.Matrix4d
+                # Extract the translation (position) from the matrix
+                cfg_body.position = list(local_to_world_matrix.ExtractTranslation())  # Returns a Gf.Vec3d
+
+                # Extract the rotation from the matrix
+                quat = local_to_world_matrix.ExtractRotationQuat()  # Returns a Gf.Quatd
+                cfg_body.quat = [quat.real] + list(quat.imaginary)
+                cfg_body.euler_degree = None
+        else:
+            if prim:
+                print(f"Prim at {prim.GetPath()} is not Xformable or does not exist.")
+            else:
+                print(f"Prim not found at path {prim.GetPath()}")
+
+        # 角度和4元数转化
+        if cfg_body.euler_degree is not None:
+            # 注意角度和弧度模式
+            cfg_body.quat = rotations.euler_angles_to_quats(np.array(cfg_body.euler_degree), degrees=True)
+        else:
+            cfg_body.euler_degree = rotations.quats_to_euler_angles(np.array(cfg_body.quat), degrees=True)
+
+        # 初始化机器人关节树
+        self.robot_entity = Articulation(
+            prim_paths_expr=self.cfg_body.prim_path,
+            name=cfg_body.name_prefix + f'_{cfg_body.id}',
+            positions=np.array([cfg_body.position]),
+            orientations=np.array([cfg_body.quat]),
+        )
         # 机器人的历史轨迹
         self.trajectory: Trajectory = None
         # 机器人的控制器
@@ -32,20 +85,26 @@ class RobotBase:
         # 用于地图
         self.map_grid: GridMap = map_grid  # 用于存储一个实例化的gridmap
         # 用于回调函数中
+        self.flag_active = False
         self.flag_world_reset: bool = False  # 用来记录下世界是不是被初始化了
         self.flag_action_navigation: bool = False  # 用来记录是不是启动导航了
         # 用于PDDL, 记录当前用的 skill, 之所以用skill, 是为了和action区分, action一般是底层的关节动作
         self.state_skill: str = ''
         self.state_skill_complete: bool = True  # 默认状态, 没有skill要做, 所以是True
-        # 传感器相关 机器人的感知范围
-        self.sensors: dict = {}
+        # 布置机器人的相机, 目前机器人一个相机
+        # 机器人的感知范围
+        self.cameras: dict = {}
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
+        if cfg_camera is not None:
+            print(f"create camera for {self.cfg_body.name_prefix}")
+            self.camera = CameraBase(cfg_body, cfg_camera)
+            self.camera.create_camera()
 
     def cleanup(self):
         for controller in self.controllers.values():
             controller.cleanup()
-        for sensor in self.sensors.values():
+        for sensor in self.cameras.values():
             sensor.cleanup()
         for rigid_body in self.get_rigid_bodies():
             self._scene.remove_object(rigid_body.name_prefix)
@@ -59,7 +118,7 @@ class RobotBase:
         return self.controllers
 
     def get_obs(self) -> dict:
-        """Get observation of robot, including controllers, sensors, and world pose.
+        """Get observation of robot, including controllers, cameras, and world pose.
 
         Raises:
             NotImplementedError: _description_
@@ -100,7 +159,8 @@ class RobotBase:
         return pos_IB, q_IB
 
     def initialize(self) -> None:
-        raise NotImplementedError()
+        if self.cfg_camera is not None:
+            self.camera.initialize()
 
     def move_to(self, target_position: np.ndarray, target_orientation: np.ndarray) -> bool:
         """
@@ -134,7 +194,7 @@ class RobotBase:
             return True
 
     def navigate_to(self, pos_target: np.ndarray = None, orientation_target: np.ndarray = None,
-                    reset_flag: bool = False, load_from_file: bool=False) -> None:
+                    reset_flag: bool = False, load_from_file: bool = False) -> None:
         """
         让机器人导航到某一个位置,
         不需要输入机器人的起始位置, 因为机器人默认都是从当前位置出发的;
@@ -163,8 +223,6 @@ class RobotBase:
             grid_map = np.load("./floor6_value_map.npy")
         else:
             grid_map = self.map_grid.value_map
-
-
 
         grid_map[pos_index_robot] = self.map_grid.empty_cell
 
@@ -196,7 +254,7 @@ class RobotBase:
 
     def post_reset(self) -> None:
         """Set up things that happen after the world resets."""
-        for sensor in self.sensors.values():
+        for sensor in self.cameras.values():
             sensor.post_reset()
         return
 
@@ -236,11 +294,13 @@ class RobotBase:
 
         def decorator(robot_class):
             cls.robots[name] = robot_class
+
             @wraps(robot_class)
             def wrapped_function(*args, **kwargs):
                 return robot_class(*args, **kwargs)
 
             return wrapped_function
+
         return decorator
 
     def set_up_to_scene(self, scene: Scene) -> None:
@@ -250,7 +310,7 @@ class RobotBase:
             scene (Scene): scene to set up.
         """
         # self._scene = scene
-        robot_cfg = self.config
+        robot_cfg = self.cfg_body
         if self.robot_entity:
             scene.add(self.robot_entity)
             # log.debug('self.robot_entity: ' + str(self.robot_entity))
@@ -323,7 +383,6 @@ class RobotBase:
                 else:  # 奇数列，从上到下
                     path_points.append([x, max_y])
                     path_points.append([x, min_y])
-
         return path_points
 
 

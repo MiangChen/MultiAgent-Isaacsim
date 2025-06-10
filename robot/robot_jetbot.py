@@ -42,7 +42,7 @@ class RobotJetbot(RobotBase):
 
         self.traj = Trajectory(
             robot_prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
-            # name='traj' + f'_{config.id}',
+            # name='traj' + f'_{cfg_body.id}',
             id=config.id,
             max_points=100,
             color=(0.3, 1.0, 0.3),

@@ -1,11 +1,10 @@
 from typing import Dict, List, Type
 import yaml
-
+from pydantic import BaseModel, Field, ValidationError
 
 from map.map_grid_map import GridMap
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
-
 
 import numpy as np
 from isaacsim.core.api.scenes import Scene
@@ -39,10 +38,10 @@ class RobotSwarmManager:
         self.map_grid = map_grid
 
     def register_robot_class(
-        self,
-        robot_class_name: str,
-        robot_class: Type[RobotBase],
-        robot_class_cfg: Type[RobotCfg],
+            self,
+            robot_class_name: str,
+            robot_class: Type[RobotBase],
+            robot_class_cfg: Type[RobotCfg],
     ) -> None:
         """注册新的机器人类型"""
         self.robot_warehouse[robot_class_name] = []
@@ -52,7 +51,7 @@ class RobotSwarmManager:
         self.robot_class_cfg[robot_class_name] = robot_class_cfg
 
     def load_robot_swarm_cfg(
-        self, robot_swarm_cfg_file: str = None, dict: Dict = None
+            self, robot_swarm_cfg_file: str = None, dict: Dict = None
     ) -> None:
 
         if robot_swarm_cfg_file is not None:
@@ -62,27 +61,26 @@ class RobotSwarmManager:
         if dict is None:
             print("No configuration file or dictionary found")
         for robot_class_name in dict.keys():
-            for robot in dict[
-                robot_class_name
-            ]:  # 可能有多个机器人  这里可以优化一下 让yaml的格式就和robot cfg一样
+            for robot_cfg in dict[robot_class_name]:  # 可能有多个机器人  这里可以优化一下 让yaml的格式就和robot cfg一样
+                cfg_body_dict = robot_cfg['body']
+                cfg_camera_dict = None
+                if 'camera' in robot_cfg.keys():
+                    cfg_camera_dict = robot_cfg['camera']
                 self.create_robot(
-                    robot_class_name,
-                    id=robot["id"],
-                    position=robot["position"],
-                    orientation=robot["orientation"],
+                    robot_class_name=robot_class_name,
                     robot_class_cfg=self.robot_class_cfg[robot_class_name],
+                    cfg_body_dict=cfg_body_dict,
+                    cfg_camera_dict=cfg_camera_dict,
                 )
 
     def create_robot(
-        self,
-        robot_class_name: str = None,
-        id: int = None,
-        position=None,
-        orientation=None,
-        robot_class_cfg: Type[RobotCfg] = None,
+            self,
+            robot_class_name: str = None,
+            robot_class_cfg: Type[RobotCfg] = None,
+            cfg_body_dict: Dict = None,
+            cfg_camera_dict: Dict = None,
     ):
         """创建新机器人并加入仓库"""
-
         if robot_class_name not in self.robot_class:
             raise ValueError(f"Unknown robot type: {robot_class_name}")
 
@@ -90,21 +88,32 @@ class RobotSwarmManager:
         #     raise ValueError(f"Robot id '{id}' of robot type {robot_class_name} already exists")
 
         # 定义对应的机器人的位置和姿态, 以及编号
-        cfg = robot_class_cfg(
-            id=id,
-            position=np.array(position),
-            orientation=np.array(orientation),
-        )
+        cfg_body = None
+        try:
+            print(f"尝试加载{robot_class_name} {cfg_body_dict['id']}号的配置文件")
+            cfg_body = robot_class_cfg(
+                **cfg_body_dict
+            )
+        except ValidationError as e:
+            print(f"加载失败,检查{robot_class_name}的配置文件")
+            print(e)
+        # 配置机器人的相机
+        cfg_camera = None
+        if cfg_camera_dict is not None:
+            from camera.camera_cfg import CameraCfg
+            cfg_camera = CameraCfg(
+                **cfg_camera_dict
+            )
 
-        # 实例化一个对应的机器人
+        # 实例化完整的机器人
         robot = self.robot_class[robot_class_name](
-            cfg, scene=self.scene, map_grid=self.map_grid
+            cfg_body=cfg_body, cfg_camera=cfg_camera, scene=self.scene, map_grid=self.map_grid,
         )
         self.robot_warehouse[robot_class_name].append(robot)
         return robot
 
     def activate_robot(
-        self, flag_file_path: str = None, flag_dict: Dict = None
+            self, flag_file_path: str = None, flag_dict: Dict = None
     ) -> None:
         # 两种寄存器配置模式, 一个是从文件读取, 适合初始化时后加载大量机器人, 另一个是通过dict来配置, 时候后续少量的处理;
         if flag_file_path is not None:
@@ -116,8 +125,8 @@ class RobotSwarmManager:
 
         for key in self.robot_class.keys():
             for robot in self.robot_warehouse[key]:
-                if robot.config.type in flag_dict.keys():
-                    if robot.config.id in flag_dict[key]:
+                if robot.cfg_body.type in flag_dict.keys():
+                    if robot.cfg_body.id in flag_dict[key]:
                         robot.flag_active = True  # 机器人自身记录一份
                         self.robot_active[key].append(robot)
                         self.scene.add(robot.robot_entity)

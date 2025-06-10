@@ -1,6 +1,7 @@
 from isaacsim.core.api.scenes import Scene
 
 from map.map_grid_map import GridMap
+from camera.camera_cfg import CameraCfg
 from controller.controller_pid import ControllerPID
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
@@ -16,55 +17,32 @@ from isaacsim.core.utils.types import ArticulationActions
 
 
 class RobotH1(RobotBase):
-    def __init__(self, config: RobotCfgH1, scene: Scene = None, map_grid: GridMap = None) -> None:
-        super().__init__(config, scene, map_grid)
-        self.prim_path = config.prim_path + f'/{config.name_prefix}_{config.id}'
-        prim = get_prim_at_path(self.prim_path)
-        if not prim.IsValid():
-            prim = define_prim(self.prim_path, "Xform")
-
-            if config.usd_path:
-                prim.GetReferences().AddReference(config.usd_path)  # 加载机器人USD模型
-            else:
-                carb.log_error("unable to add robot usd, usd_path not provided")
-        # 初始化机器人关节树
-        self.robot_entity = Articulation(
-            prim_paths_expr=self.prim_path,
-            name=config.name_prefix + f'_{config.id}',
-            positions=np.array([config.position]),
-            orientations=np.array([config.orientation]),
-        )
-
-        self.config = config
-        self.flag_active = False
-        self.robot_prim = config.prim_path + f'/{config.name_prefix}_{config.id}'
+    def __init__(self, cfg_body: RobotCfgH1, cfg_camera: CameraCfg = None, scene: Scene = None,
+                 map_grid: GridMap = None) -> None:
+        super().__init__(cfg_body, cfg_camera, scene, map_grid)
         self.control_mode = 'joint_positions'
-        # self.scale = config.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以, 所以注释掉了
-        # from controller.controller_pid_jetbot import ControllerJetbot
-        # self.controller = ControllerJetbot()
+
         # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
         self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
         self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
 
         # self.traj = Trajectory(
         #     robot_prim_path=self.robot_prim,
-        #     # name='traj' + f'_{config.id}',
-        #     id=config.id,
+        #     # name='traj' + f'_{cfg_body.id}',
+        #     id=cfg_body.id,
         #     max_points=100,
         #     color=(0.3, 1.0, 0.3),
         #     scene=self.scene,
         #     radius=0.05,
         # )
-        self.view_angle = 2 * np.pi / 3  # 感知视野 弧度
-        self.view_radius = 2  # 感知半径 米
 
         # 神经网络控制器
-        # prim_path = "/World/h1"
-        self.controller_policy = H1FlatTerrainPolicy(prim_path=self.prim_path)
+        self.controller_policy = H1FlatTerrainPolicy(prim_path=self.cfg_body.prim_path)
         self.base_command = np.zeros(3)
         return
 
     def initialize(self):
+        super().initialize()
         self.controller_policy.initialize(self.robot_entity)  # 初始化配置
 
     def move_to(self, target_pos):
