@@ -10,8 +10,8 @@ from isaacsim.asset.gen.omap.bindings import _omap
 class GridMap():
     def __init__(self,
                  start_point: list = [0, 0, 0],
-                 min_bounds: list = [-10, -10, 0],
-                 max_bounds: list = [10, 10, 10],
+                 min_bounds: list = [-20, -20, 0],
+                 max_bounds: list = [20, 20, 5],
                  occupied_cell: int = 1,
                  empty_cell: int = 0,
                  invisible_cell: int = 2,

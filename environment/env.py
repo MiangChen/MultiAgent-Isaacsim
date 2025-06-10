@@ -26,13 +26,14 @@ def create_scene(usd_path: str, prim_path_root: str = "/World"):
             or usd_path.endswith("usda")
             or usd_path.endswith("usdc")
     ):
+
         create_prim(
-            prim_path=prim_path_root,
+            prim_path_root,
             usd_path=usd_path,
             # scale=self.simulation.scene_scale,
             scale=[1, 1, 1],
-            # translation=[0, 0, 0.81],
-            # orientation=[0.62, -0.774, -0.09, 0.08]
+            # translation=[0, 0, 0.81696],
+            # orientation=[0.610, -0.789, -0.05184, 0.040] # wxyz
         )
     else:
         raise RuntimeError("Env file path needs to end with .usd, .usda or .usdc .")
@@ -53,10 +54,10 @@ class Env(gym.Env):
         self.world = World(physics_dt=1 / 200)
         # self.world.scene.add_default_ground_plane()  # 添加地面
         create_scene(usd_path=usd_path)
-        self.cell_size = 0.2
+        self.cell_size = 0.1
         self.map_grid = GridMap(
-            min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=self.cell_size
-        )  # gridmap需要再robot swarm之前使用
+            cell_size=self.cell_size
+        )  # gridmap需要在robot swarm之前使用
 
         self.robot_swarm = RobotSwarmManager(self.world.scene, self.map_grid)
         self.robot_swarm.register_robot_class(

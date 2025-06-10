@@ -5,11 +5,11 @@ y_orig = -3.929
 z_orig = 15.292
 quat = [-0.030, 0.679, 0.148, -0.719]  # xyzw
 
-# 坐标系变化的增量
+# 坐标系变化的数值
 delta_x = 0.0
 delta_y = 0.0
 delta_z = 0.81696
-rotate_angle_x = -104.637  # 度
+rotate_angle_x = -104.637  # 度 # 绕着对应的轴旋转
 rotate_angle_y = -7.276  # 度
 rotate_angle_z = -1.894  # 度
 

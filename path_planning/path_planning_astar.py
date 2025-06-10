@@ -1,6 +1,8 @@
 import heapq
-import numpy as np
 from typing import Tuple, List, Optional
+
+import matplotlib.pyplot as plt
+import numpy as np
 import collections # For BFS queue
 
 class AStar:
@@ -183,7 +185,9 @@ class AStar:
 
     def find_path(self,
                   start: Tuple[int, int, int],
-                  goal: Tuple[int, int, int]) -> Optional[List[Tuple[int, int, int]]]:
+                  goal: Tuple[int, int, int],
+                  render: bool = False,
+                  save_path: str = None) -> Optional[List[Tuple[int, int, int]]]:
         """
         Find a path from start to goal using A* algorithm with obstacle avoidance cost.
         """
@@ -227,6 +231,11 @@ class AStar:
                     current = came_from[current]
                     path.append(current)
                 path.reverse()
+
+                # 如果需要渲染，绘制路径
+                if render:
+                    self.plot_path(self.map[:,:,0], start=start, goal=goal, path=path, save_path=save_path)
+
                 return np.array(path)
 
             if current in closed_set:
@@ -267,94 +276,50 @@ class AStar:
         return None
 
 
-# Example Usage:
-if __name__ == "__main__":
-    # Create a sample 3D map (10x10x5)
-    # 0.0 represents free space, 1.0 represents obstacles
-    map_shape = (10, 10, 5)
-    sample_map = np.zeros(map_shape)
+    def plot_path(self, map_2d, start, goal, path=None, save_path=None):
+        """
+        绘制地图、起点、终点和路径
+        """
 
-    # Add some obstacles to create a narrow passage
-    sample_map[3:7, 3:7, 1:4] = 1.0 # A block obstacle
-    sample_map[1, 5, :] = 1.0        # A vertical line obstacle near start
-    sample_map[8, :, 2] = 1.0        # A horizontal line obstacle near goal
+        # 创建图像
+        plt.figure(figsize=(8, 8))
+        plt.clf()  # 清除当前图形
 
-    # Scenario: Obstacles create a narrow passage
-    # Path might need to go through (5, y, 2) where y is between 2 and 8
-    sample_map[4, 0:8, 2] = 1.0 # Wall from y=0 to 7
-    sample_map[6, 2:10, 2] = 1.0 # Wall from y=2 to 9
-    # This creates a narrow vertical passage at x=5, y=8,9, x=6, y=0,1
-    # And a passage around y=8,9, x between 4 and 6
-    # And a passage around y=0,1, x between 4 and 6
+        # 方案1：使用标准灰度映射（推荐）
+        # 0=黑色(空白), 1=白色(障碍物)
+        plt.imshow(map_2d.T, cmap='gray', origin='lower', vmin=0, vmax=1)
 
-    # Define start and goal points
-    start_point = (1, 1, 2)
-    goal_point = (2, 2, 2)
+        # 方案2：如果想要障碍物显示为黑色，可以使用：
+        # plt.imshow(map_2d.T, cmap='gray_r', origin='lower', vmin=0, vmax=1)
 
-    print(f"\n--- Running A* with penalty_factor = 0 (standard A*) ---")
-    # Use 26 directions for a more flexible search in 3D
-    astar_standard = AStar(sample_map, penalty_factor=0, directions='26')
-    path_standard = astar_standard.find_path(start_point, goal_point)
+        # 方案3：使用自定义颜色映射，更清晰地区分障碍物
+        # from matplotlib.colors import ListedColormap
+        # colors = ['white', 'black']  # 0=白色(空白), 1=黑色(障碍物)
+        # cmap = ListedColormap(colors)
+        # plt.imshow(map_2d.T, cmap=cmap, origin='lower', vmin=0, vmax=1)
 
-    if path_standard is not None:
-        print(f"Path found (standard A*). Length: {len(path_standard)}")
-        # Calculate minimum distance to obstacle for this path
-        obstacle_locations = np.argwhere(sample_map == 1.0)
-        min_dist_to_obs = np.inf
-        for point in path_standard:
-            px, py, pz = point
-            min_dist_sq_point = np.inf
-            for obs_loc in obstacle_locations:
-                 ox, oy, oz = obs_loc
-                 dist_sq = (px - ox)**2 + (py - oy)**2 + (pz - oz)**2
-                 min_dist_sq_point = min(min_dist_sq_point, dist_sq)
-            min_dist_to_obs = min(min_dist_to_obs, np.sqrt(min_dist_sq_point))
-        print(f"Minimum Euclidean distance from path to any original obstacle: {min_dist_to_obs:.2f}")
+        # 绘制起点（红色）
+        plt.plot(start[0], start[1], 'ro', markersize=10, label='Start')
 
-    else:
-        print(f"No path found with standard A*.")
+        # 绘制终点（黄色）
+        plt.plot(goal[0], goal[1], 'yo', markersize=10, label='Goal')
 
-    print(f"\n--- Running A* with penalty_factor = 50 ---")
-    astar_penalty_moderate = AStar(sample_map, penalty_factor=50, directions='26')
-    path_penalty_moderate = astar_penalty_moderate.find_path(start_point, goal_point)
+        # 如果有路径，绘制路径（绿色）
+        if path is not None:
+            path = np.array(path)
+            plt.plot(path[:, 0], path[:, 1], 'g-', linewidth=2, label='Path')
 
-    if path_penalty_moderate is not None:
-        print(f"Path found (moderate penalty). Length: {len(path_penalty_moderate)}")
-        obstacle_locations = np.argwhere(sample_map == 1.0)
-        min_dist_to_obs = np.inf
-        for point in path_penalty_moderate:
-            px, py, pz = point
-            min_dist_sq_point = np.inf
-            for obs_loc in obstacle_locations:
-                 ox, oy, oz = obs_loc
-                 dist_sq = (px - ox)**2 + (py - oy)**2 + (pz - oz)**2
-                 min_dist_sq_point = min(min_dist_sq_point, dist_sq)
-            min_dist_to_obs = min(min_dist_to_obs, np.sqrt(min_dist_sq_point))
-        print(f"Minimum Euclidean distance from path to any original obstacle: {min_dist_to_obs:.2f}")
-        # You will likely observe this distance is larger than in the standard A* case (if a path existed).
+        plt.grid(True, alpha=0.3)  # 添加透明度，避免网格线过于突出
+        plt.legend()
+        plt.title('A* Path Planning')
 
-    else:
-        print(f"No path found with moderate penalty.") # Could happen if penalty makes all paths too expensive
+        # 设置坐标轴范围
+        plt.xlim(0, map_2d.shape[0] - 1)
+        plt.ylim(0, map_2d.shape[1] - 1)
 
-    print(f"\n--- Running A* with penalty_factor = 500 (strong penalty) ---")
-    astar_penalty_strong = AStar(sample_map, penalty_factor=500, directions='26')
-    path_penalty_strong = astar_penalty_strong.find_path(start_point, goal_point)
-
-    if path_penalty_strong is not None:
-        print(f"Path found (strong penalty). Length: {len(path_penalty_strong)}")
-        obstacle_locations = np.argwhere(sample_map == 1.0)
-        min_dist_to_obs = np.inf
-        for point in path_penalty_strong:
-            px, py, pz = point
-            min_dist_sq_point = np.inf
-            for obs_loc in obstacle_locations:
-                 ox, oy, oz = obs_loc
-                 dist_sq = (px - ox)**2 + (py - oy)**2 + (pz - oz)**2
-                 min_dist_sq_point = min(min_dist_sq_point, dist_sq)
-            min_dist_to_obs = min(min_dist_to_obs, np.sqrt(min_dist_sq_point))
-        print(f"Minimum Euclidean distance from path to any original obstacle: {min_dist_to_obs:.2f}")
-         # This distance should be even larger, favoring paths further away.
-    else:
-        print(f"No path found with strong penalty.") # More likely to happen if path is narrow
-
+        if save_path:
+            plt.savefig(save_path, dpi=150, bbox_inches='tight')
+            plt.close()
+        else:
+            plt.show()
 

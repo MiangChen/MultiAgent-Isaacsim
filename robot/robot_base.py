@@ -220,19 +220,24 @@ class RobotBase:
 
         # 用于把机器人对应位置的设置为空的, 不然会找不到路线
         if load_from_file == True:
-            grid_map = np.load("./floor6_value_map.npy")
+            grid_map = np.load("./value_map.npy")
+            pos_map = np.load("./pos_map.npy")
         else:
             grid_map = self.map_grid.value_map
+            np.save("./value_map.npy", grid_map)
+            pos_map = self.map_grid.pos_map
+            np.save("./pos_map.npy", pos_map)
 
         grid_map[pos_index_robot] = self.map_grid.empty_cell
 
         planner = AStar(grid_map, obs_value=1.0, free_value=0.0, directions="eight")
-        path = planner.find_path(tuple(pos_index_robot), tuple(pos_index_target))
+        path = planner.find_path(tuple(pos_index_robot), tuple(pos_index_target), render=True)
 
         real_path = np.zeros_like(path, dtype=np.float32)
         for i in range(path.shape[0]):  # 把index变成连续实际世界的坐标
             real_path[i] = self.map_grid.pos_map[tuple(path[i])]
             real_path[i][-1] = 0
+        print(real_path)
 
         self.move_along_path(real_path, flag_reset=True)
 
