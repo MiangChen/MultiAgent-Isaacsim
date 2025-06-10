@@ -10,10 +10,10 @@ class GridMap():
                  start_point: list = [0, 0, 0],
                  min_bounds: list = [-10, -10, 0],
                  max_bounds: list = [10, 10, 10],
-                 cell_size: float = 0.1,
                  occupied_cell: int = 1,
                  empty_cell: int = 0,
-                 invisible_cell: int = 2
+                 invisible_cell: int = 2,
+                 cell_size: float = None,
                  ):
         """
         用于将一个xyz范围内的连续地图变成一个gridmap

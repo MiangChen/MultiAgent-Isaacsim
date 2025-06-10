@@ -165,6 +165,7 @@ class RobotBase:
             grid_map = self.map_grid.value_map
 
 
+
         grid_map[pos_index_robot] = self.map_grid.empty_cell
 
         planner = AStar(grid_map, obs_value=1.0, free_value=0.0, directions="eight")

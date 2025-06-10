@@ -37,7 +37,7 @@ if __name__ == "__main__":
     # usd_path = './scene/CityDemopack/World_CityDemopack.usd'
     # usd_path = f'{PATH_PROJECT}/scene/simple_city.usd'
     # usd_path = f'{PATH_PROJECT}/scene/flatroom4.usd'
-    usd_path = f'{PATH_PROJECT}/scene/flatroom2.usd'
+    usd_path = f'{PATH_PROJECT}/scene/0528_2cycle_calib.usd'
     usd_abs_path = os.path.abspath(usd_path)
     env = Env(simulation_app, usd_abs_path)
     env.reset()
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     # x, y, z = run_once(file_path="coffee.wav")
     x, y, z = -1.2, 3.78, 0
     print(f"导航到{x, y,z}点")
-    env.robot_swarm.robot_active['h1'][0].navigate_to([x, y, z], load_from_file=True)
+    env.robot_swarm.robot_active['h1'][0].navigate_to([x, y, z], load_from_file=False)
     for i in range(500000):
 
         # 设置相机的位置

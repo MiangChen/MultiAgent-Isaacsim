@@ -19,7 +19,7 @@
 #
 h1:
   - id: 0
-    position: [1.8, 2.36, 1.05]
+    position: [7.5, 17, 1.05]
     orientation: [0.0, 0.0, 0.0, 1.0]
     alias: Hellen
 
