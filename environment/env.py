@@ -33,7 +33,7 @@ def create_scene(usd_path: str, prim_path_root: str = "/World"):
             # scale=self.simulation.scene_scale,
             scale=[1, 1, 1],
             # translation=[0, 0, 0.81696],
-            # orientation=[0.610, -0.789, -0.05184, 0.040] # wxyz
+            # orientation=[0.610, -0.789, -0.05184, 0.040] # wxyz, xyz还是zyx顺序不确定
         )
     else:
         raise RuntimeError("Env file path needs to end with .usd, .usda or .usdc .")

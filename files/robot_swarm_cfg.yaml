@@ -20,7 +20,7 @@
 h1:
   - body:
       id: 0
-      position: [ 7.5, 16.5, 1.05 ]
+      position: [ 0, 0, 1.05 ]
       quat: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Hellen
 #    camera:

@@ -8,7 +8,7 @@ import collections # For BFS queue
 class AStar:
     def __init__(self,
                  map_3d: np.ndarray,
-                 penalty_factor: float = 100.0, # 新增：惩罚系数，控制远离障碍物的倾向
+                 penalty_factor: float = 10.0, # 新增：惩罚系数，控制远离障碍物的倾向
                  obs_value: float = 1.0,
                  free_value: float = 0.0,
                  directions: str = 'eight'):
