@@ -230,7 +230,7 @@ class RobotBase:
 
         grid_map[pos_index_robot] = self.map_grid.empty_cell
 
-        planner = AStar(grid_map, obs_value=1.0, free_value=0.0, directions="eight", penalty_factor=0)
+        planner = AStar(grid_map, obs_value=1.0, free_value=0.0, directions="eight", penalty_factor=20)
         path = planner.find_path(tuple(pos_index_robot), tuple(pos_index_target), render=True)
 
         real_path = np.zeros_like(path, dtype=np.float32)

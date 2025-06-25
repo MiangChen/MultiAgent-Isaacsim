@@ -20,7 +20,7 @@
 h1:
   - body:
       id: 0
-      position: [ 0, 0, 1.05 ]
+      position: [ -10, -0.1, 1.05 ]
       quat: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Hellen
 #    camera:
@@ -32,10 +32,6 @@ h1:
 #      focal_length: 30 # 相机的焦段 mm
 #      lens_aperture: 0 # 相机的光圈 0 表示没有景深 全部清晰
 #      focus_distance: 0 # 相机的对焦距离
-
-
-
-
 
 #
 #

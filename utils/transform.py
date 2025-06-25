@@ -128,8 +128,10 @@ quat = [0, 0, 0, 1]  # xyzw格式的quat
 
 # 坐标系变化的数值
 translate_pos = [-4, -6, 0.7]
+translate_pos = [0, -2.4, 0.8]
 # 旋转为xyz顺序
 rotate = [-104, 0, 8]
+rotate = [-103, -0.4, -1.4]
 
 if __name__ == "__main__":
     # === 方法1: 只返回新的位置和四元数 ===
