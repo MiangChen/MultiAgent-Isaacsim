@@ -61,8 +61,8 @@ import omni
 class MapSemantic():
     def __init__(self,):
         self.map_semantic = {
-            "depot": [5-0.7, 0, 0],  # 仓库
-            "place1": [2-0.7, -2, 0], # 一号房子
-            "place2": [-1-0.7, -2, 0], # 二号房子
-            "place3": [-1-0.7, 2, 0], # 三号房子
+            "depot": [6.5, 0.6, 0],  # 仓库
+            "place1": [0.5, -1.4, 0], # 一号房子
+            "place2": [3.5, -1.4, 0], # 二号房子
+            "place3": [5.5, -1.4, 0], # 三号房子
         }

@@ -62,7 +62,9 @@ class RobotSwarmManager:
             print("No configuration file or dictionary found")
         for robot_class_name in dict.keys():
             for robot_cfg in dict[robot_class_name]:  # 可能有多个机器人  这里可以优化一下 让yaml的格式就和robot cfg一样
+                robot_id = robot_cfg['id']
                 cfg_body_dict = robot_cfg['body']
+                cfg_body_dict['id'] = robot_id
                 cfg_camera_dict = None
                 if 'camera' in robot_cfg.keys():
                     cfg_camera_dict = robot_cfg['camera']
@@ -99,7 +101,7 @@ class RobotSwarmManager:
             print(e)
         # 配置机器人的相机
         cfg_camera = None
-        if cfg_camera_dict is not None:
+        if cfg_camera_dict is not None and cfg_camera_dict != {}:
             from camera.camera_cfg import CameraCfg
             cfg_camera = CameraCfg(
                 **cfg_camera_dict

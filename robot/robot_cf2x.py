@@ -3,6 +3,7 @@ from isaacsim.core.api.scenes import Scene
 from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 
 from controller.controller_pid import ControllerPID
+from camera.camera_cfg import CameraCfg
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from controller.controller_cf2x import ControllerCf2x
@@ -13,8 +14,9 @@ from robot.robot_cfg_drone_cf2x import RobotCfgCf2x
 
 
 class RobotCf2x(RobotBase):
-    def __init__(self, config: RobotCfgCf2x, scene: Scene, map_grid: GridMap):
-        super().__init__(config, scene, map_grid)
+    def __init__(self, cfg_body: RobotCfgCf2x, cfg_camera: CameraCfg = None, scene: Scene = None,
+                 map_grid: GridMap = None) -> None:
+        super().__init__(cfg_body, cfg_camera, scene, map_grid)
 
         # self.scale = cfg_body.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以
         # from controller.controller_pid_jetbot import ControllerJetbot

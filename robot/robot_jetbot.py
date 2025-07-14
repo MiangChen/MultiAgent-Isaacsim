@@ -2,6 +2,7 @@ import numpy as np
 
 from controller.controller_pid import ControllerPID
 from controller.controller_pid_jetbot import ControllerJetbot
+from camera.camera_cfg import CameraCfg
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from robot.robot_base import RobotBase
@@ -16,39 +17,40 @@ from isaacsim.core.utils.types import ArticulationActions
 
 
 class RobotJetbot(RobotBase):
-    def __init__(self, config: RobotCfgJetbot, scene: Scene, map_grid: GridMap):
-        super().__init__(config, scene, map_grid)
-        self.prim_path = config.prim_path + f'/{config.name_prefix}_{config.id}'
-        prim = get_prim_at_path(self.prim_path)
-        if not prim.IsValid():
-            prim = define_prim(self.prim_path, "Xform")
-            if config.usd_path:
-                prim.GetReferences().AddReference(config.usd_path)  # 加载机器人USD模型
-            else:
-                carb.log_error("unable to add robot usd, usd_path not provided")
-        self.robot_entity = Articulation(
-            prim_paths_expr=self.prim_path,
-            name=config.name_prefix + f'_{config.id}',
-            positions=np.array([config.position]),
-            orientations=np.array([config.orientation]),
-        )
-        self.flag_active = False
-
+    def __init__(self, cfg_body: RobotCfgJetbot, cfg_camera: CameraCfg = None, scene: Scene = None,
+                 map_grid: GridMap = None) -> None:
+        super().__init__(cfg_body, cfg_camera, scene, map_grid)
+        # self.prim_path = config.prim_path + f'/{config.name_prefix}_{config.id}'
+        # prim = get_prim_at_path(self.prim_path)
+        # if not prim.IsValid():
+        #     prim = define_prim(self.prim_path, "Xform")
+        #     if config.usd_path:
+        #         prim.GetReferences().AddReference(config.usd_path)  # 加载机器人USD模型
+        #     else:
+        #         carb.log_error("unable to add robot usd, usd_path not provided")
+        # self.robot_entity = Articulation(
+        #     prim_paths_expr=self.prim_path,
+        #     name=config.name_prefix + f'_{config.id}',
+        #     positions=np.array([config.position]),
+        #     orientations=np.array([config.orientation]),
+        # )
+        # self.flag_active = False
+        #
         self.controller = ControllerJetbot()
         self.control_mode = 'joint_velocities'
-        # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
+        # # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
         self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
         self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
-
-        self.traj = Trajectory(
-            robot_prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
-            # name='traj' + f'_{cfg_body.id}',
-            id=config.id,
-            max_points=100,
-            color=(0.3, 1.0, 0.3),
-            scene=self.scene,
-            radius=0.05,
-        )
+        #
+        # self.traj = Trajectory(
+        #     robot_prim_path=self.config.prim_path + f'/{config.name_prefix}_{config.id}',
+        #     # name='traj' + f'_{cfg_body.id}',
+        #     id=config.id,
+        #     max_points=100,
+        #     color=(0.3, 1.0, 0.3),
+        #     scene=self.scene,
+        #     radius=0.05,
+        # )
         return
 
     def initialize(self) -> None:

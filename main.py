@@ -168,11 +168,11 @@ if __name__ == "__main__":
                             object_semantics_pos = plan[f"step_{state_step}"][robot][robot_action]['loc']
 
         env.step(action=None)  # execute one physics step and one rendering step
-        if i % 60 == 0:  # 1s加一个轨迹
-            env.robot_swarm.robot_active['jetbot'][0].traj.add_trajectory(pos)
-            env.robot_swarm.robot_active['jetbot'][1].traj.add_trajectory(pos1)
-            env.robot_swarm.robot_active['jetbot'][2].traj.add_trajectory(pos1)
-            env.robot_swarm.robot_active['jetbot'][3].traj.add_trajectory(pos1)
+        # if i % 60 == 0:  # 1s加一个轨迹
+            # env.robot_swarm.robot_active['jetbot'][0].traj.add_trajectory(pos)
+            # env.robot_swarm.robot_active['jetbot'][1].traj.add_trajectory(pos1)
+            # env.robot_swarm.robot_active['jetbot'][2].traj.add_trajectory(pos1)
+            # env.robot_swarm.robot_active['jetbot'][3].traj.add_trajectory(pos1)
             # print(len(env.robot_swarm.robot_active['h1'][0].path), env.robot_swarm.robot_active['h1'][0].path_index)
             # print(env.robot_swarm.robot_active['cf2x'][0].robot_entity.get_joint_velocities())
 
