@@ -13,3 +13,8 @@ pyttsx3 >=2.98 # 文本转语音
 openpyxl >= 3.1.5 # 读写excel文件
 langchain
 langchain_openai
+
+# PDDL需要的
+unified-planning[engines]
+networks
+tamer
