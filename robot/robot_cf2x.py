@@ -1,4 +1,6 @@
 import numpy as np
+import omni
+import omni.appwindow
 from isaacsim.core.api.scenes import Scene
 from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 
@@ -12,162 +14,357 @@ from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_drone_cf2x import RobotCfgCf2x
 
 
-
 class RobotCf2x(RobotBase):
+    """
+    CF2x无人机控制类 
+    
+     键盘控制说明:
+    - Q键: 起飞到预设高度并保持悬停
+    - E键: 降落到地面
+    - W键: 向前移动 (+X方向)
+    - S键: 向后移动 (-X方向)
+    - A键: 向左移动 (+Y方向)
+    - D键: 向右移动 (-Y方向)
+    """
     def __init__(self, cfg_body: RobotCfgCf2x, cfg_camera: CameraCfg = None, scene: Scene = None,
                  map_grid: GridMap = None) -> None:
         super().__init__(cfg_body, cfg_camera, scene, map_grid)
 
-        # self.scale = cfg_body.scale  # 已经在config中有的, 就不要再拿别的量来存储了, 只存储一次config就可以
-        # from controller.controller_pid_jetbot import ControllerJetbot
+        self.is_drone = True  # 标记为无人机
         self.controller = ControllerCf2x()
-        # # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
-        # self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
-        # self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
-        #
-        # self.traj = Trajectory(
-        #     robot_prim_path=cfg_body.prim_path + f'/{cfg_body.name_prefix}_{cfg_body.id}',
-        #     # name='traj' + f'_{cfg_body.id}',
-        #     id=cfg_body.id,
-        #     max_points=100,
-        #     color=(0.3, 1.0, 0.3),
-        #     scene=self.scene,
-        #     radius=0.05,
-        # )
-        # # self.history_traj = []  # 历史轨迹
-        # # self.last_yaw = 0
-        #
-        # self.view_angle = 2 * np.pi / 3  # 感知视野 弧度
-        # self.view_radius = 2  # 感知半径 米
-        self.velocity = [0, 0, 0]  # 表示无人机的x y z方向上的速度
-        self.map_grid = map_grid  # 用于存储一个实例化的gridmap
+        self.map_grid = map_grid
 
+        # 无人机基本属性
+        self.position = np.array(getattr(cfg_body, 'position', [0.0, 0.0, 0.0]), dtype=np.float32)
+        self.target_position = self.position.copy()
+        self.velocity = np.zeros(3, dtype=np.float32)  # 当前速度 [vx, vy, vz]
+        self.default_speed = getattr(cfg_body, 'default_speed', 1.0)  # 默认移动速度
+        self.takeoff_height = getattr(cfg_body, 'takeoff_height', 1.0)  # 起飞悬停高度
+        self.land_height = getattr(cfg_body, 'land_height', 0.0)  # 降落高度
+        
+        # 飞行状态
+        self.flight_state = 'landed'  # 'landed', 'hovering'
+        self.hovering_height = self.takeoff_height  # 悬停高度
+        
+        # 路径瞬移相关
+        self.waypoints =  [[0, 0, 1], [5, 0, 1], [5, 5, 1], [0, 5, 1]]  # 路径点列表
+        self.current_waypoint_index = 0
+        self.teleport_mode = True  # 默认使用瞬移模式
+        
+        # 键盘控制
+        self.keyboard_control_enabled = True
+        self._movement_command = np.zeros(3, dtype=np.float32)  # 键盘移动命令
+        self._keyboard_sub = None
+        
+        # 初始化键盘事件监听
+        self._setup_keyboard_events()
+        
         return
 
+    def _setup_keyboard_events(self):
+        """设置键盘事件监听"""
+        import carb
+        try:
+            appwindow = omni.appwindow.get_default_app_window()
+            input_iface = carb.input.acquire_input_interface()
+            
+            self._keyboard_sub = input_iface.subscribe_to_keyboard_events(
+                appwindow.get_keyboard(), self._on_keyboard_event
+            )
+            print("无人机键盘控制设置成功")
+            print("控制说明: Q起飞, E降落, WASD移动")
+        except Exception as e:
+            print(f"键盘事件监听设置失败: {e}")
+            self._keyboard_sub = None
+
+    def _on_keyboard_event(self, event, *args, **kwargs):
+        """键盘事件回调函数"""
+        import carb
+        
+        try:
+            # 按键按下事件
+            if event.type == carb.input.KeyboardEventType.KEY_PRESS:
+                if event.input.name == "Q":
+                    self.takeoff()
+                elif event.input.name == "E":
+                    self.land()
+                elif event.input.name == "W":
+                    self._movement_command[0] = self.default_speed  # 向前
+                elif event.input.name == "S":
+                    self._movement_command[0] = -self.default_speed  # 向后
+                elif event.input.name == "A":
+                    self._movement_command[1] = self.default_speed  # 向左
+                elif event.input.name == "D":
+                    self._movement_command[1] = -self.default_speed  # 向右
+            
+            # 按键释放事件
+            elif event.type == carb.input.KeyboardEventType.KEY_RELEASE:
+                if event.input.name in ["W", "S"]:
+                    self._movement_command[0] = 0.0
+                elif event.input.name in ["A", "D"]:
+                    self._movement_command[1] = 0.0
+            
+            return True
+        except Exception as e:
+            print(f"键盘事件处理错误: {e}")
+            return False
+
     def initialize(self):
+        """初始化无人机"""
         return
 
     def apply_action(self, action=None):
-        self.robot_entity.apply_action(self.controller.velocity(action))
+        """应用动作"""
+        if action is not None:
+            self.robot_entity.apply_action(self.controller.velocity(action))
         return
 
     def forward(self, velocity=None):
-        self.robot_entity.apply_action(self.controller.forward(velocity))
+        """前进动作"""
+        if velocity is not None:
+            self.robot_entity.apply_action(self.controller.forward(velocity))
         return
 
+    def takeoff(self):
+        """起飞到预设高度并悬停"""
+        if self.flight_state == 'landed':
+            # 获取当前位置，只改变高度
+            positions, orientations = self.robot_entity.get_world_poses()
+            current_pos = positions[0]
+            
+            # 设置新的悬停位置
+            self.position = np.array([current_pos[0], current_pos[1], self.takeoff_height], dtype=np.float32)
+            self.hovering_height = self.takeoff_height
+            
+            # 直接设置位置（瞬移到悬停高度）
+            orientation = orientations[0]
+            self.robot_entity.set_world_poses([self.position], [orientation])
+            
+            # 更新状态
+            self.flight_state = 'hovering'
+            self.velocity = np.zeros(3, dtype=np.float32)  # 悬停时速度为0
+            
+            print(f"无人机起飞到高度: {self.takeoff_height}m，进入悬停状态")
+        else:
+            print("无人机已在飞行状态")
+
+    def land(self):
+        """降落到地面"""
+        if self.flight_state == 'hovering':
+            # 获取当前位置，只改变高度
+            positions, orientations = self.robot_entity.get_world_poses()
+            current_pos = positions[0]
+            
+            # 设置降落位置
+            self.position = np.array([current_pos[0], current_pos[1], self.land_height], dtype=np.float32)
+            
+            # 直接设置位置（瞬移到地面）
+            orientation = orientations[0]
+            self.robot_entity.set_world_poses([self.position], [orientation])
+            
+            # 立即清零所有运动相关变量
+            self.velocity = np.zeros(3, dtype=np.float32)  # 清零速度
+            self._movement_command = np.zeros(3, dtype=np.float32)  # 清除移动命令
+            
+            # 更新状态
+            self.flight_state = 'landed'
+            
+            print(f"无人机降落到高度: {self.land_height}m")
+        else:
+            print("无人机已在地面状态")
+
+    def update_position_with_velocity(self, dt):
+        """基于速度和时间步长更新位置 (ds = v * dt)"""
+        if self.flight_state == 'hovering':
+            # 计算位移: ds = v * dt
+            displacement = self.velocity * dt
+            
+            # 更新位置
+            self.position += displacement
+            
+            # 保持悬停高度（只允许水平移动）
+            self.position[2] = self.hovering_height
+            
+            # 应用新位置到无人机实体
+            _, orientations = self.robot_entity.get_world_poses()
+            orientation = orientations[0]
+            self.robot_entity.set_world_poses([self.position], [orientation])
+
+    def set_waypoints(self, waypoints):
+        """设置路径点列表进行瞬移"""
+        self.waypoints = [np.array(wp, dtype=np.float32) for wp in waypoints]
+        self.current_waypoint_index = 0
+        print(f"设置了 {len(waypoints)} 个路径点")
+        
+        # 如果无人机在地面，先起飞
+        if self.flight_state == 'landed':
+            self.takeoff()
+
+    def teleport_to_waypoint(self, index):
+        """瞬移到指定路径点"""
+        if 0 <= index < len(self.waypoints):
+            target = self.waypoints[index].copy()
+            # 确保在悬停高度
+            target[2] = self.hovering_height
+            
+            # 瞬移
+            self.position = target
+            _, orientations = self.robot_entity.get_world_poses()
+            orientation = orientations[0]
+            self.robot_entity.set_world_poses([self.position], [orientation])
+            
+            print(f"瞬移到路径点 {index + 1}/{len(self.waypoints)}: {target}")
+            return True
+        return False
+
+    def execute_waypoint_sequence(self):
+        """执行路径点序列（自动瞬移）"""
+        if self.current_waypoint_index < len(self.waypoints):
+            success = self.teleport_to_waypoint(self.current_waypoint_index)
+            if success:
+                self.current_waypoint_index += 1
+                if self.current_waypoint_index >= len(self.waypoints):
+                    print("所有路径点执行完成")
+                    return True
+        return False
+
+    def teleport_to_position(self, position):
+        """瞬移到指定位置"""
+        target_pos = np.array(position, dtype=np.float32)
+        
+        # 如果在地面状态，先起飞
+        if self.flight_state == 'landed':
+            self.takeoff()
+        
+        # 确保在悬停高度
+        target_pos[2] = self.hovering_height
+        
+        self.position = target_pos
+        _, orientations = self.robot_entity.get_world_poses()
+        orientation = orientations[0]
+        self.robot_entity.set_world_poses([self.position], [orientation])
+        print(f"瞬移到位置: {target_pos}")
+
+    def keyboard_control(self, dt):
+        """键盘控制处理"""
+        if self.flight_state == 'hovering' and self.keyboard_control_enabled:
+            # 设置速度为键盘命令
+            self.velocity = self._movement_command.copy()
+            # 注意：位置更新在 on_physics_step 中统一处理
+        elif self.flight_state == 'landed':
+            # 地面状态下确保速度为0
+            self.velocity = np.zeros(3, dtype=np.float32)
+
     def on_physics_step(self, step_size):
-        if self.flag_world_reset == True:
-            if self.flag_action_navigation == True:
-                self.move_along_path()  # 每一次都计算下速度
-            self.apply_action(action=self.velocity)  # 把速度传输给机器人本体
+        """物理步进回调 - 简化版"""
+        if self.is_drone:
+            if self.keyboard_control_enabled:
+                # 键盘控制模式
+                self.keyboard_control(step_size)
+            else:
+                # 自动模式 - 执行路径点序列
+                if hasattr(self, 'waypoints') and self.waypoints:
+                    self.execute_waypoint_sequence()
+            
+            # 只有在悬停状态下才维持位置，降落状态不进行位置更新
+            if self.flight_state == 'hovering':
+                self.update_position_with_velocity(step_size)
+        
+        # 保持原有的地面机器人兼容性
+        if hasattr(self, 'flag_world_reset') and self.flag_world_reset:
+            if hasattr(self, 'flag_action_navigation') and self.flag_action_navigation:
+                self.move_along_path()
+            if hasattr(self, 'velocity') and not self.is_drone:
+                self.apply_action(action=self.velocity)
 
+    def enable_keyboard_control(self, enable=True):
+        """启用或禁用键盘控制"""
+        self.keyboard_control_enabled = enable
+        if not enable:
+            # 禁用键盘控制时清零移动命令
+            self._movement_command = np.zeros(3, dtype=np.float32)
+            self.velocity = np.zeros(3, dtype=np.float32)
+        print(f"键盘控制已{'启用' if enable else '禁用'}")
 
+    def __del__(self):
+        """析构函数，清理资源"""
+        self._cleanup_keyboard_events()
+    
+    def _cleanup_keyboard_events(self):
+        """清理键盘事件监听"""
+        if self._keyboard_sub is not None:
+            try:
+                import carb
+                input_iface = carb.input.acquire_input_interface()
+                input_iface.unsubscribe_to_keyboard_events(self._keyboard_sub)
+                self._keyboard_sub = None
+            except Exception as e:
+                print(f"键盘事件清理失败: {e}")
+
+    # 以下方法保留用于兼容性，主要用于地面机器人
     def move_to(self, target_postion):
+        """移动到目标位置（地面机器人兼容性方法）"""
         import numpy as np
-        """
-        让2轮差速小车在一个2D平面上运动到目标点
-        缺点：不适合3D，无法避障，地面要是平的
-        速度有两个分两，自转的分量 + 前进的分量
-        """
-        car_position, car_orientation = self.robot_entity.get_world_pose()  # self.get_world_pose()  ## type np.array
-        # print(car_orientation)
-        # print(type(car_orientation))
-        # car_position, car_orientation = self.robot.get_world_pose()  ## type np.array
-        # 获取2D方向的小车朝向，逆时针是正
-        car_yaw_angle = self.quaternion_to_yaw(car_orientation)
+        positions, orientations = self.robot_entity.get_world_poses()
+        car_yaw_angle = self.quaternion_to_yaw(orientations[0])
 
-        # 获取机器人和目标连线的XY平面上的偏移角度
-        car_to_target_angle = np.arctan2(target_postion[1] - car_position[1], target_postion[0] - car_position[0])
-        # 差速, 和偏移角度成正比，通过pi归一化
+        car_to_target_angle = np.arctan2(target_postion[1] - positions[0][1], target_postion[0] - positions[0][0])
         delta_angle = car_to_target_angle - car_yaw_angle
-        # if abs(car_to_target_angle - car_yaw_angle) > np.pi * 11/10:  # 超过pi，那么用另一个旋转方向更好， 归一化到 -pi ～ pi区间, 以及一个滞回，防止振荡
-        #     delta_angle = delta_angle - 2 * np.pi
-        if abs(delta_angle) < 0.017:  # 角度控制死区
+        
+        if abs(delta_angle) < 0.017:
             delta_angle = 0
-        elif delta_angle < -np.pi:  # 当差距abs超过pi后, 就代表从这个方向转弯不好, 要从另一个方向转弯
+        elif delta_angle < -np.pi:
             delta_angle += 2 * np.pi
         elif delta_angle > np.pi:
             delta_angle -= 2 * np.pi
-        if np.linalg.norm(target_postion[0:2] - car_position[0:2]) < 0.1:
+        
+        if np.linalg.norm(target_postion[0:2] - positions[0][0:2]) < 0.1:
             self.velocity = [0, 0]
-            # self.apply_action([0, 0])
-            return True  # 已经到达目标点附近10cm, 停止运动
+            return True
 
-        # k1 = 1 / np.pi
-        # v_rotation = k1 * delta_angle
         v_rotation = self.pid_angle.compute(delta_angle, dt=1 / 60)
-        # 前进速度，和距离成正比
-        k2 = 1
-        v_forward = 15  # k2 * np.linalg.norm(target_postion[0:2] - car_position[0:2])
+        v_forward = 15
 
-        # 合速度
         v_left = v_forward + v_rotation
         v_right = v_forward - v_rotation
         v_max = 20
-        if v_left > v_max:
-            v_left = v_max
-        elif v_left < -v_max:
-            v_left = -v_max
-        if v_right > v_max:
-            v_right = v_max
-        elif v_right < -v_max:
-            v_right = -v_max
+        
+        v_left = np.clip(v_left, -v_max, v_max)
+        v_right = np.clip(v_right, -v_max, v_max)
+        
         self.velocity = [v_left, v_right]
-        # self.apply_action([v_left, v_right])  # 尝试删掉这个, 用于在中断中执行速度指令;
-        # print(v_left, v_right)
-        # print("v rotation", v_rotation, "v forward", v_forward)
-        # print("yaw", car_yaw_angle, "target yaw", car_to_target_angle,"\tdelta angle", delta_angle, "\tdistance ", np.linalg.norm(target_postion[0:2] - car_position[0:2]))
-        return False  # 还没有到达
+        return False
 
     def move_along_path(self, path: list = None, flag_reset: bool = False):
-        """
-        让机器人沿着一个list的路径点运动
-        需求: 在while外面 能够记录已经到达的点, 每次到达某个目标点的 10cm附近,就认为到了, 然后准备下一个点
-
-        """
+        """让机器人沿着路径点运动"""
         if flag_reset == True:
             self.path_index = 0
             self.path = path
 
-        # car_position, car_orientation = self.robot.get_world_pose()  ## type np.array
-        # # 获取2D方向的小车朝向，逆时针是正
-        # if np.linalg.norm(self.path[self.path_index][0:2] - car_position[0:2]) < 0.1:
-        #     self.path_index = self.path_index + 1
-        if self.path_index < len(self.path):  # 当index==len的时候, 就已经到达目标了
+        if hasattr(self, 'path') and hasattr(self, 'path_index') and self.path_index < len(self.path):
             reach_flat = self.move_to(self.path[self.path_index])
-            # print(self.path[self.path_index])
             if reach_flat == True:
                 self.path_index += 1
             return False
         else:
-            self.flag_action_navigation = False
-            self.state_skill_complete = True
+            if hasattr(self, 'flag_action_navigation'):
+                self.flag_action_navigation = False
+            if hasattr(self, 'state_skill_complete'):
+                self.state_skill_complete = True
             return True
 
     def navigate_to(self, pos_target: np.array = None, reset_flag: bool = False):
-        """
-        让机器人导航到某一个位置,
-        不需要输入机器人的起始位置, 因为机器人默认都是从当前位置出发的
-
-        Args:
-            target_pos:
-            reset_flag:
-
-        Returns:
-
-        """
-        # 小车的导航只能使用2d的
-        # pos_target = [9, 9, 0]
-        if pos_target == None:
+        """导航到目标位置"""
+        if pos_target is None:
             raise ValueError("no target position")
         elif pos_target[2] != 0:
             raise ValueError("小车的z轴高度得在平面上")
-        pos_robot = self.get_world_pose()[0]
-
+        
+        positions, _ = self.robot_entity.get_world_poses()
+        pos_robot = positions[0]
         pos_index_target = self.map_grid.compute_index(pos_target)
         pos_index_robot = self.map_grid.compute_index(pos_robot)
 
-        # 用于把机器人对应位置的设置为空的, 不然会找不到路线
         grid_map = self.map_grid.value_map
         grid_map[pos_index_robot] = self.map_grid.empty_cell
 
@@ -175,110 +372,64 @@ class RobotCf2x(RobotBase):
         path = planner.find_path(tuple(pos_index_robot), tuple(pos_index_target))
 
         real_path = np.zeros_like(path, dtype=np.float32)
-        for i in range(path.shape[0]):  # 把index变成连续实际世界的坐标
+        for i in range(path.shape[0]):
             real_path[i] = self.map_grid.pos_map[tuple(path[i])]
             real_path[i][-1] = 0
 
-        self.move_along_path(real_path)  # [[1,1], [1,2], [2,2], [2,1],[1,1]]
-
-        # 标记一下, 开始运动
-        self.flag_action_navigation = True
-
-        # 标记当前的动作
-        self.state_skill = 'navigate_to'
-        self.state_skill_complete = False
-
-
+        self.move_along_path(real_path)
+        if hasattr(self, 'flag_action_navigation'):
+            self.flag_action_navigation = True
+        if hasattr(self, 'state_skill'):
+            self.state_skill = 'navigate_to'
+        if hasattr(self, 'state_skill_complete'):
+            self.state_skill_complete = False
         return
 
     def pick_up(self):
-        """
-        让机器人拿起来某一个东西, 需要指定物品的名称, 并且在操作范围内
-        Returns:
-        """
-
-
+        """拾取物品"""
+        pass
 
     def explore_zone(self, zone_corners: list = None, scane_direction: str = "horizontal", reset_flag: bool = False):
-        """
-        用户输入一个方形区域的四个角落点, 需要根据感知范围来探索这个区域, 感知范围是一个扇形的区域, 假设视野为120, 半径为2m,
-        输入一个[[1,1], [1,10], [10,10], [10,1]]的方形区域, 该如何规划路径?
-
-        """
-        # 1. 计算区域的边界
+        """探索指定区域"""
         min_x = min(corner[0] for corner in zone_corners)
         max_x = max(corner[0] for corner in zone_corners)
         min_y = min(corner[1] for corner in zone_corners)
         max_y = max(corner[1] for corner in zone_corners)
 
-        # 2. 确定扫描线的方向 (这里选择水平扫描)
-        scan_direction = scane_direction  # 可以选择 "horizontal" 或 "vertical"
-
-        # 3. 计算扫描线之间的距离，保证覆盖整个区域
-        #    使用视野半径和视野角度来计算有效覆盖宽度
+        scan_direction = scane_direction
+        
         import math
         effective_width = 2 * self.view_radius * math.sin(self.view_angle / 2)
-        scan_line_spacing = effective_width * 0.8  # 稍微重叠，确保覆盖
+        scan_line_spacing = effective_width * 0.8
 
-        # 4. 生成扫描线
         scan_lines = []
         if scan_direction == "horizontal":
             y = min_y
-        while y <= max_y:
-            scan_lines.append(y)
-            y += scan_line_spacing
-        else:  # vertical
+            while y <= max_y:
+                scan_lines.append(y)
+                y += scan_line_spacing
+        else:
             x = min_x
             while x <= max_x:
                 scan_lines.append(x)
                 x += scan_line_spacing
 
-        # 5. 生成路径点
         path_points = []
         if scan_direction == "horizontal":
             for i, y in enumerate(scan_lines):
-                if i % 2 == 0:  # 偶数行，从左到右
+                if i % 2 == 0:
                     path_points.append([min_x, y])
                     path_points.append([max_x, y])
-                else:  # 奇数行，从右到左
+                else:
                     path_points.append([max_x, y])
                     path_points.append([min_x, y])
-        else:  # vertical
+        else:
             for i, x in enumerate(scan_lines):
-                if i % 2 == 0:  # 偶数列，从下到上
+                if i % 2 == 0:
                     path_points.append([x, min_y])
                     path_points.append([x, max_y])
-                else:  # 奇数列，从上到下
+                else:
                     path_points.append([x, max_y])
                     path_points.append([x, min_y])
 
         return path_points
-
-
-if __name__ == '__main__':
-    explorer = Explorer()
-    zone_corners = [[1, 1], [1, 10], [10, 10], [10, 1]]
-    path = explorer.explore_zone(zone_corners)
-
-    print("生成的路径点:")
-    for point in path:
-        print(point)
-
-    # 可视化路径 (需要 matplotlib)
-    import matplotlib.pyplot as plt
-
-    x_coords = [point[0] for point in path]
-    y_coords = [point[1] for point in path]
-
-    plt.plot(x_coords, y_coords, marker='o', linestyle='-', color='blue')
-
-    # 绘制区域边界
-    zone_x = [corner[0] for corner in zone_corners] + [zone_corners[0][0]]
-    zone_y = [corner[1] for corner in zone_corners] + [zone_corners[0][1]]
-    plt.plot(zone_x, zone_y, color='red', linestyle='--')
-
-    plt.xlabel("X")
-    plt.ylabel("Y")
-    plt.title("探索路径")
-    plt.grid(True)
-    plt.show()
