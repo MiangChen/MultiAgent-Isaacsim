@@ -91,3 +91,4 @@ with OneshotPlanner(problem_kind=problem.kind) as planner:
         schedule.visualize_gantt()
 
 plan = schedule.plan_steps
+print(plan)

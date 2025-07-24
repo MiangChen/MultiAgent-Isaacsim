@@ -29,6 +29,7 @@ class RobotBase:
         self.robot_entity: Articulation = None
         # 通用的机器人本体初始化代码
         self.cfg_body.prim_path = cfg_body.prim_path + f'/{cfg_body.type}' + f'/{cfg_body.name_prefix}_{cfg_body.id}'
+
         prim = get_prim_at_path(self.cfg_body.prim_path)
         if not prim.IsValid():
             prim = define_prim(self.cfg_body.prim_path, "Xform")

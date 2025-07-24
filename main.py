@@ -102,7 +102,9 @@ if __name__ == "__main__":
 
 
     # 进行任务规划
-    from pddl.solver_p import plan
+    # from pddl.solver_p import plan
+    plan = {'step_0': {'robot2': {'navigate-to': {'start': 'depot', 'goal': 'place1'}}, 'robot3': {'navigate-to': {'start': 'depot', 'goal': 'place2'}}}, 'step_1': {'robot2': {'pick-up': {'it': 'item1', 'loc': 'place1'}}, 'robot3': {'pick-up': {'it': 'item2', 'loc': 'place2'}}}, 'step_2': {'robot2': {'navigate-to': {'start': 'place1', 'goal': 'depot'}}, 'robot3': {'navigate-to': {'start': 'place2', 'goal': 'depot'}}}, 'step_3': {'robot2': {'put-down': {'it': 'item1', 'loc': 'depot'}}, 'robot3': {'put-down': {'it': 'item2', 'loc': 'depot'}}}}
+
     from map.map_semantic_map import MapSemantic
 
     map_semantic = MapSemantic()

@@ -20,22 +20,7 @@ class RobotJetbot(RobotBase):
     def __init__(self, cfg_body: RobotCfgJetbot, cfg_camera: CameraCfg = None, scene: Scene = None,
                  map_grid: GridMap = None) -> None:
         super().__init__(cfg_body, cfg_camera, scene, map_grid)
-        # self.prim_path = config.prim_path + f'/{config.name_prefix}_{config.id}'
-        # prim = get_prim_at_path(self.prim_path)
-        # if not prim.IsValid():
-        #     prim = define_prim(self.prim_path, "Xform")
-        #     if config.usd_path:
-        #         prim.GetReferences().AddReference(config.usd_path)  # 加载机器人USD模型
-        #     else:
-        #         carb.log_error("unable to add robot usd, usd_path not provided")
-        # self.robot_entity = Articulation(
-        #     prim_paths_expr=self.prim_path,
-        #     name=config.name_prefix + f'_{config.id}',
-        #     positions=np.array([config.position]),
-        #     orientations=np.array([config.orientation]),
-        # )
-        # self.flag_active = False
-        #
+
         self.controller = ControllerJetbot()
         self.control_mode = 'joint_velocities'
         # # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
@@ -51,10 +36,48 @@ class RobotJetbot(RobotBase):
         #     scene=self.scene,
         #     radius=0.05,
         # )
+        self.init_ros2()
         return
 
     def initialize(self) -> None:
         return
+
+    def init_ros2(self):
+        import omni.graph.core as og
+
+        og.Controller.edit(
+            {"graph_path": f"/ActionGraph/{self.cfg_body.name_prefix}_{self.cfg_body.id}", "evaluator_name": "execution"},
+            {
+                og.Controller.Keys.CREATE_NODES: [
+                    ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
+                    ("PublishJointState", "isaacsim.ros2.bridge.ROS2PublishJointState"),
+                    ("SubscribeJointState", "isaacsim.ros2.bridge.ROS2SubscribeJointState"),
+                    ("ArticulationController", "isaacsim.core.nodes.IsaacArticulationController"),
+                    ("ReadSimTime", "isaacsim.core.nodes.IsaacReadSimulationTime"),
+                ],
+                og.Controller.Keys.CONNECT: [
+                    ("OnPlaybackTick.outputs:tick", "PublishJointState.inputs:execIn"),
+                    ("OnPlaybackTick.outputs:tick", "SubscribeJointState.inputs:execIn"),
+                    ("OnPlaybackTick.outputs:tick", "ArticulationController.inputs:execIn"),
+
+                    ("ReadSimTime.outputs:simulationTime", "PublishJointState.inputs:timeStamp"),
+
+                    ("SubscribeJointState.outputs:jointNames", "ArticulationController.inputs:jointNames"),
+                    ("SubscribeJointState.outputs:positionCommand", "ArticulationController.inputs:positionCommand"),
+                    ("SubscribeJointState.outputs:velocityCommand", "ArticulationController.inputs:velocityCommand"),
+                    ("SubscribeJointState.outputs:effortCommand", "ArticulationController.inputs:effortCommand"),
+                ],
+                og.Controller.Keys.SET_VALUES: [
+                    # Providing path to /panda robot to Articulation Controller node
+                    # Providing the robot path is equivalent to setting the targetPrim in Articulation Controller node
+                    # ("ArticulationController.inputs:usePath", True),      # if you are using an older version of Isaac Sim, you may need to uncomment this line
+                    ("PublishJointState.inputs:topicName", f"joint_states_{self.cfg_body.name_prefix}_{self.cfg_body.id}"),
+                    ("ArticulationController.inputs:robotPath", f"{self.cfg_body.prim_path}"),
+                    ("PublishJointState.inputs:targetPrim", f"{self.cfg_body.prim_path}")
+                ],
+            },
+        )
+
 
     def move_to(self, target_pos):
         import numpy as np
