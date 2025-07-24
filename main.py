@@ -98,7 +98,11 @@ if __name__ == "__main__":
     env.world.add_physics_callback("physics_step_h1_0",
                                    callback_fn=env.robot_swarm.robot_active['h1'][0].on_physics_step)
 
-    env.robot_swarm.robot_active['cf2x'][0].forward()
+    # 注册cf2x无人机的物理步进回调
+    env.world.add_physics_callback("physics_step_cf2x_0",
+                                   callback_fn=env.robot_swarm.robot_active['cf2x'][0].on_physics_step)
+
+    # env.robot_swarm.robot_active['cf2x'][0].forward()  # 注释掉单次forward调用
 
 
     # 进行任务规划
