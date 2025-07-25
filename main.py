@@ -183,3 +183,4 @@ if __name__ == "__main__":
             # print(env.robot_swarm.robot_active['cf2x'][0].robot_entity.get_joint_velocities())
 
     simulation_app.close()  # close Isaac Sim
+
