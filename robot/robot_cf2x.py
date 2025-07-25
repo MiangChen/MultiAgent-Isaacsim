@@ -12,6 +12,9 @@ from controller.controller_cf2x import ControllerCf2x
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_drone_cf2x import RobotCfgCf2x
+import rclpy
+from geometry_msgs.msg import Pose, Twist
+import threading
 
 
 class RobotCf2x(RobotBase):
@@ -55,6 +58,22 @@ class RobotCf2x(RobotBase):
         self.keyboard_control_enabled = True
         self._movement_command = np.zeros(3, dtype=np.float32)  # 键盘移动命令
         self._keyboard_sub = None
+        
+        # ROS2初始化
+        self.ros2_initialized = False
+        self._ros2_lock = threading.Lock()
+        try:
+            rclpy.init(args=None)
+            from rclpy.node import Node
+            self.ros2_node = rclpy.create_node(f"cf2x_publisher_{getattr(cfg_body, 'id', '0')}")
+            self.pose_pub = self.ros2_node.create_publisher(Pose, 'drone/pose', 10)
+            self.twist_pub = self.ros2_node.create_publisher(Twist, 'drone/twist', 10)
+            # 订阅无人机目标速度
+            self.cmd_vel_sub = self.ros2_node.create_subscription(
+                Twist, 'drone/cmd_vel', self.cmd_vel_callback, 10)
+            self.ros2_initialized = True
+        except Exception as e:
+            print(f"ROS2初始化失败: {e}")
         
         # 初始化键盘事件监听
         self._setup_keyboard_events()
@@ -218,7 +237,7 @@ class RobotCf2x(RobotBase):
         return False
 
     def execute_waypoint_sequence(self):
-        """执行路径点序列（自动瞬移）"""
+        """执行路径点序列"""
         if self.current_waypoint_index < len(self.waypoints):
             success = self.teleport_to_waypoint(self.current_waypoint_index)
             if success:
@@ -255,22 +274,35 @@ class RobotCf2x(RobotBase):
             # 地面状态下确保速度为0
             self.velocity = np.zeros(3, dtype=np.float32)
 
+    def cmd_vel_callback(self, msg):
+        # ROS2回调：接收目标速度，设置无人机移动命令
+        with self._ros2_lock:
+            self._movement_command[0] = float(msg.linear.x)
+            self._movement_command[1] = float(msg.linear.y)
+            self._movement_command[2] = float(msg.linear.z)
+
     def on_physics_step(self, step_size):
-        """物理步进回调 - 简化版"""
         if self.is_drone:
             if self.keyboard_control_enabled:
-                # 键盘控制模式
                 self.keyboard_control(step_size)
             else:
-                # 自动模式 - 执行路径点序列
                 if hasattr(self, 'waypoints') and self.waypoints:
                     self.execute_waypoint_sequence()
-            
-            # 只有在悬停状态下才维持位置，降落状态不进行位置更新
             if self.flight_state == 'hovering':
                 self.update_position_with_velocity(step_size)
-        
-        # 保持原有的地面机器人兼容性
+        # ROS2发布无人机状态，并处理订阅回调
+        if getattr(self, 'ros2_initialized', False):
+            pose = Pose()
+            pose.position.x = float(self.position[0])
+            pose.position.y = float(self.position[1])
+            pose.position.z = float(self.position[2])
+            twist = Twist()
+            twist.linear.x = float(self.velocity[0])
+            twist.linear.y = float(self.velocity[1])
+            twist.linear.z = float(self.velocity[2])
+            self.pose_pub.publish(pose)
+            self.twist_pub.publish(twist)
+            rclpy.spin_once(self.ros2_node, timeout_sec=0)
         if hasattr(self, 'flag_world_reset') and self.flag_world_reset:
             if hasattr(self, 'flag_action_navigation') and self.flag_action_navigation:
                 self.move_along_path()
@@ -287,11 +319,15 @@ class RobotCf2x(RobotBase):
         print(f"键盘控制已{'启用' if enable else '禁用'}")
 
     def __del__(self):
-        """析构函数，清理资源"""
         self._cleanup_keyboard_events()
+        if getattr(self, 'ros2_initialized', False):
+            try:
+                self.ros2_node.destroy_node()
+                rclpy.shutdown()
+            except Exception as e:
+                print(f"ROS2关闭失败: {e}")
     
     def _cleanup_keyboard_events(self):
-        """清理键盘事件监听"""
         if self._keyboard_sub is not None:
             try:
                 import carb
@@ -303,7 +339,7 @@ class RobotCf2x(RobotBase):
 
     # 以下方法保留用于兼容性，主要用于地面机器人
     def move_to(self, target_postion):
-        """移动到目标位置（地面机器人兼容性方法）"""
+        """移动到目标位置"""
         import numpy as np
         positions, orientations = self.robot_entity.get_world_poses()
         car_yaw_angle = self.quaternion_to_yaw(orientations[0])
