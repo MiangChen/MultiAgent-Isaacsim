@@ -1,35 +1,28 @@
-cf2x:
-  - id: 0
-    body:
-      position: [ 7, 4 , 0.05 ]
-      orientation: [ 0.0, 0.0, 0.0, 1.0 ]
-    camera: {}
-
 jetbot:
   - id: 0  # 激活jetbot中的0号机器人
     body:
-      position: [ 5, 4, 0.0 ]
+      position: [ 4.3, -1, 0.0 ]
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Allen
     camera: {}
 
   - id: 1
     body:
-      position: [ 5, 3, 0.0 ]
+      position: [ 4.3, -0.5, 0.0 ]
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Bob
     camera: {}
 
   - id: 2
     body:
-      position: [ 5, 2, 0.0 ]
+      position: [ 4.3, 0, 0.0 ]
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Candy
     camera: {}
 
   - id: 3
     body:
-      position: [ 5, 1, 0.0 ]
+      position: [ 4.3, 0.5, 0.0 ]
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: David
     camera: {}
@@ -37,7 +30,7 @@ jetbot:
 h1:
   - id: 0
     body:
-      position: [ 3, 2, 1.05 ]
+      position: [ -10, -0.1, 1.05 ]
       quat: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Hellen
     camera: {}
@@ -51,3 +44,11 @@ h1:
 #      focal_length: 30 # 相机的焦段 mm
 #      lens_aperture: 0 # 相机的光圈 0 表示没有景深 全部清晰
 #      focus_distance: 0 # 相机的对焦距离
+
+
+cf2x:
+  - id: 0
+    body:
+      position: [ 1.0, 0.0 , 0.05 ]
+      orientation: [ 0.0, 0.0, 0.0, 1.0 ]
+    camera: {}

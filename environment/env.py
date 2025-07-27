@@ -53,6 +53,14 @@ class Env(gym.Env):
         self._runner = simulation_app
         self.world = World(physics_dt=1 / 200)
         # self.world.scene.add_default_ground_plane()  # 添加地面
+        # self.world.set_gpu_dynamics_enabled(True)
+        # import omni.physx
+        #
+        # physx_interface = omni.physx.acquire_physx_interface()
+        #
+        # physx_interface.set_gpu_dynamics_enabled(True)
+        # is_enabled = physx_interface.get_gpu_dynamics_enabled()
+        # print("is_enabled:", is_enabled)
         create_scene(usd_path=usd_path)
         self.cell_size = 0.1
         self.map_grid = GridMap(
