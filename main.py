@@ -96,7 +96,7 @@ if __name__ == "__main__":
     # plt.show()
 
     # 需要先构建地图, 才能做后续的规划
-    # env.map_grid.generate_grid_map('2d')
+    env.map_grid.generate_grid_map('2d')
 
     # 添加回调函数, 每一个world step都会执行其中的内容
     env.world.add_physics_callback("physics_step_jetbot_0",
@@ -125,23 +125,22 @@ if __name__ == "__main__":
 
     map_semantic = MapSemantic()
     state_step = 0  # state用来表示状态相关的量
-    # for robot in plan[f"step_{state_step}"].keys():
-    #     id = int(robot[-1])
-    #     for robot_action in plan[f"step_{state_step}"][robot].keys():
-    #         if robot_action == 'navigate-to':
-    #             map_semantic_start = plan[f"step_{state_step}"][robot][robot_action]['start']
-    #             map_semantic_end = plan[f"step_{state_step}"][robot][robot_action]['goal']
-    #
-    #             pos_target = map_semantic.map_semantic[map_semantic_end]
-    #             env.robot_swarm.robot_active['jetbot'][id].navigate_to(pos_target)
-    #         elif robot_action == 'pick-up':
-    #             object_semantic_name = plan[f"step_{state_step}"][robot][robot_action]['it']
-    #             object_semantics_pos = plan[f"step_{state_step}"][robot][robot_action]['loc']
+    for robot in plan[f"step_{state_step}"].keys():
+        id = int(robot[-1])
+        for robot_action in plan[f"step_{state_step}"][robot].keys():
+            if robot_action == 'navigate-to':
+                map_semantic_start = plan[f"step_{state_step}"][robot][robot_action]['start']
+                map_semantic_end = plan[f"step_{state_step}"][robot][robot_action]['goal']
+
+                pos_target = map_semantic.map_semantic[map_semantic_end]
+                env.robot_swarm.robot_active['jetbot'][id].navigate_to(pos_target)
+            elif robot_action == 'pick-up':
+                object_semantic_name = plan[f"step_{state_step}"][robot][robot_action]['it']
+                object_semantics_pos = plan[f"step_{state_step}"][robot][robot_action]['loc']
 
     # env.robot_swarm.robot_active['h1'][0].navigate_to([0, 2, 0])
     for i in range(500000):
-        env.step(action=None)  # execute one physics step and one rendering step
-        continue
+
         # 设置相机的位置
         camera_pose = np.zeros(3)  # 创建一个包含三个0.0的数组
         pos = env.robot_swarm.robot_active['jetbot'][0].get_world_poses()[0]  # x y z 坐标
