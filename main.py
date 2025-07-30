@@ -20,7 +20,6 @@ import numpy as np
 import matplotlib
 
 #  import omni.usd  # 从4.5开始就无法使用了
-from isaacsim.core.utils.viewports import set_camera_view
 
 # 获取本地资产的路径
 from isaacsim.core.utils.nucleus import get_assets_root_path
@@ -116,20 +115,13 @@ if __name__ == "__main__":
                 object_semantic_name = plan[f"step_{state_step}"][robot][robot_action]['it']
                 object_semantics_pos = plan[f"step_{state_step}"][robot][robot_action]['loc']
 
-    # env.robot_swarm.robot_active['h1'][0].navigate_to([0, 2, 0])
-    for i in range(500000):
+    env.robot_swarm.robot_active['h1'][0].navigate_to([-10, 5, 0])
+    for i in range(5000000):
         # 设置相机的位置
-        camera_pose = np.zeros(3)  # 创建一个包含三个0.0的数组
         pos = env.robot_swarm.robot_active['jetbot'][0].get_world_poses()[0]  # x y z 坐标
         pos1 = env.robot_swarm.robot_active['jetbot'][1].get_world_poses()[0]  # x y z 坐标
         pos_cf2x = env.robot_swarm.robot_active['cf2x'][0].get_world_poses()[0]  # x y z 坐标
-        camera_pose[:2] = pos_cf2x[:2]  # 将xy坐标赋值给result的前两个元素
-        camera_pose[2] = pos_cf2x[-1] + 1
-        set_camera_view(
-            eye=camera_pose,  # np.array([5+i*0.001, 0, 50]),
-            target=pos_cf2x,  # np.array([5+i*0.001, 0, 0]),
-            camera_prim_path=env.camera_prim_path,
-        )
+
 
         # 使用pddl进行规划
         # 根据已经规划好的, 进行一个划分,

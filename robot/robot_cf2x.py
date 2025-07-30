@@ -6,6 +6,7 @@ from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 
 from controller.controller_pid import ControllerPID
 from camera.camera_cfg import CameraCfg
+from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from controller.controller_cf2x import ControllerCf2x
@@ -29,9 +30,11 @@ class RobotCf2x(RobotBase):
     - A键: 向左移动 (+Y方向)
     - D键: 向右移动 (-Y方向)
     """
-    def __init__(self, cfg_body: RobotCfgCf2x, cfg_camera: CameraCfg = None, scene: Scene = None,
+
+    def __init__(self, cfg_body: RobotCfgCf2x, cfg_camera: CameraCfg = None,
+                 cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
                  map_grid: GridMap = None) -> None:
-        super().__init__(cfg_body, cfg_camera, scene, map_grid)
+        super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid)
 
         self.is_drone = True  # 标记为无人机
         self.controller = ControllerCf2x()
@@ -44,21 +47,21 @@ class RobotCf2x(RobotBase):
         self.default_speed = getattr(cfg_body, 'default_speed', 1.0)  # 默认移动速度
         self.takeoff_height = getattr(cfg_body, 'takeoff_height', 1.0)  # 起飞悬停高度
         self.land_height = getattr(cfg_body, 'land_height', 0.0)  # 降落高度
-        
+
         # 飞行状态
         self.flight_state = 'landed'  # 'landed', 'hovering'
         self.hovering_height = self.takeoff_height  # 悬停高度
-        
+
         # 路径瞬移相关
-        self.waypoints =  [[0, 0, 1], [5, 0, 1], [5, 5, 1], [0, 5, 1]]  # 路径点列表
+        self.waypoints = [[0, 0, 1], [5, 0, 1], [5, 5, 1], [0, 5, 1]]  # 路径点列表
         self.current_waypoint_index = 0
         self.teleport_mode = True  # 默认使用瞬移模式
-        
+
         # 键盘控制
         self.keyboard_control_enabled = True
         self._movement_command = np.zeros(3, dtype=np.float32)  # 键盘移动命令
         self._keyboard_sub = None
-        
+
         # ROS2初始化
         self.ros2_initialized = False
         self._ros2_lock = threading.Lock()
@@ -74,10 +77,10 @@ class RobotCf2x(RobotBase):
             self.ros2_initialized = True
         except Exception as e:
             print(f"ROS2初始化失败: {e}")
-        
+
         # 初始化键盘事件监听
         self._setup_keyboard_events()
-        
+
         return
 
     def _setup_keyboard_events(self):
@@ -86,7 +89,7 @@ class RobotCf2x(RobotBase):
         try:
             appwindow = omni.appwindow.get_default_app_window()
             input_iface = carb.input.acquire_input_interface()
-            
+
             self._keyboard_sub = input_iface.subscribe_to_keyboard_events(
                 appwindow.get_keyboard(), self._on_keyboard_event
             )
@@ -99,7 +102,7 @@ class RobotCf2x(RobotBase):
     def _on_keyboard_event(self, event, *args, **kwargs):
         """键盘事件回调函数"""
         import carb
-        
+
         try:
             # 按键按下事件
             if event.type == carb.input.KeyboardEventType.KEY_PRESS:
@@ -115,14 +118,14 @@ class RobotCf2x(RobotBase):
                     self._movement_command[1] = self.default_speed  # 向左
                 elif event.input.name == "D":
                     self._movement_command[1] = -self.default_speed  # 向右
-            
+
             # 按键释放事件
             elif event.type == carb.input.KeyboardEventType.KEY_RELEASE:
                 if event.input.name in ["W", "S"]:
                     self._movement_command[0] = 0.0
                 elif event.input.name in ["A", "D"]:
                     self._movement_command[1] = 0.0
-            
+
             return True
         except Exception as e:
             print(f"键盘事件处理错误: {e}")
@@ -150,19 +153,19 @@ class RobotCf2x(RobotBase):
             # 获取当前位置，只改变高度
             positions, orientations = self.robot_entity.get_world_poses()
             current_pos = positions[0]
-            
+
             # 设置新的悬停位置
             self.position = np.array([current_pos[0], current_pos[1], self.takeoff_height], dtype=np.float32)
             self.hovering_height = self.takeoff_height
-            
+
             # 直接设置位置（瞬移到悬停高度）
             orientation = orientations[0]
             self.robot_entity.set_world_poses([self.position], [orientation])
-            
+
             # 更新状态
             self.flight_state = 'hovering'
             self.velocity = np.zeros(3, dtype=np.float32)  # 悬停时速度为0
-            
+
             print(f"无人机起飞到高度: {self.takeoff_height}m，进入悬停状态")
         else:
             print("无人机已在飞行状态")
@@ -251,13 +254,13 @@ class RobotCf2x(RobotBase):
         if self.flight_state == 'hovering':
             # 计算位移: ds = v * dt
             displacement = self.velocity * dt
-            
+
             # 更新位置
             self.position += displacement
-            
+
             # 保持悬停高度（只允许水平移动）
             self.position[2] = self.hovering_height
-            
+
             # 应用新位置到无人机实体
             _, orientations = self.robot_entity.get_world_poses()
             orientation = orientations[0]
@@ -268,7 +271,7 @@ class RobotCf2x(RobotBase):
         self.waypoints = [np.array(wp, dtype=np.float32) for wp in waypoints]
         self.current_waypoint_index = 0
         print(f"设置了 {len(waypoints)} 个路径点")
-        
+
         # 如果无人机在地面，先起飞
         if self.flight_state == 'landed':
             self.takeoff()
@@ -279,13 +282,13 @@ class RobotCf2x(RobotBase):
             target = self.waypoints[index].copy()
             # 确保在悬停高度
             target[2] = self.hovering_height
-            
+
             # 瞬移
             self.position = target
             _, orientations = self.robot_entity.get_world_poses()
             orientation = orientations[0]
             self.robot_entity.set_world_poses([self.position], [orientation])
-            
+
             print(f"瞬移到路径点 {index + 1}/{len(self.waypoints)}: {target}")
             return True
         return False
@@ -304,14 +307,14 @@ class RobotCf2x(RobotBase):
     def teleport_to_position(self, position):
         """瞬移到指定位置"""
         target_pos = np.array(position, dtype=np.float32)
-        
+
         # 如果在地面状态，先起飞
         if self.flight_state == 'landed':
             self.takeoff()
-        
+
         # 确保在悬停高度
         target_pos[2] = self.hovering_height
-        
+
         self.position = target_pos
         _, orientations = self.robot_entity.get_world_poses()
         orientation = orientations[0]
@@ -336,6 +339,7 @@ class RobotCf2x(RobotBase):
             self._movement_command[2] = float(msg.linear.z)
 
     def on_physics_step(self, step_size):
+        super().on_physics_step(step_size)
         if self.is_drone:
             if self.keyboard_control_enabled:
                 self.keyboard_control(step_size)
@@ -380,7 +384,7 @@ class RobotCf2x(RobotBase):
                 rclpy.shutdown()
             except Exception as e:
                 print(f"ROS2关闭失败: {e}")
-    
+
     def _cleanup_keyboard_events(self):
         if self._keyboard_sub is not None:
             try:
@@ -400,14 +404,14 @@ class RobotCf2x(RobotBase):
 
         car_to_target_angle = np.arctan2(target_postion[1] - positions[0][1], target_postion[0] - positions[0][0])
         delta_angle = car_to_target_angle - car_yaw_angle
-        
+
         if abs(delta_angle) < 0.017:
             delta_angle = 0
         elif delta_angle < -np.pi:
             delta_angle += 2 * np.pi
         elif delta_angle > np.pi:
             delta_angle -= 2 * np.pi
-        
+
         if np.linalg.norm(target_postion[0:2] - positions[0][0:2]) < 0.1:
             self.velocity = [0, 0]
             return True
@@ -418,10 +422,10 @@ class RobotCf2x(RobotBase):
         v_left = v_forward + v_rotation
         v_right = v_forward - v_rotation
         v_max = 20
-        
+
         v_left = np.clip(v_left, -v_max, v_max)
         v_right = np.clip(v_right, -v_max, v_max)
-        
+
         self.velocity = [v_left, v_right]
         return False
 
@@ -449,7 +453,7 @@ class RobotCf2x(RobotBase):
             raise ValueError("no target position")
         elif pos_target[2] != 0:
             raise ValueError("小车的z轴高度得在平面上")
-        
+
         positions, _ = self.robot_entity.get_world_poses()
         pos_robot = positions[0]
         pos_index_target = self.map_grid.compute_index(pos_target)
@@ -487,7 +491,7 @@ class RobotCf2x(RobotBase):
         max_y = max(corner[1] for corner in zone_corners)
 
         scan_direction = scane_direction
-        
+
         import math
         effective_width = 2 * self.view_radius * math.sin(self.view_angle / 2)
         scan_line_spacing = effective_width * 0.8

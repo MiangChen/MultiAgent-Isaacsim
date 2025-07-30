@@ -1,15 +1,12 @@
+from files.assets_scripts_linux import PATH_PROJECT, PATH_ISAACSIM_ASSETS
 from map.map_grid_map import GridMap
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.robot_h1 import RobotH1, RobotCfgH1
 from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
 from robot.robot_swarm_manager import RobotSwarmManager
-from files.assets_scripts_linux import PATH_PROJECT, PATH_ISAACSIM_ASSETS
 
 import gymnasium as gym
-import numpy as np
 from isaacsim.core.api import World
-from isaacsim.core.utils.viewports import create_viewport_for_camera, set_camera_view
-import isaacsim.core.utils.prims as prims_utils
 from isaacsim.core.utils.prims import create_prim
 
 
@@ -33,7 +30,7 @@ def create_scene(usd_path: str, prim_path_root: str = "/World"):
             # scale=self.simulation.scene_scale,
             scale=[1, 1, 1],
             # translation=[0, 0, 0.81696],
-            # orientation=[0.610, -0.789, -0.05184, 0.040] # wxyz, xyz还是zyx顺序不确定
+            # orientation=[0.610, -0.789, -0.05184, 0.040] # wxyz, xyz还是zyx顺序不确定 
         )
     else:
         raise RuntimeError("Env file path needs to end with .usd, .usda or .usdc .")
@@ -71,6 +68,7 @@ class Env(gym.Env):
         # physx_interface.set_gpu_dynamics_enabled(True)
         # is_enabled = physx_interface.get_gpu_dynamics_enabled()
         # print("is_enabled:", is_enabled)
+
         create_scene(usd_path=usd_path)
         self.cell_size = cell_size
         self.map_grid = GridMap(
@@ -100,41 +98,10 @@ class Env(gym.Env):
             f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml"
         )
 
-        # self.robot_swarm.create_robot(robot_class_name='jetbot', id=0, position=(0.0, 0.0, 0.0),
-        #                               orientation=(0.0, 0.0, 0.0, 1),
-        #                               robot_class_cfg=JetbotCfg)  # 机器人名字和cfg是对应的, 所以直接输入一个cfg就可以了
-
         self.robot_swarm.activate_robot(
             f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml"
         )  # 统一在这里加入机器人
 
-        # 添加相机, 为相机添加viewport
-        self.camera_prim_path = "/World/camera_test"
-        xform_path = self.camera_prim_path + "/xform_camera"
-        # prims_utils.delete_prim(xform_path) # 如果已经有了，要先删除
-        # prims_utils.delete_prim(camera_prim_path)
-        prims_utils.create_prim(
-            prim_path=self.camera_prim_path,
-            prim_type="Camera",
-            position=np.array([5, 0, 50.0]),
-        )
-        # 创建一个 Xform 原始来控制相机的位置和旋转
-        xform_prim = prims_utils.create_prim(prim_path=xform_path, prim_type="Xform")
-        create_viewport_for_camera(
-            viewport_name="/test_camera",
-            camera_prim_path=self.camera_prim_path,
-            width=720 / 2,
-            height=720 / 2,
-            position_x=800,  ## 设置他在IsaacSimAPP中的相对的位置
-            position_y=400,
-        )
-
-        ## 可以设置相机的观察位置
-        set_camera_view(
-            eye=np.array([5, 0, 50]),
-            target=np.array([5, 0, 0]),
-            camera_prim_path=self.camera_prim_path,
-        )
         print("init success")
 
         return

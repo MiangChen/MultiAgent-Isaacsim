@@ -68,11 +68,14 @@ class RobotSwarmManager:
                 cfg_camera_dict = None
                 if 'camera' in robot_cfg.keys():
                     cfg_camera_dict = robot_cfg['camera']
+                if 'camera_third_person' in robot_cfg.keys():
+                    cfg_camera_third_person_dict = robot_cfg['camera_third_person']
                 self.create_robot(
                     robot_class_name=robot_class_name,
                     robot_class_cfg=self.robot_class_cfg[robot_class_name],
                     cfg_body_dict=cfg_body_dict,
                     cfg_camera_dict=cfg_camera_dict,
+                    cfg_camera_third_person_dict=cfg_camera_third_person_dict,
                 )
 
     def create_robot(
@@ -81,6 +84,7 @@ class RobotSwarmManager:
             robot_class_cfg: Type[RobotCfg] = None,
             cfg_body_dict: Dict = None,
             cfg_camera_dict: Dict = None,
+            cfg_camera_third_person_dict: Dict = None,
     ):
         """创建新机器人并加入仓库"""
         if robot_class_name not in self.robot_class:
@@ -107,9 +111,21 @@ class RobotSwarmManager:
                 **cfg_camera_dict
             )
 
+        # 配置机器人的第三视角相机
+        from camera.camera_third_person_cfg import CameraThirdPersonCfg
+        cfg_camera_third_person = None
+        if cfg_camera_third_person_dict:  # 如果字典不为None且不为空
+            # from camera.camera_cfg import CameraCfg # 确保导入
+            try:
+                cfg_camera_third_person = CameraThirdPersonCfg(**cfg_camera_third_person_dict)
+            except ValidationError as e:
+                print(f"加载机器人 {cfg_body_dict.get('id')} 的相机配置失败: {e}")
+                cfg_camera_third_person = None  # 加载失败则不使用相机
+
         # 实例化完整的机器人
         robot = self.robot_class[robot_class_name](
-            cfg_body=cfg_body, cfg_camera=cfg_camera, scene=self.scene, map_grid=self.map_grid,
+            cfg_body=cfg_body, cfg_camera=cfg_camera, cfg_camera_third_person=cfg_camera_third_person, scene=self.scene,
+            map_grid=self.map_grid,
         )
         self.robot_warehouse[robot_class_name].append(robot)
         return robot

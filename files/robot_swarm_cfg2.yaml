@@ -5,6 +5,7 @@ jetbot:
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Allen
     camera: {}
+    camera_third_person: False
 
   - id: 1
     body:
@@ -12,6 +13,7 @@ jetbot:
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Bob
     camera: {}
+    camera_third_person: False
 
   - id: 2
     body:
@@ -19,6 +21,7 @@ jetbot:
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Candy
     camera: {}
+    camera_third_person: False
 
   - id: 3
     body:
@@ -26,6 +29,7 @@ jetbot:
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: David
     camera: {}
+    camera_third_person: False
 
 h1:
   - id: 0
@@ -34,6 +38,12 @@ h1:
       quat: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Hellen
     camera: {}
+    camera_third_person:
+      enabled: true
+      relative_position: [ -5.0, 0.0, 3.0 ]  # 相机相对于机器人的位置 (后方5米, 上方3米)
+      viewport_position: [ 800, 0 ]        # Viewport在Isaac Sim窗口中的起始位置 (x, y)
+      viewport_size: [ 360, 360 ]          # Viewport的尺寸 (宽, 高)
+
 
 #    camera:
 #      position: [ 0, 0, 0.5 ]  # 相对于机器人中心的偏移距离
@@ -52,3 +62,4 @@ cf2x:
       position: [ 1.0, 0.0 , 0.05 ]
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
     camera: {}
+    camera_third_person: False
