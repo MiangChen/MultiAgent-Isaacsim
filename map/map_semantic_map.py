@@ -60,9 +60,8 @@ import omni
 
 class MapSemantic():
     def __init__(self,):
-        self.map_semantic = {
-            "depot": [6.5, 0.6, 0],  # 仓库
-            "place1": [0.5, -1.4, 0], # 一号房子
-            "place2": [3.5, -1.4, 0], # 二号房子
-            "place3": [5.5, -1.4, 0], # 三号房子
-        }
+        import yaml
+        with open('files/env_cfg.yaml', 'r') as f:
+            cfg = yaml.safe_load(f)
+        self.map_semantic = cfg['map_semantic']
+

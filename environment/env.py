@@ -42,7 +42,17 @@ def create_scene(usd_path: str, prim_path_root: str = "/World"):
 
 class Env(gym.Env):
 
-    def __init__(self, simulation_app=None, usd_path: str = None) -> None:
+    def __init__(self, simulation_app,
+                 physics_dt: float,
+                 usd_path: str,
+                 cell_size: float,
+                 start_point: list = [0, 0, 0],
+                 min_bounds: list = [-20, -20, 0],
+                 max_bounds: list = [20, 20, 5],
+                 occupied_cell: int = 1,
+                 empty_cell=0,
+                 invisible_cell=2,
+                 ) -> None:
         self._render = None
         self._robot_name = None
         self._current_task_name = None
@@ -51,9 +61,9 @@ class Env(gym.Env):
         # self.simulation_app = SimulationApp({"headless": False})  # we can also run as headless.
 
         self._runner = simulation_app
-        self.world = World(physics_dt=1 / 200)
+        self.world = World(physics_dt=physics_dt)
         # self.world.scene.add_default_ground_plane()  # 添加地面
-        # self.world.set_gpu_dynamics_enabled(True)
+        # self.world.set_gpu_dynamics_enabled(True)  #  目前用不了, 不知道是什么bug?
         # import omni.physx
         #
         # physx_interface = omni.physx.acquire_physx_interface()
@@ -62,9 +72,15 @@ class Env(gym.Env):
         # is_enabled = physx_interface.get_gpu_dynamics_enabled()
         # print("is_enabled:", is_enabled)
         create_scene(usd_path=usd_path)
-        self.cell_size = 0.1
+        self.cell_size = cell_size
         self.map_grid = GridMap(
-            cell_size=self.cell_size
+            cell_size=self.cell_size,
+            start_point=start_point,
+            min_bounds=min_bounds,
+            max_bounds=max_bounds,
+            occupied_cell=occupied_cell,
+            empty_cell=empty_cell,
+            invisible_cell=invisible_cell,
         )  # gridmap需要在robot swarm之前使用
 
         self.robot_swarm = RobotSwarmManager(self.world.scene, self.map_grid)

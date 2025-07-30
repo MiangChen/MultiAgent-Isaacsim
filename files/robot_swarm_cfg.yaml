@@ -8,28 +8,28 @@ cf2x:
 jetbot:
   - id: 0  # 激活jetbot中的0号机器人
     body:
-      position: [ 5, 4, 0.0 ]
+      position: [ 5, 4, 0.035 ]
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Allen
     camera: {}
 
   - id: 1
     body:
-      position: [ 5, 3, 0.0 ]
+      position: [ 5, 3, 0.035 ]
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Bob
     camera: {}
 
   - id: 2
     body:
-      position: [ 5, 2, 0.0 ]
+      position: [ 5, 2, 0.035 ]
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Candy
     camera: {}
 
   - id: 3
     body:
-      position: [ 5, 1, 0.0 ]
+      position: [ 5, 1, 0.035 ]
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: David
     camera: {}

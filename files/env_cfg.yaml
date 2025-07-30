@@ -1,0 +1,24 @@
+scene:
+  usd_path:  "/home/ubuntu/PycharmProjects/multiagent-isaacsim/scene/mvp2/small_city.usd" # 这里需要你根据实际情况填写usd文件的路径
+
+world:
+  physics_dt: 0.005  # 1 / 200
+
+map:
+  cell_size: 0.2  # grid map的分辨率
+  start_point: [0, 0, 0]  # 构建gridmap的起点, 要保证这里是没有障碍物的
+  min_bounds: [-34, 0, 0] #
+  max_bounds: [19, 32, 1]
+  occupied_cell: 1
+  empty_cell: 0
+  invisible_cell: 2
+
+
+map_semantic:
+  depot0: [ 5, 4, 0 ]
+  depot1: [ 5, 3, 0 ]  # 这里的坐标可根据实际情况调整
+  depot2: [ 5, 2, 0 ]  # 这里的坐标可根据实际情况调整
+  depot3: [ 5, 1, 0 ]  # 这里的坐标可根据实际情况调整
+  place1: [-4.5, 11.4, 0]
+  place2: [5.6, 11.4, 0]
+  place3: [-4.7, 22.5, 0]
