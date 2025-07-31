@@ -82,13 +82,13 @@ if __name__ == "__main__":
                                    callback_fn=env.robot_swarm.robot_active['h1'][0].on_physics_step)
 
     # 注册cf2x无人机的物理步进回调
-    env.world.add_physics_callback("physics_step_cf2x_0",
-                                   callback_fn=env.robot_swarm.robot_active['cf2x'][0].on_physics_step)
+    # env.world.add_physics_callback("physics_step_cf2x_0",
+    #                                callback_fn=env.robot_swarm.robot_active['cf2x'][0].on_physics_step)
 
     # env.robot_swarm.robot_active['cf2x'][0].forward()  # 注释掉单次forward调用
 
     # 进行任务规划
-    from pddl.solver_p import plan
+    # from pddl.solver_p import plan
     plan = {'step_0': {'robot2': {'navigate-to': {'start': 'depot2', 'goal': 'place1'}},
                        'robot3': {'navigate-to': {'start': 'depot3', 'goal': 'place2'}}},
             'step_1': {'robot2': {'pick-up': {'it': 'item1', 'loc': 'place1'}},
@@ -115,13 +115,8 @@ if __name__ == "__main__":
                 object_semantic_name = plan[f"step_{state_step}"][robot][robot_action]['it']
                 object_semantics_pos = plan[f"step_{state_step}"][robot][robot_action]['loc']
 
-    env.robot_swarm.robot_active['h1'][0].navigate_to([-10, 5, 0])
+    # env.robot_swarm.robot_active['h1'][0].navigate_to([-10, 5, 0])
     for i in range(5000000):
-        # 设置相机的位置
-        pos = env.robot_swarm.robot_active['jetbot'][0].get_world_poses()[0]  # x y z 坐标
-        pos1 = env.robot_swarm.robot_active['jetbot'][1].get_world_poses()[0]  # x y z 坐标
-        pos_cf2x = env.robot_swarm.robot_active['cf2x'][0].get_world_poses()[0]  # x y z 坐标
-
 
         # 使用pddl进行规划
         # 根据已经规划好的, 进行一个划分,

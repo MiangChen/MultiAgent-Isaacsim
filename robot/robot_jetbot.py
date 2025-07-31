@@ -42,6 +42,7 @@ class RobotJetbot(RobotBase):
         return
 
     def initialize(self) -> None:
+        super().initialize()
         return
 
     def init_ros2(self):

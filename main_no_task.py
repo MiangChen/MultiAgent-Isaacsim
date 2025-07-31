@@ -116,7 +116,7 @@ if __name__ == "__main__":
     #             object_semantic_name = plan[f"step_{state_step}"][robot][robot_action]['it']
     #             object_semantics_pos = plan[f"step_{state_step}"][robot][robot_action]['loc']
 
-    env.robot_swarm.robot_active['h1'][0].navigate_to([0, 20, 0])
+    # env.robot_swarm.robot_active['h1'][0].navigate_to([0, 20, 0])
     for i in range(500000):
         env.step(action=None)  # execute one physics step and one rendering step
         continue
