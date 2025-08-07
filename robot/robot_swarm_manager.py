@@ -5,12 +5,20 @@ from pydantic import BaseModel, Field, ValidationError
 from map.map_grid_map import GridMap
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
+# 基础消息接口
+from rclpy.node import Node
+import rclpy
+from std_msgs.msg import String
+from geometry_msgs.msg import PoseStamped
+from rclpy.executors import MultiThreadedExecutor
+from geometry_msgs.msg import Transform as RosTransform
+from .msg import PrimTransform, SceneModifications, Plan, SkillInfo
 
 import numpy as np
 from isaacsim.core.api.scenes import Scene
 
 
-class RobotSwarmManager:
+class RobotSwarmManager(BaseNode):
     """
     增强型机器人集群管理系统
     专门管理多个机器人的
@@ -21,6 +29,9 @@ class RobotSwarmManager:
     """
 
     def __init__(self, scene: Scene, map_grid: GridMap = None):
+
+        super().__init__('swarm')
+
         self.scene = scene  # 保留世界场景引用
         self.robot_warehouse: Dict[str, List[RobotBase]] = (
             {}
@@ -36,6 +47,23 @@ class RobotSwarmManager:
         }
         self.robot_class_cfg = {}  # 对应的机器人
         self.map_grid = map_grid
+
+        self.robot_positions = {}
+        self.formation_config = {}
+        # 定时发布数据
+        self.create_timer(1.0, self.update_swarm_data)
+        self.timestep_subscriber = self.create_subscriber(
+            Plan,
+            'Plan',
+            self._plan_callback,
+            100
+        )
+        self.timestep_subscriber
+        self.swarm_publisher = self.create_publisher(
+            SkillInfo,
+            ''
+        )
+
 
     def register_robot_class(
             self,
@@ -74,6 +102,7 @@ class RobotSwarmManager:
                     cfg_body_dict=cfg_body_dict,
                     cfg_camera_dict=cfg_camera_dict,
                 )
+
 
     def create_robot(
             self,
@@ -182,6 +211,55 @@ class RobotSwarmManager:
         """检查名称是否唯一"""
         return self._find_robot(name) is None
 
+    def update_swarm_data(self):
+        self.shared_data['robot_count'] = len(self.robot_positions)
+        self.shared_data['formation_type'] = 'triangle'
+        self.publish_data('robot_count', len(self.robot_positions))
+        self.publish_data('formation_type', 'triangle')
+
+    def get_robot_positions(self):
+        return self.robot_positions
+
+    def request_map_info(self):
+        """请求地图信息"""
+
+        def handle_map_response(value):
+            self.get_logger().info(f"Received map size: {value}")
+
+        self.query_node_data('map', 'map_size', handle_map_response)
+
+    def _plan_callback(self, msg: Plan):
+
+        skills: Dict[int, Dict[str, Dict[str, Any]]] = {}
+
+        # 遍历每个时间步
+        for step in msg.steps:  # type: TimestepSkills
+            t: int = step.timestep
+            if t not in skills:
+                skills[t] = {}
+
+            # 遍历该时间步里，每个机器人的技能列表
+            for robot_skill in step.robots:  # type: RobotSkill
+                robot_id: str = robot_skill.robot_id
+
+                # 通常这里 skill_list 长度为 1；如果有多个，你可以按需取第一个或全部
+                # 下面示例取第一个
+                if not robot_skill.skill_list:
+                    continue
+
+                sk: SkillInfo = robot_skill.skill_list[0]
+                # 将参数列表转成 dict（如果你确实在 Parameter.msg 里定义了 key/value）
+                params_dict = {p.key: p.value for p in sk.params}
+
+                skills[t][robot_id] = {
+                    'skill': sk.skill,
+                    'params': params_dict,
+                    'object_id': sk.object_id if sk.object_id else None,
+                    'task_id': sk.task_id
+                }
+
+        # 存回成员变量
+        self.skills_by_timestep = skills
 
 if __name__ == "__main__":
     pass

@@ -1,0 +1,3 @@
+# SceneModifications.msg
+
+PrimTransform[] modifications

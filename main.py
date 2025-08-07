@@ -1,6 +1,7 @@
 import os
 
 from isaacsim import SimulationApp
+from rclpy.executors import MultiThreadedExecutor
 
 simulation_app = SimulationApp({"headless": False})  # we can also run as headless.
 from files.assets_scripts_linux import NAME_USR, PATH_PROJECT, PATH_ISAACSIM_ASSETS
@@ -119,81 +120,16 @@ if __name__ == "__main__":
 
     # 进行任务规划
     # from pddl.solver_p import plan
-    plan = {'step_0': {'robot2': {'navigate-to': {'start': 'depot', 'goal': 'place1'}}, 'robot3': {'navigate-to': {'start': 'depot', 'goal': 'place2'}}}, 'step_1': {'robot2': {'pick-up': {'it': 'item1', 'loc': 'place1'}}, 'robot3': {'pick-up': {'it': 'item2', 'loc': 'place2'}}}, 'step_2': {'robot2': {'navigate-to': {'start': 'place1', 'goal': 'depot'}}, 'robot3': {'navigate-to': {'start': 'place2', 'goal': 'depot'}}}, 'step_3': {'robot2': {'put-down': {'it': 'item1', 'loc': 'depot'}}, 'robot3': {'put-down': {'it': 'item2', 'loc': 'depot'}}}}
 
-    from map.map_semantic_map import MapSemantic
+    rclpy.init(args=args)
 
-    map_semantic = MapSemantic()
-    state_step = 0  # state用来表示状态相关的量
-    # for robot in plan[f"step_{state_step}"].keys():
-    #     id = int(robot[-1])
-    #     for robot_action in plan[f"step_{state_step}"][robot].keys():
-    #         if robot_action == 'navigate-to':
-    #             map_semantic_start = plan[f"step_{state_step}"][robot][robot_action]['start']
-    #             map_semantic_end = plan[f"step_{state_step}"][robot][robot_action]['goal']
-    #
-    #             pos_target = map_semantic.map_semantic[map_semantic_end]
-    #             env.robot_swarm.robot_active['jetbot'][id].navigate_to(pos_target)
-    #         elif robot_action == 'pick-up':
-    #             object_semantic_name = plan[f"step_{state_step}"][robot][robot_action]['it']
-    #             object_semantics_pos = plan[f"step_{state_step}"][robot][robot_action]['loc']
+    try:
+        env.spin()
+    finally:
+        env.plan_receiver.destroy_node()
+        env.scene_monitor.destroy_node()
+        rclpy.shutdown()
 
-    # env.robot_swarm.robot_active['h1'][0].navigate_to([0, 2, 0])
-    for i in range(500000):
-        env.step(action=None)  # execute one physics step and one rendering step
-        continue
-        # 设置相机的位置
-        camera_pose = np.zeros(3)  # 创建一个包含三个0.0的数组
-        pos = env.robot_swarm.robot_active['jetbot'][0].get_world_poses()[0]  # x y z 坐标
-        pos1 = env.robot_swarm.robot_active['jetbot'][1].get_world_poses()[0]  # x y z 坐标
-        pos_cf2x = env.robot_swarm.robot_active['cf2x'][0].get_world_poses()[0]  # x y z 坐标
-        camera_pose[:2] = pos_cf2x[:2]  # 将xy坐标赋值给result的前两个元素
-        camera_pose[2] = pos_cf2x[-1] + 1
-        set_camera_view(
-            eye=camera_pose,  # np.array([5+i*0.001, 0, 50]),
-            target=pos_cf2x,  # np.array([5+i*0.001, 0, 0]),
-            camera_prim_path=env.camera_prim_path,
-        )
-
-        # 使用pddl进行规划
-        # 根据已经规划好的, 进行一个划分,
-        # 要首先确定机器人的action complete状态, 肯定要记录上次的action是什么, 然后action 有一个 flag, 用于记录这个action启动后, 有没有完成; flag_action_complete
-        # 如果发现每一个机器人都完成了action, 那么就可以进入plan搜索下一个step,
-        # 一个flag用于确定是否启动回调函数
-        # 一个flag用于确定机器人时候时候完成了某个action
-        # 先不混用
-        state_skill_complete_all = True
-        for robot_class in env.robot_swarm.robot_class:
-            for robot in env.robot_swarm.robot_active[robot_class]:
-                state_skill_complete_all = state_skill_complete_all and robot.state_skill_complete
-
-        if state_skill_complete_all == True:
-            state_step += 1
-            if f"step_{state_step}" in plan.keys():
-                for robot in plan[f"step_{state_step}"].keys():
-                    id = int(robot[-1])
-                    for robot_action in plan[f"step_{state_step}"][robot].keys():
-                        if robot_action == 'navigate-to':
-                            map_semantic_start = plan[f"step_{state_step}"][robot][robot_action]['start']
-                            map_semantic_end = plan[f"step_{state_step}"][robot][robot_action]['goal']
-                            pos_target = map_semantic.map_semantic[map_semantic_end]
-                            env.robot_swarm.robot_active['jetbot'][id].navigate_to(pos_target)
-                        elif robot_action == 'pick-up':
-                            object_semantic_name = plan[f"step_{state_step}"][robot][robot_action]['it']
-                            object_semantics_pos = plan[f"step_{state_step}"][robot][robot_action]['loc']
-                            env.robot_swarm.robot_active['jetbot'][id].pick_up()
-                        elif robot_action == 'put-down':
-                            object_semantic_name = plan[f"step_{state_step}"][robot][robot_action]['it']
-                            object_semantics_pos = plan[f"step_{state_step}"][robot][robot_action]['loc']
-
-        env.step(action=None)  # execute one physics step and one rendering step
-        # if i % 60 == 0:  # 1s加一个轨迹
-            # env.robot_swarm.robot_active['jetbot'][0].traj.add_trajectory(pos)
-            # env.robot_swarm.robot_active['jetbot'][1].traj.add_trajectory(pos1)
-            # env.robot_swarm.robot_active['jetbot'][2].traj.add_trajectory(pos1)
-            # env.robot_swarm.robot_active['jetbot'][3].traj.add_trajectory(pos1)
-            # print(len(env.robot_swarm.robot_active['h1'][0].path), env.robot_swarm.robot_active['h1'][0].path_index)
-            # print(env.robot_swarm.robot_active['cf2x'][0].robot_entity.get_joint_velocities())
 
     simulation_app.close()  # close Isaac Sim
 

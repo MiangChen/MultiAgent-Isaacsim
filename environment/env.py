@@ -12,6 +12,14 @@ from isaacsim.core.utils.viewports import create_viewport_for_camera, set_camera
 import isaacsim.core.utils.prims as prims_utils
 from isaacsim.core.utils.prims import create_prim
 
+from ros.ros_swarm import BaseNode, SceneMonitorNode
+from rclpy.node import Node
+import rclpy
+from std_msgs.msg import String
+from geometry_msgs.msg import PoseStamped
+from rclpy.executors import MultiThreadedExecutor
+from geometry_msgs.msg import Transform as RosTransform
+from .msg import PrimTransform, SceneModifications, Plan, SkillInfo
 
 def create_scene(usd_path: str, prim_path_root: str = "/World"):
     """
@@ -43,6 +51,8 @@ def create_scene(usd_path: str, prim_path_root: str = "/World"):
 class Env(gym.Env):
 
     def __init__(self, simulation_app=None, usd_path: str = None) -> None:
+
+        super().__init__()
         self._render = None
         self._robot_name = None
         self._current_task_name = None
@@ -121,6 +131,16 @@ class Env(gym.Env):
         )
         print("init success")
 
+        self.plan_receiver = BaseNode('plan_receiver')
+        self.plan_receiver.plan_subscriber = self.create_subscriber(
+            Plan,
+            'Plan',
+            self._plan_callback,
+            100
+        )
+        self.plan_receiver.plan_subscriber
+        self.scene_monitor = SceneMonitorNode('scene_monitor')
+
         return
 
     def reset(self):
@@ -140,3 +160,106 @@ class Env(gym.Env):
             for robot in self.robot_swarm.robot_active[robot_class]:
                 robot.initialize()
                 robot.flag_world_reset = True
+
+    def _plan_callback(self, msg: Plan):
+
+        skills: Dict[int, Dict[str, Dict[str, Any]]] = {}
+
+        # 遍历每个时间步
+        for step in msg.steps:  # type: TimestepSkills
+            t: int = step.timestep
+            if t not in skills:
+                skills[t] = {}
+
+            # 遍历该时间步里，每个机器人的技能列表
+            for robot_skill in step.robots:  # type: RobotSkill
+                robot_id: str = robot_skill.robot_id
+
+                # 通常这里 skill_list 长度为 1；如果有多个，你可以按需取第一个或全部
+                # 下面示例取第一个
+                if not robot_skill.skill_list:
+                    continue
+
+                sk: SkillInfo = robot_skill.skill_list[0]
+                # 将参数列表转成 dict（如果你确实在 Parameter.msg 里定义了 key/value）
+                params_dict = {p.key: p.value for p in sk.params}
+
+                skills[t][robot_id] = {
+                    'skill': sk.skill,
+                    'params': params_dict,
+                    'object_id': sk.object_id if sk.object_id else None,
+                    'task_id': sk.task_id
+                }
+
+        # 存回成员变量
+        self.skills_by_timestep = skills
+
+        self._execute_and_render()
+
+    def _execute_and_render (self):
+
+        from map.map_semantic_map import MapSemantic
+        map_semantic = MapSemantic()
+
+        for i in range(500000):
+            self.step(action=None)  # execute one physics step and one rendering step
+            continue
+            # 设置相机的位置
+            camera_pose = np.zeros(3)  # 创建一个包含三个0.0的数组
+            pos = self.robot_swarm.robot_active['jetbot'][0].get_world_poses()[0]  # x y z 坐标
+            pos1 = self.robot_swarm.robot_active['jetbot'][1].get_world_poses()[0]  # x y z 坐标
+            pos_cf2x = env.robot_swarm.robot_active['cf2x'][0].get_world_poses()[0]  # x y z 坐标
+            camera_pose[:2] = pos_cf2x[:2]  # 将xy坐标赋值给result的前两个元素
+            camera_pose[2] = pos_cf2x[-1] + 1
+            set_camera_view(
+                eye=camera_pose,  # np.array([5+i*0.001, 0, 50]),
+                target=pos_cf2x,  # np.array([5+i*0.001, 0, 0]),
+                camera_prim_path=env.camera_prim_path,
+            )
+
+            # 根据已经规划好的, 进行一个划分,
+            # 要首先确定机器人的action complete状态, 肯定要记录上次的action是什么, 然后action 有一个 flag, 用于记录这个action启动后, 有没有完成; flag_action_complete
+            # 如果发现每一个机器人都完成了action, 那么就可以进入plan搜索下一个step,
+            # 一个flag用于确定是否启动回调函数
+            # 一个flag用于确定机器人时候时候完成了某个action
+            # 先不混用
+            # 检查所有机器人上一个技能是否都执行完毕
+            state_skill_complete_all = True
+
+            for robot_class in env.robot_swarm.robot_class:
+                for robot in env.robot_swarm.robot_active[robot_class]:
+                    state_skill_complete_all &= robot.state_skill_complete
+
+            if state_skill_complete_all:
+                # 推进到下一个 timestep
+                state_step += 1
+
+                # 拿出这一步骤所有机器人的技能分配（默认空 dict）
+                timestep_plan = self.skills_by_timestep.get(state_step, {})
+
+                # 遍历每个机器人要执行的 skill
+                for robot_id, skill_info in timestep_plan.items():
+                    # --- 解析 robot_id 和索引 ---
+                    # 假设 robot_id 格式总是 'robotN'
+                    idx = int(robot_id.replace('robot', ''))
+
+                    # --- 解析 SkillInfoDict ---
+                    skill = skill_info['skill']  # 比如 'navigate-to'
+                    params = skill_info.get('params', {})  # 原 plan 里的 start/goal 都放这里
+                    # object_id/task_id 如果需要，也可以取： skill_info['object_id'], skill_info['task_id']
+
+                    # --- 调度到具体方法 ---
+                    if skill == 'navigate-to':
+                        # 取出目的地
+                        goal = params['goal']
+                        pos_target = map_semantic.map_semantic[goal]
+                        env.robot_swarm.robot_active['jetbot'][idx].navigate_to(pos_target)
+
+                    elif skill == 'pick-up':
+                        env.robot_swarm.robot_active['jetbot'][idx].pick_up()
+
+                    elif skill == 'put-down':
+                        env.robot_swarm.robot_active['jetbot'][idx].put_down()
+
+            # 推进物理／渲染
+            self.step(action=None)
