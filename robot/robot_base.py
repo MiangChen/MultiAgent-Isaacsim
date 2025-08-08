@@ -106,7 +106,7 @@ class RobotBase:
         if cfg_camera is not None:
             print(f"create camera for {self.cfg_body.name_prefix}")
             self.camera = CameraBase(cfg_body, cfg_camera)
-            self.camera.create_camera()
+            self.camera.create_camera(camera_path=self.cfg_body.camera_path)
 
         # 第三视角相机
         # --- 新增：存储相机配置并初始化相机属性 ---

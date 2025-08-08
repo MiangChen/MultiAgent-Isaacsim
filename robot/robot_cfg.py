@@ -26,3 +26,4 @@ class RobotCfg(BaseCfg):
     scale: Optional[Tuple[float, float, float]] = (1.0, 1.0, 1.0)
     # controllers: Optional[List[ControllerCfg]] = None
     # cameras: Optional[List[SensorCfg]] = None
+    camera_path: Optional[str]  = None

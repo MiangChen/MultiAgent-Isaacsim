@@ -18,32 +18,35 @@ class CameraBase:
         self.cfg_camera = cfg_camera
         self.cfg_body = cfg_body
 
-    def create_camera(self):
-        self.cfg_camera.prim_path = self.cfg_body.prim_path + '/camera/Camera'
+    def create_camera(self, camera_path: str=None):
+        if camera_path is None:
+            self.cfg_camera.prim_path = self.cfg_body.prim_path + '/camera/Camera'
+        else:
+            self.cfg_camera.prim_path = camera_path
         prim = get_prim_at_path(self.cfg_camera.prim_path)
 
         if not prim.IsValid():
             prim = define_prim(self.cfg_camera.prim_path, "Xform")
-        if prim.IsA(UsdGeom.Xformable):
+            if prim.IsA(UsdGeom.Xformable):
 
-            # 获取值（默认时间或指定时间）
-            timecode = Usd.TimeCode.Default()
+                # 获取值（默认时间或指定时间）
+                timecode = Usd.TimeCode.Default()
 
-            translate_attr = prim.GetAttribute('xformOp:translate')
-            if not translate_attr:
-                print("Prim 未定义 xformOp:translate 属性")
-            else:  # 静态用默认时间，动态用 Usd.TimeCode(frame)
-                translate_value: Gf.Vec3d = translate_attr.Get(timecode)
-                # print(f"平移值: {tra/slate_value}")  # 例如 (1.0, 2.0, 3.0)
-                self.cfg_camera.position = list(translate_value)
+                translate_attr = prim.GetAttribute('xformOp:translate')
+                if not translate_attr:
+                    print("Prim 未定义 xformOp:translate 属性")
+                else:  # 静态用默认时间，动态用 Usd.TimeCode(frame)
+                    translate_value: Gf.Vec3d = translate_attr.Get(timecode)
+                    # print(f"平移值: {tra/slate_value}")  # 例如 (1.0, 2.0, 3.0)
+                    self.cfg_camera.position = list(translate_value)
 
-            quat_attr = prim.GetAttribute('xformOp:orient')
-            if not quat_attr:
-                print("Prim 未定义 xformOp:orient 属性")
-            else:
-                quat_value = quat_attr.Get(timecode)
-                self.cfg_camera.quat = [quat_value.real] + list(quat_value.imaginary)
-                self.cfg_camera.euler_degree = None
+                quat_attr = prim.GetAttribute('xformOp:orient')
+                if not quat_attr:
+                    print("Prim 未定义 xformOp:orient 属性")
+                else:
+                    quat_value = quat_attr.Get(timecode)
+                    self.cfg_camera.quat = [quat_value.real] + list(quat_value.imaginary)
+                    self.cfg_camera.euler_degree = None
             # Convert the prim to an Xformable object
             # xformable = UsdGeom.Xformable(prim)
             #
@@ -61,33 +64,33 @@ class CameraBase:
             # quat = local_to_world_matrix.ExtractRotationQuat()  # Returns a Gf.Quatd
             # self.cfg_camera.quat = [quat.real] + list(quat.imaginary)
             # self.cfg_camera.euler_degree = None
-        else:
-            if prim:
-                print(f"Prim at {prim.GetPath()} is not Xformable or does not exist.")
             else:
-                print(f"Prim not found at path {prim.GetPath()}")
+                if prim:
+                    print(f"Prim at {prim.GetPath()} is not Xformable or does not exist.")
+                else:
+                    print(f"Prim not found at path {prim.GetPath()}")
 
-        # 配置相机角度必须是4元数
-        if self.cfg_camera.euler_degree is not None:
-            # 注意角度和弧度模式
-            self.cfg_camera.quat = rotations.euler_angles_to_quats(np.array(self.cfg_camera.euler_degree), degrees=True)
+            # 配置相机角度必须是4元数
+            if self.cfg_camera.euler_degree is not None:
+                # 注意角度和弧度模式
+                self.cfg_camera.quat = rotations.euler_angles_to_quats(np.array(self.cfg_camera.euler_degree), degrees=True)
+            else:
+                self.cfg_camera.euler_degree = rotations.quats_to_euler_angles(np.array(self.cfg_camera.quat), degrees=True)
+
+            self.camera = Camera(
+                prim_path=self.cfg_camera.prim_path,
+                frequency=self.cfg_camera.frequency,
+                resolution=self.cfg_camera.resolution,
+                translation=self.cfg_camera.position,
+                orientation=self.cfg_camera.quat
+            )
+            print(self.cfg_camera.quat)
+            self.set_local_pose(translation=self.cfg_camera.position, orientation=self.cfg_camera.quat,
+                                camera_axes='usd')
         else:
-            self.cfg_camera.euler_degree = rotations.quats_to_euler_angles(np.array(self.cfg_camera.quat), degrees=True)
-
-        self.camera = Camera(
-            prim_path=self.cfg_camera.prim_path,
-            frequency=self.cfg_camera.frequency,
-            resolution=self.cfg_camera.resolution,
-            translation=self.cfg_camera.position,
-            orientation=self.cfg_camera.quat
-        )
-        print(self.cfg_camera.quat)
-        self.set_local_pose(translation=self.cfg_camera.position, orientation=self.cfg_camera.quat,
-                            camera_axes='usd')
-        # if not prim.IsValid():
-        #     self.camera.set_local_pose(translation=self.cfg_camera.position, orientation=self.cfg_camera.quat)
-        # else:
-        #     self.camera.set_world_pose(position=self.cfg_camera.position, orientation=self.cfg_camera.quat)
+            self.camera = Camera(
+                prim_path=self.cfg_camera.prim_path
+            )
         return
 
     def initialize(self):
