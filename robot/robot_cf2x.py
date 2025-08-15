@@ -2,9 +2,9 @@ import numpy as np
 import omni
 import omni.appwindow
 from isaacsim.core.api.scenes import Scene
-from isaacsim.robot.wheeled_robots.robots import WheeledRobot
+# from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 
-from controller.controller_pid import ControllerPID
+# from controller.controller_pid import ControllerPID
 from camera.camera_cfg import CameraCfg
 from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from map.map_grid_map import GridMap

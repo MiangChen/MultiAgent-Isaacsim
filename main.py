@@ -2,80 +2,16 @@ import os
 import yaml
 
 import argparse
-from isaacsim import SimulationApp
-import omni
-
-def initialize_simulation_app_from_yaml(config_path):
-    """
-    Initialize SimulationApp with settings from a YAML file.
-
-    Args:
-        config_path (str): Path to the YAML configuration file.
-    """
-    # 1. 读取YAML配置文件
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-
-    # 2. 获取SimulationApp的构造函数配置
-    # 'headless' 设置现在直接从 YAML 文件中读取
-    sim_app_config = config.get("simulation_app_config", {})
-    is_headless = sim_app_config.get("headless", False)  # 安全地获取headless值，默认为False
-
-    print(f"Initializing Isaac Sim with headless={is_headless}")
-
-    # 3. 拼接 experience 路径
-    experience = config.get("experience", "")
-    # 确保 EXP_PATH 环境变量已设置
-    exp_path = os.environ.get("EXP_PATH")
-    if not exp_path:
-        raise ValueError("EXP_PATH environment variable is not set. Please set it to your Isaac Sim experience path.")
-
-    full_experience_path = f'{exp_path}/{experience}'
-
-    # --- 新增逻辑：从YAML读取并启用扩展 ---
-    # extensions_to_enable = config.get("enabled_extensions", [])
-    # if extensions_to_enable:
-    #     ext_manager = omni.kit.app.get_app().get_extension_manager()
-    #     for ext_name in extensions_to_enable:
-    #         print(f"Enabling extension: {ext_name}")
-    #         ext_manager.set_extension_enabled_immediate(ext_name, True)
-
-    # 4. 初始化 SimulationApp
-    simulation_app = SimulationApp(sim_app_config, experience=full_experience_path)
-
-
-    # 5. 循环设置所有其他渲染和物理参数
-    if "settings" in config and config["settings"]:
-        for key, value in config["settings"].items():
-            simulation_app.set_setting(key, value)
-            print(f"Set setting: {key} = {value}")
-
-    # 6. 根据从配置中读取的 headless 状态来决定是否禁用视口
-    if is_headless:
-        import omni.kit.viewport.utility
-        try:
-            viewport = omni.kit.viewport.utility.get_active_viewport()
-            if viewport:
-                viewport.updates_enabled = False
-                print("Viewport updates disabled for headless mode.")
-        except Exception as e:
-            print(f"Could not disable viewport: {e}")
-
-    return simulation_app
 
 # simulation_app = SimulationApp({"headless": False})  # we can also run as headless.
 parser = argparse.ArgumentParser(description="Initialize Isaac Sim from a YAML config.")
-parser.add_argument("--config", type=str, default="./files/sim_cfg.yaml", help="Path to the configuration YAML file.")
+parser.add_argument("--config", type=str, default="./files/sim_cfg.yaml", help="Path to the configuration physics engine.")
 parser.add_argument("--enable", type=str, action='append', help="Enable a feature. Can be used multiple times.")
 
 args = parser.parse_args()
-# --enable isaacsim.ros2.bridge --enable omni.kit.graph.editor.core --enable omni.graph.bundle.action --enable omni.kit.graph.delegate.modern --enable isaacsim.asset.gen.omap --enable omni.graph.window.action
-# 从YAML文件初始化
+
+from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
 simulation_app = initialize_simulation_app_from_yaml(args.config)
-
-
-# 性能优化
-# carb.settings.get_settings().set_int("/rtx/debugMaterialType", 0)
 
 from environment.env import Env
 
@@ -88,10 +24,10 @@ if __name__ == "__main__":
     # 加载场景\世界引擎\grid map的参数
     with open(f'./files/env_cfg.yaml', 'r') as f:
         cfg = yaml.safe_load(f)
-    usd_abs_path = os.path.abspath(cfg['scene']['usd_path'])
+    from files.variables import WORLD_USD_PATH
     env = Env(
         # 场景
-        usd_path=usd_abs_path,
+        usd_path=WORLD_USD_PATH,
         # 世界引擎
         simulation_app=simulation_app,
         physics_dt=cfg['world']['physics_dt'],
@@ -155,7 +91,7 @@ if __name__ == "__main__":
                 object_semantic_name = plan[f"step_{state_step}"][robot][robot_action]['it']
                 object_semantics_pos = plan[f"step_{state_step}"][robot][robot_action]['loc']
 
-    # env.robot_swarm.robot_active['h1'][0].navigate_to([-10, 5, 0])
+    env.robot_swarm.robot_active['h1'][0].navigate_to([-10, 5, 0])
     for i in range(5000000):
 
         # 使用pddl进行规划
