@@ -51,8 +51,9 @@ def collect_available_usd_files(base_folder):
         current_path = Path(dirpath)
         for file in current_path.glob("*.usd"):
             if "available" in file.name:
-                relative_path = file.relative_to(base_path)
-                usd_files[file.name] = str(relative_path).replace("\\", "/")  # 用斜杠
+                # relative_path = file.relative_to(base_path)
+                # usd_files[file.name] = str(relative_path).replace("\\", "/")  # 用斜杠
+                usd_files[file.name] = str(file).replace("\\", "/")
 
     return usd_files
 

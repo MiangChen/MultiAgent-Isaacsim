@@ -20,15 +20,13 @@ def load_config(file_path:str = None) -> dict:
 
 file_path = os.path.join(_current_dir, './env_cfg.yaml')
 ASSET_PATH = load_config(file_path)['asset_path']
-WORLD_NAME = load_config(file_path)['world']['name']
+WORLD_NAME = load_config(file_path)['world']['name']  # 获取需要的场景名字
 
+
+# 获取场景的绝对路径
 file_path = os.path.join(_current_dir, '../asset/user_usd_files.json')
 with open(file_path, 'r', encoding='utf-8') as file:
     world_name_dic = json.load(file)
 
-WORLD_USD_PATH = ASSET_PATH + world_name_dic[WORLD_NAME]
+WORLD_USD_PATH = world_name_dic[WORLD_NAME]
 print(WORLD_USD_PATH)
-
-
-
-WORLD_USD_PATH = ASSET_PATH + '/Isaac/User/' + world_name_dic[WORLD_NAME]
