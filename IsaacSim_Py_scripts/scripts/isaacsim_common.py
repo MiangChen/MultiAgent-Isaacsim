@@ -126,7 +126,9 @@ def create_sim_environment(world_usd_path, rendering_hz, simulation_app):
             usd_path = world_usd_path
         else:
             # Locate Isaac Sim assets folder
-            assets_root_path = get_assets_root_path()
+            # assets_root_path = get_assets_root_path()
+            assets_root_path = "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5"
+
             print(f"Using {assets_root_path}")
             if assets_root_path is None:
                 carb.log_error("Could not find Isaac Sim assets folder")
