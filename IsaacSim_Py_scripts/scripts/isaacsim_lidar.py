@@ -143,7 +143,7 @@ def main():
     )
     drone_prim = add_drone_body(curr_stage)
 
-    lidar_config = "autel_percexuption_120x352"
+    lidar_config = "autel_perception_120x352"
     lidar_config_path = copy_lidar_config(lidar_config)
     lidar_annotators = add_drone_lidar(g_drone_prim_path, lidar_config)
 

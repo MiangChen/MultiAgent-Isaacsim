@@ -8,7 +8,7 @@
 #
 
 from typing import Optional
-
+import asyncio
 from controller.controller_policy import PolicyController
 
 import numpy as np
@@ -16,9 +16,7 @@ import omni
 import omni.kit.commands
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
 from isaacsim.core.utils.types import ArticulationActions
-# from isaacsim.storage.native import get_assets_root_path
-from isaacsim.core.utils.nucleus import get_assets_root_path
-
+from files.variables import ASSET_PATH
 
 class H1FlatTerrainPolicy(PolicyController):
     """The H1 Humanoid running Flat Terrain Policy Locomotion Policy"""
@@ -44,17 +42,18 @@ class H1FlatTerrainPolicy(PolicyController):
             orientation (np.ndarray) -- orientation of the robot
 
         """
-        assets_root_path = get_assets_root_path()
+
         if usd_path == None:
-            usd_path = assets_root_path + "/Isaac/Robots/Unitree/H1/h1.usd"
+            usd_path = ASSET_PATH + "/Isaac/Robots/Unitree/H1/h1.usd"
         super().__init__(name, prim_path, root_path, usd_path, position, orientation)
 
-        self.load_policy(
-            assets_root_path + "/Isaac/Samples/Policies/H1_Policies/h1_policy.pt",
-            assets_root_path + "/Isaac/Samples/Policies/H1_Policies/h1_env.yaml",
+        asyncio.run(self.load_policy(
+            ASSET_PATH + "/Isaac/Samples/Policies/H1_Policies/h1_policy.pt",
+            ASSET_PATH + "/Isaac/Samples/Policies/H1_Policies/h1_env.yaml",
             # 本地的
             # "/home/ubuntu/PycharmProjects/multiagent-isaacsim/IsaacLab/logs/rsl_rl/h1_flat/2025-04-14_19-39-24/exported/policy.pt",
             # "/home/ubuntu/PycharmProjects/multiagent-isaacsim/IsaacLab/logs/rsl_rl/h1_flat/2025-04-14_19-39-24/params/env.yaml",
+        )
         )
         self._action_scale = 0.5
         self._previous_action = np.zeros(19)

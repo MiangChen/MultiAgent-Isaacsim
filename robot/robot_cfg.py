@@ -1,11 +1,7 @@
 from typing import List, Optional, Tuple
 from pydantic import BaseModel
-# from isaacsim.storage.native import get_assets_root_path
-from isaacsim.core.utils.nucleus import get_assets_root_path
 
-assets_root_path = get_assets_root_path()  # 不可以放在
-if assets_root_path is None:
-    print("Could not find nucleus server with /Isaac folder")
+from files.variables import ASSET_PATH
 
 class BaseCfg(BaseModel):
     def update(self, **kwargs):

@@ -8,6 +8,7 @@
 #
 
 import io
+import asyncio
 from typing import Optional
 
 import carb
@@ -62,7 +63,7 @@ class PolicyController(BaseController):
         # else:
         #     self.robot = SingleArticulation(prim_path=root_path, name=name, position=position, orientation=orientation)
 
-    def load_policy(self, policy_file_path, policy_env_path) -> None:
+    async def load_policy(self, policy_file_path, policy_env_path) -> None:
         """
         加载策略。
 
@@ -71,7 +72,11 @@ class PolicyController(BaseController):
             policy_env_path (str): 环境配置文件地址.
         """
         # 读取策略
-        file_content = omni.client.read_file(policy_file_path)[2]
+        # file_content = omni.client.read_file(policy_file_path)[2]
+        result, _, file_content = await omni.client.read_file_async(policy_file_path) # omni.client.read_file(policy_file_path)[2]
+        if result != omni.client.Result.OK:
+            carb.log_error(f"Failed to read policy file from {policy_file_path}. Result: {result}")
+            return
         file = io.BytesIO(memoryview(file_content).tobytes())
         self.policy = torch.jit.load(file)
         # 读取环境配置
