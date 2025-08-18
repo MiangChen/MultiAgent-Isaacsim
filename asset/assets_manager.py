@@ -65,3 +65,4 @@ with open(output_json, "w", encoding="utf-8") as f:
     json.dump(result, f, ensure_ascii=False, indent=2)
 
 print(f"已找到 {len(result)} 个包含 'available' 的 .usd 文件，结果已写入：{output_json}")
+

@@ -1,9 +1,9 @@
-import os
+
 import yaml
 
 import argparse
 
-# simulation_app = SimulationApp({"headless": False})  # we can also run as headless.
+
 parser = argparse.ArgumentParser(description="Initialize Isaac Sim from a YAML config.")
 parser.add_argument("--config", type=str, default="./files/sim_cfg.yaml", help="Path to the configuration physics engine.")
 parser.add_argument("--enable", type=str, action='append', help="Enable a feature. Can be used multiple times.")
