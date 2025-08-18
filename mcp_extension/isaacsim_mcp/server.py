@@ -1,4 +1,5 @@
-# isaacsim_mcp_server.py
+# isaac_sim_mcp_server.py
+import math
 import time
 from mcp.server.fastmcp import FastMCP, Context, Image
 import socket
@@ -12,13 +13,17 @@ import os
 from pathlib import Path
 import base64
 from urllib.parse import urlparse
+import sys
+import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-logger = logging.getLogger("IsaacsimMCPServer")
+logger = logging.getLogger("IsaacMCPServer")
 
+assets_root_path = "C:/isaacsim_assets/Assets/Isaac/4.5/"
 
 @dataclass
 class IsaacConnection:
@@ -68,7 +73,7 @@ class IsaacConnection:
                     if not chunk:
                         # If we get an empty chunk, the connection might be closed
                         if (
-                            not chunks
+                                not chunks
                         ):  # If we haven't received anything yet, this is an error
                             raise Exception(
                                 "Connection closed before receiving any data"
@@ -116,7 +121,7 @@ class IsaacConnection:
             raise Exception("No data received")
 
     def send_command(
-        self, command_type: str, params: Dict[str, Any] = None
+            self, command_type: str, params: Dict[str, Any] = None
     ) -> Dict[str, Any]:
         """Send a command to Isaac and return the response"""
         if not self.sock and not self.connect():
@@ -207,8 +212,8 @@ async def server_lifespan(server: FastMCP) -> AsyncIterator[Dict[str, Any]]:
 
 # Create the MCP server with lifespan support
 mcp = FastMCP(
-    "IsaacsimMCP",
-    description="Isaacsim integration through the Model Context Protocol",
+    "IsaacSimMCP",
+    description="Isaac Sim integration through the Model Context Protocol",
     lifespan=server_lifespan,
 )
 _isaac_connection = None
@@ -267,12 +272,12 @@ def get_isaac_connection():
 
 @mcp.tool("create_physics_scene")
 def create_physics_scene(
-    objects: List[Dict[str, Any]] = [],
-    floor: bool = True,
-    gravity: List[float] = [0, -0.981, 0],
-    scene_name: str = "physics_scene",
+        objects: List[Dict[str, Any]] = [],
+        floor: bool = True,
+        gravity: List[float] = [0, -0.981, 0],
+        scene_name: str = "physics_scene",
 ) -> Dict[str, Any]:
-    """Create a physics scene with multiple objects. Before create physics scene, you need to call get_scene_info() first to verify availability of connection.
+    """Create a physics scene with multiple objects. Before create physics scene, you need to call get_scene_info() with depth = 1 first to verify availability of connection.
 
     Args:
         objects: List of objects to create. Each object should have at least 'type' and 'position' and 'name'.()
@@ -313,7 +318,7 @@ def create_physics_scene(
 @mcp.tool("create_robot")
 def create_robot(robot_type: str = "g1", position: List[float] = [0, 0, 0]) -> str:
     """Create a robot in the Isaac scene. Directly create robot prim in stage at the right position. For any creation of robot, you need to call create_physics_scene() first. call create_robot() as first attmpt beofre call execute_script().
-
+    It's very important that x and y is the horizontal axis. z is the vertical axis !!
     Args:
         robot_type: The type of robot to create. Available options:
             - "franka": Franka Emika Panda robot
@@ -331,27 +336,10 @@ def create_robot(robot_type: str = "g1", position: List[float] = [0, 0, 0]) -> s
     )
     return f"create_robot successfully: {result.get('result', '')}, {result.get('message', '')}"
 
-@mcp.tool("create_pddl")
-def create_pddl(usr_query: str = "") ->Dict[str, Any]:
-    """
-    用户输入一个需求, 然后调用PDDL, 得到一个字典存储的规划方案
-    The user enters a requirement, then calls PDDL to get a planning solution stored in a dictionary.
-    Args:
-        usr_query: The user input
-
-    Returns:
-        dict with pddl planning solution
-    """
-    isaac = get_isaac_connection()
-    result = isaac.send_command(
-        "create_pddl", {"usr_query": usr_query}
-    )
-    return f"create_pddl successfully: {result.get('result', '')}, {result.get('message', '')}"
-
 
 @mcp.tool("load_scene")
 def load_scene(
-    scene_path: str = "",
+        scene_path: str = "",
 ) -> str:
     """Load a scene in Isaac Sim. You need to call browse_scene_repository() first to get the scene path. The scene_path should be a valid USD file path.
     Args:
@@ -393,17 +381,631 @@ def save_scene(scene_name: str = "default_scene") -> str:
     return f"save_scene successfully: {result.get('result', '')}, {result.get('message', '')}"
 
 
+@mcp.tool("delete_prim")
+def delete_prim(prim_path: str = "") -> str:
+    """Delete a prim in Isaac Sim.
+
+    Args:
+        prim_path: The path to the prim to delete.
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command("delete_prim", {"prim_path": prim_path})
+    return f"delete_prim successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("get_scene_info")
+def get_scene_info(max_depth: int = 2) -> str:
+    """Get the scene info in Isaac Sim.
+
+    Args:
+        max_depth: Maximum depth level of prims to retrieve. Default is 2.
+
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command("get_scene_info", {"max_depth": max_depth})
+    return f"get_scene_info successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("adjust_size")
+def adjust_size(
+        prim_path: str = "", scale: list[float] = [1, 1, 1]
+) -> str:
+    """Adjust the size of a prim in Isaac Sim.
+
+    Args:
+        prim_path: The path to the prim to adjust.
+        scale: The scale factor to apply to the prim.
+
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "adjust_size", {"prim_path": prim_path, "scale": scale}
+    )
+    return f"adjust_size successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("adjust_pose")
+def adjust_pose(
+        prim_path: str = "", position: List[float] = [0, 0, 0], rotation: List[float] = [0, 0, 0]
+) -> str:
+    """Adjust the pose of a prim in Isaac Sim.
+    It's very important that x and y is the horizontal axis. z is the vertical axis !!
+    Args:
+        prim_path: The path to the prim to adjust.
+        position: The new position of the prim.
+        rotation: Euler angles in degrees [roll, pitch, yaw].
+
+    Returns:
+        String with result information.
+    """
+    try:
+        # 欧拉角（roll, pitch, yaw）转四元数（scalar-first: [w, x, y, z]）
+        quat = R.from_euler("xyz", rotation, degrees=True).as_quat()  # [x, y, z, w]
+        orientation = [quat[3], quat[0], quat[1], quat[2]]  # 变为 [w, x, y, z]
+
+        isaac = get_isaac_connection()
+        result = isaac.send_command(
+            "adjust_pose",
+            {"prim_path": prim_path, "position": position, "orientation": orientation},
+        )
+        return f"adjust_pose successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+    except Exception as e:
+        return f"adjust_pose failed: {str(e)}"
+
+
+@mcp.tool("set_prim_activate_state")
+def set_prim_activate_state(
+        prim_path: str = "", activate: bool = True
+) -> str:
+    """Set the activation state of a prim in Isaac Sim.
+
+    Args:
+        prim_path: The path to the prim to activate/deactivate.
+        activate: Whether to activate (True) or deactivate (False) the prim.
+
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "set_prim_activate_state", {"prim_path": prim_path, "activate": activate}
+    )
+    return f"set_prim_activate_state successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("set_collision_offsets")
+def set_collision_offsets(
+        prim_path: str = "",
+        contact_offset: float = 0.02,
+        rest_offset: float = 0.0
+) -> str:
+    """
+    Set collision contactOffset and restOffset for a prim in Isaac Sim.
+
+    Args:
+        prim_path: The path to the prim to modify.
+        contact_offset: The distance at which collisions start being considered.
+        rest_offset: The distance objects try to maintain after collision resolution.
+
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "set_collision_offsets",
+        {
+            "prim_path": prim_path,
+            "contact_offset": contact_offset,
+            "rest_offset": rest_offset
+        },
+    )
+    return f"set_collision_offsets successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("set_collision_enabled")
+def set_collision_enabled(
+        prim_path: str = "",
+        collision_enabled: bool = True
+) -> str:
+    """Enable or disable collision for a prim in Isaac Sim.
+
+    Args:
+        prim_path: The path to the prim to modify.
+        collision_enabled: Whether collision should be enabled for this prim.
+
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "set_collision_enabled",
+        {
+            "prim_path": prim_path,
+            "collision_enabled": collision_enabled
+        },
+    )
+    return f"set_collision_enabled successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("set_physics_properties")
+def set_physics_properties(
+        prim_path: str = "",
+        mass: float = 1.0,
+        velocity: List[float] = [0.0, 0.0, 0.0],
+        gravity_enabled: bool = True
+) -> str:
+    """Set physics properties (mass, velocity, gravity) for a prim in Isaac Sim.
+
+    Args:
+        prim_path: The path to the prim to modify.
+        mass: The mass of the prim (kg).
+        velocity: The linear velocity of the prim [vx, vy, vz].
+        gravity_enabled: Whether the prim should be affected by gravity.
+
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "set_physics_properties",
+        {
+            "prim_path": prim_path,
+            "mass": mass,
+            "velocity": velocity,
+            "gravity_enabled": gravity_enabled
+        },
+    )
+    return f"set_physics_properties successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("set_collision_approximation")
+def set_collision_approximation(
+        prim_path: str = "",
+        approximation: str = "convexHull"
+) -> str:
+    """
+    Set the collision approximation type for a prim in Isaac Sim.
+
+    Args:
+        prim_path: The path to the prim to modify.
+        approximation: The type of collision approximation to use.
+                       Valid options include: "convexHull", "sdf", "none", "boundingCube", "meshSimplification", "boundingSphere", "convexDecomposition".
+
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "set_collision_approximation",
+        {
+            "prim_path": prim_path,
+            "approximation": approximation
+        },
+    )
+    return f"set_collision_approximation successfully: {result.get('result', '')},{result.get('message', '')}"
+
+
+@mcp.tool("set_material_properties")
+def set_material_properties(
+        material_path: str = "",
+        static_friction: float = 0.5,
+        dynamic_friction: float = 0.5,
+        restitution: float = 0.0,
+        static_friction_mode: str = "average",
+        dynamic_friction_mode: str = "average",
+        restitution_mode: str = "average"
+) -> str:
+    """
+    Set material properties and combine modes for a PhysicsMaterial prim in Isaac Sim.
+
+    Args:
+        material_path: The path to the PhysicsMaterial prim.
+        static_friction: Static friction coefficient (0 ~ 1).
+        dynamic_friction: Dynamic friction coefficient (0 ~ 1).
+        restitution: Restitution (bounciness) coefficient (0 ~ 1).
+        static_friction_mode: Combine mode: average, min, max, multiply.
+        dynamic_friction_mode: Combine mode: average, min, max, multiply.
+        restitution_mode: Combine mode: average, min, max, multiply.
+
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "set_material_properties",
+        {
+            "material_path": material_path,
+            "static_friction": static_friction,
+            "dynamic_friction": dynamic_friction,
+            "restitution": restitution,
+            "static_friction_mode": static_friction_mode,
+            "dynamic_friction_mode": dynamic_friction_mode,
+            "restitution_mode": restitution_mode
+        },
+    )
+    return f"set_material_properties successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("set_physics_scene_config")
+def set_physics_scene_config(
+        gravity: List[float] = [0.0, -9.81, 0.0],
+        unit_system: str = "metersPerSecondSquared",  # 可选值举例：metersPerSecondSquared
+        scale: float = 1.0,
+        default_material: str = ""  # 路径，例如 "/World/Materials/Default"
+) -> str:
+    """
+    Configure the physics scene in Isaac Sim.
+
+    Args:
+        gravity: World gravity vector [x, y, z].
+        unit_system: Unit system for physics (e.g., "metersPerSecondSquared").
+        scale: Global physics scene scale.
+        default_material: Prim path to default PhysicsMaterial.
+
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "set_physics_scene_config",
+        {
+            "gravity": gravity,
+            "unit_system": unit_system,
+            "scale": scale,
+            "default_material": default_material
+        },
+    )
+    return f"set_physics_scene_config successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("create_joint")
+def create_joint(
+        joint_path: str = "",
+        joint_type: str = "revolute",  # revolute / prismatic / fixed
+        body0: str = "",
+        body1: str = "",
+        axis: List[float] = [0, 0, 1],
+        local_pos0: List[float] = [0, 0, 0],
+        local_pos1: List[float] = [0, 0, 0],
+        lower_limit: float = None,
+        upper_limit: float = None
+) -> str:
+    """
+    Create a joint (revolute, prismatic, or fixed) between two prims in Isaac Sim.
+
+    Args:
+        joint_path: Path to create the joint at (e.g., /World/MyJoint).
+        joint_type: Type of joint: "revolute", "prismatic", or "fixed".
+        body0: Prim path of the first body.
+        body1: Prim path of the second body.
+        axis: Rotation/translation axis (as a unit vector).
+        local_pos0: Local position on body0.
+        local_pos1: Local position on body1.
+        lower_limit: (Optional) Lower limit in radians or meters.
+        upper_limit: (Optional) Upper limit in radians or meters.
+
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "create_joint",
+        {
+            "joint_path": joint_path,
+            "joint_type": joint_type.lower(),
+            "body0": body0,
+            "body1": body1,
+            "axis": axis,
+            "local_pos0": local_pos0,
+            "local_pos1": local_pos1,
+            "lower_limit": lower_limit,
+            "upper_limit": upper_limit
+        },
+    )
+    return f"create_joint successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("set_drive_parameters")
+def set_drive_parameters(
+        joint_path: str = "",
+        drive_name: str = "angular",  # or "linear"
+        target_position: float = 0.0,
+        target_velocity: float = 0.0,
+        stiffness: float = 0.0,
+        damping: float = 0.0,
+        max_force: float = 1000.0
+) -> str:
+    """
+    Set DriveAPI parameters for a joint in Isaac Sim.
+
+    Args:
+        joint_path: The full USD path to the joint prim.
+        drive_name: Name of the drive (usually "angular" or "linear").
+        target_position: Target angle (rad) or position (m).
+        target_velocity: Target angular or linear velocity.
+        stiffness: Drive spring stiffness.
+        damping: Drive damping factor.
+        max_force: Maximum force/torque the drive can apply.
+
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "set_drive_parameters",
+        {
+            "joint_path": joint_path,
+            "drive_name": drive_name,
+            "target_position": target_position,
+            "target_velocity": target_velocity,
+            "stiffness": stiffness,
+            "damping": damping,
+            "max_force": max_force
+        },
+    )
+    return f"set_drive_parameters successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("create_object")
+def create_object(
+        usd_path: str,
+        position: List[float] = [0, 0, 0],
+        orientation: List[float] = [0, 0, 0]
+) -> str:
+    """
+    Create a simple object in the Isaac scene. For any creation of object, you need to call create_physics_scene() first if there is no physical scene.
+You can call get_people_list(), get_user_assets_list(), get_sensor_assets_list(), get_robot_list() or get_official_asset_list() to find the usd path if you don't know where it is.
+    It's very important that x and y is the horizontal axis. z is the vertical axis !!
+
+
+    Args:
+        usd_path: The path to the asset to create.
+        position: Position of the object in the scene.
+        orientation: Euler angles in degrees [roll, pitch, yaw] for the object's orientation.
+
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "create_object",
+        {
+            "usd_path": usd_path,
+            "position": position,
+            "orientation": orientation,  # Euler angles in degrees [roll, pitch, yaw]
+        },
+    )
+    return f"create_object successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("get_people_list")
+def get_people_list() -> List[str]:
+    """Get the list of available people assets in the Isaac Sim repository.
+
+    Returns:
+        List of people asset paths.
+    """
+    try:
+        with open(os.path.join(assets_root_path, "people_usd_files.json"), "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"Error: JSON file not found")
+    except json.JSONDecodeError as e:
+        print(f"Error：JSON DecodeError：{e}")
+    except Exception as e:
+        print(f"Error：JSON ReadError：{e}")
+    return None
+
+
+@mcp.tool("get_user_assets_list")
+def get_user_assets_list() -> List[str]:
+    """Get the list of available user assets in the Isaac Sim repository.
+
+    Returns:
+        List of user asset paths.
+    """
+    try:
+        with open(os.path.join(assets_root_path, "user_usd_files.json"), "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"Error: JSON file not found")
+    except json.JSONDecodeError as e:
+        print(f"Error：JSON DecodeError：{e}")
+    except Exception as e:
+        print(f"Error：JSON ReadError：{e}")
+    return None
+
+
+@mcp.tool("get_sensor_assets_list")
+def get_sensor_assets_list() -> List[str]:
+    """Get the list of available sensor assets in the Isaac Sim repository.
+
+    Returns:
+        List of sensor asset paths.
+    """
+    try:
+        with open(os.path.join(assets_root_path, "sensor_usd_files.json"), "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"Error: JSON file not found")
+    except json.JSONDecodeError as e:
+        print(f"Error：JSON DecodeError：{e}")
+    except Exception as e:
+        print(f"Error：JSON ReadError：{e}")
+    return None
+
+
+@mcp.tool("get_robot_list")
+def get_robot_list() -> List[str]:
+    """Get the list of available robot assets in the Isaac Sim repository.
+
+    Returns:
+        List of robot asset paths.
+    """
+    try:
+        with open(os.path.join(assets_root_path, "robot_usd_files.json"), "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"Error: JSON file not found")
+    except json.JSONDecodeError as e:
+        print(f"Error：JSON DecodeError：{e}")
+    except Exception as e:
+        print(f"Error：JSON ReadError：{e}")
+    return None
+
+
+@mcp.tool("get_official_asset_list")
+def get_official_asset_list() -> List[str]:
+    """Get the list of available official assets in the Isaac Sim repository.
+
+    Returns:
+        List of official asset paths.
+    """
+    try:
+        with open(os.path.join(assets_root_path, "usd_files.json"), "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"Error: JSON file not found")
+    except json.JSONDecodeError as e:
+        print(f"Error：JSON DecodeError：{e}")
+    except Exception as e:
+        print(f"Error：JSON ReadError：{e}")
+    return None
+
+
+@mcp.tool("check_prim_overlap")
+def check_prim_overlap(
+        position: List[float] = [0, 0, 0],
+        thereshold: float = 0.1
+) -> str:
+    """
+    Check if a prim at the given position overlaps with existing prims in the scene.
+    Args:
+        position: The position to check for overlap.
+        thereshold: The distance threshold to consider as overlap.
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "check_prim_overlap",
+        {
+            "position": position,
+            "thereshold": thereshold
+        },
+    )
+    return f"check_prim_overlap successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("get_selected_prim")
+def get_selected_prim() -> str:
+    """Get the currently selected prim in the Isaac Sim scene.
+
+    Returns:
+        String with the path of the selected prim.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command("get_selected_prim")
+    return f"get_selected_prim successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("focus_on_prim")
+def focus_on_prim(prim_path: str = "") -> str:
+    """Focus the camera on a specific prim in the Isaac Sim scene.
+
+    Args:
+        prim_path: The path to the prim to focus on.
+
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command("focus_on_prim", {"prim_path": prim_path})
+    return f"focus_on_prim successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("create_camera")
+def create_camera(
+        position: List[float] = [0, 0, 0],
+        orientation: List[float] = [0, 0, 0],
+        prim_path: str = "/World/Camera"
+) -> str:
+    """Create a camera in the Isaac Sim scene.
+    When [roll, pitch, yaw] equals to [0,0,0], the camera is just facing the ground. So if you wanna view downward,
+    just set orientation as [0, 0, 0].
+    Changing roll will make camera rotate with x-axis. Changing pitch will make camera rotate with y-axis. Changing yaw will make camera rotate with z-axis.
+
+    Args:
+        position: The position of the camera in the scene, list float [x, y, z].
+        orientation: Euler angles in degrees [roll, pitch, yaw].
+        prim_path: The prim path of the camera.
+
+    Returns:
+        String with result information.
+    """
+    isaac = get_isaac_connection()
+    result = isaac.send_command(
+        "create_camera",
+        {
+            "position": position,
+            "orientation": orientation,
+            "prim_path": prim_path
+        },
+    )
+    return f"create_camera successfully: {result.get('result', '')}, {result.get('message', '')}"
+
+
+@mcp.tool("eluer_to_quaternion")
+def eluer_to_quaternion(
+        roll: float = 0.0,
+        pitch: float = 0.0,
+        yaw: float = 0.0,
+        degrees: bool = True,
+) -> List[float]:
+    """Convert Euler angles to quaternion.
+
+    Args:
+        roll: Roll angle in degrees.
+        pitch: Pitch angle in degrees.
+        yaw: Yaw angle in degrees.
+        degrees: Whether the input angles are in degrees (default is True). If False, angles are assumed to be in radians.
+    Returns:
+        Quaternion as a list [w, x, y, z].
+    """
+    if degrees:
+        x, y, z = roll * (math.pi / 180), pitch * (math.pi / 180), yaw * (math.pi / 180)
+    else:
+        x, y, z = roll, pitch, yaw
+
+    # 计算每个轴的半角
+    cx = math.cos(x / 2)
+    sx = math.sin(x / 2)
+    cy = math.cos(y / 2)
+    sy = math.sin(y / 2)
+    cz = math.cos(z / 2)
+    sz = math.sin(z / 2)
+
+    # XYZ 顺序旋转生成的四元数
+    w = cx * cy * cz + sx * sy * sz
+    x = sx * cy * cz - cx * sy * sz
+    y = cx * sy * cz + sx * cy * sz
+    z = cx * cy * sz - sx * sy * cz
+
+    return [w, x, y, z]
+
+
 # @mcp.prompt()
 # def asset_creation_strategy() -> str:
 #     """Defines the preferred strategy for creating assets in Isaac Sim"""
 #     return """
 #     """
 
-
-def main():
-    """Run the MCP server"""
-    mcp.run()
-
-
 if __name__ == "__main__":
-    main()
+    mcp.run(transport="stdio")
