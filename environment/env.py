@@ -129,7 +129,7 @@ class Env(gym.Env):
 
         # 加载场景：这通常是一个需要与模拟器交互的潜在异步操作
         create_scene(usd_path=self._usd_path)
-        await add_entity()
+        #  await add_entity()
 
         await self.robot_swarm.load_robot_swarm_cfg(
             f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml"
