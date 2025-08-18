@@ -36,8 +36,38 @@ def create_scene(usd_path: str, prim_path_root: str = "/World"):
         raise RuntimeError("Env file path needs to end with .usd, .usda or .usdc .")
     return
 
+async def add_entity():
+    #  加入复杂的场景
+
+    from scene_generation.scene_generation_python.tools import ToolFunctions, AddCubeInput
+    # tool_impl = ToolFunctions()
+    # tools = tool_impl.tools
+    #
+    # input_data = AddCubeInput(prim_path="/World/Car", size=5.0, position=[1.0, 2.0, 3.0])
+    # add_cube_tool = tools[0]
+    # result = await add_cube_tool.ainvoke(input_data.model_dump())
+    # result = await add_cube_tool.ainvoke(input_value={'prim_path': '/World/Car...ition': [1.0, 2.0, 3.0]})
+    my_tools = ToolFunctions()
+
+    # 2. 准备输入数据 (使用 Pydantic 模型)
+    cube_input = AddCubeInput(
+        prim_path="/World/MyAwesomeCube",
+        size=50.0,
+        position=[0, 15, 25.0]  # x, y, z
+    )
+
+    # 3. 直接 await 调用实例上的 async 方法
+    #    这是最简单、最pythonic的方式
+    result_message = await my_tools.add_cube(cube_input)
+
+    print(f"Tool execution result: {result_message}")
+
 
 class Env(gym.Env):
+    """
+    一个使用异步工厂模式进行初始化的Gym环境。
+    请不要直接调用 Env(...)，而是使用 await Env.create(...) 来创建实例。
+    """
 
     def __init__(self, simulation_app,
                  physics_dt: float,
@@ -50,26 +80,18 @@ class Env(gym.Env):
                  empty_cell=0,
                  invisible_cell=2,
                  ) -> None:
+
+        print("Executing synchronous __init__...")
+
+        # --- 存储参数和基本属性赋值 ---
         self._render = None
         self._robot_name = None
         self._current_task_name = None
-        # self._validate()
-        # from isaacsim import SimulationApp
-        # self.simulation_app = SimulationApp({"headless": False})  # we can also run as headless.
-
         self._runner = simulation_app
-        self.world = World(physics_dt=physics_dt)
-        # self.world.scene.add_default_ground_plane()  # 添加地面
-        # self.world.set_gpu_dynamics_enabled(True)  #  目前用不了, 不知道是什么bug?
-        # import omni.physx
-        #
-        # physx_interface = omni.physx.acquire_physx_interface()
-        #
-        # physx_interface.set_gpu_dynamics_enabled(True)
-        # is_enabled = physx_interface.get_gpu_dynamics_enabled()
-        # print("is_enabled:", is_enabled)
+        self._usd_path = usd_path  # 保存usd_path以供异步方法使用
 
-        create_scene(usd_path=usd_path)
+        # --- 创建核心的、同步的对象 ---
+        self.world = World(physics_dt=physics_dt)
         self.cell_size = cell_size
         self.map_grid = GridMap(
             cell_size=self.cell_size,
@@ -82,6 +104,8 @@ class Env(gym.Env):
         )  # gridmap需要在robot swarm之前使用
 
         self.robot_swarm = RobotSwarmManager(self.world.scene, self.map_grid)
+
+        # --- 配置机器人管理器 (这些都是同步的配置) ---
         self.robot_swarm.register_robot_class(
             robot_class_name="jetbot",
             robot_class=RobotJetbot,
@@ -93,25 +117,65 @@ class Env(gym.Env):
         self.robot_swarm.register_robot_class(
             robot_class_name="cf2x", robot_class=RobotCf2x, robot_class_cfg=RobotCfgCf2x
         )  # 注册cf2x机器人
-        # TODO 更新路径的设置
-        self.robot_swarm.load_robot_swarm_cfg(
+
+
+        print("Synchronous __init__ finished.")
+
+    async def _async_init(self) -> None:
+        """
+        处理所有需要等待的异步初始化步骤。
+        """
+        print("Starting asynchronous initialization...")
+
+        # 加载场景：这通常是一个需要与模拟器交互的潜在异步操作
+        create_scene(usd_path=self._usd_path)
+        await add_entity()
+
+        await self.robot_swarm.load_robot_swarm_cfg(
             f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml"
         )
-
+        # 激活机器人： 是一个典型的异步操作。
         self.robot_swarm.activate_robot(
             f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml"
-        )  # 统一在这里加入机器人
+        )
 
-        print("init success")
+    @classmethod
+    async def create(cls, simulation_app,
+                     physics_dt: float,
+                     usd_path: str,
+                     cell_size: float,
+                     start_point: list = [0, 0, 0],
+                     min_bounds: list = [-20, -20, 0],
+                     max_bounds: list = [20, 20, 5],
+                     occupied_cell: int = 1,
+                     empty_cell=0,
+                     invisible_cell=2,
+                     ) -> "Env":
+        """
+        异步地创建并完全初始化一个Env实例。
+        """
+        instance = cls(
+            simulation_app=simulation_app,
+            physics_dt=physics_dt,
+            usd_path=usd_path,
+            cell_size=cell_size,
+            start_point=start_point,
+            min_bounds=min_bounds,
+            max_bounds=max_bounds,
+            occupied_cell=occupied_cell,
+            empty_cell=empty_cell,
+            invisible_cell=invisible_cell,
+        )
 
-        return
+        await instance._async_init()
+
+        return instance
 
     def reset(self):
         self.world.reset()
         self.init_robot()  # 似乎要在这里先初始化机器人, 才能在grid map中找到机器人的障碍
         self.map_grid.initialize()
         print("reset env & init grid map success")
-
         return
 
     def step(self, action):

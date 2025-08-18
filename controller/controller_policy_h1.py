@@ -18,9 +18,15 @@ from isaacsim.core.utils.rotations import quat_to_rot_matrix
 from isaacsim.core.utils.types import ArticulationActions
 from files.variables import ASSET_PATH
 
-class H1FlatTerrainPolicy(PolicyController):
-    """The H1 Humanoid running Flat Terrain Policy Locomotion Policy"""
 
+class H1FlatTerrainPolicy(PolicyController):
+    """
+    The H1 Humanoid running Flat Terrain Policy Locomotion Policy.
+    This class uses an asynchronous factory pattern for initialization.
+    Please use `await H1FlatTerrainPolicy.create(...)` to instantiate.
+    """
+
+    # 1. __init__ 方法现在是完全同步和轻量级的
     def __init__(
             self,
             prim_path: str,
@@ -31,34 +37,68 @@ class H1FlatTerrainPolicy(PolicyController):
             orientation: Optional[np.ndarray] = None,
     ) -> None:
         """
-        Initialize H1 robot and import flat terrain policy.
-
-        Args:
-            prim_path (str) -- prim path of the robot on the stage
-            root_path (Optional[str]): The path to the articulation root of the robot
-            name (str) -- name of the quadruped
-            usd_path (str) -- robot usd filepath in the directory
-            position (np.ndarray) -- position of the robot
-            orientation (np.ndarray) -- orientation of the robot
-
+        Initializes the H1 robot's basic properties.
+        NOTE: This method NO LONGER loads the policy model.
         """
+        print(f"H1FlatTerrainPolicy synchronous __init__ for {prim_path}")
 
-        if usd_path == None:
+        if usd_path is None:
             usd_path = ASSET_PATH + "/Isaac/Robots/Unitree/H1/h1.usd"
+
+        # 调用父类的构造函数 (同步)
         super().__init__(name, prim_path, root_path, usd_path, position, orientation)
 
-        asyncio.run(self.load_policy(
-            ASSET_PATH + "/Isaac/Samples/Policies/H1_Policies/h1_policy.pt",
-            ASSET_PATH + "/Isaac/Samples/Policies/H1_Policies/h1_env.yaml",
-            # 本地的
-            # "/home/ubuntu/PycharmProjects/multiagent-isaacsim/IsaacLab/logs/rsl_rl/h1_flat/2025-04-14_19-39-24/exported/policy.pt",
-            # "/home/ubuntu/PycharmProjects/multiagent-isaacsim/IsaacLab/logs/rsl_rl/h1_flat/2025-04-14_19-39-24/params/env.yaml",
-        )
-        )
+        # 移除 `asyncio.run(...)`
+        # 只初始化同步的属性
         self._action_scale = 0.5
         self._previous_action = np.zeros(19)
         self._policy_counter = 0
         self.base_command = np.zeros(3)
+
+    # 2. 创建一个私有的异步方法来处理耗时操作
+    async def _load_policy_async(self) -> None:
+        """
+        Asynchronously loads the neural network policy.
+        """
+        #print(f"Loading policy model for {self.prim_path}...")
+
+        # 假设 self.load_policy 是一个 async def 方法
+        await self.load_policy(
+            ASSET_PATH + "/Isaac/Samples/Policies/H1_Policies/h1_policy.pt",
+            ASSET_PATH + "/Isaac/Samples/Policies/H1_Policies/h1_env.yaml",
+        )
+#        print(f"Policy model for {self.prim_path} loaded successfully.")
+
+    # 3. 创建异步工厂 @classmethod 作为新的实例化入口
+    @classmethod
+    async def create(
+            cls,
+            prim_path: str,
+            root_path: Optional[str] = None,
+            name: str = "h1",
+            usd_path: Optional[str] = None,
+            position: Optional[np.ndarray] = None,
+            orientation: Optional[np.ndarray] = None,
+    ) -> "H1FlatTerrainPolicy":
+        """
+        Asynchronously creates and fully initializes an H1FlatTerrainPolicy instance,
+        including loading the policy model.
+        """
+        # 首先，同步地调用 __init__ 创建一个“半成品”实例
+        instance = cls(
+            prim_path=prim_path,
+            root_path=root_path,
+            name=name,
+            usd_path=usd_path,
+            position=position,
+            orientation=orientation,
+        )
+
+        # 然后，调用异步初始化方法来完成所有耗时操作
+        await instance._load_policy_async()
+
+        # 最后，返回一个完全准备好的实例
+        return instance
 
     def _compute_observation(self, command, robot):
         """

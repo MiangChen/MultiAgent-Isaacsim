@@ -1,3 +1,5 @@
+import asyncio
+
 from isaacsim.core.api.scenes import Scene
 
 from map.map_grid_map import GridMap
@@ -18,35 +20,75 @@ import numpy as np
 
 
 class RobotH1(RobotBase):
+    """
+    H1 Robot Class.
+    This class uses an asynchronous factory pattern for initialization
+    because its policy controller requires asynchronous loading.
+    Please use `await RobotH1.create(...)` to instantiate.
+    """
+
+    # 1. __init__ 方法现在是完全同步的，不再创建策略控制器
     def __init__(self, cfg_body: RobotCfgH1, cfg_camera: CameraCfg = None,
                  cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None, ) -> None:
+                 map_grid: GridMap = None) -> None:
+
         super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid)
         self.control_mode = 'joint_positions'
 
-        # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
+        # 初始化PID控制器等同步组件
         self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
         self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
 
-        # self.traj = Trajectory(
-        #     robot_prim_path=self.robot_prim,
-        #     # name='traj' + f'_{cfg_body.id}',
-        #     id=cfg_body.id,
-        #     max_points=100,
-        #     color=(0.3, 1.0, 0.3),
-        #     scene=self.scene,
-        #     radius=0.05,
-        # )
+        # 移除对 H1FlatTerrainPolicy 的直接实例化
+        # self.controller_policy = H1FlatTerrainPolicy(prim_path=self.cfg_body.prim_path)
 
-        # 神经网络控制器
-        self.controller_policy = H1FlatTerrainPolicy(prim_path=self.cfg_body.prim_path)
+        # 将控制器先初始化为 None，它将在异步工厂中被正确创建
+        self.controller_policy: H1FlatTerrainPolicy | None = None
         self.base_command = np.zeros(3)
 
         return
 
+    # 2. 新增的异步工厂 @classmethod
+    @classmethod
+    async def create(cls, cfg_body: RobotCfgH1, cfg_camera: CameraCfg = None,
+                     cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
+                     map_grid: GridMap = None) -> "RobotH1":
+        """
+        Asynchronously creates and fully initializes a RobotH1 instance,
+        including its asynchronous policy controller.
+        """
+        # 首先，同步调用 __init__ 创建一个“半成品”实例
+        instance = cls(
+            cfg_body=cfg_body,
+            cfg_camera=cfg_camera,
+            cfg_camera_third_person=cfg_camera_third_person,
+            scene=scene,
+            map_grid=map_grid
+        )
+
+        # 然后，异步地创建并加载 H1FlatTerrainPolicy 控制器
+        # print(f"Creating policy controller for robot {instance.type}...")
+        instance.controller_policy = await H1FlatTerrainPolicy.create(
+            prim_path=instance.cfg_body.prim_path
+            # 如果 H1FlatTerrainPolicy.create 需要更多参数，请在这里传递
+        )
+
+        # 最后，返回一个完全准备好的实例
+        return instance
+
+    # 3. initialize 方法保持不变
     def initialize(self):
+        """
+        Initializes the robot's connection to the simulation world entities.
+        This should be called after the world is ready (e.g., after a reset).
+        """
         super().initialize()
-        self.controller_policy.initialize(self.robot_entity)  # 初始化配置
+        # 到这里时，self.controller_policy 已经被 create 方法成功创建了
+        if self.controller_policy:
+            self.controller_policy.initialize(self.robot_entity)
+        else:
+            # 这是一个安全检查，正常情况下不应该发生
+            print(f"[Warning] RobotH1 '{self.name}' has no controller_policy to initialize.")
 
     def move_to(self, target_pos):
         import numpy as np
