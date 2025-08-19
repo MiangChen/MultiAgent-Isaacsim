@@ -1,42 +1,41 @@
-import os
-
 from files.assets_scripts_linux import PATH_PROJECT, PATH_ISAACSIM_ASSETS
 from map.map_grid_map import GridMap
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.robot_h1 import RobotH1, RobotCfgH1
 from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
 from robot.robot_swarm_manager import RobotSwarmManager
+from scene.scene_manager import SceneManager
 
 import gymnasium as gym
 from isaacsim.core.api import World
 
 import importlib.util
-try:
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-except NameError:
-    current_dir = os.getcwd()
-relative_path_to_module = "../mcp_extension/isaacsim.mcp_extension/isaacsim_mcp_extension/extension.py"
-absolute_path = os.path.join(current_dir, relative_path_to_module)
+# try:
+#     current_dir = os.path.dirname(os.path.abspath(__file__))
+# except NameError:
+#     current_dir = os.getcwd()
+# relative_path_to_module = "../mcp_extension/isaacsim.mcp_extension/isaacsim_mcp_extension/extension.py"
+# absolute_path = os.path.join(current_dir, relative_path_to_module)
 
-module_name = "scene_manager"
+# module_name = "scene_manager"
 
-# 创建一个模块规范 (Module Spec)
-spec = importlib.util.spec_from_file_location(module_name, absolute_path)
-
-# 根据规范创建并执行模块加载
-if spec and spec.loader:
-    my_extension_module = importlib.util.module_from_spec(spec)
-
-    # 将模块添加到 sys.modules，这样其他地方也可以 import my_mcp_extension
-    # sys.modules[module_name] = my_extension_module
-
-    spec.loader.exec_module(my_extension_module)
-
-spec = importlib.util.spec_from_file_location(module_name, absolute_path)
-my_extension_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(my_extension_module)
-
-scene_manager = my_extension_module.MCPExtension()
+# # 创建一个模块规范 (Module Spec)
+# spec = importlib.util.spec_from_file_location(module_name, absolute_path)
+#
+# # 根据规范创建并执行模块加载
+# if spec and spec.loader:
+#     my_extension_module = importlib.util.module_from_spec(spec)
+#
+#     # 将模块添加到 sys.modules，这样其他地方也可以 import my_mcp_extension
+#     # sys.modules[module_name] = my_extension_module
+#
+#     spec.loader.exec_module(my_extension_module)
+#
+# spec = importlib.util.spec_from_file_location(module_name, absolute_path)
+# my_extension_module = importlib.util.module_from_spec(spec)
+# spec.loader.exec_module(my_extension_module)
+#
+# scene_manager = my_extension_module.MCPExtension()
 
 
 class Env(gym.Env):
@@ -80,6 +79,7 @@ class Env(gym.Env):
         )  # gridmap需要在robot swarm之前使用
 
         self.robot_swarm = RobotSwarmManager(self.world.scene, self.map_grid)
+        self.scene_manager = SceneManager()
 
         # --- 配置机器人管理器 (这些都是同步的配置) ---
         self.robot_swarm.register_robot_class(
@@ -104,8 +104,15 @@ class Env(gym.Env):
         print("Starting asynchronous initialization...")
 
         # 加载场景：这通常是一个需要与模拟器交互的潜在异步操作
-        scene_manager.load_scene(usd_path=self._usd_path)
-        scene_manager.create_robot()
+        self.scene_manager.load_scene(usd_path=self._usd_path)
+        self.scene_manager.create_robot()
+        self.scene_manager.create_shape(
+            shape_type="cube",
+            size=1.0,
+            position=[0, 0, 10],
+            color=[255, 255, 255],
+            make_dynamic=False
+        )
 
         await self.robot_swarm.load_robot_swarm_cfg(
             f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml"

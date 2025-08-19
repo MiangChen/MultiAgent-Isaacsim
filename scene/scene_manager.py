@@ -1,10 +1,12 @@
 import omni
 import traceback
-from typing import Dict, Any, List
-from pxr import UsdGeom, Gf, Sdf
-from pathlib import Path
+from typing import Dict, Any, List, Union
+
 import math
 import numpy as np
+from pathlib import Path
+from pxr import UsdGeom, Gf, Sdf, UsdPhysics
+
 from files.variables import ASSET_PATH
 
 
@@ -26,15 +28,14 @@ class SceneManager:
             # "get_object_info": self.get_object_info,
             # "execute_script": self.execute_script,
             "get_scene_info": self.get_scene_info,
-            "create_physics_scene": self.create_physics_scene,
             "create_camera": self.create_camera,
             "create_object": self.create_object,
             "create_robot": self.create_robot,
+            "create_shape": self.create_shape,
             "browse_scene_repository": self.browse_scene_repository,
             "load_scene": self.load_scene,
             "save_scene": self.save_scene,
             "delete_prim": self.delete_prim,
-            "get_scene_info": self.get_scene_info,
             "set_prim_scale": self.set_prim_scale,
             "adjust_pose": self.adjust_pose,
             "set_prim_activate_state": self.set_prim_activate_state,
@@ -494,43 +495,133 @@ class SceneManager:
         robot.set_world_poses(positions=np.array([position]) / get_stage_units())
         return {"status": "success", "message": f"{robot_type} robot created at {new_prim_path}"}
 
-    def eluer_to_quaternion(
+
+    def create_shape(
+            self,
+            shape_type: str,
+            prim_path: str = None,
+            position: List[float] = [0, 0, 0],
+            orientation: List[float] = [1, 0, 0, 0],  # WXYZ 四元数
+            size: Union[float, List[float]] = 1.0,
+            color: List[float] = [0.8, 0.1, 0.1],
+            mass: float = 1.0,
+            make_dynamic: bool = True
+    ) -> Dict[str, Any]:
+        """
+        在场景中创建一个带有物理属性的几何形状 (Cube, Cuboid, Sphere)。
+
+        这个函数直接操作 USD prims，不依赖 World API。
+
+        Args:
+            shape_type (str): 要创建的形状类型。支持: "cube", "cuboid", "sphere"。
+            prim_path (str, optional): 创建 prim 的路径。如果为 None，将自动生成唯一路径。
+            position (List[float], optional): 物体的世界坐标 [x, y, z]。
+            orientation (List[float], optional): 物体的世界朝向 [w, x, y, z] 四元数。
+            size (Union[float, List[float]], optional): 形状的尺寸。
+                - 对于 "cube" 和 "sphere": 这是一个 float (边长/半径)。
+                - 对于 "cuboid": 这是一个 list [x, y, z]。
+            color (List[float], optional): 物体的显示颜色 [r, g, b]。
+            mass (float, optional): 物体的质量 (kg)。仅当 make_dynamic 为 True 时生效。
+            make_dynamic (bool, optional): 是否为物体添加刚体和碰撞属性。
+
+        Returns:
+            Dict[str, Any]: 包含操作状态和结果的字典。
+        """
+        try:
+            stage = omni.usd.get_context().get_stage()
+            if not stage:
+                return {"status": "error", "message": "No active USD stage."}
+
+            # --- 1. 生成唯一的 Prim Path (如果未提供) ---
+            if not prim_path:
+                base_path = f"/World/{shape_type.capitalize()}"
+                scene_info = self.get_scene_info(max_depth=100)  # 获取场景所有prims
+                existing_paths = [p["path"] for p in scene_info.get("result", [])]
+                suffix = 0
+                prim_path = base_path
+                while prim_path in existing_paths:
+                    suffix += 1
+                    prim_path = f"{base_path}_{suffix}"
+
+            # --- 2. 根据类型创建几何 Prim ---
+            shape_type = shape_type.lower()
+            if shape_type in ["cube", "cuboid"]:
+                prim = UsdGeom.Cube.Define(stage, prim_path)
+            elif shape_type == "sphere":
+                prim = UsdGeom.Sphere.Define(stage, prim_path)
+            else:
+                return {"status": "error", "message": f"Unsupported shape type: {shape_type}"}
+
+            # --- 3. 设置几何属性 (尺寸和颜色) ---
+            if shape_type == "cube":
+                if not isinstance(size, (int, float)):
+                    return {"status": "error", "message": "Size for 'cube' must be a single float or int."}
+                prim.GetSizeAttr().Set(float(size))
+            elif shape_type == "cuboid":
+                if not isinstance(size, list) or len(size) != 3:
+                    return {"status": "error", "message": "Size for 'cuboid' must be a list of [x, y, z]."}
+                # 对于长方体，我们通过设置缩放来实现
+                xform = UsdGeom.Xformable(prim)
+                xform.AddScaleOp().Set(Gf.Vec3f(size[0], size[1], size[2]))
+            elif shape_type == "sphere":
+                if not isinstance(size, (int, float)):
+                    return {"status": "error", "message": "Size for 'sphere' (radius) must be a single float or int."}
+                prim.GetRadiusAttr().Set(float(size))
+
+            # 设置显示颜色
+            prim.GetDisplayColorAttr().Set([Gf.Vec3f(color[0], color[1], color[2])])
+
+            # --- 4. 设置位姿 (位置和朝向) ---
+            xform = UsdGeom.Xformable(prim)
+            xform.AddTranslateOp().Set(Gf.Vec3d(position[0], position[1], position[2]))
+            xform.AddOrientOp().Set(Gf.Quatd(orientation[0], orientation[1], orientation[2], orientation[3]))
+
+            # --- 5. 添加物理属性 (如果需要) ---
+            if make_dynamic:
+                # 应用刚体 API
+                UsdPhysics.RigidBodyAPI.Apply(prim)
+                # 应用碰撞 API (对于基本体，默认碰撞形状就足够了)
+                UsdPhysics.CollisionAPI.Apply(prim)
+                # 应用质量 API 并设置质量
+                mass_api = UsdPhysics.MassAPI.Apply(prim)
+                mass_api.CreateMassAttr().Set(mass)
+
+            return {
+                "status": "success",
+                "message": f"Successfully created shape '{shape_type}' at {prim_path}",
+                "result": prim_path
+            }
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {"status": "error", "message": str(e)}
+
+    def euler_to_quaternion(
             self,
             roll: float = 0.0,
             pitch: float = 0.0,
             yaw: float = 0.0,
-            degrees: bool = True,
+            degrees: bool = True
     ) -> List[float]:
-        """Convert Euler angles to quaternion.
+        """使用 scipy 将欧拉角转换为四元数。"""
 
-        Args:
-            roll: Roll angle in degrees.
-            pitch: Pitch angle in degrees.
-            yaw: Yaw angle in degrees.
-            degrees: Whether the input angles are in degrees (default is True). If False, angles are assumed to be in radians.
-        Returns:
-            Quaternion as a list [w, x, y, z].
-        """
-        if degrees:
-            x, y, z = roll * (math.pi / 180), pitch * (math.pi / 180), yaw * (math.pi / 180)
-        else:
-            x, y, z = roll, pitch, yaw
+        # 1. 使用 'xyz' 顺序从欧拉角创建 Rotation 对象。
+        from scipy.spatial.transform import Rotation as R
+        rotation = R.from_euler('xyz', [roll, pitch, yaw], degrees=degrees)
 
-        # 计算每个轴的半角
-        cx = math.cos(x / 2)
-        sx = math.sin(x / 2)
-        cy = math.cos(y / 2)
-        sy = math.sin(y / 2)
-        cz = math.cos(z / 2)
-        sz = math.sin(z / 2)
+        # 2. 将 Rotation 对象转换为四元数。
+        # 注意：scipy 默认输出 [x, y, z, w] 格式。
+        quat_xyzw = rotation.as_quat()
 
-        # XYZ 顺序旋转生成的四元数
-        w = cx * cy * cz + sx * sy * sz
-        x = sx * cy * cz - cx * sy * sz
-        y = cx * sy * cz + sx * cy * sz
-        z = cx * cy * sz - sx * sy * cz
+        # 3. 重新排列为 [w, x, y, z] Isaacsim的顺序
+        w = quat_xyzw[3]
+        x = quat_xyzw[0]
+        y = quat_xyzw[1]
+        z = quat_xyzw[2]
 
         return [w, x, y, z]
+
 
     def set_prim_scale(self, prim_path: str, scale: list) -> dict:
         try:
@@ -999,95 +1090,6 @@ class SceneManager:
 
     ###############################################################################################################
     ###############################################################################################################
-
-    def create_physics_scene(
-            self,
-            objects: List[Dict[str, Any]] = [],
-            floor: bool = True,
-            gravity: List[float] = (0.0, -9.81, 0.0),
-            scene_name: str = "physics_scene",
-    ) -> Dict[str, Any]:
-        """Create a physics scene with multiple objects."""
-        try:
-            from isaacsim.core.api import World
-            from isaacsim.core.api.objects import (
-                DynamicCuboid,
-                DynamicSphere,
-                DynamicCone,
-                DynamicCylinder,
-                DynamicCapsule,
-            )
-
-            # 类型映射表
-            type_class_map = {
-                "Cube": DynamicCuboid,
-                "Box": DynamicCuboid,
-                "Sphere": DynamicSphere,
-                "Cone": DynamicCone,
-                "Cylinder": DynamicCylinder,
-                "Capsule": DynamicCapsule,
-            }
-
-            world = World().instance()
-
-            if floor:
-                world.scene.add_default_ground_plane()
-
-            print("Start creating objects:", objects)
-            objects_created = 0
-            created_paths = []
-
-            for i, obj in enumerate(objects):
-                obj_name = obj.get("name", f"object_{i}")
-                obj_type = obj.get("type", "Cube")
-                obj_path = obj.get("path", f"/World/{obj_name}")
-                obj_class = type_class_map.get(obj_type)
-
-                if not obj_class:
-                    print(f"[Warning] Unsupported object type: {obj_type}, skipping.")
-                    continue
-
-                # 通用参数
-                shape_args = {
-                    "prim_path": obj_path,
-                    "name": obj_name,
-                    "position": np.array(obj.get("position", [0, 0, 0])),
-                    "orientation": np.array(
-                        obj.get("orientation", [1, 0, 0, 0])
-                    ),  # scalar-first quaternion
-                    "scale": np.array(obj.get("scale", [1, 1, 1])),
-                    "color": np.array(obj.get("color", [0.5, 0.5, 1.0])),
-                    "mass": obj.get("mass", 1.0),
-                }
-
-                # 类型特定参数
-                if obj_type == "Sphere":
-                    shape_args["radius"] = obj.get("radius", 1.0)
-
-                elif obj_type in ["Cone", "Cylinder", "Capsule"]:
-                    shape_args["radius"] = obj.get("radius", 1.0)
-                    shape_args["height"] = obj.get("height", 2.0)
-
-                elif obj_type in ["Cube", "Box"]:
-                    shape_args["size"] = obj.get("size", None)  # 可选，Cube 支持 size
-
-                # 创建对象
-                world.scene.add(obj_class(**shape_args))
-                objects_created += 1
-                created_paths.append(obj_path)
-
-            return {
-                "status": "success",
-                "message": f"Created physics scene with {objects_created} objects",
-                "result": created_paths,
-            }
-
-        except Exception as e:
-            return {
-                "status": "error",
-                "message": f"Failed to create physics scene: {e}",
-                "result": None,
-            }
 
     # TODO:扩展到isaacsim官方Assets,支持更多的场景，或者使用Asset browser mcp的resource 功能。
     def browse_scene_repository(
