@@ -9,7 +9,6 @@ from robot.robot_swarm_manager import RobotSwarmManager
 
 import gymnasium as gym
 from isaacsim.core.api import World
-from isaacsim.core.utils.prims import create_prim
 
 import importlib.util
 try:
@@ -38,33 +37,6 @@ my_extension_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(my_extension_module)
 
 scene_manager = my_extension_module.MCPExtension()
-
-def create_scene(usd_path: str, prim_path_root: str = "/World"):
-    """
-
-    Create a scene from config.(But just input usd file yet.)
-    Args:
-        usd_path (str): path to scene config file(use to be a .usd file)
-        prim_path_root (str): path to root prim
-    """
-    if (
-            usd_path.endswith("usd")
-            or usd_path.endswith("usda")
-            or usd_path.endswith("usdc")
-    ):
-
-        create_prim(
-            prim_path_root,
-            usd_path=usd_path,
-            # scale=self.simulation.scene_scale,
-            scale=[1, 1, 1],
-            # translation=[0, 0, 0.81696],
-            # orientation=[0.610, -0.789, -0.05184, 0.040] # wxyz, xyz还是zyx顺序不确定 
-        )
-    else:
-        raise RuntimeError("Env file path needs to end with .usd, .usda or .usdc .")
-    return
-
 
 
 class Env(gym.Env):
@@ -132,7 +104,7 @@ class Env(gym.Env):
         print("Starting asynchronous initialization...")
 
         # 加载场景：这通常是一个需要与模拟器交互的潜在异步操作
-        create_scene(usd_path=self._usd_path)
+        scene_manager.load_scene(usd_path=self._usd_path)
         scene_manager.create_robot()
 
         await self.robot_swarm.load_robot_swarm_cfg(

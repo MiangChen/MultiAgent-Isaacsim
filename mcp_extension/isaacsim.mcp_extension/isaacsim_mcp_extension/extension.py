@@ -1378,31 +1378,32 @@ class MCPExtension(omni.ext.IExt):
                 "result": None,
             }
 
-    def load_scene(
-            self,
-            scene_path: str = None,
-    ) -> Dict[str, Any]:
-        """Load a scene from the repository."""
-        try:
-            # from isaacsim import SimulationApp
+    def load_scene(self, usd_path: str, prim_path_root: str = "/World"):
+        """
 
-            # simulation_app = SimulationApp(
-            #     {"headless": False}
-            # )  # we can also run as headless.
-            self.env = Env(simulation_app=None, usd_path=scene_path)
-            self.env.reset()
-            return {
-                "status": "success",
-                "message": f"Scene loaded successfully from {scene_path}",
-                "result": None,
-            }
-        except Exception as e:
-            traceback.print_exc()
-            return {
-                "status": "error",
-                "message": f"Failed to load scene: {e}",
-                "result": None,
-            }
+        Create a scene from config.(But just input usd file yet.)
+        Args:
+            usd_path (str): path to scene config file(use to be a .usd file)
+            prim_path_root (str): path to root prim
+        """
+        if (
+                usd_path.endswith("usd")
+                or usd_path.endswith("usda")
+                or usd_path.endswith("usdc")
+        ):
+
+            from isaacsim.core.utils.prims import create_prim
+            create_prim(
+                prim_path_root,
+                usd_path=usd_path,
+                # scale=self.simulation.scene_scale,
+                scale=[1, 1, 1],
+                # translation=[0, 0, 0.81696],
+                # orientation=[0.610, -0.789, -0.05184, 0.040] # wxyz, xyz还是zyx顺序不确定
+            )
+        else:
+            raise RuntimeError("Env file path needs to end with .usd, .usda or .usdc .")
+        return
 
     def save_scene(
             self,
