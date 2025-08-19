@@ -103,6 +103,6 @@ from grutopia.core.runtime import SimulatorRuntime
 skill是上层用的
 
 
-[![Lines of Code](https://img.shields.io/badge/LoC-2055-blue)](https://github.com/MiangChen/multiagent-isaacsim)
+[![Lines of Code](https://img.shields.io/badge/LoC-32328-blue)](https://github.com/MiangChen/multiagent-isaacsim)
 
-cloc . --exclude-dir=IsaacLab --exclude-dir=PX4-Autopilot
+cloc . --exclude-dir=IsaacLab 

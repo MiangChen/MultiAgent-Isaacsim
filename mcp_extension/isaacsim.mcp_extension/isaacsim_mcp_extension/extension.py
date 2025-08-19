@@ -608,6 +608,11 @@ class MCPExtension(omni.ext.IExt):
                 "base_prim_path": "/World/Go1",
                 "base_name": "my_go1",
             },
+            "h1": {
+                "usd_path": "/Isaac/Robots/Unitree/H1/h1.usd",
+                "base_prim_path": "/World/H1",
+                "base_name": "my_h1",
+            },
         }
 
         robot_type = robot_type.lower()
