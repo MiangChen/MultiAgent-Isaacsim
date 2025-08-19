@@ -97,7 +97,7 @@ class ToolFunctions:
             return f"[Add Sphere] Error: {str(e)}"
 
     async def add_cube(self, inputs: AddCubeInput) -> str:
-        await omni.kit.app.get_app().next_update_async()
+        # await omni.kit.app.get_app().next_update_async()  # 在主循环开始前，await next_update_async() 会导致死锁。
         try:
             result, prim_path = omni.kit.commands.execute(
                 "CreateMeshPrim",

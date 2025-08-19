@@ -1,3 +1,5 @@
+import os
+
 from files.assets_scripts_linux import PATH_PROJECT, PATH_ISAACSIM_ASSETS
 from map.map_grid_map import GridMap
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
@@ -9,6 +11,33 @@ import gymnasium as gym
 from isaacsim.core.api import World
 from isaacsim.core.utils.prims import create_prim
 
+import importlib.util
+try:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    current_dir = os.getcwd()
+relative_path_to_module = "../mcp_extension/isaacsim.mcp_extension/isaacsim_mcp_extension/extension.py"
+absolute_path = os.path.join(current_dir, relative_path_to_module)
+
+module_name = "scene_manager"
+
+# 创建一个模块规范 (Module Spec)
+spec = importlib.util.spec_from_file_location(module_name, absolute_path)
+
+# 根据规范创建并执行模块加载
+if spec and spec.loader:
+    my_extension_module = importlib.util.module_from_spec(spec)
+
+    # 将模块添加到 sys.modules，这样其他地方也可以 import my_mcp_extension
+    # sys.modules[module_name] = my_extension_module
+
+    spec.loader.exec_module(my_extension_module)
+
+spec = importlib.util.spec_from_file_location(module_name, absolute_path)
+my_extension_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(my_extension_module)
+
+scene_manager = my_extension_module.MCPExtension()
 
 def create_scene(usd_path: str, prim_path_root: str = "/World"):
     """
@@ -36,31 +65,6 @@ def create_scene(usd_path: str, prim_path_root: str = "/World"):
         raise RuntimeError("Env file path needs to end with .usd, .usda or .usdc .")
     return
 
-async def add_entity():
-    #  加入复杂的场景
-
-    from scene_generation.scene_generation_python.tools import ToolFunctions, AddCubeInput
-    # tool_impl = ToolFunctions()
-    # tools = tool_impl.tools
-    #
-    # input_data = AddCubeInput(prim_path="/World/Car", size=5.0, position=[1.0, 2.0, 3.0])
-    # add_cube_tool = tools[0]
-    # result = await add_cube_tool.ainvoke(input_data.model_dump())
-    # result = await add_cube_tool.ainvoke(input_value={'prim_path': '/World/Car...ition': [1.0, 2.0, 3.0]})
-    my_tools = ToolFunctions()
-
-    # 2. 准备输入数据 (使用 Pydantic 模型)
-    cube_input = AddCubeInput(
-        prim_path="/World/MyAwesomeCube",
-        size=50.0,
-        position=[0, 15, 25.0]  # x, y, z
-    )
-
-    # 3. 直接 await 调用实例上的 async 方法
-    #    这是最简单、最pythonic的方式
-    result_message = await my_tools.add_cube(cube_input)
-
-    print(f"Tool execution result: {result_message}")
 
 
 class Env(gym.Env):
@@ -129,7 +133,7 @@ class Env(gym.Env):
 
         # 加载场景：这通常是一个需要与模拟器交互的潜在异步操作
         create_scene(usd_path=self._usd_path)
-        #  await add_entity()
+        scene_manager.create_robot()
 
         await self.robot_swarm.load_robot_swarm_cfg(
             f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml"

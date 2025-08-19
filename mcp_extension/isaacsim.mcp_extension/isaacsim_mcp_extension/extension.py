@@ -19,11 +19,11 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 files_parent_dir = os.path.abspath(os.path.join(current_dir, "../../../"))
 sys.path.append(files_parent_dir)  # 将项目根目录添加到 sys.path 中
-from files.variables import PATH_PROJECT, PATH_ISAACSIM_ASSETS
+from files.variables import PATH_PROJECT, PATH_ISAACSIM_ASSETS, ASSET_PATH
 
 # TODO： import 需要整理一下
 
-from environment import Env
+# from environment import Env
 
 
 # Extension Methods required by Omniverse Kit
@@ -31,9 +31,20 @@ from environment import Env
 # instantiated when extension gets enabled and `on_startup(ext_id)` will be called. Later when extension gets disabled
 # on_shutdown() is called.
 class MCPExtension(omni.ext.IExt):
+    _instance = None
+
+    @classmethod
+    def get_instance(cls):
+        """
+        A class method to get the singleton instance of the running extension.
+        This is the main way other internal scripts will access the service.
+        """
+        return cls._instance
+
     def __init__(self) -> None:
         """Initialize the extension."""
         super().__init__()
+        MCPExtension._instance = self  # Set the instance here as a fallback
         self.ext_id = None
         self.running = False
         self.host = None
@@ -42,11 +53,11 @@ class MCPExtension(omni.ext.IExt):
         self.assert_repository_path = None
         self.server_thread = None
         self._usd_context = None
-        self._physx_interface = None
-        self._timeline = None
-        self._window = None
-        self._status_label = None
-        self._server_thread = None
+        self._physx_interface = None  # not used
+        self._timeline = None  # not used
+        self._window = None  # not used
+        self._status_label = None  # not used
+        self._server_thread = None  # not used
         self._models = None
         self._settings = carb.settings.get_settings()
         self._image_url_cache = {}  # cache for image url
@@ -55,6 +66,7 @@ class MCPExtension(omni.ext.IExt):
 
     def on_startup(self, ext_id: str):
         """Initialize extension and UI elements"""
+        MCPExtension._instance = self
         print("trigger  on_startup for: ", ext_id)
         print("settings: ", self._settings.get("/exts/omni.kit.pipapi"))
         self._settings.set(
@@ -75,6 +87,7 @@ class MCPExtension(omni.ext.IExt):
         self._start()
 
     def on_shutdown(self):
+        MCPExtension._instance = None
         print("trigger  on_shutdown for: ", self.ext_id)
         self._models = {}
         gc.collect()
@@ -566,7 +579,7 @@ class MCPExtension(omni.ext.IExt):
 
     def create_robot(self, robot_type: str = "g1", position: List[float] = [0, 0, 0]) -> Dict[str, Any]:
         from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
-        from isaacsim.storage.native import get_assets_root_path
+        from files.variables import ASSET_PATH
         from isaacsim.core.prims import Articulation
 
         ROBOT_CONFIGS = {
@@ -599,8 +612,7 @@ class MCPExtension(omni.ext.IExt):
 
         robot_type = robot_type.lower()
         config = ROBOT_CONFIGS.get(robot_type, ROBOT_CONFIGS["franka"])
-        assets_root_path = get_assets_root_path()
-        asset_path = assets_root_path + config["usd_path"]
+        asset_path = ASSET_PATH + config["usd_path"]
 
         # 获取当前 prim 信息
         scene_info = self.get_scene_info()
@@ -633,7 +645,6 @@ class MCPExtension(omni.ext.IExt):
 
     def create_object(self, usd_path: str, position: List[float], orientation: List[float]) -> Dict[str, Any]:
         from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
-        from isaacsim.storage.native import get_assets_root_path
 
         # 检查重合
 #        if self.check_prim_overlapping(position):
@@ -657,8 +668,7 @@ class MCPExtension(omni.ext.IExt):
             new_prim_path = f"{base_prim_path}_{suffix}"
             new_name = f"{base_name}_{suffix}"
 
-        assets_root_path = get_assets_root_path()
-        asset_path = assets_root_path + "/Isaac/" + usd_path
+        asset_path = ASSET_PATH + "/Isaac/" + usd_path
 
         # 将 asset 引用添加到 Stage
         add_reference_to_stage(usd_path=asset_path, prim_path=new_prim_path)

@@ -20,6 +20,10 @@ def load_config(file_path:str = None) -> dict:
 
 file_path = os.path.join(_current_dir, './env_cfg.yaml')
 ASSET_PATH = load_config(file_path)['asset_path']
+PATH_ISAACSIM_ASSETS = ASSET_PATH
+# 项目的位置
+PATH_PROJECT = '/home/ubuntu/PycharmProjects/multiagent-isaacsim'
+
 WORLD_NAME = load_config(file_path)['world']['name']  # 获取需要的场景名字
 
 
