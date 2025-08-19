@@ -1,7 +1,8 @@
-import omni.ext
 import carb
-from .scene_manager import SceneManager  # Import the new classes
+import omni.ext
+
 from .mcp_server import MCPNetworkServer  # Use relative imports
+from scene.scene_manager import SceneManager  # Import the new classes
 
 
 class MCPExtension(omni.ext.IExt):
