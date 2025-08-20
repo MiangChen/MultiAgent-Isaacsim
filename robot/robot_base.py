@@ -1,11 +1,14 @@
 from typing import List, Optional, Tuple
+from pydantic import ValidationError  # 用于错误处理
 
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from camera.camera_base import CameraBase
 from camera.camera_cfg import CameraCfg
+from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from robot.robot_cfg import RobotCfg
 from robot.robot_trajectory import Trajectory
+from pxr import Gf
 from pxr import Usd, UsdGeom
 import numpy as np
 import carb
@@ -14,13 +17,16 @@ from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import RigidPrim
 from isaacsim.core.prims import Articulation
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
+import isaacsim.core.utils.prims as prims_utils
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
-
+from isaacsim.core.utils.viewports import create_viewport_for_camera, set_intrinsics_matrix
+from isaacsim.core.utils.viewports import set_camera_view as _set_camera_view
 
 class RobotBase:
     """Base class of robot."""
 
-    def __init__(self, cfg_body: RobotCfg = None, cfg_camera: CameraCfg = None, scene: Scene = None,
+    def __init__(self, cfg_body: RobotCfg = None, cfg_camera: CameraCfg = None,
+                 cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
                  map_grid: GridMap = None):
         self.cfg_body = cfg_body
         self.cfg_camera = cfg_camera
@@ -38,23 +44,23 @@ class RobotBase:
             else:
                 carb.log_error("unable to add robot usd, usd_path not provided")
         elif prim.IsA(UsdGeom.Xformable):
-                # Convert the prim to an Xformable object
-                xformable = UsdGeom.Xformable(prim)
+            # Convert the prim to an Xformable object
+            xformable = UsdGeom.Xformable(prim)
 
-                # Get the local-to-world transformation matrix
-                # CORRECTED METHOD NAME: ComputeLocalToWorldTransform
-                # You need to specify a time code.
-                timecode = Usd.TimeCode.Default()  # Use default time or simulation time
-                local_to_world_matrix = xformable.ComputeLocalToWorldTransform(timecode)
+            # Get the local-to-world transformation matrix
+            # CORRECTED METHOD NAME: ComputeLocalToWorldTransform
+            # You need to specify a time code.
+            timecode = Usd.TimeCode.Default()  # Use default time or simulation time
+            local_to_world_matrix = xformable.ComputeLocalToWorldTransform(timecode)
 
-                # The local_to_world_matrix is a Gf.Matrix4d
-                # Extract the translation (position) from the matrix
-                cfg_body.position = list(local_to_world_matrix.ExtractTranslation())  # Returns a Gf.Vec3d
+            # The local_to_world_matrix is a Gf.Matrix4d
+            # Extract the translation (position) from the matrix
+            cfg_body.position = list(local_to_world_matrix.ExtractTranslation())  # Returns a Gf.Vec3d
 
-                # Extract the rotation from the matrix
-                quat = local_to_world_matrix.ExtractRotationQuat()  # Returns a Gf.Quatd
-                cfg_body.quat = [quat.real] + list(quat.imaginary)
-                cfg_body.euler_degree = None
+            # Extract the rotation from the matrix
+            quat = local_to_world_matrix.ExtractRotationQuat()  # Returns a Gf.Quatd
+            cfg_body.quat = [quat.real] + list(quat.imaginary)
+            cfg_body.euler_degree = None
         else:
             if prim:
                 print(f"Prim at {prim.GetPath()} is not Xformable or does not exist.")
@@ -100,7 +106,14 @@ class RobotBase:
         if cfg_camera is not None:
             print(f"create camera for {self.cfg_body.name_prefix}")
             self.camera = CameraBase(cfg_body, cfg_camera)
-            self.camera.create_camera()
+            self.camera.create_camera(camera_path=self.cfg_body.camera_path)
+
+        # 第三视角相机
+        # --- 新增：存储相机配置并初始化相机属性 ---
+        self.cfg_camera_third_person = cfg_camera_third_person
+        self.camera_prim_path = None
+        self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
+        self.transform_camera_pos = np.array([0, 0, 0])
 
     def cleanup(self):
         for controller in self.controllers.values():
@@ -163,6 +176,47 @@ class RobotBase:
         if self.cfg_camera is not None:
             self.camera.initialize()
 
+        # 第三视角相机初始化
+        # --- 新增：在初始化时创建相机和视口 ---
+        if self.cfg_camera_third_person and self.cfg_camera_third_person.enabled:
+            print(f"为机器人 {self.cfg_body.id} 创建第三人称相机...")
+
+            # 1. 为相机创建唯一的prim路径和视口名称
+            self.camera_prim_path = f"/World/Robot_{self.cfg_body.id}_Camera"
+            viewport_name = f"Viewport_Robot_{self.cfg_body.id}"
+
+            # 如果prim已存在，先删除（可选，用于热重载）
+            if prims_utils.is_prim_path_valid(self.camera_prim_path):
+                prims_utils.delete_prim(self.camera_prim_path)
+
+            # 2. 创建相机Prim
+            # prims_utils.create_prim(
+            #     prim_path=self.camera_prim_path,
+            #     prim_type="Camera",
+            #     # 初始位置不那么重要，因为每一步都会更新
+            #     position=np.array([0, 0, 10.0]),
+            # )
+            from isaacsim.sensors.camera import Camera
+            camera = Camera(
+                prim_path=self.camera_prim_path
+            )
+            camera.set_focal_length(2)
+
+            # 3. 创建视口
+            create_viewport_for_camera(
+                viewport_name=viewport_name,
+                camera_prim_path=self.camera_prim_path,
+                width=self.cfg_camera_third_person.viewport_size[0],
+                height=self.cfg_camera_third_person.viewport_size[1],
+                position_x=self.cfg_camera_third_person.viewport_position[0],
+                position_y=self.cfg_camera_third_person.viewport_position[1],
+            )
+            # set_intrinsics_matrix(viewport_api = viewport_name, focal_length = 15)
+
+            # 4. 将相对位置转换为numpy数组以便后续计算
+            self.relative_camera_pos = np.array(self.cfg_camera_third_person.relative_position)
+            self.transform_camera_pos = np.array(self.cfg_camera_third_person.transform_position)
+
     def move_to(self, target_position: np.ndarray, target_orientation: np.ndarray) -> bool:
         """
 
@@ -215,7 +269,12 @@ class RobotBase:
             raise ValueError("小车的z轴高度得在平面上")
         pos_robot = self.get_world_poses()[0]
 
+        print(pos_target)
+
         pos_index_target = self.map_grid.compute_index(pos_target)
+
+        print(pos_index_target)
+
         pos_index_robot = self.map_grid.compute_index(pos_robot)
         pos_index_robot[-1] = 0  # todo : 这也是因为机器人限制导致的
 
@@ -255,8 +314,10 @@ class RobotBase:
         """
         Args:
             step_size:  dt 时间间隔
-        """
-        raise NotImplementedError()
+        """  # --- 新增：在每一步物理更新后，更新相机位置 ---
+        # 更新相机的视野
+        self._update_camera_view()
+        return
 
     def post_reset(self) -> None:
         """Set up things that happen after the world resets."""
@@ -391,6 +452,38 @@ class RobotBase:
                     path_points.append([x, min_y])
         return path_points
 
+    # --- 新增：独立的相机更新方法，保持代码整洁 ---
+    def _update_camera_view(self):
+        """更新第三人称相机的位置和朝向"""
+        if self.cfg_camera_third_person and self.cfg_camera_third_person.enabled and self.camera_prim_path:
+            # 1. 获取机器人的当前位置
+            robot_position, _ = self.get_world_poses()
+
+            # 2. 计算相机的位置 (eye) 和目标位置 (target)
+            camera_eye_position = robot_position + self.relative_camera_pos + self.transform_camera_pos
+            camera_target_position = robot_position
+
+            # 3. 设置相机视图
+            safe_set_camera_view(
+                eye=camera_eye_position,
+                target=camera_target_position,
+                camera_prim_path=self.camera_prim_path,
+            )
+
+def safe_set_camera_view(*, eye, target, camera_prim_path):
+    # 强制把 None 的 target 改成一个默认值（比如沿前向 1m）
+    if target is None:
+        tgt = np.asarray(eye, dtype=float).reshape(3,)
+        tgt[2] -= 1.0  # 例：Z 轴负方向
+        target = tgt
+    _set_camera_view(eye=_to_vec3d(eye), target=_to_vec3d(target), camera_prim_path=camera_prim_path)
+
+def _to_vec3d(v):
+    # 把任意 (list/tuple/numpy) 转成 Gf.Vec3d，并做长度和 NaN 防守
+    a = np.asarray(v, dtype=float).reshape(3,)
+    if not np.all(np.isfinite(a)):
+        raise ValueError(f"camera vector has inf/NaN: {v}")
+    return Gf.Vec3d(float(a[0]), float(a[1]), float(a[2]))
 
 if __name__ == "__main__":
     pass

@@ -5,6 +5,7 @@ jetbot:
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Allen
     camera: {}
+    camera_third_person: False
 
   - id: 1
     body:
@@ -12,6 +13,8 @@ jetbot:
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Bob
     camera: {}
+    camera_third_person: False
+
 
   - id: 2
     body:
@@ -19,6 +22,8 @@ jetbot:
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Candy
     camera: {}
+    camera_third_person: False
+
 
   - id: 3
     body:
@@ -26,6 +31,8 @@ jetbot:
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: David
     camera: {}
+    camera_third_person: False
+
 
 h1:
   - id: 0
@@ -34,6 +41,7 @@ h1:
       quat: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Hellen
     camera: {}
+    camera_third_person: False
 
 #    camera:
 #      position: [ 0, 0, 0.5 ]  # 相对于机器人中心的偏移距离
@@ -44,11 +52,3 @@ h1:
 #      focal_length: 30 # 相机的焦段 mm
 #      lens_aperture: 0 # 相机的光圈 0 表示没有景深 全部清晰
 #      focus_distance: 0 # 相机的对焦距离
-
-
-cf2x:
-  - id: 0
-    body:
-      position: [ 1.0, 0.0 , 0.05 ]
-      orientation: [ 0.0, 0.0, 0.0, 1.0 ]
-    camera: {}

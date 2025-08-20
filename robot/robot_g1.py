@@ -1,12 +1,13 @@
 import numpy as np
-from isaacsim.core.api.scenes import Scene
-from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 
+from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from controller.controller_pid import ControllerPID
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_jetbot import RobotCfgJetbot
 
+from isaacsim.robot.wheeled_robots.robots import WheeledRobot
+from isaacsim.core.api.scenes import Scene
 
 class RobotJetbot(RobotBase):
     def __init__(self, config: RobotCfgG1, scene: Scene = None, map_grid: GridMap = None) -> None:

@@ -1,6 +1,8 @@
 from typing import Optional
 
-from robot.robot_cfg import RobotCfg, assets_root_path
+from robot.robot_cfg import RobotCfg
+
+from files.variables import ASSET_PATH
 
 
 class RobotCfgJetbot(RobotCfg):
@@ -10,4 +12,5 @@ class RobotCfgJetbot(RobotCfg):
     prim_path: Optional[str] = '/World/robot/jetbot'
 
     id: int = 0
-    usd_path: Optional[str] = assets_root_path + "/Isaac/Robots/Jetbot/jetbot.usd"
+    usd_path: Optional[str] = ASSET_PATH + "/Isaac/Robots/Jetbot/jetbot.usd"
+    camera_path: Optional[str] = '/World/robot/jetbot/jetbot/jetbot_0/chassis/rgb_camera/jetbot_camera'
