@@ -31,6 +31,7 @@ class SceneManager:
             ## semantic ##
             "add_semantic": self.add_semantic,
             "count_semantics_in_scene": self.count_semantics_in_scene,
+            "remove_all_semantics": self.remove_all_semantics,
             ## create ##
             "create_camera": self.create_camera,
             "create_object": self.create_object,
@@ -134,6 +135,43 @@ class SceneManager:
             import traceback
             traceback.print_exc()
             return {"status": "error", "message": str(e)}
+
+    def remove_all_semantics(self, prim_path: str = '/') -> Dict[str, Any]:
+        """
+        Removes all semantic tags from a given prim and its children
+        Args:
+            prim_path:  str, optional: Prim to remove any applied semantic APIs on
+
+        Returns:
+
+        """
+        try:
+            from isaacsim.core.utils.semantics import remove_all_semantics
+            stage = omni.usd.get_context().get_stage()
+            if not stage:
+                return {"status": "error", "message": "No active USD stage."}
+
+            prim = stage.GetPrimAtPath(prim_path)
+            if not prim.IsValid():
+                return {"status": "error", "message": f"Prim not found at path: {prim_path}"}
+
+            remove_all_semantics(
+                prim=prim,
+                recursive=True
+            )
+
+            return {
+                "status": "success",
+                "message": f"Successfully removed all semantics from prim <{prim_path}>"
+            }
+        except ImportError:
+            return {"status": "error",
+                    "message": "Failed to import 'isaacsim.core.utils.semantics'. Ensure Isaac Sim is running."}
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {"status": "error", "message": str(e)}
+
 
     def count_semantics_in_scene(self, prim_path: str = '/') -> Dict[str, Any]:
         """

@@ -103,18 +103,18 @@ if __name__ == "__main__":
 
     map_semantic = MapSemantic()
     state_step = 0  # state用来表示状态相关的量
-    # for robot in plan[f"step_{state_step}"].keys():
+    # for robot in plan[f"step_{plan_step}"].keys():
     #     id = int(robot[-1])
-    #     for robot_action in plan[f"step_{state_step}"][robot].keys():
+    #     for robot_action in plan[f"step_{plan_step}"][robot].keys():
     #         if robot_action == 'navigate-to':
-    #             map_semantic_start = plan[f"step_{state_step}"][robot][robot_action]['start']
-    #             map_semantic_end = plan[f"step_{state_step}"][robot][robot_action]['goal']
+    #             map_semantic_start = plan[f"step_{plan_step}"][robot][robot_action]['start']
+    #             map_semantic_end = plan[f"step_{plan_step}"][robot][robot_action]['goal']
     #
     #             pos_target = map_semantic.map_semantic[map_semantic_end]
     #             env.robot_swarm.robot_active['jetbot'][id].navigate_to(pos_target)
     #         elif robot_action == 'pick-up':
-    #             object_semantic_name = plan[f"step_{state_step}"][robot][robot_action]['it']
-    #             object_semantics_pos = plan[f"step_{state_step}"][robot][robot_action]['loc']
+    #             object_semantic_name = plan[f"step_{plan_step}"][robot][robot_action]['it']
+    #             object_semantics_pos = plan[f"step_{plan_step}"][robot][robot_action]['loc']
 
     # env.robot_swarm.robot_active['h1'][0].navigate_to([0, 20, 0])
     for i in range(500000):

@@ -132,38 +132,36 @@ if __name__ == "__main__":
     # add cars
     created_prim_paths = []
 
+    print( "all semantics in scene:", scene_manager.count_semantics_in_scene().get('result') )
     for cube_name, config in CUBES_CONFIG.items():
         print(f"--- Processing: {cube_name} ---")
 
-        # --- 步骤 A: 调用 create_shape 并获取返回值 ---
+        # --- step A: use create_shape  ---
         creation_result = scene_manager.create_shape(**config)
 
-        # --- 步骤 B: 检查创建是否成功 ---
+        # --- step B: check the result ---
         if creation_result.get("status") == "success":
             # 从返回值中提取 prim_path
             prim_path = creation_result.get("result")
             print(f"  Successfully created prim at: {prim_path}")
             created_prim_paths.append(prim_path)
 
-            # --- 步骤 C: 使用获取的 prim_path 调用 add_semantic ---
+            # --- step C: use add_semantic ---
             semantic_result = scene_manager.add_semantic(
                 prim_path=prim_path,
-                semantic_label='car'  # 设置您想要的标签
+                semantic_label='car'  # target semantic label 'car'
             )
 
-            # 打印添加语义标签的结果
             if semantic_result.get("status") == "success":
                 print(f"  Successfully applied semantic label 'car' to {prim_path}")
             else:
                 print(f"  [ERROR] Failed to apply semantic label: {semantic_result.get('message')}")
 
         else:
-            # 如果创建失败，打印错误信息
             print(f"  [ERROR] Failed to create shape '{cube_name}': {creation_result.get('message')}")
 
     print("All prims with 'car' label:", created_prim_paths)
     print(scene_manager.count_semantics_in_scene().get('result'))
-
 
     try:
         # 获取事件循环并执行我们的一次性异步设置函数
@@ -193,7 +191,6 @@ if __name__ == "__main__":
 
         # swarm_manager.robot_active['cf2x'][0].forward()  # 注释掉单次forward调用
 
-        # --- 实验逻辑定义阶段 (从 setup 移到这里) ---
         print("--- Initializing experiment plan and semantic map ---")
 
         # 定义任务规划
@@ -208,49 +205,38 @@ if __name__ == "__main__":
                        'robot3': {'put-down': {'it': 'item2', 'loc': 'depot3'}}}
         }
 
-        state_step = 0
-
-        # 启动 plan 的第一步
-        for robot in plan[f"step_{state_step}"].keys():
-            id = int(robot[-1])
-            for robot_action in plan[f"step_{state_step}"][robot].keys():
-                if robot_action == 'navigate-to':
-                    map_semantic_end = plan[f"step_{state_step}"][robot][robot_action]['goal']
-                    pos_target = map_semantic.map_semantic[map_semantic_end]
-                    swarm_manager.robot_active['jetbot'][id].navigate_to(pos_target)
+        plan_step = 0
 
         swarm_manager.robot_active['h1'][0].navigate_to([-10, 5, 0])
-        print("--- Initial robot goals set. Starting simulation loop. ---")
 
-        # --- 模拟循环阶段 ---
-        # while simulation_app.is_running():
-        while True:
-            # 1. 驱动模拟器前进
+        # --- simulation loop ---
+        while simulation_app.is_running():
+            # 1. world step
             env.step(action=None)
 
-            # 2. 检查并执行 PDDL 状态机逻辑
+            # 2. check if all robots have completed their actions
             state_skill_complete_all = True
             for robot_class in swarm_manager.robot_class:
                 for robot in swarm_manager.robot_active[robot_class]:
+                    # todo: only check the robots in PDDL plan
                     state_skill_complete_all = state_skill_complete_all and robot.state_skill_complete
 
             if state_skill_complete_all:
-                state_step += 1
-                if f"step_{state_step}" in plan:
-                    print(f"--- All robots completed actions. Advancing to PDDL step {state_step} ---")
-                    for robot in plan[f"step_{state_step}"].keys():
+                if f"step_{plan_step}" in plan:
+                    print(f"--- All robots completed actions. Advancing to PDDL step {plan_step} ---")
+                    # 3. advance to next step
+                    for robot in plan.get(f"step_{plan_step}").keys():
                         id = int(robot[-1])
-                        for robot_action in plan[f"step_{state_step}"][robot].keys():
+                        for robot_action in plan.get(f"step_{plan_step}")[robot].keys():
                             if robot_action == 'navigate-to':
-                                map_semantic_end = plan[f"step_{state_step}"][robot][robot_action]['goal']
+                                map_semantic_end = plan.get(f"step_{plan_step}")[robot][robot_action]['goal']
                                 pos_target = map_semantic.map_semantic[map_semantic_end]
                                 swarm_manager.robot_active['jetbot'][id].navigate_to(pos_target)
                             elif robot_action == 'pick-up':
                                 swarm_manager.robot_active['jetbot'][id].pick_up()
-
+                    plan_step += 1
     finally:
-        # 4. 手动调用 __exit__，这与离开 with 块的作用相同
-        #    它会安全地关闭和清理应用程序
+        # 4. use __exit__ to close simulation safely
         print("--- Simulation finished. Manually closing application. ---")
         if simulation_app:
             simulation_app.__exit__(None, None, None)
