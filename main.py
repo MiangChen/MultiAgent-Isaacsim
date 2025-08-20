@@ -30,7 +30,7 @@ if __name__ == "__main__":
     from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
     from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
     from robot.robot_h1 import RobotH1, RobotCfgH1
-    from robot.robot_swarm_manager import SwarmManager
+    from robot.swarm_manager import SwarmManager
 
 
     async def setup_simulation(simulation_app) -> Env:

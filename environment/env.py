@@ -2,7 +2,7 @@ import gymnasium as gym
 
 from files.assets_scripts_linux import PATH_PROJECT, PATH_ISAACSIM_ASSETS
 from map.map_grid_map import GridMap
-from robot.robot_swarm_manager import SwarmManager
+from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
 
 import importlib.util
