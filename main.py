@@ -8,8 +8,6 @@ matplotlib.use('TkAgg')
 from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
 
 
-
-# --- 2. 主程序入口，负责实验逻辑和模拟循环 ---
 if __name__ == "__main__":
 
     # -- init simulation app --
@@ -17,13 +15,11 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str, default="./files/sim_cfg.yaml",
                         help="Path to the configuration physics engine.")
     parser.add_argument("--enable", type=str, action='append', help="Enable a feature. Can be used multiple times.")
-
     args = parser.parse_args()
 
-    # 使用 `with` 语句来创建和管理 simulation_app 的整个生命周期
     simulation_app = initialize_simulation_app_from_yaml(args.config)
 
-    # -- 开始集群框架 --
+    # -- init simulation env --
     from environment.env import Env
     from map.map_grid_map import GridMap
     from map.map_semantic_map import MapSemantic
@@ -62,7 +58,6 @@ if __name__ == "__main__":
 
         return env
 
-    # 加载场景\世界引擎\grid map的参数
     with open(f'./files/env_cfg.yaml', 'r') as f:
         cfg = yaml.safe_load(f)
 
@@ -83,12 +78,10 @@ if __name__ == "__main__":
     swarm_manager = SwarmManager(map_grid)
     # create scene manager
     scene_manager = SceneManager()
-
     # load scene
     scene_manager.load_scene(usd_path=WORLD_USD_PATH)
-
-    scale = [2, 5, 1.0]
     # create some cars
+    scale = [2, 5, 1.0]
     CUBES_CONFIG = {
         "cube_1": {
             "shape_type": "cuboid",
@@ -128,10 +121,7 @@ if __name__ == "__main__":
             "make_dynamic": False,
         },
     }
-
-    # add cars
     created_prim_paths = []
-
     print( "all semantics in scene:", scene_manager.count_semantics_in_scene().get('result') )
     for cube_name, config in CUBES_CONFIG.items():
         print(f"--- Processing: {cube_name} ---")
@@ -160,6 +150,9 @@ if __name__ == "__main__":
         else:
             print(f"  [ERROR] Failed to create shape '{cube_name}': {creation_result.get('message')}")
 
+    # create camera
+    result = scene_manager.create_camera(position=[0, 0, 5], quat=scene_manager.euler_to_quaternion(85,0,0))
+    print("create camera ",result)
     print("All prims with 'car' label:", created_prim_paths)
     print(scene_manager.count_semantics_in_scene().get('result'))
 

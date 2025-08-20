@@ -2,7 +2,6 @@ import omni
 import traceback
 from typing import Dict, Any, List, Union
 
-import math
 import numpy as np
 from pathlib import Path
 from pxr import UsdGeom, Gf, Sdf, UsdPhysics
@@ -446,7 +445,7 @@ class SceneManager:
 
     def create_camera(self,
                       position: List[float],
-                      orientation: List[float],
+                      quat: List[float],
                       prim_path: str = "/World/MyCam") -> Dict[str, Any]:
 
         from omni.kit.viewport.utility import get_active_viewport
@@ -479,15 +478,8 @@ class SceneManager:
             # 设置平移
             translate_op.Set(Gf.Vec3f(*position))
 
-            # 构建欧拉旋转：先 X，再 Y，再 Z
-            rot_x = Gf.Rotation(Gf.Vec3f(1, 0, 0), orientation[0])
-            rot_y = Gf.Rotation(Gf.Vec3f(0, 1, 0), orientation[1])
-            rot_z = Gf.Rotation(Gf.Vec3f(0, 0, 1), orientation[2])
-            combined = rot_z * rot_y * rot_x
-            quat = Gf.Quatf(combined.GetQuat())
-
             # 设置旋转
-            orient_op.Set(quat)
+            orient_op.Set(Gf.Quatf(*quat))
 
             # 切换 GUI 视口到此相机
             viewport = get_active_viewport()
@@ -689,15 +681,15 @@ class SceneManager:
                 prim.GetRadiusAttr().Set(float(size))
 
             # 设置显示颜色
-            prim.GetDisplayColorAttr().Set([Gf.Vec3f(color[0], color[1], color[2])])
+            prim.GetDisplayColorAttr().Set([Gf.Vec3f(*color)])
 
             # --- 4. 设置位姿 (位置和朝向) ---
             xform = UsdGeom.Xformable(prim)
-            xform.AddTranslateOp().Set(Gf.Vec3f(position[0], position[1], position[2]))
-            xform.AddOrientOp().Set(Gf.Quatf(orientation[0], orientation[1], orientation[2], orientation[3]))
+            xform.AddTranslateOp().Set(Gf.Vec3f(*position))
+            xform.AddOrientOp().Set(Gf.Quatf(*orientation))
 
             if shape_type == "cuboid":
-                xform.AddScaleOp().Set(Gf.Vec3f(size[0], size[1], size[2]))
+                xform.AddScaleOp().Set(Gf.Vec3f(*size))
 
             # --- 5. 添加物理属性 (如果需要) ---
             if make_dynamic:
@@ -725,13 +717,14 @@ class SceneManager:
             roll: float = 0.0,
             pitch: float = 0.0,
             yaw: float = 0.0,
-            degrees: bool = True
+            degrees: bool = True,
+            order: str = "xyz"
     ) -> List[float]:
         """使用 scipy 将欧拉角转换为四元数。"""
 
-        # 1. 使用 'xyz' 顺序从欧拉角创建 Rotation 对象。
+        # 1. 使用 order(default 'xyz' ) 从欧拉角创建 Rotation 对象。
         from scipy.spatial.transform import Rotation as R
-        rotation = R.from_euler('xyz', [roll, pitch, yaw], degrees=degrees)
+        rotation = R.from_euler(order, [roll, pitch, yaw], degrees=degrees)
 
         # 2. 将 Rotation 对象转换为四元数。
         # 注意：scipy 默认输出 [x, y, z, w] 格式。
@@ -810,7 +803,7 @@ class SceneManager:
             xform = UsdGeom.Xformable(prim)
 
             # 设置旋转（四元数）
-            quat = Gf.Quatf(orientation[0], orientation[1], orientation[2], orientation[3])
+            quat = Gf.Quatf(*orientation)
             orient_op = None
             for op in xform.GetOrderedXformOps():
                 if op.GetOpType() == UsdGeom.XformOp.TypeOrient:
