@@ -43,7 +43,6 @@ class Env(gym.Env):
     def __init__(self,
                  simulation_app,
                  physics_dt: float,
-                 usd_path: str,
                  swarm_manager: RobotSwarmManager,
                  scene_manager: SceneManager,
                  grid_map: GridMap,
@@ -57,7 +56,6 @@ class Env(gym.Env):
         self._robot_name = None
         self._current_task_name = None
         self._runner = simulation_app
-        self._usd_path = usd_path  # 保存usd_path以供异步方法使用
 
         # --- 创建核心的、同步的对象 ---
 
@@ -74,16 +72,6 @@ class Env(gym.Env):
         """
         print("Starting asynchronous initialization...")
 
-        # 加载场景：这通常是一个需要与模拟器交互的潜在异步操作
-        self._scene_manager.load_scene(usd_path=self._usd_path)
-        self._scene_manager.create_robot()
-        self._scene_manager.create_shape(
-            shape_type="cube",
-            size=1.0,
-            position=[0, 0, 10],
-            color=[255, 255, 255],
-            make_dynamic=False
-        )
         self._swarm_manager.scene = self.world.scene
         await self._swarm_manager.load_robot_swarm_cfg(
             f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml"
@@ -97,7 +85,6 @@ class Env(gym.Env):
     async def create(cls,
                      simulation_app,
                      physics_dt: float,
-                     usd_path: str,
                      swarm_manager: RobotSwarmManager,
                      scene_manager: SceneManager,
                      grid_map: GridMap,
@@ -108,7 +95,6 @@ class Env(gym.Env):
         instance = cls(
             simulation_app=simulation_app,
             physics_dt=physics_dt,
-            usd_path=usd_path,
             swarm_manager=swarm_manager,
             scene_manager=scene_manager,
             grid_map=grid_map,

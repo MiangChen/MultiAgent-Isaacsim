@@ -24,8 +24,6 @@ async def setup_simulation(simulation_app):
     )  # 注册cf2x机器人
 
     env = await Env.create(
-        # 场景
-        usd_path=WORLD_USD_PATH,
         # 世界引擎
         simulation_app=simulation_app,
         physics_dt=cfg['world']['physics_dt'],
@@ -58,7 +56,6 @@ async def setup_simulation(simulation_app):
     # swarm_manager.robot_active['cf2x'][0].forward()  # 注释掉单次forward调用
     return env
 
-
 # --- 2. 主程序入口，负责实验逻辑和模拟循环 ---
 if __name__ == "__main__":
 
@@ -80,6 +77,7 @@ if __name__ == "__main__":
     from scene.scene_manager import SceneManager
 
     from files.variables import WORLD_USD_PATH
+
     from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
     from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
     from robot.robot_h1 import RobotH1, RobotCfgH1
@@ -98,15 +96,26 @@ if __name__ == "__main__":
         occupied_cell=cfg['map']['occupied_cell'],
         empty_cell=cfg['map']['empty_cell'],
         invisible_cell=cfg['map']['invisible_cell'],
-    )  # gridmap需要在robot swarm之前使用
-
-    # Create Swarm manager
+    )
+    # create semantic
+    map_semantic = MapSemantic()
+    # create swarm manager
     swarm_manager = RobotSwarmManager(map_grid)
     # create scene manager
     scene_manager = SceneManager()
 
+    # load scene
+    scene_manager.load_scene(usd_path=WORLD_USD_PATH)
+    scene_manager.create_robot()
+    scene_manager.create_shape(
+        shape_type="cube",
+        size=1.0,
+        position=[0, 0, 10],
+        color=[255, 255, 255],
+        make_dynamic=False
+    )
+
     try:
-        # --- 设置阶段 ---
         # 获取事件循环并执行我们的一次性异步设置函数
         loop = asyncio.get_event_loop()
         env = loop.run_until_complete(setup_simulation(simulation_app))
@@ -126,7 +135,6 @@ if __name__ == "__main__":
                        'robot3': {'put-down': {'it': 'item2', 'loc': 'depot3'}}}
         }
 
-        map_semantic = MapSemantic()
         state_step = 0
 
         # 启动 plan 的第一步
@@ -166,7 +174,6 @@ if __name__ == "__main__":
                                 swarm_manager.robot_active['jetbot'][id].navigate_to(pos_target)
                             elif robot_action == 'pick-up':
                                 swarm_manager.robot_active['jetbot'][id].pick_up()
-                            # ... (其他 PDDL 动作逻辑)
 
     finally:
         # 4. 手动调用 __exit__，这与离开 with 块的作用相同
