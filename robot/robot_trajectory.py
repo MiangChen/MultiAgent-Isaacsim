@@ -1,10 +1,5 @@
-# import isaacsim.core.utils.prims as prims_utils
-# from isaacsim.core.api.simulation_context import SimulationContext
-# from omni.isaac.debug_draw import _debug_draw  # Use the singleton instance
-# import omni.usd
-# import carb  # For color definitions
-
 import numpy as np
+
 from isaacsim.core.api.scenes import Scene
 
 
@@ -27,6 +22,7 @@ class Trajectory:
         self.color = color  # RGB
         self.trajectory = [[0, 0, 0] for i in range(self.max_points)]  # 历史轨迹
         self.index = 0  # 用于表示当前指针指向新的轨迹要被插入的位置
+
         self.scene = scene
         self.id = id
         # 先提前把历史轨迹的点都加载好, 但是颜色都不可见

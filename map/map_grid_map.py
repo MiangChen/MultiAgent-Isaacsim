@@ -1,21 +1,22 @@
-from typing import List
 import logging
-import coloredlogs
+from typing import List
 
+import carb
 import numpy as np
+
 import omni
 from isaacsim.asset.gen.omap.bindings import _omap
 
 
 class GridMap():
     def __init__(self,
+                 cell_size: float = 1,
                  start_point: list = [0, 0, 0],
                  min_bounds: list = [-20, -20, 0],
                  max_bounds: list = [20, 20, 5],
                  occupied_cell: int = 1,
                  empty_cell: int = 0,
                  invisible_cell: int = 2,
-                 cell_size: float = None,
                  ):
         """
         用于将一个xyz范围内的连续地图变成一个gridmap
@@ -49,7 +50,6 @@ class GridMap():
         self.invisible_cell = invisible_cell
         self.path_robot = "/World/robot"  # 记录机器人的统一路径,后续要先deactivate再建立gridmap
         self.path_ground = "/World/GroundPlane"
-        import carb
         self.occupied_color = carb.Int4(128, 128, 128, 255)  # 灰色，表示障碍物
         self.unoccupied_color = carb.Int4(255, 255, 255, 255)  # 白色，表示可行走区域
         self.unknown_color = carb.Int4(0, 0, 255, 255)  # 蓝色，表示不可见区域

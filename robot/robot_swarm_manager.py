@@ -1,14 +1,15 @@
-import yaml
+import inspect
 from pydantic import ValidationError
 from typing import Dict, List, Type
-import inspect
+import yaml
+
+from isaacsim.core.api.scenes import Scene
+
 from camera.camera_cfg import CameraCfg # 确保导入
+from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from map.map_grid_map import GridMap
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
-from camera.camera_third_person_cfg import CameraThirdPersonCfg
-import numpy as np
-from isaacsim.core.api.scenes import Scene
 
 
 class RobotSwarmManager:
@@ -21,9 +22,9 @@ class RobotSwarmManager:
     第四个,需要能中途加入机器人和删除机器人(但是前期试过, 好像在加入机器人后, 必须要reset world, 那么世界也就完全重置了, 所以我们可以定一个机器人仓库, 比如已经有这么多机器人了, 我们现在要一些新的机器人, 那么仓库里的机器人会加入行动, 非常合理)
     """
 
-    def __init__(self, scene: Scene, map_grid: GridMap = None):
+    def __init__(self, map_grid: GridMap = None):
         # __init__ 方法完全不需要改变
-        self.scene = scene
+        self.scene: Scene = None
         self.robot_warehouse: Dict[str, List[RobotBase]] = {}
         self.flag_active: Dict[str, List[int]] = {}
         self.robot_active: Dict[str, List[RobotBase]] = {}

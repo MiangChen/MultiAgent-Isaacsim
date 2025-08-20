@@ -28,6 +28,10 @@ class SceneManager:
             # "get_object_info": self.get_object_info,
             # "execute_script": self.execute_script,
             "get_scene_info": self.get_scene_info,
+            ## semantic ##
+            "add_semantic": self.add_semantic,
+            "count_semantics_in_scene": self.count_semantics_in_scene,
+            ## create ##
             "create_camera": self.create_camera,
             "create_object": self.create_object,
             "create_robot": self.create_robot,
@@ -35,10 +39,15 @@ class SceneManager:
             "browse_scene_repository": self.browse_scene_repository,
             "load_scene": self.load_scene,
             "save_scene": self.save_scene,
+            ## prim ##
             "delete_prim": self.delete_prim,
             "set_prim_scale": self.set_prim_scale,
-            "adjust_pose": self.adjust_pose,
             "set_prim_activate_state": self.set_prim_activate_state,
+            "get_selected_prim": self.get_selected_prim,
+            "focus_on_prim": self.focus_on_prim,
+            "check_prim_overlap": self.check_prim_overlap,
+            ## transpose ##
+            "adjust_pose": self.adjust_pose,
             "set_collision_enabled": self.set_collision_enabled,
             "set_collision_offsets": self.set_collision_offsets,
             "set_collision_approximation": self.set_collision_approximation,
@@ -47,9 +56,6 @@ class SceneManager:
             "set_physics_scene_config": self.set_physics_scene_config,
             "create_joint": self.create_joint,
             "set_drive_parameters": self.set_drive_parameters,
-            "get_selected_prim": self.get_selected_prim,
-            "focus_on_prim": self.focus_on_prim,
-            "check_prim_overlap": self.check_prim_overlap,
         }
 
     def execute_command(self, command_type: str, params: dict) -> Dict[str, Any]:
@@ -76,6 +82,83 @@ class SceneManager:
                 return {"status": "error", "message": str(e)}
         else:
             return {"status": "error", "message": f"Unknown command type: {command_type}"}
+
+    def add_semantic(
+            self,
+            prim_path: str,
+            semantic_label: str,
+            type_label: str = 'class',
+            suffix: str = ''
+    ) -> Dict[str, Any]:
+        """
+        [已弃用 API] 为一个 prim 添加或更新一个语义标签。
+
+        使用了 isaac.sim.utils.semantics.add_update_semantics API。
+
+        Args:
+            prim_path (str): 要添加标签的 prim 的路径。
+            semantic_label (str): 要应用的语义标签，例如 "car" 或 "robot"。
+            type_label (str, optional): 语义信息的类型。默认为 'class'。
+            suffix (str, optional): 用于指定多个语义属性的后缀。
+
+        Returns:
+            Dict[str, Any]: 包含操作状态和消息的字典。
+        """
+        try:
+            from isaac.sim.utils.semantics import add_update_semantics # isaacsim 4.5; will be deprecated in isaacsim 5.0
+
+            stage = omni.usd.get_context().get_stage()
+            if not stage:
+                return {"status": "error", "message": "No active USD stage."}
+
+            prim = stage.GetPrimAtPath(prim_path)
+            if not prim.IsValid():
+                return {"status": "error", "message": f"Prim not found at path: {prim_path}"}
+
+            # 调用官方 API
+            add_update_semantics(
+                prim=prim,
+                semantic_label=semantic_label,
+                type_label=type_label,
+                suffix=suffix
+            )
+
+            return {
+                "status": "success",
+                "message": f"Successfully applied semantic '{semantic_label}' to prim <{prim_path}>"
+            }
+        except ImportError:
+            return {"status": "error",
+                    "message": "Failed to import 'isaac.sim.utils.semantics'. Ensure Isaac Sim is running."}
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {"status": "error", "message": str(e)}
+
+    def count_semantics_in_scene(self, prim_path: str = '/') -> Dict[str, Any]:
+        """
+        [已弃用 API] 统计场景中（或指定路径下）所有语义标签的数量。
+
+        Args:
+            prim_path (str, optional): 检查的根路径。如果为 None，则检查整个场景。
+
+        Returns:
+            Dict[str, Any]: 成功时，result 字段包含一个字典，映射标签到其数量。
+        """
+        try:
+            from isaac.sim.utils.semantics import count_semantics_in_scene
+
+            count_data = count_semantics_in_scene(prim_path=prim_path)
+
+            return {
+                "status": "success",
+                "message": f"Counted semantics for path: {'Entire Scene' if prim_path is None else prim_path}",
+                "result": count_data
+            }
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {"status": "error", "message": str(e)}
 
     def delete_prim(self, prim_path):
         """
