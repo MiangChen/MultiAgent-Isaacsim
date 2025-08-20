@@ -8,53 +8,6 @@ matplotlib.use('TkAgg')
 from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
 
 
-async def setup_simulation(simulation_app):
-
-    # --- 配置机器人管理器 (这些都是同步的配置) ---
-    swarm_manager.register_robot_class(
-        robot_class_name="jetbot",
-        robot_class=RobotJetbot,
-        robot_class_cfg=RobotCfgJetbot,
-    )  # 注册jetbot机器人
-    swarm_manager.register_robot_class(
-        robot_class_name="h1", robot_class=RobotH1, robot_class_cfg=RobotCfgH1
-    )  # 注册h1机器人
-    swarm_manager.register_robot_class(
-        robot_class_name="cf2x", robot_class=RobotCf2x, robot_class_cfg=RobotCfgCf2x
-    )  # 注册cf2x机器人
-
-    env = await Env.create(
-        # 世界引擎
-        simulation_app=simulation_app,
-        physics_dt=cfg['world']['physics_dt'],
-        swarm_manager=swarm_manager,
-        scene_manager=scene_manager,
-        grid_map=map_grid,
-    )
-
-    env.reset()
-
-    # 先构建地图, 才能做后续的规划
-    map_grid.generate_grid_map('2d')
-
-    # 添加回调函数, 每一个world step都会执行其中的内容
-    env.world.add_physics_callback("physics_step_jetbot_0",
-                                   callback_fn=swarm_manager.robot_active['jetbot'][0].on_physics_step)
-    env.world.add_physics_callback("physics_step_jetbot_1",
-                                   callback_fn=swarm_manager.robot_active['jetbot'][1].on_physics_step)
-    env.world.add_physics_callback("physics_step_jetbot_2",
-                                   callback_fn=swarm_manager.robot_active['jetbot'][2].on_physics_step)
-    env.world.add_physics_callback("physics_step_jetbot_3",
-                                   callback_fn=swarm_manager.robot_active['jetbot'][3].on_physics_step)
-    env.world.add_physics_callback("physics_step_h1_0",
-                                   callback_fn=swarm_manager.robot_active['h1'][0].on_physics_step)
-
-    # 注册cf2x无人机的物理步进回调
-    # env.world.add_physics_callback("physics_step_cf2x_0",
-    #                                callback_fn=swarm_manager.robot_active['cf2x'][0].on_physics_step)
-
-    # swarm_manager.robot_active['cf2x'][0].forward()  # 注释掉单次forward调用
-    return env
 
 # --- 2. 主程序入口，负责实验逻辑和模拟循环 ---
 if __name__ == "__main__":
@@ -81,7 +34,33 @@ if __name__ == "__main__":
     from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
     from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
     from robot.robot_h1 import RobotH1, RobotCfgH1
-    from robot.robot_swarm_manager import RobotSwarmManager
+    from robot.robot_swarm_manager import SwarmManager
+
+
+    async def setup_simulation(simulation_app) -> Env:
+
+        # --- 配置机器人管理器 (这些都是同步的配置) ---
+        swarm_manager.register_robot_class(
+            robot_class_name="jetbot",
+            robot_class=RobotJetbot,
+            robot_class_cfg=RobotCfgJetbot,
+        )  # 注册jetbot机器人
+        swarm_manager.register_robot_class(
+            robot_class_name="h1", robot_class=RobotH1, robot_class_cfg=RobotCfgH1
+        )  # 注册h1机器人
+        swarm_manager.register_robot_class(
+            robot_class_name="cf2x", robot_class=RobotCf2x, robot_class_cfg=RobotCfgCf2x
+        )  # 注册cf2x机器人
+
+        env = await Env.create(
+            simulation_app=simulation_app,
+            physics_dt=cfg['world']['physics_dt'],
+            swarm_manager=swarm_manager,
+            scene_manager=scene_manager,
+            grid_map=map_grid,
+        )
+
+        return env
 
     # 加载场景\世界引擎\grid map的参数
     with open(f'./files/env_cfg.yaml', 'r') as f:
@@ -97,28 +76,122 @@ if __name__ == "__main__":
         empty_cell=cfg['map']['empty_cell'],
         invisible_cell=cfg['map']['invisible_cell'],
     )
+
     # create semantic
     map_semantic = MapSemantic()
     # create swarm manager
-    swarm_manager = RobotSwarmManager(map_grid)
+    swarm_manager = SwarmManager(map_grid)
     # create scene manager
     scene_manager = SceneManager()
 
     # load scene
     scene_manager.load_scene(usd_path=WORLD_USD_PATH)
-    scene_manager.create_robot()
-    scene_manager.create_shape(
-        shape_type="cube",
-        size=1.0,
-        position=[0, 0, 10],
-        color=[255, 255, 255],
-        make_dynamic=False
-    )
+
+    scale = [2, 5, 1.0]
+    # create some cars
+    CUBES_CONFIG = {
+        "cube_1": {
+            "shape_type": "cuboid",
+            "size": scale,  # 尺寸未指定，使用默认值 1.0
+            "position": [11.6, 3.5, 0],
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+
+        "cube_3": {
+            "shape_type": "cuboid",
+            "size": scale,
+            "position": [0.3, 3.5, 0],
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+        "cube_4": {
+            "shape_type": "cuboid",
+            "size": scale,
+            "position": [-13.2, 3.5, 0],
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+        "cube_5": {
+            "shape_type": "cuboid",
+            "size": scale,
+            "position": [-7.1, 10, 0],
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+        "cube_6_rotated": {
+            "shape_type": "cuboid",
+            "size": scale,
+            "position": [-0.9, 30, 0],
+            "orientation": [0.707, 0, 0, 0.707],  # 使用上面计算出的旋转值
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+    }
+
+    # add cars
+    created_prim_paths = []
+
+    for cube_name, config in CUBES_CONFIG.items():
+        print(f"--- Processing: {cube_name} ---")
+
+        # --- 步骤 A: 调用 create_shape 并获取返回值 ---
+        creation_result = scene_manager.create_shape(**config)
+
+        # --- 步骤 B: 检查创建是否成功 ---
+        if creation_result.get("status") == "success":
+            # 从返回值中提取 prim_path
+            prim_path = creation_result.get("result")
+            print(f"  Successfully created prim at: {prim_path}")
+            created_prim_paths.append(prim_path)
+
+            # --- 步骤 C: 使用获取的 prim_path 调用 add_semantic ---
+            semantic_result = scene_manager.add_semantic(
+                prim_path=prim_path,
+                semantic_label='car'  # 设置您想要的标签
+            )
+
+            # 打印添加语义标签的结果
+            if semantic_result.get("status") == "success":
+                print(f"  Successfully applied semantic label 'car' to {prim_path}")
+            else:
+                print(f"  [ERROR] Failed to apply semantic label: {semantic_result.get('message')}")
+
+        else:
+            # 如果创建失败，打印错误信息
+            print(f"  [ERROR] Failed to create shape '{cube_name}': {creation_result.get('message')}")
+
+    print("All prims with 'car' label:", created_prim_paths)
+    print(scene_manager.count_semantics_in_scene().get('result'))
+
 
     try:
         # 获取事件循环并执行我们的一次性异步设置函数
         loop = asyncio.get_event_loop()
         env = loop.run_until_complete(setup_simulation(simulation_app))
+
+        env.reset()
+
+        # 先构建地图, 才能做后续的规划
+        map_grid.generate_grid_map('2d')
+
+        # 添加回调函数, 每一个world step都会执行其中的内容
+        env.world.add_physics_callback("physics_step_jetbot_0",
+                                       callback_fn=swarm_manager.robot_active['jetbot'][0].on_physics_step)
+        env.world.add_physics_callback("physics_step_jetbot_1",
+                                       callback_fn=swarm_manager.robot_active['jetbot'][1].on_physics_step)
+        env.world.add_physics_callback("physics_step_jetbot_2",
+                                       callback_fn=swarm_manager.robot_active['jetbot'][2].on_physics_step)
+        env.world.add_physics_callback("physics_step_jetbot_3",
+                                       callback_fn=swarm_manager.robot_active['jetbot'][3].on_physics_step)
+        env.world.add_physics_callback("physics_step_h1_0",
+                                       callback_fn=swarm_manager.robot_active['h1'][0].on_physics_step)
+
+        # 注册cf2x无人机的物理步进回调
+        # env.world.add_physics_callback("physics_step_cf2x_0",
+        #                                callback_fn=swarm_manager.robot_active['cf2x'][0].on_physics_step)
+
+        # swarm_manager.robot_active['cf2x'][0].forward()  # 注释掉单次forward调用
 
         # --- 实验逻辑定义阶段 (从 setup 移到这里) ---
         print("--- Initializing experiment plan and semantic map ---")

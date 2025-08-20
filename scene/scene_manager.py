@@ -93,7 +93,7 @@ class SceneManager:
         """
         [已弃用 API] 为一个 prim 添加或更新一个语义标签。
 
-        使用了 isaac.sim.utils.semantics.add_update_semantics API。
+        使用了 isaacsim.core.utils.semantics.add_update_semantics API。
 
         Args:
             prim_path (str): 要添加标签的 prim 的路径。
@@ -105,7 +105,7 @@ class SceneManager:
             Dict[str, Any]: 包含操作状态和消息的字典。
         """
         try:
-            from isaac.sim.utils.semantics import add_update_semantics # isaacsim 4.5; will be deprecated in isaacsim 5.0
+            from isaacsim.core.utils.semantics import add_update_semantics # isaacsim 4.5; will be deprecated in isaacsim 5.0
 
             stage = omni.usd.get_context().get_stage()
             if not stage:
@@ -129,7 +129,7 @@ class SceneManager:
             }
         except ImportError:
             return {"status": "error",
-                    "message": "Failed to import 'isaac.sim.utils.semantics'. Ensure Isaac Sim is running."}
+                    "message": "Failed to import 'isaacsim.core.utils.semantics'. Ensure Isaac Sim is running."}
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -146,7 +146,7 @@ class SceneManager:
             Dict[str, Any]: 成功时，result 字段包含一个字典，映射标签到其数量。
         """
         try:
-            from isaac.sim.utils.semantics import count_semantics_in_scene
+            from isaacsim.core.utils.semantics import count_semantics_in_scene
 
             count_data = count_semantics_in_scene(prim_path=prim_path)
 
@@ -323,8 +323,8 @@ class SceneManager:
         :param threshold: 半径阈值（与舞台单位一致）
         :return: 如果检测到重叠则返回 True，否则 False
         """
-        # 将列表转为 Vec3d
-        pos_vec = Gf.Vec3d(*position)
+        # 将列表转为 Vec3f
+        pos_vec = Gf.Vec3f(*position)
         self._stage = omni.usd.get_context().get_stage()
 
         for prim in self._stage.Traverse():
@@ -339,7 +339,7 @@ class SceneManager:
                 for op in xformable.GetOrderedXformOps():
                     # 只检查平移或整体变换
                     if op.GetOpType() in (UsdGeom.XformOp.TypeTranslate, UsdGeom.XformOp.TypeTransform):
-                        existing_pos = Gf.Vec3d(op.Get())
+                        existing_pos = Gf.Vec3f(op.Get())
                         if (existing_pos - pos_vec).GetLength() < threshold:
                             return {"status": "error", "message": f"Prim already exists near position {position}"}
             except Exception:
@@ -354,8 +354,8 @@ class SceneManager:
         :param threshold: 半径阈值（与舞台单位一致）
         :return: 如果检测到重叠则返回 True，否则 False
         """
-        # 将列表转为 Vec3d
-        pos_vec = Gf.Vec3d(*position)
+        # 将列表转为 Vec3f
+        pos_vec = Gf.Vec3f(*position)
         self._stage = omni.usd.get_context().get_stage()
 
         for prim in self._stage.Traverse():
@@ -370,7 +370,7 @@ class SceneManager:
                 for op in xformable.GetOrderedXformOps():
                     # 只检查平移或整体变换
                     if op.GetOpType() in (UsdGeom.XformOp.TypeTranslate, UsdGeom.XformOp.TypeTransform):
-                        existing_pos = Gf.Vec3d(op.Get())
+                        existing_pos = Gf.Vec3f(op.Get())
                         if (existing_pos - pos_vec).GetLength() < threshold:
                             return False
             except Exception:
@@ -439,12 +439,12 @@ class SceneManager:
                 orient_op = xformable.AddOrientOp()
 
             # 设置平移
-            translate_op.Set(Gf.Vec3d(*position))
+            translate_op.Set(Gf.Vec3f(*position))
 
             # 构建欧拉旋转：先 X，再 Y，再 Z
-            rot_x = Gf.Rotation(Gf.Vec3d(1, 0, 0), orientation[0])
-            rot_y = Gf.Rotation(Gf.Vec3d(0, 1, 0), orientation[1])
-            rot_z = Gf.Rotation(Gf.Vec3d(0, 0, 1), orientation[2])
+            rot_x = Gf.Rotation(Gf.Vec3f(1, 0, 0), orientation[0])
+            rot_y = Gf.Rotation(Gf.Vec3f(0, 1, 0), orientation[1])
+            rot_z = Gf.Rotation(Gf.Vec3f(0, 0, 1), orientation[2])
             combined = rot_z * rot_y * rot_x
             quat = Gf.Quatf(combined.GetQuat())
 
@@ -644,8 +644,7 @@ class SceneManager:
                 if not isinstance(size, list) or len(size) != 3:
                     return {"status": "error", "message": "Size for 'cuboid' must be a list of [x, y, z]."}
                 # 对于长方体，我们通过设置缩放来实现
-                xform = UsdGeom.Xformable(prim)
-                xform.AddScaleOp().Set(Gf.Vec3f(size[0], size[1], size[2]))
+                prim.GetSizeAttr().Set(float(1))
             elif shape_type == "sphere":
                 if not isinstance(size, (int, float)):
                     return {"status": "error", "message": "Size for 'sphere' (radius) must be a single float or int."}
@@ -656,8 +655,11 @@ class SceneManager:
 
             # --- 4. 设置位姿 (位置和朝向) ---
             xform = UsdGeom.Xformable(prim)
-            xform.AddTranslateOp().Set(Gf.Vec3d(position[0], position[1], position[2]))
-            xform.AddOrientOp().Set(Gf.Quatd(orientation[0], orientation[1], orientation[2], orientation[3]))
+            xform.AddTranslateOp().Set(Gf.Vec3f(position[0], position[1], position[2]))
+            xform.AddOrientOp().Set(Gf.Quatf(orientation[0], orientation[1], orientation[2], orientation[3]))
+
+            if shape_type == "cuboid":
+                xform.AddScaleOp().Set(Gf.Vec3f(size[0], size[1], size[2]))
 
             # --- 5. 添加物理属性 (如果需要) ---
             if make_dynamic:
@@ -770,7 +772,7 @@ class SceneManager:
             xform = UsdGeom.Xformable(prim)
 
             # 设置旋转（四元数）
-            quat = Gf.Quatd(orientation[0], orientation[1], orientation[2], orientation[3])
+            quat = Gf.Quatf(orientation[0], orientation[1], orientation[2], orientation[3])
             orient_op = None
             for op in xform.GetOrderedXformOps():
                 if op.GetOpType() == UsdGeom.XformOp.TypeOrient:
@@ -789,7 +791,7 @@ class SceneManager:
                         break
                 if not translate_op:
                     translate_op = xform.AddTranslateOp()
-                translate_op.Set(Gf.Vec3d(*position))
+                translate_op.Set(Gf.Vec3f(*position))
 
             return {
                 "status": "success",

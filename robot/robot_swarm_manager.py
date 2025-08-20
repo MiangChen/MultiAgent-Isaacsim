@@ -12,7 +12,7 @@ from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
 
 
-class RobotSwarmManager:
+class SwarmManager:
     """
     增强型机器人集群管理系统
     专门管理多个机器人的

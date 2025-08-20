@@ -2,7 +2,7 @@ import gymnasium as gym
 
 from files.assets_scripts_linux import PATH_PROJECT, PATH_ISAACSIM_ASSETS
 from map.map_grid_map import GridMap
-from robot.robot_swarm_manager import RobotSwarmManager
+from robot.robot_swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
 
 import importlib.util
@@ -43,7 +43,7 @@ class Env(gym.Env):
     def __init__(self,
                  simulation_app,
                  physics_dt: float,
-                 swarm_manager: RobotSwarmManager,
+                 swarm_manager: SwarmManager,
                  scene_manager: SceneManager,
                  grid_map: GridMap,
                  ) -> None:
@@ -85,7 +85,7 @@ class Env(gym.Env):
     async def create(cls,
                      simulation_app,
                      physics_dt: float,
-                     swarm_manager: RobotSwarmManager,
+                     swarm_manager: SwarmManager,
                      scene_manager: SceneManager,
                      grid_map: GridMap,
                      ) -> "Env":
