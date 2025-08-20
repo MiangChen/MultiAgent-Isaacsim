@@ -4,9 +4,9 @@ NAME_USR = 'ubuntu'
 NAME_CONDA_ENV = 'env_isaaclab'
 
 # 这个github项目的地址
-PATH_PROJECT = f'/home/{NAME_USR}/PycharmProjects/multiagent-isaacsim'
+PATH_PROJECT = f'/home/{NAME_USR}/multiagent-isaacsimROS/src/multiagent_isaacsim/multiagent_isaacsim'
 # isaacsim的位置, 这里以通过pip安装在conda中的isaacsim为例子
-PATH_ISAACSIM = f'/home/{NAME_USR}/anaconda3/envs/{NAME_CONDA_ENV}/lib/python3.10/site-packages/isaacsim'
+PATH_ISAACSIM = f'/home/{NAME_USR}/miniconda3/envs/{NAME_CONDA_ENV}/lib/python3.10/site-packages/isaacsim'
 # isaaclab的位置, 这里以通过git clone下来的isaaclab为例子
 PATH_ISAACLAB = f'/home/{NAME_USR}/PycharmProjects/multiagent-isaacim/IsaacLab'
 

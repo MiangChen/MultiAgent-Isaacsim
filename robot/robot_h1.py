@@ -2,24 +2,26 @@ from isaacsim.core.api.scenes import Scene
 
 from map.map_grid_map import GridMap
 from camera.camera_cfg import CameraCfg
+from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from controller.controller_pid import ControllerPID
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_h1 import RobotCfgH1
 from controller.controller_policy_h1 import H1FlatTerrainPolicy
 
-import numpy as np
-
 import carb
 from isaacsim.core.prims import Articulation
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.types import ArticulationActions
 
+import numpy as np
+
 
 class RobotH1(RobotBase):
-    def __init__(self, cfg_body: RobotCfgH1, cfg_camera: CameraCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None) -> None:
-        super().__init__(cfg_body, cfg_camera, scene, map_grid)
+    def __init__(self, cfg_body: RobotCfgH1, cfg_camera: CameraCfg = None,
+                 cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
+                 map_grid: GridMap = None, ) -> None:
+        super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid)
         self.control_mode = 'joint_positions'
 
         # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
@@ -39,6 +41,7 @@ class RobotH1(RobotBase):
         # 神经网络控制器
         self.controller_policy = H1FlatTerrainPolicy(prim_path=self.cfg_body.prim_path)
         self.base_command = np.zeros(3)
+
         return
 
     def initialize(self):
@@ -97,6 +100,7 @@ class RobotH1(RobotBase):
         return obs
 
     def on_physics_step(self, step_size):
+        super().on_physics_step(step_size)
         if self.flag_world_reset == True:
             if self.flag_action_navigation == True:
                 self.move_along_path()  # 每一次都计算下速度

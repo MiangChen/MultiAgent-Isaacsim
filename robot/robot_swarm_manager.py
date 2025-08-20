@@ -5,20 +5,12 @@ from pydantic import BaseModel, Field, ValidationError
 from map.map_grid_map import GridMap
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
-# 基础消息接口
-from rclpy.node import Node
-import rclpy
-from std_msgs.msg import String
-from geometry_msgs.msg import PoseStamped
-from rclpy.executors import MultiThreadedExecutor
-from geometry_msgs.msg import Transform as RosTransform
-from .msg import PrimTransform, SceneModifications, Plan, SkillInfo
 
 import numpy as np
 from isaacsim.core.api.scenes import Scene
 
 
-class RobotSwarmManager(BaseNode):
+class RobotSwarmManager:
     """
     增强型机器人集群管理系统
     专门管理多个机器人的
@@ -29,9 +21,6 @@ class RobotSwarmManager(BaseNode):
     """
 
     def __init__(self, scene: Scene, map_grid: GridMap = None):
-
-        super().__init__('swarm')
-
         self.scene = scene  # 保留世界场景引用
         self.robot_warehouse: Dict[str, List[RobotBase]] = (
             {}
@@ -47,23 +36,6 @@ class RobotSwarmManager(BaseNode):
         }
         self.robot_class_cfg = {}  # 对应的机器人
         self.map_grid = map_grid
-
-        self.robot_positions = {}
-        self.formation_config = {}
-        # 定时发布数据
-        self.create_timer(1.0, self.update_swarm_data)
-        self.timestep_subscriber = self.create_subscriber(
-            Plan,
-            'Plan',
-            self._plan_callback,
-            100
-        )
-        self.timestep_subscriber
-        self.swarm_publisher = self.create_publisher(
-            SkillInfo,
-            ''
-        )
-
 
     def register_robot_class(
             self,
@@ -88,6 +60,8 @@ class RobotSwarmManager(BaseNode):
                 dict = yaml.safe_load(file)  # 返回字典
         if dict is None:
             print("No configuration file or dictionary found")
+
+        print(dict)
         for robot_class_name in dict.keys():
             for robot_cfg in dict[robot_class_name]:  # 可能有多个机器人  这里可以优化一下 让yaml的格式就和robot cfg一样
                 robot_id = robot_cfg['id']
@@ -96,13 +70,15 @@ class RobotSwarmManager(BaseNode):
                 cfg_camera_dict = None
                 if 'camera' in robot_cfg.keys():
                     cfg_camera_dict = robot_cfg['camera']
+                if 'camera_third_person' in robot_cfg.keys():
+                    cfg_camera_third_person_dict = robot_cfg['camera_third_person']
                 self.create_robot(
                     robot_class_name=robot_class_name,
                     robot_class_cfg=self.robot_class_cfg[robot_class_name],
                     cfg_body_dict=cfg_body_dict,
                     cfg_camera_dict=cfg_camera_dict,
+                    cfg_camera_third_person_dict=cfg_camera_third_person_dict,
                 )
-
 
     def create_robot(
             self,
@@ -110,6 +86,7 @@ class RobotSwarmManager(BaseNode):
             robot_class_cfg: Type[RobotCfg] = None,
             cfg_body_dict: Dict = None,
             cfg_camera_dict: Dict = None,
+            cfg_camera_third_person_dict: Dict = None,
     ):
         """创建新机器人并加入仓库"""
         if robot_class_name not in self.robot_class:
@@ -136,9 +113,21 @@ class RobotSwarmManager(BaseNode):
                 **cfg_camera_dict
             )
 
+        # 配置机器人的第三视角相机
+        from camera.camera_third_person_cfg import CameraThirdPersonCfg
+        cfg_camera_third_person = None
+        if cfg_camera_third_person_dict:  # 如果字典不为None且不为空
+            # from camera.camera_cfg import CameraCfg # 确保导入
+            try:
+                cfg_camera_third_person = CameraThirdPersonCfg(**cfg_camera_third_person_dict)
+            except ValidationError as e:
+                print(f"加载机器人 {cfg_body_dict.get('id')} 的相机配置失败: {e}")
+                cfg_camera_third_person = None  # 加载失败则不使用相机
+
         # 实例化完整的机器人
         robot = self.robot_class[robot_class_name](
-            cfg_body=cfg_body, cfg_camera=cfg_camera, scene=self.scene, map_grid=self.map_grid,
+            cfg_body=cfg_body, cfg_camera=cfg_camera, cfg_camera_third_person=cfg_camera_third_person, scene=self.scene,
+            map_grid=self.map_grid,
         )
         self.robot_warehouse[robot_class_name].append(robot)
         return robot
@@ -211,55 +200,6 @@ class RobotSwarmManager(BaseNode):
         """检查名称是否唯一"""
         return self._find_robot(name) is None
 
-    def update_swarm_data(self):
-        self.shared_data['robot_count'] = len(self.robot_positions)
-        self.shared_data['formation_type'] = 'triangle'
-        self.publish_data('robot_count', len(self.robot_positions))
-        self.publish_data('formation_type', 'triangle')
-
-    def get_robot_positions(self):
-        return self.robot_positions
-
-    def request_map_info(self):
-        """请求地图信息"""
-
-        def handle_map_response(value):
-            self.get_logger().info(f"Received map size: {value}")
-
-        self.query_node_data('map', 'map_size', handle_map_response)
-
-    def _plan_callback(self, msg: Plan):
-
-        skills: Dict[int, Dict[str, Dict[str, Any]]] = {}
-
-        # 遍历每个时间步
-        for step in msg.steps:  # type: TimestepSkills
-            t: int = step.timestep
-            if t not in skills:
-                skills[t] = {}
-
-            # 遍历该时间步里，每个机器人的技能列表
-            for robot_skill in step.robots:  # type: RobotSkill
-                robot_id: str = robot_skill.robot_id
-
-                # 通常这里 skill_list 长度为 1；如果有多个，你可以按需取第一个或全部
-                # 下面示例取第一个
-                if not robot_skill.skill_list:
-                    continue
-
-                sk: SkillInfo = robot_skill.skill_list[0]
-                # 将参数列表转成 dict（如果你确实在 Parameter.msg 里定义了 key/value）
-                params_dict = {p.key: p.value for p in sk.params}
-
-                skills[t][robot_id] = {
-                    'skill': sk.skill,
-                    'params': params_dict,
-                    'object_id': sk.object_id if sk.object_id else None,
-                    'task_id': sk.task_id
-                }
-
-        # 存回成员变量
-        self.skills_by_timestep = skills
 
 if __name__ == "__main__":
     pass

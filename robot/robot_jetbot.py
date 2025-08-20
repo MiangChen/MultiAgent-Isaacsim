@@ -3,6 +3,7 @@ import numpy as np
 from controller.controller_pid import ControllerPID
 from controller.controller_pid_jetbot import ControllerJetbot
 from camera.camera_cfg import CameraCfg
+from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from robot.robot_base import RobotBase
@@ -17,9 +18,10 @@ from isaacsim.core.utils.types import ArticulationActions
 
 
 class RobotJetbot(RobotBase):
-    def __init__(self, cfg_body: RobotCfgJetbot, cfg_camera: CameraCfg = None, scene: Scene = None,
+    def __init__(self, cfg_body: RobotCfgJetbot, cfg_camera: CameraCfg = None,
+                 cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
                  map_grid: GridMap = None) -> None:
-        super().__init__(cfg_body, cfg_camera, scene, map_grid)
+        super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid)
 
         self.controller = ControllerJetbot()
         self.control_mode = 'joint_velocities'
@@ -40,13 +42,15 @@ class RobotJetbot(RobotBase):
         return
 
     def initialize(self) -> None:
+        super().initialize()
         return
 
     def init_ros2(self):
         import omni.graph.core as og
 
         og.Controller.edit(
-            {"graph_path": f"/ActionGraph/{self.cfg_body.name_prefix}_{self.cfg_body.id}", "evaluator_name": "execution"},
+            {"graph_path": f"/ActionGraph/{self.cfg_body.name_prefix}_{self.cfg_body.id}",
+             "evaluator_name": "execution"},
             {
                 og.Controller.Keys.CREATE_NODES: [
                     ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
@@ -71,13 +75,13 @@ class RobotJetbot(RobotBase):
                     # Providing path to /panda robot to Articulation Controller node
                     # Providing the robot path is equivalent to setting the targetPrim in Articulation Controller node
                     # ("ArticulationController.inputs:usePath", True),      # if you are using an older version of Isaac Sim, you may need to uncomment this line
-                    ("PublishJointState.inputs:topicName", f"joint_states_{self.cfg_body.name_prefix}_{self.cfg_body.id}"),
+                    ("PublishJointState.inputs:topicName",
+                     f"joint_states_{self.cfg_body.name_prefix}_{self.cfg_body.id}"),
                     ("ArticulationController.inputs:robotPath", f"{self.cfg_body.prim_path}"),
                     ("PublishJointState.inputs:targetPrim", f"{self.cfg_body.prim_path}")
                 ],
             },
         )
-
 
     def move_to(self, target_pos):
         import numpy as np
@@ -125,6 +129,7 @@ class RobotJetbot(RobotBase):
         return False  # 还没有到达
 
     def on_physics_step(self, step_size):
+        super().on_physics_step(step_size)
         if self.flag_world_reset == True:
             if self.flag_action_navigation == True:
                 self.move_along_path()  # 每一次都计算下速度

@@ -1,0 +1,5 @@
+asset_path : "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5/"  # 根据本地的Isaac资产位置来配置
+
+
+jetbot: "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5/Isaac/Robots/Jetbot/jetbot.usd"
+h1: "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5/Isaac/Robots/Unitree/H1/h1.usd"
