@@ -20,8 +20,8 @@ import threading
 
 class RobotCf2x(RobotBase):
     """
-    CF2x无人机控制类 
-    
+    CF2x无人机控制类
+
      键盘控制说明:
     - Q键: 起飞到预设高度并保持悬停
     - E键: 降落到地面
@@ -493,7 +493,7 @@ class RobotCf2x(RobotBase):
         scan_direction = scane_direction
 
         import math
-        effective_width = 2 * self.view_radius * math.sin(self.view_angle / 2)
+        effective_width = 2 * self.view_radius * math.sin(self.viewgraph_angle / 2)
         scan_line_spacing = effective_width * 0.8
 
         scan_lines = []

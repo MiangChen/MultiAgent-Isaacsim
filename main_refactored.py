@@ -6,6 +6,10 @@ import os
 from itertools import count
 from typing import Dict, Any
 
+import os, threading, queue, argparse, yaml
+from collections import defaultdict, deque
+import numpy as np
+
 # Third-party imports
 import yaml
 
@@ -26,12 +30,11 @@ args = parser.parse_args()
 simulation_app = initialize_simulation_app_from_yaml(args.config)
 
 # Suppress specific Isaac Sim warnings
-logging.getLogger("omni.syntheticdata.plugin").setLevel(logging.ERROR)
+# logging.getLogger("omni.syntheticdata.plugin").setLevel(logging.ERROR)
 
 # Local imports
 from environment.env import Env
-from files.assets_scripts_linux import PATH_PROJECT
-from files.variables import WORLD_USD_PATH
+from files.variables import WORLD_USD_PATH, PATH_PROJECT
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
 from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
