@@ -72,10 +72,6 @@ class Env(gym.Env):
         """
         print("Starting asynchronous initialization...")
 
-        # Set scene reference for swarm manager (if needed for other operations)
-        if self._swarm_manager:
-            self._swarm_manager.scene = self.world.scene
-
     @classmethod
     async def create(cls,
                      simulation_app,

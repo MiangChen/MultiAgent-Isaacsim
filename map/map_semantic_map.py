@@ -88,7 +88,7 @@ class MapSemantic():
             self,
             sensor_result: Dict[str, Any],
             target_semantic_class: str
-    ) -> Tuple[Usd.Prim, Dict[str, List[float]]]:
+    ) -> Tuple[Optional[Usd.Prim], Optional[Dict[str, List[float]]]]:
         """
         Parses a sensor result for a specific semantic label and returns its Prim and world pose.
 
@@ -101,18 +101,11 @@ class MapSemantic():
                                             containing 'data' and 'info' keys.
             target_semantic_class (str): The target semantic class to search for, e.g., 'car'.
 
-        Raises:
-            KeyError: If the input `sensor_result` dictionary has a missing or incomplete
-                      structure (e.g., missing 'info', 'data' keys).
-            ValueError: If the target semantic class is not found in the result's label map,
-                        or if no instance of the target class is found among the detected objects.
-            RuntimeError: If the pose of the found prim cannot be retrieved.
-
         Returns:
-            Tuple[Usd.Prim, Dict[str, List[float]]]: A tuple containing two elements:
-                - Pxr.Usd.Prim: The underlying USD Prim object of the found entity.
-                - Dict[str, List[float]]: The pose dictionary of the object,
-                                          in the format {'position': [...], 'orientation': [...]}.
+            Tuple[Optional[Usd.Prim], Optional[Dict[str, List[float]]]]: A tuple containing two elements:
+                - Optional[Pxr.Usd.Prim]: The underlying USD Prim object of the found entity, or None if not found.
+                - Optional[Dict[str, List[float]]]: The pose dictionary of the object,
+                                          in the format {'position': [...], 'orientation': [...]}, or None if not found.
         """
         try:
             # Extract necessary data structures from the sensor result
@@ -121,7 +114,8 @@ class MapSemantic():
             id_to_labels = info['idToLabels']
             prim_paths = info['primPaths']
         except KeyError as e:
-            raise KeyError(f"The input sensor_result dictionary is missing a required key: {e}") from e
+            print(f"Error: The input sensor_result dictionary is missing a required key: {e}")
+            return None, None
 
         # --- Step 1: Find the semanticId corresponding to the target class ---
         target_semantic_id = None
@@ -131,8 +125,8 @@ class MapSemantic():
                 break
 
         if target_semantic_id is None:
-            return ValueError(
-                f"The semantic class '{target_semantic_class}' was not found in the sensor result's label map.")
+            print(f"Warning: The semantic class '{target_semantic_class}' was not found in the sensor result's label map.")
+            return None, None
 
         # --- Step 2: Iterate through detected objects to find a matching semanticId ---
         for i, detected_object in enumerate(data):
@@ -140,8 +134,8 @@ class MapSemantic():
                 try:
                     prim_path = prim_paths[i]
                 except IndexError:
-                    raise IndexError(
-                        f"Found object with semantic class '{target_semantic_class}', but its index {i} is out of bounds for the prim_paths list.")
+                    print(f"Error: Found object with semantic class '{target_semantic_class}', but its index {i} is out of bounds for the prim_paths list.")
+                    return None, None
 
                 # --- Step 3: Get the Prim and its pose ---
                 try:
@@ -151,8 +145,8 @@ class MapSemantic():
                     # Get the underlying Usd.Prim from the high-level wrapper
                     usd_prim = xform_prim.prims[0]
                     if not usd_prim.IsValid():
-                        return RuntimeError(
-                            "Successfully created an XFormPrim, but could not retrieve a valid underlying Usd.Prim.")
+                        print(f"Error: Successfully created an XFormPrim, but could not retrieve a valid underlying Usd.Prim.")
+                        return None, None
 
                     pose = {
                         "position": position.tolist(),
@@ -162,10 +156,10 @@ class MapSemantic():
                     return usd_prim, pose
 
                 except Exception as e:
-                    # Wrap any exception that occurs during pose retrieval and raise it
-                    return RuntimeError(
-                        f"Successfully found Prim '{prim_path}', but failed to retrieve its pose: {e}")
+                    # Handle any exception that occurs during pose retrieval
+                    print(f"Error: Successfully found Prim '{prim_path}', but failed to retrieve its pose: {e}")
+                    return None, None
 
         # If the loop completes without finding any matching instance
-        return ValueError(
-            f"Found the semantic class '{target_semantic_class}' in the label map, but no instance of it was detected.")
+        print(f"Warning: Found the semantic class '{target_semantic_class}' in the label map, but no instance of it was detected.")
+        return None, None

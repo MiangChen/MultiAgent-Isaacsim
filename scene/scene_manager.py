@@ -20,6 +20,8 @@ class SceneManager:
     def __init__(self):
         self.prim_info = []
         self._stage = None
+        # 设置场景保存路径，默认为项目根目录下的scenes文件夹
+        self.scene_repository_path = "./scenes"
         # A dictionary mapping command names to their corresponding methods
         # todo: add a handler for extend simulation method if necessary
         self.handlers = {
@@ -1321,7 +1323,7 @@ class SceneManager:
             import os
 
             # 获取场景目录
-            scene_dir = self.assert_repository_path
+            scene_dir = self.scene_repository_path
             print("scene_dir: ", scene_dir)
 
             # 获取目录下的所有文件和子目录
@@ -1377,18 +1379,99 @@ class SceneManager:
     def save_scene(
             self,
             scene_name: str = None,
+            save_directory: str = None,
+            flatten_scene: bool = True
     ) -> Dict[str, Any]:
-        """Save the current scene to the repository."""
+        """
+        Save the current scene to a specified directory.
+        
+        Args:
+            scene_name (str, optional): Name of the scene file (without extension).
+            save_directory (str, optional): Absolute path to save directory. 
+                                          If None, uses self.scene_repository_path.
+            flatten_scene (bool, optional): If True, flattens the scene to include all 
+                                          referenced assets. If False, saves only references.
+        
+        Returns:
+            Dict[str, Any]: Status and result information.
+        """
         try:
-            omni.usd.get_context().save_as_stage(
-                f"{self.assert_repository_path}/{scene_name}.usd", None
-            )
-            return {
-                "status": "success",
-                "message": f"Scene saved successfully as {scene_name}",
-                "result": None,
-            }
+            import os
+            from pxr import Usd, Sdf
+            
+            # 确定保存目录
+            if save_directory is None:
+                save_directory = self.scene_repository_path
+            
+            # 确保保存目录存在
+            os.makedirs(save_directory, exist_ok=True)
+            
+            # 如果没有提供场景名称，使用时间戳
+            if scene_name is None:
+                import datetime
+                scene_name = f"scene_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            
+            # 构建完整的保存路径
+            if not scene_name.endswith('.usd'):
+                scene_name += '.usd'
+            save_path = os.path.join(save_directory, scene_name)
+            
+            # 获取当前stage
+            stage = omni.usd.get_context().get_stage()
+            if not stage:
+                return {
+                    "status": "error",
+                    "message": "No active USD stage to save",
+                    "result": None,
+                }
+            
+            if flatten_scene:
+                # 方法1: 扁平化保存 - 将所有引用的资产嵌入到单个文件中
+                print(f"Flattening and saving scene to: {save_path}")
+                
+                # 创建一个新的stage用于扁平化
+                flattened_stage = Usd.Stage.CreateNew(save_path)
+                
+                # 复制根层的所有内容
+                root_layer = stage.GetRootLayer()
+                flattened_layer = flattened_stage.GetRootLayer()
+                
+                # 扁平化stage - 这会将所有引用的内容合并到一个文件中
+                stage.Flatten().Export(save_path)
+                
+                # 获取文件大小信息
+                file_size = os.path.getsize(save_path) / (1024 * 1024)  # MB
+                
+                return {
+                    "status": "success",
+                    "message": f"Scene flattened and saved successfully as {scene_name} at {save_path} (Size: {file_size:.2f} MB)",
+                    "result": {
+                        "path": save_path,
+                        "size_mb": file_size,
+                        "flattened": True
+                    },
+                }
+            else:
+                # 方法2: 引用保存 - 只保存引用，文件较小
+                print(f"Saving scene with references to: {save_path}")
+                omni.usd.get_context().save_as_stage(save_path, None)
+                
+                # 获取文件大小信息
+                file_size = os.path.getsize(save_path) / 1024  # KB
+                
+                return {
+                    "status": "success",
+                    "message": f"Scene saved with references as {scene_name} at {save_path} (Size: {file_size:.2f} KB)",
+                    "result": {
+                        "path": save_path,
+                        "size_kb": file_size,
+                        "flattened": False
+                    },
+                }
+                
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return {
                 "status": "error",
                 "message": f"Failed to save scene: {e}",
