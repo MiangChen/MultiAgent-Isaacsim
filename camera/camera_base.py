@@ -31,7 +31,7 @@ class CameraBase:
         prim = get_prim_at_path(self.cfg_camera.prim_path)
 
         if prim.IsValid():
-            self.camera = CameraView(
+            self.camera_view = CameraView(
                 prim_paths_expr=self.cfg_camera.prim_path,
                 output_annotators=['rgb']
             )
@@ -58,23 +58,6 @@ class CameraBase:
                     quat_value = quat_attr.Get(timecode)
                     self.cfg_camera.quat = [quat_value.real] + list(quat_value.imaginary)
                     self.cfg_camera.euler_degree = None
-            # Convert the prim to an Xformable object
-            # xformable = UsdGeom.Xformable(prim)
-            #
-            # # Get the local-to-world transformation matrix
-            # # CORRECTED METHOD NAME: ComputeLocalToWorldTransform
-            # # You need to specify a time code.
-            # timecode = Usd.TimeCode.Default()  # Use default time or simulation time
-            # local_to_world_matrix = xformable.ComputeLocalToWorldTransform(timecode)
-            #
-            # # The local_to_world_matrix is a Gf.Matrix4d
-            # # Extract the translation (position) from the matrix
-            # self.cfg_camera.position = list(local_to_world_matrix.ExtractTranslation())  # Returns a Gf.Vec3d
-            #
-            # # Extract the rotation from the matrix
-            # quat = local_to_world_matrix.ExtractRotationQuat()  # Returns a Gf.Quatd
-            # self.cfg_camera.quat = [quat.real] + list(quat.imaginary)
-            # self.cfg_camera.euler_degree = None
             else:
                 if prim:
                     print(f"Prim at {prim.GetPath()} is not Xformable or does not exist.")
@@ -88,7 +71,7 @@ class CameraBase:
             else:
                 self.cfg_camera.euler_degree = rotations.quats_to_euler_angles(np.array(self.cfg_camera.quat), degrees=True)
 
-            self.camera = CameraView(
+            self.camera_view = CameraView(
                 prim_paths_expr=self.cfg_camera.prim_path,
                 # frequency=self.cfg_camera.frequency,
                 # resolution=self.cfg_camera.resolution,
@@ -108,27 +91,27 @@ class CameraBase:
         Returns:
             True if the view object was initialized (after the first call of .initialize()). False otherwise.
         """
-        self.camera.initialize()
+        self.camera_view.initialize()
         # 设置深度功能
         # self.camera.add_distance_to_camera_to_frame() # camera view不用
         # 物品检测功能
         # self.camera.add_bounding_box_2d_loose_to_frame() # camera view不用
-        return self.camera.initialized
+        return self.camera_view.initialized
 
     def set_local_pose(self, translation: Tuple[float, float, float],
                        orientation: Tuple[float, float, float, float],
                        camera_axes: str = 'usd') -> None:
-        self.camera.set_local_pose(translation=translation, orientation=orientation, camera_axes=camera_axes)
+        self.camera_view.set_local_pose(translation=translation, orientation=orientation, camera_axes=camera_axes)
         return None
 
     def get_current_frame(self):
-        return self.camera.get_current_frame()
+        return self.camera_view.get_current_frame()
 
     def get_depth(self):
-        return self.camera.get_depth()
+        return self.camera_view.get_depth()
 
     def get_point_cloud(self):
-        return self.camera.get_point_cloud()
+        return self.camera_view.get_point_cloud()
 
     def get_rgb(self) -> torch.Tensor:
         """
@@ -137,13 +120,13 @@ class CameraBase:
             containing the RGB data for each camera. Shape is (num_cameras, height, width, 3) with type torch.float32.
 
         """
-        return self.camera.get_rgb()
+        return self.camera_view.get_rgb()
 
     def get_local_pose(self, camera_axes: str = 'usd'):
-        return self.camera.get_local_pose(camera_axes=camera_axes)
+        return self.camera_view.get_local_pose(camera_axes=camera_axes)
 
     def get_world_pose(self, camera_axes: str = 'usd') -> Tuple[np.ndarray, np.ndarray]:
-        return self.camera.get_world_pose(camera_axes=camera_axes)
+        return self.camera_view.get_world_pose(camera_axes=camera_axes)
 
     def save_rgb_to_file(self, rgb_tensor_gpu:torch.Tensor, file_path:str=None) -> bool:
         """

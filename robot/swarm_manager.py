@@ -49,6 +49,53 @@ class SwarmManager:
         self.robot_class[robot_class_name] = robot_class
         self.robot_class_cfg[robot_class_name] = robot_class_cfg
 
+    async def initialize_async(self, 
+                              scene: Scene,
+                              robot_swarm_cfg_path: str = None,
+                              robot_active_flag_path: str = None) -> None:
+        """
+        Complete async initialization of the swarm manager.
+        
+        Args:
+            scene: The Isaac Sim scene object from env.world.scene
+            robot_swarm_cfg_path: Path to robot swarm configuration file
+            robot_active_flag_path: Path to robot active flag configuration file
+            
+        Raises:
+            ValueError: If scene is None
+            FileNotFoundError: If configuration files are not found
+            Exception: For other initialization errors
+        """
+        try:
+            # Validate scene parameter
+            if scene is None:
+                raise ValueError("Scene parameter cannot be None")
+            
+            # Set scene reference
+            self.scene = scene
+            
+            # Load robot swarm configuration if path provided
+            if robot_swarm_cfg_path is not None:
+                try:
+                    await self.load_robot_swarm_cfg(robot_swarm_cfg_path)
+                except FileNotFoundError:
+                    raise FileNotFoundError(f"Robot swarm configuration file not found: {robot_swarm_cfg_path}")
+                except Exception as e:
+                    raise Exception(f"Failed to load robot swarm configuration: {str(e)}")
+            
+            # Activate robots if flag path provided
+            if robot_active_flag_path is not None:
+                try:
+                    self.activate_robot(robot_active_flag_path)
+                except FileNotFoundError:
+                    raise FileNotFoundError(f"Robot active flag file not found: {robot_active_flag_path}")
+                except Exception as e:
+                    raise Exception(f"Failed to activate robots: {str(e)}")
+                    
+        except Exception as e:
+            # Re-raise with context for better error handling
+            raise Exception(f"SwarmManager initialization failed: {str(e)}")
+
     async def load_robot_swarm_cfg(
             self, robot_swarm_cfg_file: str = None, dict: Dict = None
     ) -> None:

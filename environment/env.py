@@ -43,9 +43,9 @@ class Env(gym.Env):
     def __init__(self,
                  simulation_app,
                  physics_dt: float,
-                 swarm_manager: SwarmManager,
                  scene_manager: SceneManager,
-                 grid_map: GridMap,
+                 swarm_manager: SwarmManager = None,
+                 grid_map: GridMap = None,
                  ) -> None:
 
         print("Executing synchronous __init__...")
@@ -68,26 +68,21 @@ class Env(gym.Env):
 
     async def _async_init(self) -> None:
         """
-        处理所有需要等待的异步初始化步骤。
+        Simplified async initialization focusing only on environment concerns.
         """
         print("Starting asynchronous initialization...")
 
-        self._swarm_manager.scene = self.world.scene
-        await self._swarm_manager.load_robot_swarm_cfg(
-            f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml"
-        )
-        # 激活机器人： 是一个典型的异步操作。
-        self._swarm_manager.activate_robot(
-            f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml"
-        )
+        # Set scene reference for swarm manager (if needed for other operations)
+        if self._swarm_manager:
+            self._swarm_manager.scene = self.world.scene
 
     @classmethod
     async def create(cls,
                      simulation_app,
                      physics_dt: float,
-                     swarm_manager: SwarmManager,
                      scene_manager: SceneManager,
-                     grid_map: GridMap,
+                     swarm_manager: SwarmManager = None,
+                     grid_map: GridMap = None,
                      ) -> "Env":
         """
         异步地创建并完全初始化一个Env实例。
@@ -102,9 +97,9 @@ class Env(gym.Env):
         await instance._async_init()
         return instance
 
-    def reset(self):
+    def reset(self) -> None:
         self.world.reset()
-        self.init_robot()  # 要先初始化机器人, grid map才能找到机器人的障碍
+        self.init_robot()  # init robot's camera
         self._grid_map.initialize()
         print("reset env & init grid map success")
         return

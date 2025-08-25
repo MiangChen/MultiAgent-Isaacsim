@@ -1,5 +1,7 @@
 import argparse
 import asyncio
+from itertools import count
+
 import yaml
 
 import matplotlib
@@ -26,6 +28,7 @@ if __name__ == "__main__":
     from scene.scene_manager import SceneManager
 
     from files.variables import WORLD_USD_PATH
+    from files.assets_scripts_linux import PATH_PROJECT
 
     from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
     from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
@@ -48,6 +51,7 @@ if __name__ == "__main__":
             robot_class_name="cf2x", robot_class=RobotCf2x, robot_class_cfg=RobotCfgCf2x
         )  # 注册cf2x机器人
 
+        # Create environment first
         env = await Env.create(
             simulation_app=simulation_app,
             physics_dt=cfg['world']['physics_dt'],
@@ -55,6 +59,17 @@ if __name__ == "__main__":
             scene_manager=scene_manager,
             grid_map=map_grid,
         )
+
+        # Initialize swarm manager after environment is ready
+        try:
+            await swarm_manager.initialize_async(
+                scene=env.world.scene,
+                robot_swarm_cfg_path=f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml",
+                robot_active_flag_path=f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml"
+            )
+        except Exception as e:
+            print(f"Error during swarm manager initialization: {e}")
+            raise
 
         return env
 
@@ -83,7 +98,7 @@ if __name__ == "__main__":
     # create some cars
     scale = [2, 5, 1.0]
     CUBES_CONFIG = {
-        "cube_1": {
+        "car0": {
             "shape_type": "cuboid",
             "size": scale,  # 尺寸未指定，使用默认值 1.0
             "position": [11.6, 3.5, 0],
@@ -91,28 +106,28 @@ if __name__ == "__main__":
             "make_dynamic": False,
         },
 
-        "cube_3": {
+        "car1": {
             "shape_type": "cuboid",
             "size": scale,
             "position": [0.3, 3.5, 0],
             "color": [255, 255, 255],
             "make_dynamic": False,
         },
-        "cube_4": {
+        "car2": {
             "shape_type": "cuboid",
             "size": scale,
             "position": [-13.2, 3.5, 0],
             "color": [255, 255, 255],
             "make_dynamic": False,
         },
-        "cube_5": {
+        "car3": {
             "shape_type": "cuboid",
             "size": scale,
             "position": [-7.1, 10, 0],
             "color": [255, 255, 255],
             "make_dynamic": False,
         },
-        "cube_6_rotated": {
+        "car4": {
             "shape_type": "cuboid",
             "size": scale,
             "position": [-0.9, 30, 0],
@@ -151,9 +166,12 @@ if __name__ == "__main__":
             print(f"  [ERROR] Failed to create shape '{cube_name}': {creation_result.get('message')}")
 
     # create camera
-    result = scene_manager.create_camera(position=[0, 0, 5], quat=scene_manager.euler_to_quaternion(85,0,0))
+    # result = scene_manager.create_camera(position=[0, 0, 5], quat=scene_manager.euler_to_quaternion(85,0,0))
+    # scene_manager.change_viewport(prim_path=result.get('result'))
+    result = scene_manager.change_viewport(prim_path='/World/robot/jetbot/jetbot/jetbot_0/chassis/rgb_camera/jetbot_camera')
     print("create camera ",result)
     print("All prims with 'car' label:", created_prim_paths)
+
     print(scene_manager.count_semantics_in_scene().get('result'))
 
     try:
@@ -161,7 +179,16 @@ if __name__ == "__main__":
         loop = asyncio.get_event_loop()
         env = loop.run_until_complete(setup_simulation(simulation_app))
 
+        # scene_manager.change_viewport(prim_path='/World/robot/jetbot/jetbot/jetbot_0/chassis/rgb_camera/jetbot_camera')
+        result = scene_manager.add_semantic_camera(prim_path='/World/semantic_camera', position = [ 0, 4, 2 ], quat = scene_manager.euler_to_quaternion(roll=90))
+        semantic_camera = result.get('result').get('camera_instance')
+        semantic_camera_prim_path = result.get('result').get('prim_path')
+        scene_manager.change_viewport(prim_path=semantic_camera_prim_path)
+
         env.reset()
+
+        semantic_camera.initialize()
+        semantic_camera.add_bounding_box_2d_loose_to_frame()        # add semantic detection
 
         # 先构建地图, 才能做后续的规划
         map_grid.generate_grid_map('2d')
@@ -201,11 +228,19 @@ if __name__ == "__main__":
         plan_step = 0
 
         swarm_manager.robot_active['h1'][0].navigate_to([-10, 5, 0])
-
+        count = 0
         # --- simulation loop ---
         while simulation_app.is_running():
             # 1. world step
             env.step(action=None)
+
+            if count % 120 == 0:
+                result = semantic_camera.get_current_frame()['bounding_box_2d_loose']
+                print("get bounding box 2d loose",result)
+                if result:
+                    car_prim, car_pose = map_semantic.get_prim_and_pose_by_semantic(result, 'car')
+                    print("get car prim and pose\n",car_prim, '\n', car_pose)
+            count += 1
 
             # 2. check if all robots have completed their actions
             state_skill_complete_all = True

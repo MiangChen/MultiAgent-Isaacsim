@@ -32,6 +32,7 @@ class SceneManager:
             "add_semantic": self.add_semantic,
             "count_semantics_in_scene": self.count_semantics_in_scene,
             "remove_all_semantics": self.remove_all_semantics,
+            "add_semantic_camera": self.add_semantic_camera,
             ## create ##
             "create_camera": self.create_camera,
             "create_object": self.create_object,
@@ -40,6 +41,8 @@ class SceneManager:
             "browse_scene_repository": self.browse_scene_repository,
             "load_scene": self.load_scene,
             "save_scene": self.save_scene,
+            # viewport
+            "change_viewport": self.change_viewport,
             ## prim ##
             "delete_prim": self.delete_prim,
             "set_prim_scale": self.set_prim_scale,
@@ -444,12 +447,74 @@ class SceneManager:
 
         return {"status": "success", "message": f"Prim '{prim_path}' focused in viewport"}
 
+    def add_semantic_camera(self,
+                            position: List[float],
+                            quat: List[float],
+                            focal_length: float = 2.0,
+                            prim_path: str = "/World/MyCam",) -> Dict[str, Any]:
+        """
+        使用 Isaac Sim 的高层 API 创建或封装一个相机。
+
+        这个函数会实例化 Isaac Sim 的 Camera 类，该类会自动处理底层
+        USD prim 的创建和属性设置。
+
+        Args:
+            position (List[float]): 相机在世界坐标系中的位置 [x, y, z]。
+            quat (List[float]): 相机在世界坐标系中的朝向，使用四元数 [w, x, y, z] 格式。
+            prim_path (str, optional): 要创建或封装的相机 Prim 的路径。
+                                       默认为 "/World/MyCam"。
+
+        Returns:
+            Dict[str, Any]: 一个包含操作状态、消息和结果的字典。
+                            - status (str): 'success' 或 'error'。
+                            - message (str): 操作的描述性消息。
+                            - result (dict | None): 成功时，返回一个包含两个关键对象的字典：
+                                - 'usd_prim': 底层的 Pxr.Usd.Prim 对象。
+                                - 'camera_instance': 高层的 isaac.core.prims.Camera 对象实例。
+                              失败时为 None。
+        """
+        try:
+            # 1. 使用 Isaac Sim 高层 API 创建或获取相机实例。
+            # 这个构造函数非常强大：
+            # - 如果 prim 不存在，它会自动创建 UsdGeom.Camera prim。
+            # - 它会自动设置位置和朝向。
+            # - 它返回一个可以用于控制相机和读取传感器数据的高层对象。
+            from isaacsim.sensors.camera import Camera
+            from isaacsim.core.utils.prims import define_prim, get_prim_at_path
+
+            camera_instance = Camera(
+                prim_path=prim_path,
+            )
+            # set positon and quat here (important!)
+            camera_instance.set_local_pose(translation=position, orientation=quat, camera_axes='usd')
+            camera_instance.set_focal_length(focal_length)
+
+            # 2. 从高层实例中获取底层的 Usd.Prim 对象。
+            # 这是连接高层封装和底层 USD API 的桥梁。
+            usd_path = camera_instance.prim
+
+            # 3. (可选但推荐) 进行有效性检查
+            if not usd_path or not usd_path.IsValid():
+                raise RuntimeError(f"成功实例化 Camera 类，但未能获取有效的底层 USD prim。")
+
+            return {
+                "status": "success",
+                "message": f"Isaac Sim Camera 实例已在 '{prim_path}' 创建或封装。",
+                "result": {
+                    "prim_path": prim_path,
+                    "camera_instance": camera_instance
+                }
+            }
+
+        except Exception as e:
+            raise RuntimeError(f"add semantic camera failed '{prim_path}': {e}") from e
+
+
     def create_camera(self,
                       position: List[float],
                       quat: List[float],
                       prim_path: str = "/World/MyCam") -> Dict[str, Any]:
 
-        from omni.kit.viewport.utility import get_active_viewport
         try:
             # 获取当前 USD Stage
             ctx = omni.usd.get_context()
@@ -482,21 +547,60 @@ class SceneManager:
             # 设置旋转
             orient_op.Set(Gf.Quatf(*quat))
 
-            # 切换 GUI 视口到此相机
-            viewport = get_active_viewport()
-            if viewport is None:
-                return {"status": "error", "message": "No active viewport to focus on camera."}
-            viewport.camera_path = prim_path
-
             return {
                 "status": "success",
-                "message": f"Camera prim '{prim_path}' created (or reused) and focused."
+                "message": f"Camera prim '{prim_path}' created (or reused) and focused.",
+                "result": prim_path
             }
 
         except Exception as e:
             return {
                 "status": "error",
                 "message": f"Failed to create or focus camera at '{prim_path}': {e}"
+            }
+
+    def change_viewport(self, prim_path: str) -> Dict[str, Any]:
+        try:
+            stage = omni.usd.get_context().get_stage()
+            if not stage:
+                return {"status": "error", "message": "USD Stage not found."}
+
+            prim = stage.GetPrimAtPath(prim_path)
+
+            # 检查1: Prim是否存在
+            if not prim.IsValid():
+                return {
+                    "status": "error",
+                    "message": (
+                        f"Prim at path '{prim_path}' is not valid or does not exist. "
+                        "If using Isaac Sim's high-level API, did you forget to call world.reset()?"
+                    )
+                }
+
+            # 检查2: Prim的类型是否是Camera
+            if not prim.IsA(UsdGeom.Camera):
+                return {
+                    "status": "error",
+                    "message": (
+                        f"Prim at path '{prim_path}' is not a Camera (type is '{prim.GetTypeName()}'). "
+                        "The camera might not be fully initialized. Try calling world.reset() first."
+                    )
+                }
+
+            from omni.kit.viewport.utility import get_active_viewport
+            # 切换 GUI 视口到此相机
+            viewport = get_active_viewport()
+            if viewport is None:
+                return {"status": "error", "message": "No active viewport to focus on camera."}
+            viewport.camera_path = prim_path
+            return {
+                "status": "success",
+                "message": f"Viewport focused on camera '{prim_path}'."
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Failed to focus viewport on camera '{prim_path}': {e}"
             }
 
     def create_object(self, usd_path: str, position: List[float], orientation: List[float]) -> Dict[str, Any]:
