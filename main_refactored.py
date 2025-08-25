@@ -15,9 +15,30 @@ matplotlib.use('TkAgg')
 # Isaac Sim related imports
 from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
 
+# Initialize simulation app
+parser = argparse.ArgumentParser(description="Initialize Isaac Sim from a YAML config.")
+parser.add_argument("--config", type=str, default="./files/sim_cfg.yaml",
+                    help="Path to the configuration physics engine.")
+parser.add_argument("--enable", type=str, action='append',
+                    help="Enable a feature. Can be used multiple times.")
+args = parser.parse_args()
+
+simulation_app = initialize_simulation_app_from_yaml(args.config)
 
 # Suppress specific Isaac Sim warnings
 logging.getLogger("omni.syntheticdata.plugin").setLevel(logging.ERROR)
+
+# Local imports
+from environment.env import Env
+from files.assets_scripts_linux import PATH_PROJECT
+from files.variables import WORLD_USD_PATH
+from map.map_grid_map import GridMap
+from map.map_semantic_map import MapSemantic
+from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
+from robot.robot_h1 import RobotH1, RobotCfgH1
+from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
+from robot.swarm_manager import SwarmManager
+from scene.scene_manager import SceneManager
 
 
 async def setup_simulation(simulation_app, swarm_manager, cfg: Dict[str, Any], scene_manager, map_grid) -> Env:
@@ -225,27 +246,7 @@ def process_semantic_detection(semantic_camera, map_semantic: MapSemantic, count
 
 
 if __name__ == "__main__":
-    # Initialize simulation app
-    parser = argparse.ArgumentParser(description="Initialize Isaac Sim from a YAML config.")
-    parser.add_argument("--config", type=str, default="./files/sim_cfg.yaml",
-                        help="Path to the configuration physics engine.")
-    parser.add_argument("--enable", type=str, action='append', 
-                        help="Enable a feature. Can be used multiple times.")
-    args = parser.parse_args()
 
-    simulation_app = initialize_simulation_app_from_yaml(args.config)
-
-    # Local imports
-    from environment.env import Env
-    from files.assets_scripts_linux import PATH_PROJECT
-    from files.variables import WORLD_USD_PATH
-    from map.map_grid_map import GridMap
-    from map.map_semantic_map import MapSemantic
-    from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
-    from robot.robot_h1 import RobotH1, RobotCfgH1
-    from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
-    from robot.swarm_manager import SwarmManager
-    from scene.scene_manager import SceneManager
 
     # Load configuration
     with open('./files/env_cfg.yaml', 'r') as f:
