@@ -3,7 +3,10 @@
 import argparse
 
 # Parse arguments *before* SimulationApp initialization
-parser = argparse.ArgumentParser(description="Setup Isaac Sim environment for Planner.")
+# ------------------------------- CLI ---------------------------------------
+parser = argparse.ArgumentParser(
+    description="Setup Isaac Sim environment for Planner (LiDAR)."
+)
 parser.add_argument(
     "--world",
     type=str,
@@ -11,32 +14,44 @@ parser.add_argument(
     help="Name or path of the world/scene to load.",
 )
 parser.add_argument("--gui", action="store_true", help="Run simulation in GUI mode.")
+group = parser.add_mutually_exclusive_group()
+group.add_argument(
+    "--namespace",
+    type=str,
+    default="",
+    help="(Deprecated) Single ROS namespace for topics and services.",
+)
+group.add_argument(
+    "--namespaces",
+    type=str,
+    default="",
+    help="Comma-separated list of namespaces for multi-UAV simulation.",
+)
 # Use parse_known_args to ignore extra args potentially passed by ROS launch
 args, unknown = parser.parse_known_args()
+
+# Derive list of namespaces --------------------------------------------------
+if args.namespaces:
+    namespace_list = [ns.strip() for ns in args.namespaces.split(",") if ns.strip()]
+else:
+    # Fallback to legacy --namespace option
+    namespace_list = [args.namespace]
+
+print(f"Running LiDAR sim with namespaces: {namespace_list}")
 
 # Import initialization module first
 from isaacsim_init import initialize_simulation_app
 
-
-
 # Initialize SimulationApp globally using parsed arguments
 g_simulation_app = initialize_simulation_app(args)
 
-import carb
-
-carb.settings.get_settings().set(
-    "/presitent/isaac/asset_root/default",
-    f"/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5",
-)
-
-# Import common functionality after simulation app is initialized
-from isaacsim.core.utils.extensions import get_extension_path_from_name
-
+# Common helpers
 from isaacsim_common import (
     create_sim_environment,
     add_drone_body,
-    run_simulation_loop,
-    g_drone_prim_path,
+    setup_ros,
+    run_simulation_loop_multi,
+    DroneSimCtx,
 )
 
 import omni
@@ -47,7 +62,7 @@ from pxr import Gf
 
 import os
 import shutil
-
+from isaacsim.core.utils.extensions import get_extension_path_from_name
 
 
 def copy_lidar_config(lidar_config):
@@ -136,26 +151,70 @@ def create_lidar_step_wrapper(lidar_annotators):
     return lidar_step_wrapper
 
 
+def build_drone_ctx(namespace: str, idx: int):
+    """Create prim, ROS node and sensor annotators for one UAV."""
+
+    prim_path = f"/{namespace}/drone" if namespace else "/drone" if idx == 0 else f"/drone_{idx}"
+
+    print(f"Adding drone body to {prim_path} with color scheme {idx}")
+    drone_prim = add_drone_body(curr_stage, prim_path, color_scheme=idx)
+    print(f"Drone prim: {drone_prim}")
+
+    # Create a partial context for ROS setup
+    partial_ctx = DroneSimCtx(
+        namespace=namespace,
+        prim_path=prim_path,
+        ros_node=None,  # Will be set below
+        drone_prim=drone_prim,
+    )
+
+    # ROS ---------------------------------------------------------------
+    node, pubs, subs, srvs = setup_ros(namespace, ctx=partial_ctx)
+
+    # LiDAR -------------------------------------------------------------
+    lidar_config = "autel_perception_120x352"
+    lidar_config_path = copy_lidar_config(lidar_config)
+    lidar_annotators = add_drone_lidar(prim_path, lidar_config)
+    lidar_step_wrapper = create_lidar_step_wrapper(lidar_annotators)
+
+    # Complete the context with all the ROS and LiDAR information
+    partial_ctx.ros_node = node
+    partial_ctx.pubs = pubs
+    partial_ctx.subs = subs
+    partial_ctx.srvs = srvs
+    partial_ctx.custom_step_fn = lidar_step_wrapper
+
+    # Store lidar config path for cleanup
+    partial_ctx._lidar_cfg_path = lidar_config_path  # type: ignore[attr-defined]
+    
+    print(f"Drone {namespace} set up with callbacks for:")
+    print(f"  - EntityState entity names: {[namespace, f'{namespace}/quadrotor', f'{namespace}_quadrotor']}")
+    print(f"  - LinkState link names: {[f'{namespace}::base_link', f'{namespace}/quadrotor::base_link', f'{namespace}_quadrotor::base_link']}")
+    return partial_ctx
+
+
 def main():
     rendering_hz = 10.0
+    global curr_stage  # Needed in build_drone_ctx
+
     world, curr_stage = create_sim_environment(
         args.world, rendering_hz, g_simulation_app
     )
-    drone_prim = add_drone_body(curr_stage)
 
-    lidar_config = "autel_perception_120x352"
-    lidar_config_path = copy_lidar_config(lidar_config)
-    lidar_annotators = add_drone_lidar(g_drone_prim_path, lidar_config)
+    drone_ctxs: list[DroneSimCtx] = []
+    for idx, ns in enumerate(namespace_list):
+        drone_ctxs.append(build_drone_ctx(ns, idx))
 
-    # Create wrapper function with captured arguments
-    lidar_step_wrapper = create_lidar_step_wrapper(lidar_annotators)
-
-    run_simulation_loop(
-        g_simulation_app, world, curr_stage, drone_prim, lidar_step_wrapper
+    # ---------------- Run simulation -----------------------------------
+    run_simulation_loop_multi(
+        g_simulation_app, world, curr_stage, drone_ctxs
     )
 
-    # Delete the copied lidar config
-    os.remove(lidar_config_path)
+    # Cleanup copied lidar config files ---------------------------------
+    for ctx in drone_ctxs:
+        cfg = getattr(ctx, "_lidar_cfg_path", None)
+        if cfg and os.path.exists(cfg):
+            os.remove(cfg)
 
 
 if __name__ == "__main__":

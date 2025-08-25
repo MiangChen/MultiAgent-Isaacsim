@@ -3,7 +3,10 @@
 import argparse
 
 # Parse arguments *before* SimulationApp initialization
-parser = argparse.ArgumentParser(description="Setup Isaac Sim environment for Planner.")
+# ------------------------------- CLI ---------------------------------------
+parser = argparse.ArgumentParser(
+    description="Setup Isaac Sim environment for Planner (Perception)."
+)
 parser.add_argument(
     "--world",
     type=str,
@@ -19,8 +22,29 @@ parser.add_argument(
 parser.add_argument(
     "--trt_overlap_mask_file", type=str, default="", help="TRT overlap mask file."
 )
+group = parser.add_mutually_exclusive_group()
+group.add_argument(
+    "--namespace",
+    type=str,
+    default="",
+    help="(Deprecated) Single ROS namespace.",
+)
+group.add_argument(
+    "--namespaces",
+    type=str,
+    default="",
+    help="Comma-separated list of namespaces for multi-UAV simulation.",
+)
 # Use parse_known_args to ignore extra args potentially passed by ROS launch
 args, unknown = parser.parse_known_args()
+
+# Derive list of namespaces
+if args.namespaces:
+    namespace_list = [ns.strip() for ns in args.namespaces.split(",") if ns.strip()]
+else:
+    namespace_list = [args.namespace]
+
+print(f"Running Perception sim with namespaces: {namespace_list}")
 
 # Import initialization module first
 from isaacsim_init import initialize_simulation_app
@@ -29,11 +53,13 @@ from isaacsim_init import initialize_simulation_app
 g_simulation_app = initialize_simulation_app(args)
 
 # Import common functionality after simulation app is initialized
+# Helpers
 from isaacsim_common import (
     create_sim_environment,
     add_drone_body,
-    run_simulation_loop,
-    g_drone_prim_path,
+    setup_ros,
+    run_simulation_loop_multi,
+    DroneSimCtx,
 )
 
 import carb
@@ -177,7 +203,7 @@ def add_drone_cameras_tiled(
 
     # Create tiled camera using the cameraview
     camera_view = CameraView(
-        prim_paths_expr=g_drone_prim_path + "/Cameras/*",
+        prim_paths_expr=drone_prim_path + "/Cameras/*",
         camera_resolution=(width, height),
         output_annotators=comp.render_types,
     )
@@ -209,39 +235,60 @@ def create_perception_step_wrapper(camera_view, fisheye_trt_processor):
     return perception_step_wrapper
 
 
-def main():
-    """Main function to orchestrate the simulation setup and execution."""
-    # Arguments are parsed globally before SimulationApp initializatin
-    rendering_hz = 10.0
-    world, curr_stage = create_sim_environment(
-        args.world, rendering_hz, g_simulation_app
-    )
-    drone_prim = add_drone_body(curr_stage)
+def build_drone_ctx(namespace: str, idx: int):
+    """Create prim, ROS node and perception cameras for one UAV."""
 
-    # Setup camera rig configuration
-    if args.robot_model == "modele":
-        cam_rig_components = gen_cam_rig_components_mde()
-    else:
-        print("Incorrect model provided:", args.robot_model)
+    prim_path = f"/{namespace}/drone" if namespace else "/drone" if idx == 0 else f"/drone_{idx}"
 
-    camera_view = add_drone_cameras_tiled(
-        curr_stage, g_drone_prim_path, cam_rig_components
-    )
+    drone_prim = add_drone_body(curr_stage, prim_path, color_scheme=idx)
 
-    # Initialize the fisheye TRT processor
-    fisheye_trt_processor = FisheyeTRTProcessor(
-        engine_file=args.trt_engine_file,
-        feat_coords_file=args.trt_feat_coords_file,
-        overlap_mask_file=args.trt_overlap_mask_file,
-    )
+    # ROS
+    node, pubs, subs, srvs = setup_ros(namespace)
 
-    # Create wrapper function with captured arguments
+    # Cameras
+    rig_comps = gen_cam_rig_components_mde()
+    camera_view = add_drone_cameras_tiled(curr_stage, prim_path, rig_comps)
+
+    fisheye_trt_processor = None
+    if args.trt_engine_file != "":
+        fisheye_trt_processor = FisheyeTRTProcessor(
+            args.trt_engine_file,
+            args.trt_feat_coords_file,
+            args.trt_overlap_mask_file,
+        )
+
     perception_step_wrapper = create_perception_step_wrapper(
         camera_view, fisheye_trt_processor
     )
 
-    run_simulation_loop(
-        g_simulation_app, world, curr_stage, drone_prim, perception_step_wrapper
+    ctx = DroneSimCtx(
+        namespace=namespace,
+        prim_path=prim_path,
+        ros_node=node,
+        pubs=pubs,
+        subs=subs,
+        srvs=srvs,
+        drone_prim=drone_prim,
+        custom_step_fn=perception_step_wrapper,
+    )
+
+    return ctx
+
+
+def main():
+    rendering_hz = 10.0
+    global curr_stage
+
+    world, curr_stage = create_sim_environment(
+        args.world, rendering_hz, g_simulation_app
+    )
+
+    drone_ctxs: list[DroneSimCtx] = []
+    for idx, ns in enumerate(namespace_list):
+        drone_ctxs.append(build_drone_ctx(ns, idx))
+
+    run_simulation_loop_multi(
+        g_simulation_app, world, curr_stage, drone_ctxs
     )
 
 
