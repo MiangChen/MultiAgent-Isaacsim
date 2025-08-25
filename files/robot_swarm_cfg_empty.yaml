@@ -1,0 +1,19 @@
+# 空的机器人群配置文件 - 没有任何机器人
+# 这个文件可以用于只运行场景而不加载任何机器人的情况
+
+# 所有机器人类型都为空
+cf2x: []
+
+jetbot: []
+
+h1: []
+
+# 如果需要添加机器人，可以参考以下格式：
+# jetbot:
+#   - id: 0
+#     body:
+#       position: [5, 4, 0.035]
+#       orientation: [0.0, 0.0, 0.0, 1.0]
+#       alias: "RobotName"
+#     camera: {}
+#     camera_third_person: false

@@ -1,0 +1,26 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from message_interface/msg/PathTracingCmd.msg
+// generated code does not contain a copyright notice
+
+
+module message_interface {
+  module msg {
+    struct PathTracingCmd {
+      @verbatim (language="comment", text=
+        "当前正在跟踪的机器人路径点的坐标，应该在0<=index<len（path_list)之间")
+      int32 index;
+
+      @verbatim (language="comment", text=
+        "表示机器人前进的速度")
+      double velocity;
+
+      @verbatim (language="comment", text=
+        "表示机器人自转的角速度，这里容易弄反正负号")
+      double omega;
+
+      @verbatim (language="comment", text=
+        "用于表示之前给出的路径列表是否都跟踪完毕")
+      boolean complete;
+    };
+  };
+};
