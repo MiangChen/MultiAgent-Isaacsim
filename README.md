@@ -8,6 +8,26 @@ https://docs.robotsfan.com/isaaclab/source/setup/installation/pip_installation.
 更新MVP的城市场景，说明在```scene```文件夹里，下载链接为：https://pan.quark.cn/s/0694d8c27c6c
 
 
+# with ros介绍
+***
+
+主要把启动文件main.py从线性逻辑修改成持续性运行逻辑，
+
+ros2节点改是env下的一个属性
+
+节点的基类在ros/ros_swarm.py下   
+ros/msg是消息类型文件
+
+目前能实现两条信息通路：
+
+用户在Isaac里直接拖拽资产，删除资产。下层的node会订阅Isaac的事件，然后发布消息，语义层的node收到消息，回调会在task_context里面做相应的变更，变更包括删除对应边和节点，修改节点的shape属性。
+发布所有时间步的plan到下层。因为平台的具体执行还没有很完善，所以目前只是开环的任务发布。
+
+在实现中，为了实现语意图和仿真场景的对齐，语意图的节点id应该要和isaac中资产prim路径的最后一个'/'后面的内容相同
+比如语意图中有“building1”，那么Isaac中也应该要有“/stage/building1”这样一个prim
+
+
+
 
 # 安装环境
 
@@ -103,24 +123,7 @@ from grutopia.core.runtime import SimulatorRuntime
 skill是上层用的
 
 ***
-***
 
-主要把启动文件main.py从线性逻辑修改成持续性运行逻辑，
-
-ros2节点改是env下的一个属性
-
-节点的基类在ros/ros_swarm.py下   
-ros/msg是消息类型文件
-
-目前能实现两条信息通路：
-
-用户在Isaac里直接拖拽资产，删除资产。下层的node会订阅Isaac的事件，然后发布消息，语义层的node收到消息，回调会在task_context里面做相应的变更，变更包括删除对应边和节点，修改节点的shape属性。
-发布所有时间步的plan到下层。因为平台的具体执行还没有很完善，所以目前只是开环的任务发布。
-
-在实现中，为了实现语意图和仿真场景的对齐，语意图的节点id应该要和isaac中资产prim路径的最后一个'/'后面的内容相同
-比如语意图中有“building1”，那么Isaac中也应该要有“/stage/building1”这样一个prim
-
-***
 
 [![Lines of Code](https://img.shields.io/badge/LoC-32328-blue)](https://github.com/MiangChen/multiagent-isaacsim)
 
