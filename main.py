@@ -29,7 +29,7 @@ parser.add_argument("--config", type=str, default="./files/sim_cfg.yaml",
                     help="Path to the configuration physics engine.")
 parser.add_argument("--enable", type=str, action='append',
                     help="Enable a feature. Can be used multiple times.")
-parser.add_argument("--ros", type=bool, default=False)
+parser.add_argument("--ros", type=bool, default=True)
 args = parser.parse_args()
 
 simulation_app = initialize_simulation_app_from_yaml(args.config)
