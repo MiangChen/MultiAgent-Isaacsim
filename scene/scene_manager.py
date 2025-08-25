@@ -1,12 +1,17 @@
+# Standard library imports
+import os
 import traceback
+from pathlib import Path
 from typing import Dict, Any, List, Union
 
+# Third-party imports
 import numpy as np
-from pathlib import Path
-from pxr import UsdGeom, Gf, Sdf, UsdPhysics
 
+# Isaac Sim related imports
 import omni
+from pxr import Gf, Sdf, UsdGeom, UsdPhysics
 
+# Local imports
 from files.variables import ASSET_PATH
 
 

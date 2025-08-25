@@ -51,20 +51,17 @@
 # print(translation)
 # # prim.get_world_poses()
 
-from typing import List
+# Standard library imports
+from typing import Dict, Any, List, Optional, Tuple
 
+# Third-party imports
 import numpy as np
+import yaml
+
+# Isaac Sim related imports
 import omni
-# from isaacsim.asset.gen.omap.bindings import _omap
-
-
-from typing import Dict, Any, Optional, List, Tuple
-# Isaac Sim / Omniverse related imports
 from isaacsim.core.prims import XFormPrim
 from pxr import Usd
-
-# Other standard library imports
-import yaml
 
 
 class MapSemantic():
