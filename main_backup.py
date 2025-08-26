@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 # Standard library imports
 import argparse
 import asyncio
@@ -8,8 +11,8 @@ from typing import Dict, Any
 from collections import defaultdict, deque
 
 # Third-party imports
-from containers import AppContainer
-from dependency_injector.wiring import inject, Provide # Dependency injection imports
+import matplotlib
+matplotlib.use('TkAgg')
 import yaml
 
 # Isaac Sim related imports
@@ -36,14 +39,8 @@ from robot.robot_h1 import RobotH1, RobotCfgH1
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
+from ui.viewport_manager_enhanced import ViewportManager
 
-
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 # ROS 2 imports (optional, only if ROS is available)
 try:
@@ -55,23 +52,17 @@ try:
 
     ROS_AVAILABLE = True
 except ImportError:
-    logger.info("ROS modules not available, running without ROS integration")
+    print("ROS modules not available, running without ROS integration")
     ROS_AVAILABLE = False
 
 # Global variables for ROS integration
+_sem_map = None
 _skill_queues = defaultdict(deque)
 _skill_lock = threading.Lock()
 
 
-def _param_dict(params) -> Dict[str, Any]:
-    """Convert ROS parameter list to dictionary
-    
-    Args:
-        params: List of ROS Parameter objects
-        
-    Returns:
-        Dict[str, Any]: Dictionary mapping parameter keys to values
-    """
+def _param_dict(params):
+    """Convert ROS parameter list to dictionary"""
     d = {}
     if params:
         for p in params:
@@ -79,15 +70,8 @@ def _param_dict(params) -> Dict[str, Any]:
     return d
 
 
-def _parse_robot_id(robot_id: str) -> tuple[str, int]:
-    """Parse robot ID string to extract robot class and index
-    
-    Args:
-        robot_id: Robot identifier string (e.g., "jetbot_1", "h1-2")
-        
-    Returns:
-        tuple[str, int]: Tuple of (robot_class_name, robot_index)
-    """
+def _parse_robot_id(robot_id: str):
+    """Parse robot ID string to extract robot class and index"""
     import re
     s = robot_id or ""
     m = re.match(r"^([A-Za-z]\w*?)[_-]?(\d+)$", s)
@@ -98,49 +82,20 @@ def _parse_robot_id(robot_id: str) -> tuple[str, int]:
     return name, idx
 
 
-# Skill execution functions with dependency injection
-@inject
-def _skill_navigate_to(
-    env,
-    rc: str,
-    rid: int,
-    params: Dict[str, Any],
-    semantic_map: MapSemantic = Provide[AppContainer.semantic_map]
-) -> None:
-    """Execute navigate-to skill with injected semantic map
-    
-    Args:
-        env: Environment instance
-        rc: Robot class name
-        rid: Robot index
-        params: Skill parameters containing 'goal' key
-        semantic_map: Injected semantic map instance
-    """
-    pos = semantic_map.map_semantic[params["goal"]]
+# Skill execution functions
+def _skill_navigate_to(env, rc, rid, params):
+    """Execute navigate-to skill"""
+    pos = _sem_map.map_semantic[params["goal"]]
     env.robot_swarm.robot_active[rc][rid].navigate_to(pos)
 
 
-def _skill_pick_up(env, rc: str, rid: int, params: Dict[str, Any]) -> None:
-    """Execute pick-up skill
-    
-    Args:
-        env: Environment instance
-        rc: Robot class name
-        rid: Robot index
-        params: Skill parameters (unused for pick-up)
-    """
+def _skill_pick_up(env, rc, rid, params):
+    """Execute pick-up skill"""
     env.robot_swarm.robot_active[rc][rid].pick_up()
 
 
-def _skill_put_down(env, rc: str, rid: int, params: Dict[str, Any]) -> None:
-    """Execute put-down skill
-    
-    Args:
-        env: Environment instance
-        rc: Robot class name
-        rid: Robot index
-        params: Skill parameters (unused for put-down)
-    """
+def _skill_put_down(env, rc, rid, params):
+    """Execute put-down skill"""
     env.robot_swarm.robot_active[rc][rid].put_down()
 
 
@@ -151,12 +106,8 @@ _SKILL_TABLE = {
 }
 
 
-def build_ros_nodes() -> tuple:
-    """Build ROS nodes for plan receiving and scene monitoring
-    
-    Returns:
-        tuple: (plan_receiver_node, scene_monitor_node) or (None, None) if ROS unavailable
-    """
+def build_ros_nodes():
+    """Build ROS nodes for plan receiving and scene monitoring"""
     if not ROS_AVAILABLE:
         return None, None
 
@@ -183,20 +134,15 @@ def build_ros_nodes() -> tuple:
                             q.append(sk)
 
         except Exception as e:
-            logger.error(f"[PlanCB] Error: {e}")
+            print(f"[PlanCB] Error: {e}")
 
     plan_receiver.create_subscription(PlanMsg, '/Plan', _plan_cb, qos)
     scene_monitor = SceneMonitorNode()
     return plan_receiver, scene_monitor
 
 
-def spin_ros_in_background(nodes: tuple, stop_evt: threading.Event) -> None:
-    """Run ROS nodes in background thread
-    
-    Args:
-        nodes: Tuple of ROS nodes to run
-        stop_evt: Threading event to signal shutdown
-    """
+def spin_ros_in_background(nodes, stop_evt: threading.Event):
+    """Run ROS nodes in background thread"""
     if not ROS_AVAILABLE or not nodes[0]:
         return
 
@@ -222,22 +168,16 @@ def spin_ros_in_background(nodes: tuple, stop_evt: threading.Event) -> None:
             rclpy.shutdown()
 
 
-async def setup_simulation(
-    simulation_app,
-    cfg: Dict[str, Any],
-    swarm_manager: SwarmManager,
-    scene_manager: SceneManager,
-    grid_map: GridMap
-) -> Env:
+async def setup_simulation(simulation_app, swarm_manager, cfg: Dict[str, Any], scene_manager, map_grid) -> Env:
     """
-    Setup simulation environment with injected dependencies.
+    Setup simulation environment with robot swarm manager.
 
     Args:
         simulation_app: Isaac Sim simulation application instance
+        swarm_manager: Robot swarm manager instance
         cfg: Configuration dictionary loaded from YAML
-        swarm_manager: Injected robot swarm manager instance
-        scene_manager: Injected scene manager instance
-        grid_map: Injected grid map instance
+        scene_manager: Scene manager instance
+        map_grid: Grid map instance
 
     Returns:
         Env: Initialized environment instance
@@ -265,7 +205,7 @@ async def setup_simulation(
         physics_dt=cfg['world']['physics_dt'],
         swarm_manager=swarm_manager,
         scene_manager=scene_manager,
-        grid_map=grid_map,
+        grid_map=map_grid,
     )
 
     # Initialize swarm manager after environment is ready
@@ -276,7 +216,7 @@ async def setup_simulation(
             robot_active_flag_path=f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml"
         )
     except Exception as e:
-        logger.error(f"Error during swarm manager initialization: {e}")
+        print(f"Error during swarm manager initialization: {e}")
         raise
 
     return env
@@ -284,10 +224,10 @@ async def setup_simulation(
 
 def create_car_objects(scene_manager: SceneManager) -> list:
     """
-    Create car objects in the scene with semantic labels using injected dependencies.
+    Create car objects in the scene with semantic labels.
 
     Args:
-        scene_manager: Injected scene manager instance for creating objects
+        scene_manager: Scene manager instance for creating objects
 
     Returns:
         list: List of created prim paths
@@ -402,17 +342,17 @@ def save_scenes(scene_manager: SceneManager) -> None:
         print(f"Failed to save reference scene: {save_result_ref.get('message')}")
 
 
-def process_semantic_detection(
-    semantic_camera,
-    map_semantic: MapSemantic
-) -> None:
+def process_semantic_detection(semantic_camera, map_semantic: MapSemantic
+                               ) -> None:
     """
-    Process semantic detection and car pose extraction using injected dependencies.
+    Process semantic detection and car pose extraction.
 
     Args:
         semantic_camera: Semantic camera instance
-        map_semantic: Injected semantic map instance
-    """
+        map_semantic: Semantic map instance
+        count: Current frame count
+        bounding_box_enabled: Whether bounding box detection is enabled
+"""
     try:
         current_frame = semantic_camera.get_current_frame()
         if current_frame and 'bounding_box_2d_loose' in current_frame:
@@ -432,23 +372,15 @@ def process_semantic_detection(
         print(f"Error getting semantic camera data: {e}")
 
 
-def process_ros_skills(
-    env,
-    swarm_manager: SwarmManager
-) -> None:
-    """Process ROS skill queue and execute skills with injected SwarmManager
-    
-    Args:
-        env: Environment instance
-        swarm_manager: Injected swarm manager instance
-    """
+def process_ros_skills(env):
+    """Process ROS skill queue and execute skills"""
     if not ROS_AVAILABLE:
         return
 
     # Check if all robots have completed their current skills
     state_skill_complete_all = True
-    for robot_class in swarm_manager.robot_class:
-        for robot in swarm_manager.robot_active[robot_class]:
+    for robot_class in env.robot_swarm.robot_class:
+        for robot in env.robot_swarm.robot_active[robot_class]:
             done = getattr(robot, "state_skill_complete", True)
             state_skill_complete_all = state_skill_complete_all and bool(done)
 
@@ -469,111 +401,17 @@ def process_ros_skills(
                 params = _param_dict(next_skill.params)
                 fn = _SKILL_TABLE.get(name)
                 if fn is None:
-                    logger.warning(f"[Scheduler] unsupported skill: {name}")
+                    print(f"[Scheduler] unsupported skill: {name}")
                 else:
                     try:
                         fn(env, rc, rid, params)
                     except Exception as e:
-                        logger.error(f"[Scheduler] start skill error: {e}")
+                        print(f"[Scheduler] start skill error: {e}")
 
 
-def run_simulation(
-    cfg: Dict[str, Any],
-    container: AppContainer
-) -> 'Env':
-    """Main simulation logic with dependency injection container
-    
-    Args:
-        cfg: Configuration dictionary loaded from YAML
-        container: Dependency injection container with all services
-        
-    Returns:
-        Env: Initialized environment instance
-    """
-    
-    # Get services from container
-    swarm_manager = container.swarm_manager()
-    scene_manager = container.scene_manager()
-    grid_map = container.grid_map()
-    semantic_map = container.semantic_map()
-
-    # Load scene
-    scene_manager.load_scene(usd_path=WORLD_USD_PATH)
-
-    # Create car objects using scene manager
-    created_prim_paths = create_car_objects(scene_manager)
-    print("All prims with 'car' label:", created_prim_paths)
-    print(scene_manager.count_semantics_in_scene().get('result'))
-
-    # Setup simulation with proper error handling
-    try:
-        loop = asyncio.get_event_loop()
-        env = loop.run_until_complete(setup_simulation(simulation_app, cfg, swarm_manager, scene_manager, grid_map))
-    except Exception as e:
-        logger.error(f"Failed to setup simulation: {e}")
-        raise
-
-    # Reset environment to ensure all objects are properly initialized
-    env.reset()
-
-    # Add physics callbacks for active robots
-    for robot_class in swarm_manager.robot_class:
-        for i, robot in enumerate(swarm_manager.robot_active[robot_class]):
-            callback_name = f"physics_step_{robot_class}_{i}"
-            env.world.add_physics_callback(callback_name, callback_fn=robot.on_physics_step)
-
-    # Create and initialize semantic camera
-    result = scene_manager.add_semantic_camera(
-        prim_path='/World/semantic_camera',
-        position=[0, 4, 2],
-        quat=scene_manager.euler_to_quaternion(roll=90)
-    )
-    semantic_camera = result.get('result').get('camera_instance')
-    semantic_camera_prim_path = result.get('result').get('prim_path')
-
-    # Initialize camera
-    semantic_camera.initialize()
-
-    # Wait for camera and rendering pipeline to fully initialize
-    for _ in range(60):
-        env.step(action=None)
-
-    # Enable bounding box detection after initialization period
-    semantic_camera.add_bounding_box_2d_loose_to_frame()
-
-    # Switch viewport to semantic camera
-    scene_manager.change_viewport(prim_path=semantic_camera_prim_path)
-
-    # Build grid map for planning
-    grid_map.generate_grid_map('2d')
-
-    print("--- Initializing experiment plan and semantic map ---")
-
-    count = 0
-    # Main simulation loop
-    while simulation_app.is_running():
-        # World step
-        env.step(action=None)
-
-        if count % 120 == 0 and count > 0:
-            process_semantic_detection(semantic_camera, semantic_map)
-
-        # Process ROS skills if ROS is enabled
-        if args.ros:
-            process_ros_skills(env, swarm_manager)
-
-        count += 1
-
-    return env
-
-
-def main() -> None:
-    """Main function - handles container setup and bootstrapping
-    
-    This function initializes the dependency injection container, sets up ROS
-    integration if requested, and runs the main simulation loop.
-    """
-    
+def main():
+    """Main async function to run the simulation."""
+    global _sem_map
     # Initialize ROS if requested and available
     ros_nodes = (None, None)
     stop_evt = None
@@ -590,28 +428,108 @@ def main() -> None:
                 daemon=True
             )
             t_ros.start()
-            logger.info("ROS integration enabled")
+            print("ROS integration enabled")
         except Exception as e:
-            logger.error(f"Failed to initialize ROS: {e}")
+            print(f"Failed to initialize ROS: {e}")
             args.ros = False
 
     try:
-        # Setup dependency injection container
-        from containers import get_container
-        container = get_container()
-        
-        # Wire the container to this module for @inject decorators in skill functions
-        container.wire(modules=[__name__])
-        
-        # Load configuration for simulation
+        # Load configuration
         with open('./files/env_cfg.yaml', 'r') as f:
             cfg = yaml.safe_load(f)
 
-        # Run simulation with dependency injection container
-        env = run_simulation(cfg, container)
+        # Create managers and components
+        map_grid = GridMap(
+            cell_size=cfg['map']['cell_size'],
+            start_point=cfg['map']['start_point'],
+            min_bounds=cfg['map']['min_bounds'],
+            max_bounds=cfg['map']['max_bounds'],
+            occupied_cell=cfg['map']['occupied_cell'],
+            empty_cell=cfg['map']['empty_cell'],
+            invisible_cell=cfg['map']['invisible_cell'],
+        )
+
+        map_semantic = MapSemantic()
+        _sem_map = map_semantic  # Set global reference for ROS
+
+        viewport_manager = ViewportManager()
+        swarm_manager = SwarmManager(map_grid)
+        scene_manager = SceneManager(viewport_manager)
+
+        # Load scene
+        scene_manager.load_scene(usd_path=WORLD_USD_PATH)
+
+        # Create car objects
+        created_prim_paths = create_car_objects(scene_manager)
+        print("All prims with 'car' label:", created_prim_paths)
+        print(scene_manager.count_semantics_in_scene().get('result'))
+
+        # Setup simulation with proper error handling
+        try:
+            # env = await setup_simulation(simulation_app, swarm_manager, cfg, scene_manager, map_grid)
+            loop = asyncio.get_event_loop()
+            env = loop.run_until_complete(setup_simulation(simulation_app, swarm_manager, cfg, scene_manager, map_grid))
+
+        except Exception as e:
+            print(f"Failed to setup simulation: {e}")
+            raise
+
+        # Reset environment to ensure all objects are properly initialized
+        env.reset()
+
+        # Add physics callbacks for active robots
+        for robot_class in swarm_manager.robot_class:
+            for i, robot in enumerate(swarm_manager.robot_active[robot_class]):
+                callback_name = f"physics_step_{robot_class}_{i}"
+                env.world.add_physics_callback(callback_name, callback_fn=robot.on_physics_step)
+
+        # Create and initialize semantic camera
+        result = scene_manager.add_semantic_camera(
+            prim_path='/World/semantic_camera',
+            position=[0, 4, 2],
+            quat=scene_manager.euler_to_quaternion(roll=90)
+        )
+        semantic_camera = result.get('result').get('camera_instance')
+        semantic_camera_prim_path = result.get('result').get('prim_path')
+
+        # Initialize camera
+        semantic_camera.initialize()
+
+        # Wait for camera and rendering pipeline to fully initialize
+        for _ in range(60):
+            env.step(action=None)
+
+        # Enable bounding box detection after initialization period
+        semantic_camera.add_bounding_box_2d_loose_to_frame()
+
+        # Switch viewport to semantic camera
+        scene_manager.change_viewport(prim_path=semantic_camera_prim_path)
+
+        # Build grid map for planning
+        map_grid.generate_grid_map('2d')
+
+        # Save current scene
+        # save_scenes(scene_manager)
+
+        print("--- Initializing experiment plan and semantic map ---")
+
+        count = 0
+        # Main simulation loop
+        while simulation_app.is_running():
+            # World step
+            env.step(action=None)
+
+            if count % 120 == 0 and count > 0:
+                process_semantic_detection(semantic_camera, map_semantic)
+
+            # Process ROS skills if ROS is enabled
+            if args.ros:
+                process_ros_skills(env)
+
+            count += 1
 
     except Exception as e:
-        logger.error(f"Error in main execution: {e}")
+        print(f"Error in main execution: {e}")
         raise
     finally:
         # Clean shutdown
@@ -620,15 +538,7 @@ def main() -> None:
         if t_ros:
             t_ros.join(timeout=1.0)
 
-        # Unwire the container
-        try:
-            from containers import get_container
-            container = get_container()
-            container.unwire()
-        except Exception:
-            pass  # Ignore unwiring errors during shutdown
-
-        logger.info("--- Simulation finished. Manually closing application. ---")
+        print("--- Simulation finished. Manually closing application. ---")
         if simulation_app:
             simulation_app.__exit__(None, None, None)
 

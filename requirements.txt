@@ -4,6 +4,7 @@ matplotlib # 绘图
 pydantic  #
 pyyaml  # 用于读取robot swarm的配置文件
 usd-core  # pixar的官方库，处理usd文件
+dependency-injector  # 依赖注入
 
 faster-whisper  # openai的whisper语音转录模型, 输入音频, 可以输出文本
 sounddevice  # 提供对计算机音频硬件的访问
