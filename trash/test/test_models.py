@@ -3,10 +3,10 @@
 Test script to verify the core data models work correctly.
 """
 
-from code_standards_formatter.models import (
+from trash.code_standards_formatter.models import (
     ImportBlocks, ImportInfo, FormatResult, FormatterConfig, ImportCategory
 )
-from code_standards_formatter.config import ConfigLoader
+from trash.code_standards_formatter.config import ConfigLoader
 
 
 def test_import_blocks():

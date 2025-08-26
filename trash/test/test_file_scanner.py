@@ -4,14 +4,13 @@ Unit tests for the FileScanner class.
 Tests file discovery, exclusion patterns, and Python file detection.
 """
 
-import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from code_standards_formatter.core.file_scanner import FileScanner
-from code_standards_formatter.models import FormatterConfig
+from trash.code_standards_formatter.core.file_scanner import FileScanner
+from trash.code_standards_formatter.models import FormatterConfig
 
 
 class TestFileScanner(unittest.TestCase):
