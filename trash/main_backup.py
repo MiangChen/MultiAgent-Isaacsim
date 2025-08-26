@@ -39,7 +39,7 @@ from robot.robot_h1 import RobotH1, RobotCfgH1
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
-from ui.viewport_manager_enhanced import ViewportManager
+from ui.viewport_manager import ViewportManager
 
 
 # ROS 2 imports (optional, only if ROS is available)
@@ -317,7 +317,7 @@ def save_scenes(scene_manager: SceneManager) -> None:
     """
     print("--- Saving current scene ---")
 
-    save_dir = os.path.abspath("./saved_scenes")
+    save_dir = os.path.abspath("../saved_scenes")
 
     # Save flattened scene (complete with all assets)
     save_result_flat = scene_manager.save_scene(
@@ -435,7 +435,7 @@ def main():
 
     try:
         # Load configuration
-        with open('./files/env_cfg.yaml', 'r') as f:
+        with open('../files/env_cfg.yaml', 'r') as f:
             cfg = yaml.safe_load(f)
 
         # Create managers and components

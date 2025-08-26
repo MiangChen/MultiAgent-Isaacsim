@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # Import manager classes
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
-from ui.viewport_manager_enhanced import ViewportManager
+from ui.viewport_manager import ViewportManager
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
 

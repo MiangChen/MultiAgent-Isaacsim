@@ -193,7 +193,7 @@ def save_scenes(scene_manager: SceneManager) -> None:
     """
     print("--- Saving current scene ---")
     
-    save_dir = os.path.abspath("./saved_scenes")  # Use absolute path
+    save_dir = os.path.abspath("../saved_scenes")  # Use absolute path
     
     # Save flattened scene (complete with all assets)
     save_result_flat = scene_manager.save_scene(
@@ -252,7 +252,7 @@ if __name__ == "__main__":
 
 
     # Load configuration
-    with open('./files/env_cfg.yaml', 'r') as f:
+    with open('../files/env_cfg.yaml', 'r') as f:
         cfg = yaml.safe_load(f)
 
     # Create managers and components

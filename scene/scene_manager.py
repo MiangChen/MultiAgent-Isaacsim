@@ -12,7 +12,7 @@ from pxr import Gf, Sdf, UsdGeom, UsdPhysics
 
 # Local imports
 from files.variables import ASSET_PATH
-from ui.viewport_manager_enhanced import ViewportManager
+from ui.viewport_manager import ViewportManager
 
 
 class SceneManager:
