@@ -474,6 +474,12 @@ def main():
         # Reset environment to ensure all objects are properly initialized
         env.reset()
 
+        # Add physics callbacks for active robots
+        for robot_class in swarm_manager.robot_class:
+            for i, robot in enumerate(swarm_manager.robot_active[robot_class]):
+                callback_name = f"physics_step_{robot_class}_{i}"
+                env.world.add_physics_callback(callback_name, callback_fn=robot.on_physics_step)
+
         # Create and initialize semantic camera
         result = scene_manager.add_semantic_camera(
             prim_path='/World/semantic_camera',
@@ -487,7 +493,7 @@ def main():
         semantic_camera.initialize()
 
         # Wait for camera and rendering pipeline to fully initialize
-        for _ in range(10):
+        for _ in range(60):
             env.step(action=None)
 
         # Enable bounding box detection after initialization period
@@ -502,12 +508,6 @@ def main():
         # Save current scene
         # save_scenes(scene_manager)
 
-        # Add physics callbacks for active robots
-        for robot_class in swarm_manager.robot_class:
-            for i, robot in enumerate(swarm_manager.robot_active[robot_class]):
-                callback_name = f"physics_step_{robot_class}_{i}"
-                env.world.add_physics_callback(callback_name, callback_fn=robot.on_physics_step)
-
         print("--- Initializing experiment plan and semantic map ---")
 
         count = 0
@@ -516,8 +516,7 @@ def main():
             # World step
             env.step(action=None)
 
-            # Process semantic detection
-            if count % 120 == 0:
+            if count % 120 == 0 and count > 0:
                 process_semantic_detection(semantic_camera, map_semantic)
 
             # Process ROS skills if ROS is enabled
