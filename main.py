@@ -7,18 +7,13 @@ import asyncio
 import logging
 import os
 import threading
-import queue
-from itertools import count
 from typing import Dict, Any
 from collections import defaultdict, deque
 
 # Third-party imports
-import yaml
-import numpy as np
-
 import matplotlib
-
 matplotlib.use('TkAgg')
+import yaml
 
 # Isaac Sim related imports
 from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
@@ -57,9 +52,6 @@ try:
 except ImportError:
     print("ROS modules not available, running without ROS integration")
     ROS_AVAILABLE = False
-
-# Suppress specific Isaac Sim warnings
-logging.getLogger("omni.syntheticdata.plugin").setLevel(logging.ERROR)
 
 # Global variables for ROS integration
 _sem_map = None
@@ -348,8 +340,8 @@ def save_scenes(scene_manager: SceneManager) -> None:
         print(f"Failed to save reference scene: {save_result_ref.get('message')}")
 
 
-def process_semantic_detection(semantic_camera, map_semantic: MapSemantic, count: int,
-                               bounding_box_enabled: bool) -> None:
+def process_semantic_detection(semantic_camera, map_semantic: MapSemantic
+                               ) -> None:
     """
     Process semantic detection and car pose extraction.
 
@@ -358,25 +350,24 @@ def process_semantic_detection(semantic_camera, map_semantic: MapSemantic, count
         map_semantic: Semantic map instance
         count: Current frame count
         bounding_box_enabled: Whether bounding box detection is enabled
-    """
-    if count % 120 == 0 and bounding_box_enabled:
-        try:
-            current_frame = semantic_camera.get_current_frame()
-            if current_frame and 'bounding_box_2d_loose' in current_frame:
-                result = current_frame['bounding_box_2d_loose']
-                print("get bounding box 2d loose", result)
-                if result:
-                    car_prim, car_pose = map_semantic.get_prim_and_pose_by_semantic(result, 'car')
-                    if car_prim is not None and car_pose is not None:
-                        print("get car prim and pose\n", car_prim, '\n', car_pose)
-                    else:
-                        print("No car detected in current frame")
+"""
+    try:
+        current_frame = semantic_camera.get_current_frame()
+        if current_frame and 'bounding_box_2d_loose' in current_frame:
+            result = current_frame['bounding_box_2d_loose']
+            print("get bounding box 2d loose", result)
+            if result:
+                car_prim, car_pose = map_semantic.get_prim_and_pose_by_semantic(result, 'car')
+                if car_prim is not None and car_pose is not None:
+                    print("get car prim and pose\n", car_prim, '\n', car_pose)
                 else:
-                    print("No bounding box data available")
+                    print("No car detected in current frame")
             else:
-                print("No frame data or bounding box key available")
-        except Exception as e:
-            print(f"Error getting semantic camera data: {e}")
+                print("No bounding box data available")
+        else:
+            print("No frame data or bounding box key available")
+    except Exception as e:
+        print(f"Error getting semantic camera data: {e}")
 
 
 def process_ros_skills(env):
@@ -499,7 +490,8 @@ def main():
         for _ in range(10):
             env.step(action=None)
 
-        bounding_box_enabled = False
+        # Enable bounding box detection after initialization period
+        semantic_camera.add_bounding_box_2d_loose_to_frame()
 
         # Switch viewport to semantic camera
         scene_manager.change_viewport(prim_path=semantic_camera_prim_path)
@@ -524,18 +516,9 @@ def main():
             # World step
             env.step(action=None)
 
-            # Enable bounding box detection after initialization period
-            if count == 60 and not bounding_box_enabled:
-                try:
-                    semantic_camera.add_bounding_box_2d_loose_to_frame()
-                    bounding_box_enabled = True
-                    print("Semantic camera bounding box detection enabled successfully")
-                except Exception as e:
-                    print(f"Warning: Failed to enable bounding box detection: {e}")
-                    print("Continuing without bounding box detection...")
-
             # Process semantic detection
-            process_semantic_detection(semantic_camera, map_semantic, count, bounding_box_enabled)
+            if count % 120 == 0:
+                process_semantic_detection(semantic_camera, map_semantic)
 
             # Process ROS skills if ROS is enabled
             if args.ros:
