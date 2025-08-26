@@ -51,13 +51,13 @@ class SceneManager:
             "load_scene": self.load_scene,
             "save_scene": self.save_scene,
             # viewport
-            "change_viewport": self.change_viewport,
-            "register_viewport": self.register_viewport,
-            "unregister_viewport": self.unregister_viewport,
-            "list_viewports": self.list_viewports,
-            "map_camera": self.map_camera,
-            "unmap_camera": self.unmap_camera,
-            "get_camera_path": self.get_camera_path,
+            # "change_viewport": self.change_viewport,
+            # "register_viewport": self.register_viewport,
+            # "unregister_viewport": self.unregister_viewport,
+            # "list_viewports": self.list_viewports,
+            # "map_camera": self.map_camera,
+            # "unmap_camera": self.unmap_camera,
+            # "get_camera_path": self.get_camera_path,
             ## prim ##
             "delete_prim": self.delete_prim,
             "set_prim_scale": self.set_prim_scale,
@@ -574,159 +574,159 @@ class SceneManager:
                 "message": f"Failed to create or focus camera at '{prim_path}': {e}"
             }
 
-    def change_viewport(self, prim_path: str, viewport_name: str = None) -> Dict[str, Any]:
-        """
-        切换viewport的camera视角，委托给ViewportManager处理
-        保持原有API兼容性，同时支持新的viewport_name参数
-        
-        Args:
-            prim_path: camera的prim路径
-            viewport_name: viewport名称，为空时使用当前活跃的viewport
-            
-        Returns:
-            Dict[str, Any]: 包含操作状态和消息的字典
-        """
-        try:
-            # 基础验证：检查USD stage
-            stage = omni.usd.get_context().get_stage()
-            if not stage:
-                return {"status": "error", "message": "USD Stage not found."}
-
-            prim = stage.GetPrimAtPath(prim_path)
-
-            # 检查1: Prim是否存在
-            if not prim.IsValid():
-                return {
-                    "status": "error",
-                    "message": (
-                        f"Prim at path '{prim_path}' is not valid or does not exist. "
-                        "If using Isaac Sim's high-level API, did you forget to call world.reset()?"
-                    )
-                }
-
-            # 检查2: Prim的类型是否是Camera
-            if not prim.IsA(UsdGeom.Camera):
-                return {
-                    "status": "error",
-                    "message": (
-                        f"Prim at path '{prim_path}' is not a Camera (type is '{prim.GetTypeName()}'). "
-                        "The camera might not be fully initialized. Try calling world.reset() first."
-                    )
-                }
-
-            # 委托给ViewportManager处理viewport切换
-            success = self._viewport_manager.change_viewport(prim_path, viewport_name)
-            
-            if success:
-                return {
-                    "status": "success",
-                    "message": f"Viewport focused on camera '{prim_path}'."
-                }
-            else:
-                return {
-                    "status": "error",
-                    "message": f"Failed to focus viewport on camera '{prim_path}'"
-                }
-                
-        except Exception as e:
-            return {
-                "status": "error",
-                "message": f"Failed to focus viewport on camera '{prim_path}': {e}"
-            }
+    # def change_viewport(self, prim_path: str, viewport_name: str = None) -> Dict[str, Any]:
+    #     """
+    #     切换viewport的camera视角，委托给ViewportManager处理
+    #     保持原有API兼容性，同时支持新的viewport_name参数
+    #
+    #     Args:
+    #         prim_path: camera的prim路径
+    #         viewport_name: viewport名称，为空时使用当前活跃的viewport
+    #
+    #     Returns:
+    #         Dict[str, Any]: 包含操作状态和消息的字典
+    #     """
+    #     try:
+    #         # 基础验证：检查USD stage
+    #         stage = omni.usd.get_context().get_stage()
+    #         if not stage:
+    #             return {"status": "error", "message": "USD Stage not found."}
+    #
+    #         prim = stage.GetPrimAtPath(prim_path)
+    #
+    #         # 检查1: Prim是否存在
+    #         if not prim.IsValid():
+    #             return {
+    #                 "status": "error",
+    #                 "message": (
+    #                     f"Prim at path '{prim_path}' is not valid or does not exist. "
+    #                     "If using Isaac Sim's high-level API, did you forget to call world.reset()?"
+    #                 )
+    #             }
+    #
+    #         # 检查2: Prim的类型是否是Camera
+    #         if not prim.IsA(UsdGeom.Camera):
+    #             return {
+    #                 "status": "error",
+    #                 "message": (
+    #                     f"Prim at path '{prim_path}' is not a Camera (type is '{prim.GetTypeName()}'). "
+    #                     "The camera might not be fully initialized. Try calling world.reset() first."
+    #                 )
+    #             }
+    #
+    #         # 委托给ViewportManager处理viewport切换
+    #         success = self._viewport_manager.change_viewport(prim_path, viewport_name)
+    #
+    #         if success:
+    #             return {
+    #                 "status": "success",
+    #                 "message": f"Viewport focused on camera '{prim_path}'."
+    #             }
+    #         else:
+    #             return {
+    #                 "status": "error",
+    #                 "message": f"Failed to focus viewport on camera '{prim_path}'"
+    #             }
+    #
+    #     except Exception as e:
+    #         return {
+    #             "status": "error",
+    #             "message": f"Failed to focus viewport on camera '{prim_path}': {e}"
+    #         }
 
     # === ViewportManager委托方法 ===
     
-    def register_viewport(self, name: str, viewport_obj: Any) -> Dict[str, Any]:
-        """
-        注册viewport对象，委托给ViewportManager处理
-        
-        Args:
-            name: viewport名称
-            viewport_obj: viewport对象
-            
-        Returns:
-            Dict[str, Any]: 包含操作状态和消息的字典
-        """
-        success = self._viewport_manager.register_viewport(name, viewport_obj)
-        if success:
-            return {"status": "success", "message": f"Viewport '{name}' registered successfully"}
-        else:
-            return {"status": "error", "message": f"Failed to register viewport '{name}'"}
+    # def register_viewport(self, name: str, viewport_obj: Any) -> Dict[str, Any]:
+    #     """
+    #     注册viewport对象，委托给ViewportManager处理
+    #
+    #     Args:
+    #         name: viewport名称
+    #         viewport_obj: viewport对象
+    #
+    #     Returns:
+    #         Dict[str, Any]: 包含操作状态和消息的字典
+    #     """
+    #     success = self._viewport_manager.register_viewport(name, viewport_obj)
+    #     if success:
+    #         return {"status": "success", "message": f"Viewport '{name}' registered successfully"}
+    #     else:
+    #         return {"status": "error", "message": f"Failed to register viewport '{name}'"}
     
-    def unregister_viewport(self, name: str) -> Dict[str, Any]:
-        """
-        注销viewport，委托给ViewportManager处理
-        
-        Args:
-            name: viewport名称
-            
-        Returns:
-            Dict[str, Any]: 包含操作状态和消息的字典
-        """
-        success = self._viewport_manager.unregister_viewport(name)
-        if success:
-            return {"status": "success", "message": f"Viewport '{name}' unregistered successfully"}
-        else:
-            return {"status": "error", "message": f"Failed to unregister viewport '{name}' or viewport not found"}
+    # def unregister_viewport(self, name: str) -> Dict[str, Any]:
+    #     """
+    #     注销viewport，委托给ViewportManager处理
+    #
+    #     Args:
+    #         name: viewport名称
+    #
+    #     Returns:
+    #         Dict[str, Any]: 包含操作状态和消息的字典
+    #     """
+    #     success = self._viewport_manager.unregister_viewport(name)
+    #     if success:
+    #         return {"status": "success", "message": f"Viewport '{name}' unregistered successfully"}
+    #     else:
+    #         return {"status": "error", "message": f"Failed to unregister viewport '{name}' or viewport not found"}
     
-    def list_viewports(self) -> Dict[str, Any]:
-        """
-        列出所有已注册的viewport，委托给ViewportManager处理
-        
-        Returns:
-            Dict[str, Any]: 包含viewport列表的字典
-        """
-        viewports = self._viewport_manager.list_viewports()
-        return {"status": "success", "result": viewports}
+    # def list_viewports(self) -> Dict[str, Any]:
+    #     """
+    #     列出所有已注册的viewport，委托给ViewportManager处理
+    #
+    #     Returns:
+    #         Dict[str, Any]: 包含viewport列表的字典
+    #     """
+    #     viewports = self._viewport_manager.list_viewports()
+    #     return {"status": "success", "result": viewports}
+    #
+    # def map_camera(self, viewport_name: str, camera_path: str) -> Dict[str, Any]:
+    #     """
+    #     建立viewport到camera的映射关系，委托给ViewportManager处理
+    #
+    #     Args:
+    #         viewport_name: viewport名称
+    #         camera_path: camera的prim路径
+    #
+    #     Returns:
+    #         Dict[str, Any]: 包含操作状态和消息的字典
+    #     """
+    #     success = self._viewport_manager.map_camera(viewport_name, camera_path)
+    #     if success:
+    #         return {"status": "success", "message": f"Camera '{camera_path}' mapped to viewport '{viewport_name}'"}
+    #     else:
+    #         return {"status": "error", "message": f"Failed to map camera '{camera_path}' to viewport '{viewport_name}'"}
+    #
+    # def unmap_camera(self, viewport_name: str) -> Dict[str, Any]:
+    #     """
+    #     清理viewport的camera映射关系，委托给ViewportManager处理
+    #
+    #     Args:
+    #         viewport_name: viewport名称
+    #
+    #     Returns:
+    #         Dict[str, Any]: 包含操作状态和消息的字典
+    #     """
+    #     success = self._viewport_manager.unmap_camera(viewport_name)
+    #     if success:
+    #         return {"status": "success", "message": f"Camera mapping for viewport '{viewport_name}' removed"}
+    #     else:
+    #         return {"status": "error", "message": f"Failed to remove camera mapping for viewport '{viewport_name}' or mapping not found"}
     
-    def map_camera(self, viewport_name: str, camera_path: str) -> Dict[str, Any]:
-        """
-        建立viewport到camera的映射关系，委托给ViewportManager处理
-        
-        Args:
-            viewport_name: viewport名称
-            camera_path: camera的prim路径
-            
-        Returns:
-            Dict[str, Any]: 包含操作状态和消息的字典
-        """
-        success = self._viewport_manager.map_camera(viewport_name, camera_path)
-        if success:
-            return {"status": "success", "message": f"Camera '{camera_path}' mapped to viewport '{viewport_name}'"}
-        else:
-            return {"status": "error", "message": f"Failed to map camera '{camera_path}' to viewport '{viewport_name}'"}
-    
-    def unmap_camera(self, viewport_name: str) -> Dict[str, Any]:
-        """
-        清理viewport的camera映射关系，委托给ViewportManager处理
-        
-        Args:
-            viewport_name: viewport名称
-            
-        Returns:
-            Dict[str, Any]: 包含操作状态和消息的字典
-        """
-        success = self._viewport_manager.unmap_camera(viewport_name)
-        if success:
-            return {"status": "success", "message": f"Camera mapping for viewport '{viewport_name}' removed"}
-        else:
-            return {"status": "error", "message": f"Failed to remove camera mapping for viewport '{viewport_name}' or mapping not found"}
-    
-    def get_camera_path(self, viewport_name: str) -> Dict[str, Any]:
-        """
-        查询viewport对应的camera路径，委托给ViewportManager处理
-        
-        Args:
-            viewport_name: viewport名称
-            
-        Returns:
-            Dict[str, Any]: 包含camera路径的字典
-        """
-        camera_path = self._viewport_manager.get_camera_path(viewport_name)
-        if camera_path:
-            return {"status": "success", "result": camera_path}
-        else:
-            return {"status": "error", "message": f"No camera mapping found for viewport '{viewport_name}'"}
+    # def get_camera_path(self, viewport_name: str) -> Dict[str, Any]:
+    #     """
+    #     查询viewport对应的camera路径，委托给ViewportManager处理
+    #
+    #     Args:
+    #         viewport_name: viewport名称
+    #
+    #     Returns:
+    #         Dict[str, Any]: 包含camera路径的字典
+    #     """
+    #     camera_path = self._viewport_manager.get_camera_path(viewport_name)
+    #     if camera_path:
+    #         return {"status": "success", "result": camera_path}
+    #     else:
+    #         return {"status": "error", "message": f"No camera mapping found for viewport '{viewport_name}'"}
 
     def create_object(self, usd_path: str, position: List[float], orientation: List[float]) -> Dict[str, Any]:
         from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units

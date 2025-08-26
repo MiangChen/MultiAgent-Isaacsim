@@ -8,7 +8,6 @@ from typing import Dict, Any
 from collections import defaultdict, deque
 
 # Third-party imports
-from containers import AppContainer
 from dependency_injector.wiring import inject, Provide # Dependency injection imports
 import yaml
 
@@ -36,7 +35,7 @@ from robot.robot_h1 import RobotH1, RobotCfgH1
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
-
+from containers import AppContainer
 
 # Setup logging
 logging.basicConfig(
@@ -496,6 +495,7 @@ def run_simulation(
     scene_manager = container.scene_manager()
     grid_map = container.grid_map()
     semantic_map = container.semantic_map()
+    viewport_manager = container.viewport_manager()
 
     # Load scene
     scene_manager.load_scene(usd_path=WORLD_USD_PATH)
@@ -542,7 +542,8 @@ def run_simulation(
     semantic_camera.add_bounding_box_2d_loose_to_frame()
 
     # Switch viewport to semantic camera
-    scene_manager.change_viewport(prim_path=semantic_camera_prim_path)
+    # scene_manager.change_viewport(prim_path=semantic_camera_prim_path)
+    viewport_manager.change_viewport(camera_prim_path = semantic_camera_prim_path, viewport_name=None)
 
     # Build grid map for planning
     grid_map.generate_grid_map('2d')

@@ -19,8 +19,24 @@ from isaacsim.core.utils.rotations import quat_to_rot_matrix
 import isaacsim.core.utils.prims as prims_utils
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.viewports import create_viewport_for_camera, set_camera_view, set_intrinsics_matrix
-from ui.viewport_manager_enhanced import viewport_manager
 
+
+def _get_viewport_manager_from_container():
+    """
+    Get viewport manager from dependency injection container.
+
+    This function provides a fallback mechanism to obtain the viewport manager
+    when it's not directly injected into the constructor.
+
+    Returns:
+        ViewportManager: The viewport manager instance from the container
+    """
+    try:
+        from containers import get_container
+        container = get_container()
+        return container.viewport_manager()
+    except Exception as e:
+        raise Exception("ViewportManager not found in container") from e
 
 class RobotBase:
     """Base class of robot."""
@@ -31,6 +47,7 @@ class RobotBase:
         self.cfg_body = cfg_body
         self.cfg_camera = cfg_camera
         self.scene = scene
+        self.viewport_manager = _get_viewport_manager_from_container()  # 通过依赖注入获取viewport_manager
         # 代表机器人的实体
         self.robot_entity: Articulation = None
         # 通用的机器人本体初始化代码
@@ -118,8 +135,8 @@ class RobotBase:
 
     def cleanup(self):
         # 清理ViewportManager中的注册信息
-        if self.viewport_name:
-            viewport_manager.unregister_viewport(self.viewport_name)
+        if self.viewport_name and self.viewport_manager:
+            self.viewport_manager.unregister_viewport(self.viewport_name)
             print(f"Robot {self.cfg_body.id} viewport unregistered from ViewportManager")
         
         for controller in self.controllers.values():
@@ -444,10 +461,10 @@ class RobotBase:
         )
 
         # 4. 注册viewport到ViewportManager
-        if viewport_obj:
-            success = viewport_manager.register_viewport(self.viewport_name, viewport_obj)
+        if viewport_obj and self.viewport_manager:
+            success = self.viewport_manager.register_viewport(self.viewport_name, viewport_obj)
             if success:
-                viewport_manager.map_camera(self.viewport_name, self.camera_prim_path)
+                self.viewport_manager.map_camera(self.viewport_name, self.camera_prim_path)
                 print(f"Robot {self.cfg_body.id} viewport registered to ViewportManager")
             else:
                 print(f"Failed to register Robot {self.cfg_body.id} viewport to ViewportManager")
