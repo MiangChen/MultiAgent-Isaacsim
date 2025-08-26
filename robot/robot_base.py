@@ -133,27 +133,6 @@ class RobotBase:
         self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
         self.transform_camera_pos = np.array([0, 0, 0])
 
-    def cleanup(self):
-        # 清理ViewportManager中的注册信息
-        if self.viewport_name and self.viewport_manager:
-            self.viewport_manager.unregister_viewport(self.viewport_name)
-            print(f"Robot {self.cfg_body.id} viewport unregistered from ViewportManager")
-        
-        for controller in self.controllers.values():
-            controller.cleanup()
-        for sensor in self.cameras.values():
-            sensor.cleanup()
-        for rigid_body in self.get_rigid_bodies():
-            self._scene.remove_object(rigid_body.name_prefix)
-            # log.debug(f'rigid body {rigid_body} removed')  # Commented out as log is not imported
-        # log.debug(f'robot {self.name} clean up')  # Commented out as log is not imported
-
-    def forward(self, velocity=None):
-        raise NotImplementedError()
-
-    def get_controllers(self):
-        return self.controllers
-
     def get_obs(self) -> dict:
         """Get observation of robot, including controllers, cameras, and world pose.
 
@@ -161,34 +140,6 @@ class RobotBase:
             NotImplementedError: _description_
         """
         raise NotImplementedError()
-
-    def get_rigid_bodies(self) -> List[RigidPrim]:
-        raise NotImplementedError()
-
-    def get_robot_base(self) -> RigidPrim:
-        """
-        Get base link of robot.
-
-        Returns:
-            RigidPrim: rigid prim of robot base link.
-        """
-        raise NotImplementedError()
-
-    def get_robot_scale(self) -> np.ndarray:
-        """Get robot scale.
-
-        Returns:
-            np.ndarray: robot scale in (x, y, z).
-        """
-        return self.robot_entity.get_local_scale()
-
-    def get_robot_articulation(self) -> Articulation:
-        """Get isaac robots instance (articulation).
-
-        Returns:
-            Robot: robot articulation.
-        """
-        return self.robot_entity
 
     def get_world_poses(self) -> Tuple[np.ndarray, np.ndarray]:
         pos_IB, q_IB = self.robot_entity.get_world_poses()
@@ -332,40 +283,6 @@ class RobotBase:
         yaw = atan2(matrix[1, 0], matrix[0, 0])
         return yaw
 
-    @classmethod
-    def register(cls, name: str) -> None:
-        """Register a robot class with its name_prefix(decorator).
-
-        Args:
-            name(str): name_prefix of the robot class.
-        """
-
-        def decorator(robot_class):
-            cls.robots[name] = robot_class
-
-            @wraps(robot_class)
-            def wrapped_function(*args, **kwargs):
-                return robot_class(*args, **kwargs)
-
-            return wrapped_function
-
-        return decorator
-
-    def set_up_to_scene(self, scene: Scene) -> None:
-        """Set up robot in the scene.
-
-        Args:
-            scene (Scene): scene to set up.
-        """
-        # self._scene = scene
-        robot_cfg = self.cfg_body
-        if self.robot_entity:
-            scene.add(self.robot_entity)
-            # log.debug('self.robot_entity: ' + str(self.robot_entity))
-        for rigid_body in self.get_rigid_bodies():
-            scene.add(rigid_body)
-        return
-
     def step(self, action: np.ndarray) -> Tuple[np.ndarray]:
         """
 
@@ -377,61 +294,6 @@ class RobotBase:
             info:
         """
         raise NotImplementedError
-
-    def explore_zone(self, zone_corners: list = None, scane_direction: str = "horizontal",
-                     reset_flag: bool = False) -> None:
-        """
-        用户输入一个方形区域的四个角落点, 需要根据感知范围来探索这个区域, 感知范围是一个扇形的区域, 假设视野为120, 半径为2m,
-        输入一个[[1,1], [1,10], [10,10], [10,1]]的方形区域, 该如何规划路径?
-
-        """
-        # 1. 计算区域的边界
-        min_x = min(corner[0] for corner in zone_corners)
-        max_x = max(corner[0] for corner in zone_corners)
-        min_y = min(corner[1] for corner in zone_corners)
-        max_y = max(corner[1] for corner in zone_corners)
-
-        # 2. 确定扫描线的方向 (这里选择水平扫描)
-        scan_direction = scane_direction  # 可以选择 "horizontal" 或 "vertical"
-
-        # 3. 计算扫描线之间的距离，保证覆盖整个区域
-        #    使用视野半径和视野角度来计算有效覆盖宽度
-        import math
-        effective_width = 2 * self.view_radius * math.sin(self.view_angle / 2)
-        scan_line_spacing = effective_width * 0.8  # 稍微重叠，确保覆盖
-
-        # 4. 生成扫描线
-        scan_lines = []
-        if scan_direction == "horizontal":
-            y = min_y
-        while y <= max_y:
-            scan_lines.append(y)
-            y += scan_line_spacing
-        else:  # vertical
-            x = min_x
-            while x <= max_x:
-                scan_lines.append(x)
-                x += scan_line_spacing
-
-        # 5. 生成路径点
-        path_points = []
-        if scan_direction == "horizontal":
-            for i, y in enumerate(scan_lines):
-                if i % 2 == 0:  # 偶数行，从左到右
-                    path_points.append([min_x, y])
-                    path_points.append([max_x, y])
-                else:  # 奇数行，从右到左
-                    path_points.append([max_x, y])
-                    path_points.append([min_x, y])
-        else:  # vertical
-            for i, x in enumerate(scan_lines):
-                if i % 2 == 0:  # 偶数列，从下到上
-                    path_points.append([x, min_y])
-                    path_points.append([x, max_y])
-                else:  # 奇数列，从上到下
-                    path_points.append([x, max_y])
-                    path_points.append([x, min_y])
-        return path_points
 
     def _initialize_third_person_camera(self):
         """初始化第三人称相机并注册到ViewportManager"""
@@ -467,7 +329,7 @@ class RobotBase:
                 self.viewport_manager.map_camera(self.viewport_name, self.camera_prim_path)
                 print(f"Robot {self.cfg_body.id} viewport registered to ViewportManager")
             else:
-                print(f"Failed to register Robot {self.cfg_body.id} viewport to ViewportManager")
+                raise RuntimeError(f"Failed to register viewport for robot {self.cfg_body.id}")
 
         # 5. 将相对位置转换为numpy数组以便后续计算
         self.relative_camera_pos = np.array(self.cfg_camera_third_person.relative_position)
@@ -504,7 +366,6 @@ class RobotBase:
             'robot_id': self.cfg_body.id if self.cfg_body else None,
             'enabled': self.cfg_camera_third_person.enabled if self.cfg_camera_third_person else False
         }
-
 
 if __name__ == "__main__":
     pass

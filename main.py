@@ -535,20 +535,20 @@ def run_simulation(
     semantic_camera.initialize()
 
     # Wait for camera and rendering pipeline to fully initialize
-    for _ in range(60):
+    for _ in range(10):
         env.step(action=None)
 
     # Enable bounding box detection after initialization period
     semantic_camera.add_bounding_box_2d_loose_to_frame()
 
     # Switch viewport to semantic camera
-    # scene_manager.change_viewport(prim_path=semantic_camera_prim_path)
-    viewport_manager.change_viewport(camera_prim_path = semantic_camera_prim_path, viewport_name=None)
+    from omni.kit.viewport.utility import get_viewport_from_window_name
+    # isaacsim default viewport
+    viewport_manager.register_viewport(name='Viewport', viewport_obj=get_viewport_from_window_name('Viewport'))
+    viewport_manager.change_viewport(camera_prim_path = semantic_camera_prim_path, viewport_name='Viewport')
 
     # Build grid map for planning
     grid_map.generate_grid_map('2d')
-
-    print("--- Initializing experiment plan and semantic map ---")
 
     count = 0
     # Main simulation loop
