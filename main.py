@@ -39,6 +39,8 @@ from robot.robot_h1 import RobotH1, RobotCfgH1
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
+from ui.viewport_manager_enhanced import ViewportManager
+
 
 # ROS 2 imports (optional, only if ROS is available)
 try:
@@ -450,8 +452,9 @@ def main():
         map_semantic = MapSemantic()
         _sem_map = map_semantic  # Set global reference for ROS
 
+        viewport_manager = ViewportManager()
         swarm_manager = SwarmManager(map_grid)
-        scene_manager = SceneManager()
+        scene_manager = SceneManager(viewport_manager)
 
         # Load scene
         scene_manager.load_scene(usd_path=WORLD_USD_PATH)

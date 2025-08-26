@@ -1,5 +1,4 @@
-from typing import List, Optional, Tuple
-from pydantic import ValidationError  # 用于错误处理
+from typing import List, Tuple
 
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
@@ -20,6 +19,7 @@ from isaacsim.core.utils.rotations import quat_to_rot_matrix
 import isaacsim.core.utils.prims as prims_utils
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.viewports import create_viewport_for_camera, set_camera_view, set_intrinsics_matrix
+from ui.viewport_manager_enhanced import viewport_manager
 
 
 class RobotBase:
@@ -112,18 +112,24 @@ class RobotBase:
         # --- 新增：存储相机配置并初始化相机属性 ---
         self.cfg_camera_third_person = cfg_camera_third_person
         self.camera_prim_path = None
+        self.viewport_name = None  # 存储viewport名称
         self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
         self.transform_camera_pos = np.array([0, 0, 0])
 
     def cleanup(self):
+        # 清理ViewportManager中的注册信息
+        if self.viewport_name:
+            viewport_manager.unregister_viewport(self.viewport_name)
+            print(f"Robot {self.cfg_body.id} viewport unregistered from ViewportManager")
+        
         for controller in self.controllers.values():
             controller.cleanup()
         for sensor in self.cameras.values():
             sensor.cleanup()
         for rigid_body in self.get_rigid_bodies():
             self._scene.remove_object(rigid_body.name_prefix)
-            log.debug(f'rigid body {rigid_body} removed')
-        log.debug(f'robot {self.name} clean up')
+            # log.debug(f'rigid body {rigid_body} removed')  # Commented out as log is not imported
+        # log.debug(f'robot {self.name} clean up')  # Commented out as log is not imported
 
     def forward(self, velocity=None):
         raise NotImplementedError()
@@ -176,46 +182,9 @@ class RobotBase:
         if self.cfg_camera is not None:
             self.camera.initialize()
 
-        # 第三视角相机初始化
-        # --- 新增：在初始化时创建相机和视口 ---
+        # 第三视角相机初始化 - 使用ViewportManager
         if self.cfg_camera_third_person and self.cfg_camera_third_person.enabled:
-            print(f"为机器人 {self.cfg_body.id} 创建第三人称相机...")
-
-            # 1. 为相机创建唯一的prim路径和视口名称
-            self.camera_prim_path = f"/World/Robot_{self.cfg_body.id}_Camera"
-            viewport_name = f"Viewport_Robot_{self.cfg_body.id}"
-
-            # 如果prim已存在，先删除（可选，用于热重载）
-            if prims_utils.is_prim_path_valid(self.camera_prim_path):
-                prims_utils.delete_prim(self.camera_prim_path)
-
-            # 2. 创建相机Prim
-            # prims_utils.create_prim(
-            #     prim_path=self.camera_prim_path,
-            #     prim_type="Camera",
-            #     # 初始位置不那么重要，因为每一步都会更新
-            #     position=np.array([0, 0, 10.0]),
-            # )
-            from isaacsim.sensors.camera import Camera
-            camera = Camera(
-                prim_path=self.camera_prim_path
-            )
-            camera.set_focal_length(2)
-
-            # 3. 创建视口
-            create_viewport_for_camera(
-                viewport_name=viewport_name,
-                camera_prim_path=self.camera_prim_path,
-                width=self.cfg_camera_third_person.viewport_size[0],
-                height=self.cfg_camera_third_person.viewport_size[1],
-                position_x=self.cfg_camera_third_person.viewport_position[0],
-                position_y=self.cfg_camera_third_person.viewport_position[1],
-            )
-            # set_intrinsics_matrix(viewport_api = viewport_name, focal_length = 15)
-
-            # 4. 将相对位置转换为numpy数组以便后续计算
-            self.relative_camera_pos = np.array(self.cfg_camera_third_person.relative_position)
-            self.transform_camera_pos = np.array(self.cfg_camera_third_person.transform_position)
+            self._initialize_third_person_camera()
 
     def move_to(self, target_position: np.ndarray, target_orientation: np.ndarray) -> bool:
         """
@@ -447,6 +416,46 @@ class RobotBase:
                     path_points.append([x, min_y])
         return path_points
 
+    def _initialize_third_person_camera(self):
+        """初始化第三人称相机并注册到ViewportManager"""
+        print(f"为机器人 {self.cfg_body.id} 创建第三人称相机...")
+
+        # 1. 为相机创建唯一的prim路径和视口名称
+        self.camera_prim_path = f"/World/Robot_{self.cfg_body.id}_Camera"
+        self.viewport_name = f"Viewport_Robot_{self.cfg_body.id}"
+
+        # 如果prim已存在，先删除（可选，用于热重载）
+        if prims_utils.is_prim_path_valid(self.camera_prim_path):
+            prims_utils.delete_prim(self.camera_prim_path)
+
+        # 2. 创建相机Prim
+        from isaacsim.sensors.camera import Camera
+        camera = Camera(prim_path=self.camera_prim_path)
+        camera.set_focal_length(2)
+
+        # 3. 创建视口
+        viewport_obj = create_viewport_for_camera(
+            viewport_name=self.viewport_name,
+            camera_prim_path=self.camera_prim_path,
+            width=self.cfg_camera_third_person.viewport_size[0],
+            height=self.cfg_camera_third_person.viewport_size[1],
+            position_x=self.cfg_camera_third_person.viewport_position[0],
+            position_y=self.cfg_camera_third_person.viewport_position[1],
+        )
+
+        # 4. 注册viewport到ViewportManager
+        if viewport_obj:
+            success = viewport_manager.register_viewport(self.viewport_name, viewport_obj)
+            if success:
+                viewport_manager.map_camera(self.viewport_name, self.camera_prim_path)
+                print(f"Robot {self.cfg_body.id} viewport registered to ViewportManager")
+            else:
+                print(f"Failed to register Robot {self.cfg_body.id} viewport to ViewportManager")
+
+        # 5. 将相对位置转换为numpy数组以便后续计算
+        self.relative_camera_pos = np.array(self.cfg_camera_third_person.relative_position)
+        self.transform_camera_pos = np.array(self.cfg_camera_third_person.transform_position)
+
     # --- 新增：独立的相机更新方法，保持代码整洁 ---
     def _update_camera_view(self):
         """更新第三人称相机的位置和朝向"""
@@ -464,6 +473,20 @@ class RobotBase:
                 target=camera_target_position,
                 camera_prim_path=self.camera_prim_path,
             )
+
+    def get_viewport_info(self):
+        """
+        获取robot的viewport信息，供ViewportManager批量操作使用
+        
+        Returns:
+            dict: 包含viewport_name, camera_path等信息的字典
+        """
+        return {
+            'viewport_name': self.viewport_name,
+            'camera_path': self.camera_prim_path,
+            'robot_id': self.cfg_body.id if self.cfg_body else None,
+            'enabled': self.cfg_camera_third_person.enabled if self.cfg_camera_third_person else False
+        }
 
 
 if __name__ == "__main__":
