@@ -514,7 +514,7 @@ async def main():
         # Create and initialize semantic camera
         result = scene_manager.add_semantic_camera(
             prim_path='/World/semantic_camera',
-            position=[0, 4, 2],
+            position=[1, 4, 2],
             quat=scene_manager.euler_to_quaternion(roll=90)
         )
         semantic_camera = result.get('result').get('camera_instance')
@@ -579,7 +579,8 @@ async def main():
 if __name__ == "__main__":
     # 将 main_task 协程作为 Isaac Sim 循环中的一个任务调度
     # 这会确保 main_task 在 Isaac Sim 的事件循环中运行，而不是创建新的
-    asyncio.ensure_future(main())
+    # asyncio.ensure_future(main())
+    asyncio.run(main())
 
     # 这行代码会阻塞，直到 simulation_app 停止运行
     simulation_app.update()

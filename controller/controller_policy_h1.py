@@ -60,8 +60,6 @@ class H1FlatTerrainPolicy(PolicyController):
         """
         Asynchronously loads the neural network policy.
         """
-        #print(f"Loading policy model for {self.prim_path}...")
-
         # 假设 self.load_policy 是一个 async def 方法
         await self.load_policy(
             ASSET_PATH + "/Isaac/Samples/Policies/H1_Policies/h1_policy.pt",

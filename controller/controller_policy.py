@@ -72,8 +72,7 @@ class PolicyController(BaseController):
             policy_env_path (str): 环境配置文件地址.
         """
         # 读取策略
-        # file_content = omni.client.read_file(policy_file_path)[2]
-        result, _, file_content = await omni.client.read_file_async(policy_file_path) # omni.client.read_file(policy_file_path)[2]
+        result, _, file_content = await omni.client.read_file_async(policy_file_path)
         if result != omni.client.Result.OK:
             carb.log_error(f"Failed to read policy file from {policy_file_path}. Result: {result}")
             return
