@@ -1310,7 +1310,7 @@ class SceneManager:
                 "result": None,
             }
 
-    def load_scene(self, usd_path: str, prim_path_root: str = "/World"):
+    def load_scene(self, usd_path: str, prim_path_root: str = "/World/Scene"):
         """
 
         Create a scene from config.(But just input usd file yet.)

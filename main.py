@@ -24,6 +24,7 @@ parser.add_argument("--ros", type=bool, default=True)
 args = parser.parse_args()
 
 simulation_app = initialize_simulation_app_from_yaml(args.config)
+from isaacsim.core.api import World
 
 # Local imports
 from environment.env import Env
@@ -220,26 +221,14 @@ def spin_ros_in_background(nodes: tuple, stop_evt: threading.Event) -> None:
         if ROS_AVAILABLE:
             rclpy.shutdown()
 
-
+@inject
 async def setup_simulation(
-    simulation_app,
-    cfg: Dict[str, Any],
-    swarm_manager: SwarmManager,
-    scene_manager: SceneManager,
-    grid_map: GridMap
-) -> Env:
+    swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
+    env: Env = Provide[AppContainer.env],
+    world: World = Provide[AppContainer.world],
+) -> None:
     """
     Setup simulation environment with injected dependencies.
-
-    Args:
-        simulation_app: Isaac Sim simulation application instance
-        cfg: Configuration dictionary loaded from YAML
-        swarm_manager: Injected robot swarm manager instance
-        scene_manager: Injected scene manager instance
-        grid_map: Injected grid map instance
-
-    Returns:
-        Env: Initialized environment instance
     """
     # Register robot classes to swarm manager
     swarm_manager.register_robot_class(
@@ -258,28 +247,14 @@ async def setup_simulation(
         robot_class_cfg=RobotCfgCf2x
     )
 
-    # Create environment first
-    env = await Env.create(
-        simulation_app=simulation_app,
-        physics_dt=cfg['world']['physics_dt'],
-        swarm_manager=swarm_manager,
-        scene_manager=scene_manager,
-        grid_map=grid_map,
-    )
+    await env.initialize_async()
 
     # Initialize swarm manager after environment is ready
-    try:
-        await swarm_manager.initialize_async(
-            scene=env.world.scene,
-            robot_swarm_cfg_path=f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml",
-            robot_active_flag_path=f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml"
-        )
-    except Exception as e:
-        logger.error(f"Error during swarm manager initialization: {e}")
-        raise
-
-    return env
-
+    await swarm_manager.initialize_async(
+        scene=world.scene,
+        robot_swarm_cfg_path=f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml",
+        robot_active_flag_path=f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml"
+    )
 
 def create_car_objects(scene_manager: SceneManager) -> list:
     """
@@ -476,105 +451,8 @@ def process_ros_skills(
                         logger.error(f"[Scheduler] start skill error: {e}")
 
 
-def run_simulation(
-    cfg: Dict[str, Any],
-    container: AppContainer
-) -> 'Env':
-    """Main simulation logic with dependency injection container
-    
-    Args:
-        cfg: Configuration dictionary loaded from YAML
-        container: Dependency injection container with all services
-        
-    Returns:
-        Env: Initialized environment instance
-    """
-    
-    # Get services from container
-    swarm_manager = container.swarm_manager()
-    scene_manager = container.scene_manager()
-    grid_map = container.grid_map()
-    semantic_map = container.semantic_map()
-    viewport_manager = container.viewport_manager()
+async def main():
 
-    # Load scene
-    scene_manager.load_scene(usd_path=WORLD_USD_PATH)
-
-    # Create car objects using scene manager
-    created_prim_paths = create_car_objects(scene_manager)
-    print("All prims with 'car' label:", created_prim_paths)
-    print(scene_manager.count_semantics_in_scene().get('result'))
-
-    # Setup simulation with proper error handling
-    try:
-        loop = asyncio.get_event_loop()
-        env = loop.run_until_complete(setup_simulation(simulation_app, cfg, swarm_manager, scene_manager, grid_map))
-    except Exception as e:
-        logger.error(f"Failed to setup simulation: {e}")
-        raise
-
-    # Reset environment to ensure all objects are properly initialized
-    env.reset()
-
-    # Add physics callbacks for active robots
-    for robot_class in swarm_manager.robot_class:
-        for i, robot in enumerate(swarm_manager.robot_active[robot_class]):
-            callback_name = f"physics_step_{robot_class}_{i}"
-            env.world.add_physics_callback(callback_name, callback_fn=robot.on_physics_step)
-
-    # Create and initialize semantic camera
-    result = scene_manager.add_semantic_camera(
-        prim_path='/World/semantic_camera',
-        position=[0, 4, 2],
-        quat=scene_manager.euler_to_quaternion(roll=90)
-    )
-    semantic_camera = result.get('result').get('camera_instance')
-    semantic_camera_prim_path = result.get('result').get('prim_path')
-
-    # Initialize camera
-    semantic_camera.initialize()
-
-    # Wait for camera and rendering pipeline to fully initialize
-    for _ in range(10):
-        env.step(action=None)
-
-    # Enable bounding box detection after initialization period
-    semantic_camera.add_bounding_box_2d_loose_to_frame()
-
-    # Switch viewport to semantic camera
-    from omni.kit.viewport.utility import get_viewport_from_window_name
-    # isaacsim default viewport
-    viewport_manager.register_viewport(name='Viewport', viewport_obj=get_viewport_from_window_name('Viewport'))
-    viewport_manager.change_viewport(camera_prim_path = semantic_camera_prim_path, viewport_name='Viewport')
-
-    # Build grid map for planning
-    grid_map.generate_grid_map('2d')
-
-    count = 0
-    # Main simulation loop
-    while simulation_app.is_running():
-        # World step
-        env.step(action=None)
-
-        if count % 120 == 0 and count > 0:
-            process_semantic_detection(semantic_camera, semantic_map)
-
-        # Process ROS skills if ROS is enabled
-        if args.ros:
-            process_ros_skills(env, swarm_manager)
-
-        count += 1
-
-    return env
-
-
-def main() -> None:
-    """Main function - handles container setup and bootstrapping
-    
-    This function initializes the dependency injection container, sets up ROS
-    integration if requested, and runs the main simulation loop.
-    """
-    
     # Initialize ROS if requested and available
     ros_nodes = (None, None)
     stop_evt = None
@@ -599,21 +477,85 @@ def main() -> None:
     try:
         # Setup dependency injection container
         from containers import get_container
+
         container = get_container()
-        
+
         # Wire the container to this module for @inject decorators in skill functions
         container.wire(modules=[__name__])
-        
-        # Load configuration for simulation
-        with open('./files/env_cfg.yaml', 'r') as f:
-            cfg = yaml.safe_load(f)
 
-        # Run simulation with dependency injection container
-        env = run_simulation(cfg, container)
+        # Get services from container
+        swarm_manager = container.swarm_manager()
+        scene_manager = container.scene_manager()
+        grid_map = container.grid_map()
+        semantic_map = container.semantic_map()
+        viewport_manager = container.viewport_manager()
+        world = container.world()
+        env = container.env()
+        env.simulation_app = simulation_app
+        await setup_simulation()
+
+        # Load scene
+        scene_manager.load_scene(usd_path=WORLD_USD_PATH)
+
+        # Create car objects using scene manager
+        created_prim_paths = create_car_objects(scene_manager)
+        print("All prims with 'car' label:", created_prim_paths)
+        print(scene_manager.count_semantics_in_scene().get('result'))
+
+        # Reset environment to ensure all objects are properly initialized
+        env.reset()
+
+        # Add physics callbacks for active robots
+        for robot_class in swarm_manager.robot_class:
+            for i, robot in enumerate(swarm_manager.robot_active[robot_class]):
+                callback_name = f"physics_step_{robot_class}_{i}"
+                env.world.add_physics_callback(callback_name, callback_fn=robot.on_physics_step)
+
+        # Create and initialize semantic camera
+        result = scene_manager.add_semantic_camera(
+            prim_path='/World/semantic_camera',
+            position=[0, 4, 2],
+            quat=scene_manager.euler_to_quaternion(roll=90)
+        )
+        semantic_camera = result.get('result').get('camera_instance')
+        semantic_camera_prim_path = result.get('result').get('prim_path')
+
+        # Initialize camera
+        semantic_camera.initialize()
+
+        # Wait for camera and rendering pipeline to fully initialize
+        for _ in range(10):
+            env.step(action=None)
+
+        # Enable bounding box detection after initialization period
+        semantic_camera.add_bounding_box_2d_loose_to_frame()
+
+        # Switch viewport to semantic camera
+        from omni.kit.viewport.utility import get_viewport_from_window_name
+
+        # isaacsim default viewport
+        viewport_manager.register_viewport(name='Viewport', viewport_obj=get_viewport_from_window_name('Viewport'))
+        viewport_manager.change_viewport(camera_prim_path=semantic_camera_prim_path, viewport_name='Viewport')
+
+        # Build grid map for planning
+        grid_map.generate_grid_map('2d')
+
+        count = 0
+        # Main simulation loop
+        while simulation_app.is_running():
+            # World step
+            env.step(action=None)
+
+            if count % 120 == 0 and count > 0:
+                process_semantic_detection(semantic_camera, semantic_map)
+
+            # Process ROS skills if ROS is enabled
+            if args.ros:
+                process_ros_skills(env, swarm_manager)
+            count += 1
 
     except Exception as e:
-        logger.error(f"Error in main execution: {e}")
-        raise
+        raise Exception(f"Simulation failed: {e}")
     finally:
         # Clean shutdown
         if stop_evt:
@@ -624,6 +566,7 @@ def main() -> None:
         # Unwire the container
         try:
             from containers import get_container
+
             container = get_container()
             container.unwire()
         except Exception:
@@ -633,7 +576,10 @@ def main() -> None:
         if simulation_app:
             simulation_app.__exit__(None, None, None)
 
-
 if __name__ == "__main__":
-    main()
+    # 将 main_task 协程作为 Isaac Sim 循环中的一个任务调度
+    # 这会确保 main_task 在 Isaac Sim 的事件循环中运行，而不是创建新的
+    asyncio.ensure_future(main())
 
+    # 这行代码会阻塞，直到 simulation_app 停止运行
+    simulation_app.update()

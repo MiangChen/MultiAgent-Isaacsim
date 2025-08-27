@@ -67,7 +67,6 @@ class H1FlatTerrainPolicy(PolicyController):
             ASSET_PATH + "/Isaac/Samples/Policies/H1_Policies/h1_policy.pt",
             ASSET_PATH + "/Isaac/Samples/Policies/H1_Policies/h1_env.yaml",
         )
-#        print(f"Policy model for {self.prim_path} loaded successfully.")
 
     # 3. 创建异步工厂 @classmethod 作为新的实例化入口
     @classmethod

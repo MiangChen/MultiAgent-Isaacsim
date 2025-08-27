@@ -1,27 +1,20 @@
 import gymnasium as gym
 
+from isaacsim.core.api import World
+
 from map.map_grid_map import GridMap
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
 
 
 class Env(gym.Env):
-    """
-    一个使用异步工厂模式进行初始化的Gym环境。
-    请不要直接调用 Env(...)，而是使用 await Env.create(...) 来创建实例。
-    """
-
     def __init__(self,
                  simulation_app,
-                 physics_dt: float,
+                 world: World,
                  scene_manager: SceneManager,
                  swarm_manager: SwarmManager = None,
                  grid_map: GridMap = None,
                  ) -> None:
-
-        print("Executing synchronous __init__...")
-
-        from isaacsim.core.api import World
         # --- 存储参数和基本属性赋值 ---
         self._render = None
         self._robot_name = None
@@ -29,40 +22,16 @@ class Env(gym.Env):
         self._runner = simulation_app
 
         # --- 创建核心的、同步的对象 ---
-
-        self.world = World(physics_dt=physics_dt)
-
+        self.world = world
         self._swarm_manager = swarm_manager
         self._scene_manager = scene_manager
         self._grid_map = grid_map
-        print("Synchronous __init__ finished.")
 
-    async def _async_init(self) -> None:
-        """
-        Simplified async initialization focusing only on environment concerns.
-        """
-        print("Starting asynchronous initialization...")
-
-    @classmethod
-    async def create(cls,
-                     simulation_app,
-                     physics_dt: float,
-                     scene_manager: SceneManager,
-                     swarm_manager: SwarmManager = None,
-                     grid_map: GridMap = None,
-                     ) -> "Env":
-        """
-        异步地创建并完全初始化一个Env实例。
-        """
-        instance = cls(
-            simulation_app=simulation_app,
-            physics_dt=physics_dt,
-            swarm_manager=swarm_manager,
-            scene_manager=scene_manager,
-            grid_map=grid_map,
-        )
-        await instance._async_init()
-        return instance
+    async def initialize_async(self) -> None:
+        """执行所有必要的异步初始化步骤。"""
+        print("Starting environment's asynchronous initialization...")
+        # ... 任何需要 await 的操作 ...
+        print("Environment's asynchronous initialization finished.")
 
     def reset(self) -> None:
         self.world.reset()

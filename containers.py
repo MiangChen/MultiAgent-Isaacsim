@@ -1,21 +1,14 @@
-"""
-Dependency Injection Container for Isaac Sim Application
-
-This module provides a clean dependency injection container using the dependency-injector
-library's DeclarativeContainer pattern. It manages all manager instances as singletons
-with automatic dependency resolution.
-"""
-
-import logging
-from typing import Dict, Any
-
+from collections.abc import Mapping
 from dependency_injector import containers, providers
+import logging
+from typing import Dict, Any, List
+
 import yaml
 
-# Setup logging
-logger = logging.getLogger(__name__)
+from isaacsim.core.api import World
 
 # Import manager classes
+from environment.env import Env
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
 from ui.viewport_manager import ViewportManager
@@ -36,6 +29,10 @@ class AppContainer(containers.DeclarativeContainer):
     config = providers.Configuration()
     
     # Core singletons (no dependencies)
+    world = providers.Singleton(
+        World,
+        physics_dt=config.simulation.physics_dt
+    )
     viewport_manager = providers.Singleton(ViewportManager)
     semantic_map = providers.Singleton(MapSemantic)
     
@@ -62,41 +59,40 @@ class AppContainer(containers.DeclarativeContainer):
         map_grid=grid_map
     )
 
+    env = providers.Factory(
+        Env,
+        simulation_app=providers.Object(None), # simulation_app 比较特殊，可能需要在运行时提供
+        world=world,
+        scene_manager=scene_manager,
+        swarm_manager=swarm_manager,
+        grid_map=grid_map,
+    )
 
-def create_container(config_path: str = './files/env_cfg.yaml', wire_modules: bool = True) -> AppContainer:
+def merge_dicts(d1, d2):
+    for k, v in d2.items():
+        if k in d1 and isinstance(d1[k], Mapping) and isinstance(v, Mapping):
+            d1[k] = merge_dicts(d1[k], v)
+        else:
+            d1[k] = v
+    return d1
+
+def create_container(config_path: List[str] = ['./files/env_cfg.yaml', './files/env_cfg.yaml'], wire_modules: bool = True) -> AppContainer:
     """
     Create and configure the dependency injection container
     
     This function creates the container, loads configuration from YAML,
     and optionally wires modules for dependency injection.
-    
-    Args:
-        config_path: Path to the YAML configuration file
-        wire_modules: Whether to wire modules for @inject decorators (default: True)
-    
-    Returns:
-        AppContainer: Configured dependency injection container
-        
-    Raises:
-        FileNotFoundError: If configuration file is not found
-        yaml.YAMLError: If configuration file is invalid
-        Exception: For other container setup errors
     """
     container = AppContainer()
-    
-    # Load and set configuration
-    try:
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
-        
-        # Validate configuration structure and content
-        validate_configuration(config)
-        
-        container.config.from_dict(config)
-        
-    except FileNotFoundError as e:
-        raise FileNotFoundError(f"Configuration file not found: {e}")
-    
+    final_config = {}
+    for path in config_path:
+        with open(path, 'r') as f:
+            current_config = yaml.safe_load(f)
+            final_config = merge_dicts(final_config, current_config)
+
+    validate_configuration(final_config)
+    container.config.from_dict(final_config)
+
     # Wire modules for dependency injection (optional for performance)
     # This enables @inject decorators to work in the specified modules
     if wire_modules:
@@ -121,21 +117,12 @@ def create_container(config_path: str = './files/env_cfg.yaml', wire_modules: bo
     return container
 
 
-def safe_container_setup(config_path: str = './files/env_cfg.yaml', wire_modules: bool = True) -> AppContainer:
+def safe_container_setup(config_path: List[str] = ['./files/env_cfg.yaml', './files/env_cfg.yaml'], wire_modules: bool = True) -> AppContainer:
     """
     Safely setup container with comprehensive error handling
     
     This function provides a safe wrapper around container creation with
     detailed error messages and graceful failure handling.
-    
-    Args:
-        config_path: Path to the YAML configuration file
-        
-    Returns:
-        AppContainer: Successfully configured container
-        
-    Raises:
-        RuntimeError: If container setup fails with detailed error message
     """
     try:
         container = create_container(config_path, wire_modules)
@@ -150,6 +137,7 @@ def safe_container_setup(config_path: str = './files/env_cfg.yaml', wire_modules
         container.scene_manager.provider
         container.swarm_manager.provider
         container.semantic_map.provider
+        container.env.provider
 
         return container
         
@@ -160,12 +148,6 @@ def safe_container_setup(config_path: str = './files/env_cfg.yaml', wire_modules
 def validate_configuration(config: Dict[str, Any]) -> None:
     """
     Validate configuration dictionary for required fields
-    
-    Args:
-        config: Configuration dictionary to validate
-        
-    Raises:
-        ValueError: If required configuration is missing or invalid
     """
     # Check required top-level sections
     required_sections = ['map']
@@ -205,12 +187,6 @@ _container: AppContainer = None
 def get_container() -> AppContainer:
     """
     Get the global container instance with safe initialization
-    
-    Returns:
-        AppContainer: The global container instance
-        
-    Raises:
-        RuntimeError: If container initialization fails
     """
     global _container
     if _container is None:

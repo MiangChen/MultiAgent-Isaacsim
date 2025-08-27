@@ -22,8 +22,7 @@ class SwarmManager:
     第四个,需要能中途加入机器人和删除机器人(但是前期试过, 好像在加入机器人后, 必须要reset world, 那么世界也就完全重置了, 所以我们可以定一个机器人仓库, 比如已经有这么多机器人了, 我们现在要一些新的机器人, 那么仓库里的机器人会加入行动, 非常合理)
     """
 
-    def __init__(self, map_grid: GridMap = None):
-        # __init__ 方法完全不需要改变
+    def __init__(self, map_grid: GridMap = None, ):
         self.scene: Scene = None
         self.robot_warehouse: Dict[str, List[RobotBase]] = {}
         self.flag_active: Dict[str, List[int]] = {}
@@ -55,16 +54,6 @@ class SwarmManager:
                               robot_active_flag_path: str = None) -> None:
         """
         Complete async initialization of the swarm manager.
-        
-        Args:
-            scene: The Isaac Sim scene object from env.world.scene
-            robot_swarm_cfg_path: Path to robot swarm configuration file
-            robot_active_flag_path: Path to robot active flag configuration file
-            
-        Raises:
-            ValueError: If scene is None
-            FileNotFoundError: If configuration files are not found
-            Exception: For other initialization errors
         """
         try:
             # Validate scene parameter
@@ -76,21 +65,11 @@ class SwarmManager:
             
             # Load robot swarm configuration if path provided
             if robot_swarm_cfg_path is not None:
-                try:
-                    await self.load_robot_swarm_cfg(robot_swarm_cfg_path)
-                except FileNotFoundError:
-                    raise FileNotFoundError(f"Robot swarm configuration file not found: {robot_swarm_cfg_path}")
-                except Exception as e:
-                    raise Exception(f"Failed to load robot swarm configuration: {str(e)}")
+                await self.load_robot_swarm_cfg(robot_swarm_cfg_path)
             
             # Activate robots if flag path provided
             if robot_active_flag_path is not None:
-                try:
-                    self.activate_robot(robot_active_flag_path)
-                except FileNotFoundError:
-                    raise FileNotFoundError(f"Robot active flag file not found: {robot_active_flag_path}")
-                except Exception as e:
-                    raise Exception(f"Failed to activate robots: {str(e)}")
+                self.activate_robot(robot_active_flag_path)
                     
         except Exception as e:
             # Re-raise with context for better error handling
