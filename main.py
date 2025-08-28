@@ -222,7 +222,7 @@ def spin_ros_in_background(nodes: tuple, stop_evt: threading.Event) -> None:
             rclpy.shutdown()
 
 @inject
-async def setup_simulation(
+def setup_simulation(
     swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
     env: Env = Provide[AppContainer.env],
     world: World = Provide[AppContainer.world],
@@ -247,14 +247,40 @@ async def setup_simulation(
         robot_class_cfg=RobotCfgCf2x
     )
 
-    await env.initialize_async()
+    # Initialize environment and swarm manager
+    # Since Isaac Sim runs its own event loop, we need to schedule async tasks properly
+    
+    # Create initialization tasks
+    async def init_env_and_swarm():
+        await env.initialize_async()
+        await swarm_manager.initialize_async(
+            scene=world.scene,
+            robot_swarm_cfg_path=f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml",
+            robot_active_flag_path=f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml"
+        )
+    
+    # Schedule the initialization in Isaac Sim's event loop
 
-    # Initialize swarm manager after environment is ready
-    await swarm_manager.initialize_async(
-        scene=world.scene,
-        robot_swarm_cfg_path=f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml",
-        robot_active_flag_path=f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml"
-    )
+    loop = asyncio.get_event_loop()
+    # Create a task but don't wait for it to complete immediately
+    init_task = loop.create_task(init_env_and_swarm())
+
+    # Wait for initialization to complete before proceeding
+    # We'll do this by running a few simulation steps to let the async tasks execute
+    print("Waiting for async initialization to complete...")
+    for _ in range(10):  # Give some time for async initialization
+        simulation_app.update()
+        if init_task.done():
+            break
+
+    # Check if initialization completed successfully
+    if init_task.done():
+        if init_task.exception():
+            raise init_task.exception()
+        print("Async initialization completed successfully")
+    else:
+        print("Warning: Async initialization may still be running")
+
 
 def create_car_objects(scene_manager: SceneManager) -> list:
     """
@@ -451,7 +477,7 @@ def process_ros_skills(
                         logger.error(f"[Scheduler] start skill error: {e}")
 
 
-async def main():
+def main():
 
     # Initialize ROS if requested and available
     ros_nodes = (None, None)
@@ -492,7 +518,7 @@ async def main():
         world = container.world()
         env = container.env()
         env.simulation_app = simulation_app
-        await setup_simulation()
+        setup_simulation()
 
         # Load scene
         scene_manager.load_scene(usd_path=WORLD_USD_PATH)
@@ -512,15 +538,10 @@ async def main():
                 env.world.add_physics_callback(callback_name, callback_fn=robot.on_physics_step)
 
         # Create and initialize semantic camera
-        result = scene_manager.add_semantic_camera(
-            prim_path='/World/semantic_camera',
-            position=[1, 4, 2],
-            quat=scene_manager.euler_to_quaternion(roll=90)
-        )
+        result = scene_manager.add_camera(position=[1, 4, 2], quat=scene_manager.euler_to_quaternion(roll=90),
+                                          prim_path='/World/semantic_camera')
         semantic_camera = result.get('result').get('camera_instance')
         semantic_camera_prim_path = result.get('result').get('prim_path')
-
-        # Initialize camera
         semantic_camera.initialize()
 
         # Wait for camera and rendering pipeline to fully initialize
@@ -577,10 +598,5 @@ async def main():
             simulation_app.__exit__(None, None, None)
 
 if __name__ == "__main__":
-    # 将 main_task 协程作为 Isaac Sim 循环中的一个任务调度
-    # 这会确保 main_task 在 Isaac Sim 的事件循环中运行，而不是创建新的
-    # asyncio.ensure_future(main())
-    asyncio.run(main())
-
-    # 这行代码会阻塞，直到 simulation_app 停止运行
-    simulation_app.update()
+    # 直接调用同步 main 函数
+    main()

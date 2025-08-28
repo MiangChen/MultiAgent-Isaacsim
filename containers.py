@@ -34,8 +34,9 @@ class AppContainer(containers.DeclarativeContainer):
         physics_dt=config.simulation.physics_dt
     )
     viewport_manager = providers.Singleton(ViewportManager)
+    scene_manager = providers.Singleton(SceneManager)
     semantic_map = providers.Singleton(MapSemantic)
-    
+
     # GridMap with configuration injection
     grid_map = providers.Singleton(
         GridMap,
@@ -49,10 +50,6 @@ class AppContainer(containers.DeclarativeContainer):
     )
     
     # Managers with dependency injection
-    scene_manager = providers.Singleton(
-        SceneManager,
-        viewport_manager=viewport_manager
-    )
     
     swarm_manager = providers.Singleton(
         SwarmManager,

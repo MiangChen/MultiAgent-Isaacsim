@@ -287,11 +287,8 @@ if __name__ == "__main__":
         env.reset()
         
         # Create and initialize semantic camera after env.reset()
-        result = scene_manager.add_semantic_camera(
-            prim_path='/World/semantic_camera', 
-            position=[0, 4, 2], 
-            quat=scene_manager.euler_to_quaternion(roll=90)
-        )
+        result = scene_manager.add_camera(position=[0, 4, 2], quat=scene_manager.euler_to_quaternion(roll=90),
+                                          prim_path='/World/semantic_camera')
         semantic_camera = result.get('result').get('camera_instance')
         semantic_camera_prim_path = result.get('result').get('prim_path')
         

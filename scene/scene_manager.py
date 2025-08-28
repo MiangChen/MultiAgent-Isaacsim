@@ -12,8 +12,6 @@ from pxr import Gf, Sdf, UsdGeom, UsdPhysics
 
 # Local imports
 from files.variables import ASSET_PATH
-from ui.viewport_manager import ViewportManager
-
 
 class SceneManager:
     """
@@ -22,13 +20,11 @@ class SceneManager:
     and querying, but knows nothing about networking.
     """
 
-    def __init__(self, viewport_manager: ViewportManager = None):
+    def __init__(self):
         self.prim_info = []
         self._stage = None
         # 设置场景保存路径，默认为项目根目录下的scenes文件夹
         self.scene_repository_path = "./scenes"
-        # 添加ViewportManager实例
-        self._viewport_manager = viewport_manager
         # A dictionary mapping command names to their corresponding methods
         # todo: add a handler for extend simulation method if necessary
         self.handlers = {
@@ -41,7 +37,7 @@ class SceneManager:
             "add_semantic": self.add_semantic,
             "count_semantics_in_scene": self.count_semantics_in_scene,
             "remove_all_semantics": self.remove_all_semantics,
-            "add_semantic_camera": self.add_semantic_camera,
+            "add_semantic_camera": self.add_camera,
             ## create ##
             "create_camera": self.create_camera,
             "create_object": self.create_object,
@@ -454,7 +450,7 @@ class SceneManager:
 
         return {"status": "success", "message": f"Prim '{prim_path}' focused in viewport"}
 
-    def add_semantic_camera(self,
+    def add_camera(self,
                             position: List[float],
                             quat: List[float],
                             focal_length: float = 2.0,
@@ -482,10 +478,6 @@ class SceneManager:
         """
         try:
             # 1. 使用 Isaac Sim 高层 API 创建或获取相机实例。
-            # 这个构造函数非常强大：
-            # - 如果 prim 不存在，它会自动创建 UsdGeom.Camera prim。
-            # - 它会自动设置位置和朝向。
-            # - 它返回一个可以用于控制相机和读取传感器数据的高层对象。
             from isaacsim.sensors.camera import Camera
             from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 
@@ -495,14 +487,6 @@ class SceneManager:
             # set positon and quat here (important!)
             camera_instance.set_local_pose(translation=position, orientation=quat, camera_axes='usd')
             camera_instance.set_focal_length(focal_length)
-
-            # 2. 从高层实例中获取底层的 Usd.Prim 对象。
-            # 这是连接高层封装和底层 USD API 的桥梁。
-            usd_path = camera_instance.prim
-
-            # 3. (可选但推荐) 进行有效性检查
-            if not usd_path or not usd_path.IsValid():
-                raise RuntimeError(f"成功实例化 Camera 类，但未能获取有效的底层 USD prim。")
 
             return {
                 "status": "success",

@@ -75,12 +75,13 @@ save_dir = os.path.abspath("./saved_scenes")  # Use absolute path
 ```
 
 #### 多行注释
+
 ```python
 # Reset environment to ensure all objects are properly initialized
 env.reset()
 
 # Create and initialize semantic camera after env.reset()
-result = scene_manager.add_semantic_camera(...)
+result = scene_manager.add_camera(..., )
 ```
 
 ### 4. 换行规范
