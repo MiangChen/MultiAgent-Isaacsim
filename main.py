@@ -1,92 +1,80 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-import os, threading, queue, argparse, yaml
+# Standard library imports
+import argparse
+import asyncio
+import logging
+import os
+import threading
+from typing import Dict, Any
 from collections import defaultdict, deque
-import numpy as np
 
-# ===== Isaac =====
-from isaacsim import SimulationApp  # 保留原有导入方式
+# Third-party imports
+from dependency_injector.wiring import inject, Provide # Dependency injection imports
+import yaml
 
-def initialize_simulation_app_from_yaml(config_path: str) -> SimulationApp:
-    """
-    用 YAML 配置初始化 SimulationApp，并应用 settings、在 headless 下禁用视口。
-    需要环境变量 EXP_PATH 指向 Isaac Sim 的 experience 根目录。
-    """
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f) or {}
+# Isaac Sim related imports
+from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
 
-    # SimulationApp 构造参数
-    sim_app_config = config.get("simulation_app_config", {})
-    is_headless = sim_app_config.get("headless", False)
-    print(f"Initializing Isaac Sim with headless={is_headless}")
-
-    # 拼接 experience 路径
-    experience = config.get("experience", "")
-    exp_path = os.environ.get("EXP_PATH")
-    if not exp_path:
-        raise ValueError("EXP_PATH environment variable is not set. Please set it to your Isaac Sim experience path.")
-    full_experience_path = os.path.join(exp_path, experience) if experience else exp_path
-
-    # 创建 SimulationApp
-    simulation_app = SimulationApp(sim_app_config, experience=full_experience_path)
-
-    # 批量设置 settings
-    if "settings" in config and config["settings"]:
-        for key, value in config["settings"].items():
-            simulation_app.set_setting(key, value)
-            print(f"Set setting: {key} = {value}")
-
-    # headless 下尝试禁用视口更新
-    if is_headless:
-        try:
-            import omni.kit.viewport.utility
-            viewport = omni.kit.viewport.utility.get_active_viewport()
-            if viewport:
-                viewport.updates_enabled = False
-                print("Viewport updates disabled for headless mode.")
-        except Exception as e:
-            print(f"Could not disable viewport: {e}")
-
-    return simulation_app
-
+# Initialize simulation app
 parser = argparse.ArgumentParser(description="Initialize Isaac Sim from a YAML config.")
-parser.add_argument("--config", type=str, default="/home/ubuntu/multiagent-isaacsimROS/src/multiagent_isaacsim/multiagent_isaacsim/files/sim_cfg.yaml", help="Path to the configuration YAML file.")
-parser.add_argument("--enable", type=str, action='append', help="Enable a feature. Can be used multiple times.")
-
+parser.add_argument("--config", type=str, default="/home/ubuntu/multiagent-isaacsimROS/src/multiagent_isaacsim/multiagent_isaacsim/files/sim_cfg.yaml",
+                    help="Path to the configuration physics engine.")
+parser.add_argument("--enable", type=str, action='append',
+                    help="Enable a feature. Can be used multiple times.")
+parser.add_argument("--ros", type=bool, default=True)
 args = parser.parse_args()
-# --enable isaacsim.ros2.bridge --enable omni.kit.graph.editor.core --enable omni.graph.bundle.action --enable omni.kit.graph.delegate.modern --enable isaacsim.asset.gen.omap --enable omni.graph.window.action
-# 从YAML文件初始化
+
 simulation_app = initialize_simulation_app_from_yaml(args.config)
 
+# ROS 2 imports (optional, only if ROS is available)
+try:
+    import rclpy
+    rclpy.init(args=None)
+    from rclpy.executors import MultiThreadedExecutor
+    from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+    from ros.ros_swarm import BaseNode, SceneMonitorNode, SwarmNode, get_swarm_node
+    from plan_msgs.msg import Parameter, SkillInfo, RobotSkill, Plan as PlanMsg, TimestepSkills
 
-import carb
-from files.assets_scripts_linux import PATH_ISAACSIM_ASSETS
+    ROS_AVAILABLE = True
+except ImportError:
+    logger.info("ROS modules not available, running without ROS integration")
+    ROS_AVAILABLE = False
 
+from isaacsim.core.api import World
+import omni.kit.app as kit_app
+
+# Local imports
 from environment.env import Env
-
-# ===== ROS 2 =====
-import rclpy
-
-rclpy.init(args=None)
-from rclpy.executors import MultiThreadedExecutor
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
-
-from ros.ros_swarm import BaseNode, SceneMonitorNode
-from plan_msgs.msg import (  # TODO: 换成你的真实包名
-    Parameter, SkillInfo, RobotSkill, Plan as PlanMsg, TimestepSkills
-)
-
-# ---------- 语义地图 ----------
+from files.variables import WORLD_USD_PATH, PATH_PROJECT
+from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
-_sem_map = MapSemantic()
+from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
+from robot.robot_h1 import RobotH1, RobotCfgH1
+from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
+from robot.swarm_manager import SwarmManager
+from scene.scene_manager import SceneManager
+from containers import AppContainer
 
-# ---------- 每机器人串行队列 ----------
-# key: (robot_class:str, robot_idx:int) -> deque[SkillInfo]
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Global variables for ROS integration
 _skill_queues = defaultdict(deque)
 _skill_lock = threading.Lock()
 
-def _param_dict(params):
+
+def _param_dict(params) -> Dict[str, Any]:
+    """Convert ROS parameter list to dictionary
+
+    Args:
+        params: List of ROS Parameter objects
+
+    Returns:
+        Dict[str, Any]: Dictionary mapping parameter keys to values
+    """
     d = {}
     if params:
         for p in params:
@@ -94,10 +82,17 @@ def _param_dict(params):
     return d
 
 
-def _parse_robot_id(robot_id: str):
+def _parse_robot_id(robot_id: str) -> tuple[str, int]:
+    """Parse robot ID string to extract robot class and index
+
+    Args:
+        robot_id: Robot identifier string (e.g., "jetbot_1", "h1-2")
+
+    Returns:
+        tuple[str, int]: Tuple of (robot_class_name, robot_index)
+    """
     import re
     s = robot_id or ""
-    # 允许 name、name_12、name-12、name12 三种；name 里允许数字和下划线
     m = re.match(r"^([A-Za-z]\w*?)[_-]?(\d+)$", s)
     if not m:
         return "jetbot", 0
@@ -105,15 +100,50 @@ def _parse_robot_id(robot_id: str):
     idx = int(m.group(2))
     return name, idx
 
-# —— 具体技能：在主线程执行（会在各自实现里把 state_skill_complete=False）——
-def _skill_navigate_to(env, rc, rid, params):
-    pos = _sem_map.map_semantic[params["goal"]]
+
+# Skill execution functions with dependency injection
+@inject
+def _skill_navigate_to(
+    env,
+    rc: str,
+    rid: int,
+    params: Dict[str, Any],
+    semantic_map: MapSemantic = Provide[AppContainer.semantic_map]
+) -> None:
+    """Execute navigate-to skill with injected semantic map
+
+    Args:
+        env: Environment instance
+        rc: Robot class name
+        rid: Robot index
+        params: Skill parameters containing 'goal' key
+        semantic_map: Injected semantic map instance
+    """
+    pos = semantic_map.map_semantic[params["goal"]]
     env.robot_swarm.robot_active[rc][rid].navigate_to(pos)
 
-def _skill_pick_up(env, rc, rid, params):
+
+def _skill_pick_up(env, rc: str, rid: int, params: Dict[str, Any]) -> None:
+    """Execute pick-up skill
+
+    Args:
+        env: Environment instance
+        rc: Robot class name
+        rid: Robot index
+        params: Skill parameters (unused for pick-up)
+    """
     env.robot_swarm.robot_active[rc][rid].pick_up()
 
-def _skill_put_down(env, rc, rid, params):
+
+def _skill_put_down(env, rc: str, rid: int, params: Dict[str, Any]) -> None:
+    """Execute put-down skill
+
+    Args:
+        env: Environment instance
+        rc: Robot class name
+        rid: Robot index
+        params: Skill parameters (unused for put-down)
+    """
     env.robot_swarm.robot_active[rc][rid].put_down()
 
 _SKILL_TABLE = {
@@ -122,8 +152,29 @@ _SKILL_TABLE = {
     "put-down": _skill_put_down,
 }
 
-# ---------- ROS：Plan 接收（累计入队），SceneMonitor 只运行 ----------
-def build_ros_nodes():
+def _plan_cb(msg: PlanMsg):
+    """Plan callback to queue skills for robots"""
+    try:
+        steps = sorted(msg.steps, key=lambda s: s.timestep)
+        with _skill_lock:
+            for ts in steps:
+                for rs in ts.robots:
+                    rc, rid = _parse_robot_id(rs.robot_id)
+                    q = _skill_queues[(rc, rid)]
+                    for sk in rs.skill_list:
+                        q.append(sk)
+    except Exception as e:
+        logger.error(f"[PlanCB] Error: {e}")
+
+def build_ros_nodes() -> tuple:
+    """Build ROS nodes for plan receiving and scene monitoring
+
+    Returns:
+        tuple: (plan_receiver_node, scene_monitor_node) or (None, None) if ROS unavailable
+    """
+    if not ROS_AVAILABLE:
+        return None, None
+
     qos = QoSProfile(
         reliability=ReliabilityPolicy.RELIABLE,
         history=HistoryPolicy.KEEP_LAST,
@@ -131,148 +182,404 @@ def build_ros_nodes():
     )
 
     plan_receiver = BaseNode('plan_receiver')
-
-    def _plan_cb(msg: PlanMsg):
-        """按 time step 顺序，把每个机器人在该步的技能依次入队；不覆盖、不丢任务。"""
-        try:
-            # 1) 按 timestep 排序（防止发送端乱序）
-            steps = sorted(msg.steps, key=lambda s: s.timestep)
-
-            with _skill_lock:
-                for ts in steps:                # ts: TimestepSkills
-                    for rs in ts.robots:        # rs: RobotSkill
-                        rc, rid = _parse_robot_id(rs.robot_id)
-
-                        # 确保队列存在
-                        q = _skill_queues[(rc, rid)]
-
-                        # 2) 依序入队每个技能；必要时可插入时间步分隔符
-                        for sk in rs.skill_list:  # sk: SkillInfo
-                            q.append(sk)
-
-                        # 可选：如果执行侧需要“时间步边界”，插入一个哨兵
-                        # q.append(EndOfTimestep(ts.timestep))
-
-        except Exception as e:
-            carb.log_error(f"[PlanCB] {e}")
-
-    # 这里应传 QoSProfile 对象，而不是 depth 数字
     plan_receiver.create_subscription(PlanMsg, '/Plan', _plan_cb, qos)
-
     scene_monitor = SceneMonitorNode()
-    return plan_receiver, scene_monitor
+    swarm_node = get_swarm_node()
+    return plan_receiver, scene_monitor, swarm_node
 
-def spin_ros_in_background(nodes, stop_evt: threading.Event):
+def spin_ros_in_background(nodes: tuple, stop_evt: threading.Event) -> None:
+    """Run ROS nodes in background thread
+
+    Args:
+        nodes: Tuple of ROS nodes to run
+        stop_evt: Threading event to signal shutdown
+    """
+    if not ROS_AVAILABLE or not nodes[0]:
+        return
+
     exec_ = MultiThreadedExecutor(num_threads=4)
-    for n in nodes: exec_.add_node(n)
+    for n in nodes:
+        if n:
+            exec_.add_node(n)
     try:
         while not stop_evt.is_set():
             exec_.spin_once(timeout_sec=0.05)
     finally:
         for n in nodes:
-            try: exec_.remove_node(n)
-            except: pass
-            try: n.destroy_node()
-            except: pass
-        rclpy.shutdown()
+            if n:
+                try:
+                    exec_.remove_node(n)
+                except:
+                    pass
+                try:
+                    n.destroy_node()
+                except:
+                    pass
+        if ROS_AVAILABLE:
+            rclpy.shutdown()
 
-
-# ---------- 主程序 ----------
-def main():
-
-    # ====== 资产根设置（保持你原始逻辑，放在 app 创建之后） ======
-    carb.settings.get_settings().set(
-        "/presitent/isaac/asset_root/default",
-        f"{PATH_ISAACSIM_ASSETS}/Assets/Isaac/4.5"
+@inject
+async def setup_simulation(
+    swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
+    env: Env = Provide[AppContainer.env],
+    world: World = Provide[AppContainer.world],
+) -> None:
+    """
+    Setup simulation environment with injected dependencies.
+    """
+    # Register robot classes to swarm manager
+    swarm_manager.register_robot_class(
+        robot_class_name="jetbot",
+        robot_class=RobotJetbot,
+        robot_class_cfg=RobotCfgJetbot,
+    )
+    swarm_manager.register_robot_class(
+        robot_class_name="h1",
+        robot_class=RobotH1,
+        robot_class_cfg=RobotCfgH1
+    )
+    swarm_manager.register_robot_class(
+        robot_class_name="cf2x",
+        robot_class=RobotCf2x,
+        robot_class_cfg=RobotCfgCf2x
     )
 
-    # ====== ROS 初始化移入 main，避免导入即初始化 ======
-    # 创建 Env（保持你原始逻辑）
-    with open('/home/ubuntu/multiagent-isaacsimROS/src/multiagent_isaacsim/multiagent_isaacsim/files/env_cfg.yaml', 'r') as f:
-        cfg = yaml.safe_load(f)
-    usd_abs_path = os.path.abspath(cfg['scene']['usd_path'])
+    await env.initialize_async()
 
-    env = Env(
-        usd_path=usd_abs_path,
-        simulation_app=simulation_app,
-        physics_dt=cfg['world']['physics_dt'],
-        cell_size=cfg['map']['cell_size'],
-        start_point=cfg['map']['start_point'],
-        min_bounds=cfg['map']['min_bounds'],
-        max_bounds=cfg['map']['max_bounds'],
-        occupied_cell=cfg['map']['occupied_cell'],
-        empty_cell=cfg['map']['empty_cell'],
-        invisible_cell=cfg['map']['invisible_cell'],
+    # Initialize swarm manager after environment is ready
+    await swarm_manager.initialize_async(
+        scene=world.scene,
+        robot_swarm_cfg_path=f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml",
+        robot_active_flag_path=f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml"
     )
-    env.reset()
-    env.map_grid.generate_grid_map('2d')
 
-    # 物理步回调（按你的项目）
-    env.world.add_physics_callback("physics_step_jetbot_0",
-        callback_fn=env.robot_swarm.robot_active['jetbot'][0].on_physics_step)
-    env.world.add_physics_callback("physics_step_jetbot_1",
-        callback_fn=env.robot_swarm.robot_active['jetbot'][1].on_physics_step)
-    env.world.add_physics_callback("physics_step_jetbot_2",
-        callback_fn=env.robot_swarm.robot_active['jetbot'][2].on_physics_step)
-    env.world.add_physics_callback("physics_step_jetbot_3",
-        callback_fn=env.robot_swarm.robot_active['jetbot'][3].on_physics_step)
-    env.world.add_physics_callback("physics_step_h1_0",
-        callback_fn=env.robot_swarm.robot_active['h1'][0].on_physics_step)
+def create_car_objects(scene_manager: SceneManager) -> list:
+    """
+    Create car objects in the scene with semantic labels using injected dependencies.
 
-    # ROS：Plan 接收 + SceneMonitor 只 run
-    plan_receiver, scene_monitor = build_ros_nodes()
-    stop_evt = threading.Event()
-    t_ros = threading.Thread(target=spin_ros_in_background,
-                             args=([plan_receiver, scene_monitor], stop_evt),
-                             daemon=True)
-    t_ros.start()
+    Args:
+        scene_manager: Injected scene manager instance for creating objects
 
-    # 预热渲染
-    env.world.reset()
-    for _ in range(10):
-        simulation_app.update()
+    Returns:
+        list: List of created prim paths
+    """
+    scale = [2, 5, 1.0]
+    cubes_config = {
+        "car0": {
+            "shape_type": "cuboid",
+            "prim_path": "/World/car0",
+            "size": scale,
+            "position": [11.6, 3.5, 0],
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+        "car1": {
+            "shape_type": "cuboid",
+            "prim_path": "/World/car1",
+            "size": scale,
+            "position": [0.3, 3.5, 0],
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+        "car2": {
+            "shape_type": "cuboid",
+            "prim_path": "/World/car2",
+            "size": scale,
+            "position": [-13.2, 3.5, 0],
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+        "car3": {
+            "shape_type": "cuboid",
+            "prim_path": "/World/car3",
+            "size": scale,
+            "position": [-7.1, 10, 0],
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+        "car4": {
+            "shape_type": "cuboid",
+            "prim_path": "/World/car4",
+            "size": scale,
+            "position": [-0.9, 30, 0],
+            "orientation": [0.707, 0, 0, 0.707],
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+    }
+
+    created_prim_paths = []
+    print("All semantics in scene:", scene_manager.count_semantics_in_scene().get('result'))
+
+    for cube_name, config in cubes_config.items():
+        print(f"--- Processing: {cube_name} ---")
+
+        # Create shape using unpacking
+        creation_result = scene_manager.create_shape(**config)
+
+        # Check the result
+        if creation_result.get("status") == "success":
+            prim_path = creation_result.get("result")
+            print(f"  Successfully created prim at: {prim_path}")
+            created_prim_paths.append(prim_path)
+
+            # Add semantic label
+            semantic_result = scene_manager.add_semantic(
+                prim_path=prim_path,
+                semantic_label='car'
+            )
+
+            if semantic_result.get("status") == "success":
+                print(f"  Successfully applied semantic label 'car' to {prim_path}")
+            else:
+                print(f"  [ERROR] Failed to apply semantic label: {semantic_result.get('message')}")
+        else:
+            print(f"  [ERROR] Failed to create shape '{cube_name}': {creation_result.get('message')}")
+
+    return created_prim_paths
+
+
+def save_scenes(scene_manager: SceneManager) -> None:
+    """
+    Save current scene in both flattened and reference formats.
+
+    Args:
+        scene_manager: Scene manager instance for saving scenes
+    """
+    print("--- Saving current scene ---")
+
+    save_dir = os.path.abspath("./saved_scenes")
+
+    # Save flattened scene (complete with all assets)
+    save_result_flat = scene_manager.save_scene(
+        scene_name="current_scene_with_cars_flattened",
+        save_directory=save_dir,
+        flatten_scene=True
+    )
+    if save_result_flat.get("status") == "success":
+        print(f"Flattened scene saved: {save_result_flat.get('message')}")
+    else:
+        print(f"Failed to save flattened scene: {save_result_flat.get('message')}")
+
+    # Save reference version (smaller file)
+    save_result_ref = scene_manager.save_scene(
+        scene_name="current_scene_with_cars_references",
+        save_directory=save_dir,
+        flatten_scene=False
+    )
+    if save_result_ref.get("status") == "success":
+        print(f"Reference scene saved: {save_result_ref.get('message')}")
+    else:
+        print(f"Failed to save reference scene: {save_result_ref.get('message')}")
+
+
+def process_semantic_detection(
+    semantic_camera,
+    map_semantic: MapSemantic
+) -> None:
+    """
+    Process semantic detection and car pose extraction using injected dependencies.
+
+    Args:
+        semantic_camera: Semantic camera instance
+        map_semantic: Injected semantic map instance
+    """
+    try:
+        current_frame = semantic_camera.get_current_frame()
+        if current_frame and 'bounding_box_2d_loose' in current_frame:
+            result = current_frame['bounding_box_2d_loose']
+            print("get bounding box 2d loose", result)
+            if result:
+                car_prim, car_pose = map_semantic.get_prim_and_pose_by_semantic(result, 'car')
+                if car_prim is not None and car_pose is not None:
+                    print("get car prim and pose\n", car_prim, '\n', car_pose)
+                else:
+                    print("No car detected in current frame")
+            else:
+                print("No bounding box data available")
+        else:
+            print("No frame data or bounding box key available")
+    except Exception as e:
+        print(f"Error getting semantic camera data: {e}")
+
+
+def process_ros_skills(
+    env,
+    swarm_manager: SwarmManager
+) -> None:
+    """Process ROS skill queue and execute skills with injected SwarmManager
+
+    Args:
+        env: Environment instance
+        swarm_manager: Injected swarm manager instance
+    """
+    if not ROS_AVAILABLE:
+        return
+
+    # Check if all robots have completed their current skills
+    state_skill_complete_all = True
+    for robot_class in swarm_manager.robot_class:
+        for robot in swarm_manager.robot_active[robot_class]:
+            done = getattr(robot, "state_skill_complete", True)
+            state_skill_complete_all = state_skill_complete_all and bool(done)
+
+    if state_skill_complete_all:
+        # All robots completed -> get next skill for each robot
+        with _skill_lock:
+            keys = list(_skill_queues.keys())
+
+        for rc, rid in keys:
+            with _skill_lock:
+                dq = _skill_queues.get((rc, rid))
+                next_skill = dq.popleft() if (dq and len(dq) > 0) else None
+                if dq is not None and len(dq) == 0:
+                    _skill_queues.pop((rc, rid), None)
+
+            if next_skill is not None:
+                name = next_skill.skill.strip().lower()
+                params = _param_dict(next_skill.params)
+                fn = _SKILL_TABLE.get(name)
+                if fn is None:
+                    logger.warning(f"[Scheduler] unsupported skill: {name}")
+                else:
+                    try:
+                        fn(env, rc, rid, params)
+                    except Exception as e:
+                        logger.error(f"[Scheduler] start skill error: {e}")
+
+
+async def main():
+
+    print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ninto the main\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+
+    app = kit_app.get_app()
+    # Initialize ROS if requested and available
+    ros_nodes = (None, None, None)
+    stop_evt = None
+    t_ros = None
+
+    if args.ros and ROS_AVAILABLE:
+        try:
+            ros_nodes = build_ros_nodes()
+            stop_evt = threading.Event()
+            t_ros = threading.Thread(
+                target=spin_ros_in_background,
+                args=(ros_nodes, stop_evt),
+                daemon=True
+            )
+            t_ros.start()
+            logger.info("ROS integration enabled")
+        except Exception as e:
+            logger.error(f"Failed to initialize ROS: {e}")
+            args.ros = False
 
     try:
-        while simulation_app.is_running():
-            # ====== 全局屏障：必须所有机器人都完成，才会下发“下一批” ======
-            state_skill_complete_all = True
-            for robot_class in env.robot_swarm.robot_class:
-                for robot in env.robot_swarm.robot_active[robot_class]:
-                    # 没有此属性时按已完成处理，避免异常
-                    done = getattr(robot, "state_skill_complete", True)
-                    state_skill_complete_all = state_skill_complete_all and bool(done)
+        # Setup dependency injection container
+        from containers import get_container
 
-            if state_skill_complete_all:
-                # 所有人都完成 → 同步为每个机器人各取一条、同时启动
-                with _skill_lock:
-                    keys = list(_skill_queues.keys())
-                for rc, rid in keys:
-                    with _skill_lock:
-                        dq = _skill_queues.get((rc, rid))
-                        next_skill = dq.popleft() if (dq and len(dq) > 0) else None
-                        if dq is not None and len(dq) == 0:
-                            _skill_queues.pop((rc, rid), None)
-                    if next_skill is not None:
-                        name = next_skill.skill.strip().lower()
-                        params = _param_dict(next_skill.params)
-                        fn = _SKILL_TABLE.get(name)
-                        if fn is None:
-                            carb.log_warn(f"[Scheduler] unsupported skill: {name}")
-                        else:
-                            try:
-                                # 在主线程启动；各技能实现内部会把 state_skill_complete = False
-                                fn(env, rc, rid, params)
-                            except Exception as e:
-                                carb.log_error(f"[Scheduler] start skill error: {e}")
-            # 如果没全体完成，就什么也不发，等待完成
+        container = get_container()
 
-            # 推进仿真（物理+渲染）
+        # Wire the container to this module for @inject decorators in skill functions
+        container.wire(modules=[__name__])
+
+        # Get services from container
+        swarm_manager = container.swarm_manager()
+        scene_manager = container.scene_manager()
+        grid_map = container.grid_map()
+        semantic_map = container.semantic_map()
+        viewport_manager = container.viewport_manager()
+        world = container.world()
+        env = container.env()
+        env.simulation_app = simulation_app
+        await setup_simulation()
+
+        # Load scene
+        scene_manager.load_scene(usd_path=WORLD_USD_PATH)
+
+        # Create car objects using scene manager
+        created_prim_paths = create_car_objects(scene_manager)
+        print("All prims with 'car' label:", created_prim_paths)
+        print(scene_manager.count_semantics_in_scene().get('result'))
+
+        # Reset environment to ensure all objects are properly initialized
+        env.reset()
+
+        # Add physics callbacks for active robots
+        for robot_class in swarm_manager.robot_class:
+            for i, robot in enumerate(swarm_manager.robot_active[robot_class]):
+                callback_name = f"physics_step_{robot_class}_{i}"
+                env.world.add_physics_callback(callback_name, callback_fn=robot.on_physics_step)
+
+        # Create and initialize semantic camera
+        result = scene_manager.add_semantic_camera(
+            prim_path='/World/semantic_camera',
+            position=[1, 4, 2],
+            quat=scene_manager.euler_to_quaternion(roll=90)
+        )
+        semantic_camera = result.get('result').get('camera_instance')
+        semantic_camera_prim_path = result.get('result').get('prim_path')
+
+        # Initialize camera
+        semantic_camera.initialize()
+
+        # Wait for camera and rendering pipeline to fully initialize
+        for _ in range(10):
             env.step(action=None)
 
+        # Enable bounding box detection after initialization period
+        semantic_camera.add_bounding_box_2d_loose_to_frame()
+
+        # Switch viewport to semantic camera
+        from omni.kit.viewport.utility import get_viewport_from_window_name
+
+        # isaacsim default viewport
+        viewport_manager.register_viewport(name='Viewport', viewport_obj=get_viewport_from_window_name('Viewport'))
+        viewport_manager.change_viewport(camera_prim_path=semantic_camera_prim_path, viewport_name='Viewport')
+
+        # Build grid map for planning
+        grid_map.generate_grid_map('2d')
+
+        count = 0
+        # Main simulation loop
+        while simulation_app.is_running():
+            # World step
+            env.step(action=None)
+
+            if count % 120 == 0 and count > 0:
+                process_semantic_detection(semantic_camera, semantic_map)
+
+            # Process ROS skills if ROS is enabled
+            if args.ros:
+                process_ros_skills(env, swarm_manager)
+            count += 1
+
+    except Exception as e:
+        raise Exception(f"Simulation failed: {e}")
     finally:
-        stop_evt.set()
-        t_ros.join(timeout=1.0)
-        simulation_app.close()
+        # Clean shutdown
+        if stop_evt:
+            stop_evt.set()
+        if t_ros:
+            t_ros.join(timeout=1.0)
+
+        # Unwire the container
+        try:
+            from containers import get_container
+
+            container = get_container()
+            container.unwire()
+        except Exception:
+            pass  # Ignore unwiring errors during shutdown
+
+        logger.info("--- Simulation finished. Manually closing application. ---")
+        if simulation_app:
+            simulation_app.__exit__(None, None, None)
 
 if __name__ == "__main__":
-    main()
+    # 将 main_task 协程作为 Isaac Sim 循环中的一个任务调度
+    # 这会确保 main_task 在 Isaac Sim 的事件循环中运行，而不是创建新的
+    # asyncio.ensure_future(main())
+    asyncio.run(main())
+
+    # 这行代码会阻塞，直到 simulation_app 停止运行
+    simulation_app.update()

@@ -1,16 +1,22 @@
+import inspect
+from pydantic import ValidationError
 from typing import Dict, List, Type
 import yaml
-from pydantic import BaseModel, Field, ValidationError
 
+from isaacsim.core.api.scenes import Scene
+
+from camera.camera_cfg import CameraCfg # 确保导入
+from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from map.map_grid_map import GridMap
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
+from ros.ros_swarm import SwarmNode
+from ros.ros_swarm import get_swarm_node
 
-import numpy as np
 from isaacsim.core.api.scenes import Scene
 
 
-class RobotSwarmManager:
+class SwarmManager:
     """
     增强型机器人集群管理系统
     专门管理多个机器人的
@@ -20,14 +26,10 @@ class RobotSwarmManager:
     第四个,需要能中途加入机器人和删除机器人(但是前期试过, 好像在加入机器人后, 必须要reset world, 那么世界也就完全重置了, 所以我们可以定一个机器人仓库, 比如已经有这么多机器人了, 我们现在要一些新的机器人, 那么仓库里的机器人会加入行动, 非常合理)
     """
 
-    def __init__(self, scene: Scene, map_grid: GridMap = None):
-        self.scene = scene  # 保留世界场景引用
-        self.robot_warehouse: Dict[str, List[RobotBase]] = (
-            {}
-        )  # 激活的机器人 {type: [instances]}
-        self.flag_active: Dict[str, List[int]] = (
-            {}
-        )  # 机器人激活状态的寄存器, 有id的就是激活的
+    def __init__(self, map_grid: GridMap = None):
+        self.scene: Scene = None
+        self.robot_warehouse: Dict[str, List[RobotBase]] = {}
+        self.flag_active: Dict[str, List[int]] = {}
         self.robot_active: Dict[str, List[RobotBase]] = {}
         self.robot_class = {  # 可扩展的机器人类注册
             # 'jetbot': Jetbot,
@@ -36,6 +38,7 @@ class RobotSwarmManager:
         }
         self.robot_class_cfg = {}  # 对应的机器人
         self.map_grid = map_grid
+        self.swarm_node = get_swarm_node()
 
     def register_robot_class(
             self,
@@ -50,29 +53,55 @@ class RobotSwarmManager:
         self.robot_class[robot_class_name] = robot_class
         self.robot_class_cfg[robot_class_name] = robot_class_cfg
 
-    def load_robot_swarm_cfg(
+    async def initialize_async(self,
+                              scene: Scene,
+                              robot_swarm_cfg_path: str = None,
+                              robot_active_flag_path: str = None) -> None:
+        """
+        Complete async initialization of the swarm manager.
+        """
+        try:
+            # Validate scene parameter
+            if scene is None:
+                raise ValueError("Scene parameter cannot be None")
+
+            # Set scene reference
+            self.scene = scene
+
+            # Load robot swarm configuration if path provided
+            if robot_swarm_cfg_path is not None:
+                await self.load_robot_swarm_cfg(robot_swarm_cfg_path)
+
+            # Activate robots if flag path provided
+            if robot_active_flag_path is not None:
+                self.activate_robot(robot_active_flag_path)
+
+        except Exception as e:
+            # Re-raise with context for better error handling
+            raise Exception(f"SwarmManager initialization failed: {str(e)}")
+
+    async def load_robot_swarm_cfg(
             self, robot_swarm_cfg_file: str = None, dict: Dict = None
     ) -> None:
+        """异步加载并创建配置文件中定义的所有机器人。"""
 
         if robot_swarm_cfg_file is not None:
-            # 读取 YAML 文件
             with open(robot_swarm_cfg_file, "r") as file:
-                dict = yaml.safe_load(file)  # 返回字典
+                dict = yaml.safe_load(file)
         if dict is None:
             print("No configuration file or dictionary found")
+            return  # 加上 return 避免下面出错
 
-        print(dict)
         for robot_class_name in dict.keys():
             for robot_cfg in dict[robot_class_name]:  # 可能有多个机器人  这里可以优化一下 让yaml的格式就和robot cfg一样
                 robot_id = robot_cfg['id']
                 cfg_body_dict = robot_cfg['body']
                 cfg_body_dict['id'] = robot_id
-                cfg_camera_dict = None
-                if 'camera' in robot_cfg.keys():
-                    cfg_camera_dict = robot_cfg['camera']
-                if 'camera_third_person' in robot_cfg.keys():
-                    cfg_camera_third_person_dict = robot_cfg['camera_third_person']
-                self.create_robot(
+                cfg_camera_dict = robot_cfg.get('camera')
+                cfg_camera_third_person_dict = robot_cfg.get('camera_third_person')
+
+                # --- 3. 修改点: 使用 await 调用现在是异步的 create_robot ---
+                await self.create_robot(
                     robot_class_name=robot_class_name,
                     robot_class_cfg=self.robot_class_cfg[robot_class_name],
                     cfg_body_dict=cfg_body_dict,
@@ -80,7 +109,7 @@ class RobotSwarmManager:
                     cfg_camera_third_person_dict=cfg_camera_third_person_dict,
                 )
 
-    def create_robot(
+    async def create_robot(
             self,
             robot_class_name: str = None,
             robot_class_cfg: Type[RobotCfg] = None,
@@ -88,47 +117,56 @@ class RobotSwarmManager:
             cfg_camera_dict: Dict = None,
             cfg_camera_third_person_dict: Dict = None,
     ):
-        """创建新机器人并加入仓库"""
+        """
+        异步创建新机器人并加入仓库。
+        此方法可以智能地处理同步和异步两种机器人创建方式。
+        """
         if robot_class_name not in self.robot_class:
             raise ValueError(f"Unknown robot type: {robot_class_name}")
-
-        # if not self._is_name_unique(robot_class_name, id):
-        #     raise ValueError(f"Robot id '{id}' of robot type {robot_class_name} already exists")
 
         # 定义对应的机器人的位置和姿态, 以及编号
         cfg_body = None
         try:
             print(f"尝试加载{robot_class_name} {cfg_body_dict['id']}号的配置文件")
-            cfg_body = robot_class_cfg(
-                **cfg_body_dict
-            )
+            cfg_body = robot_class_cfg(**cfg_body_dict)
         except ValidationError as e:
-            print(f"加载失败,检查{robot_class_name}的配置文件")
-            print(e)
-        # 配置机器人的相机
-        cfg_camera = None
-        if cfg_camera_dict is not None and cfg_camera_dict != {}:
-            from camera.camera_cfg import CameraCfg
-            cfg_camera = CameraCfg(
-                **cfg_camera_dict
-            )
+            print(f"加载失败,检查{robot_class_name}的配置文件: {e}")
+            return  # 加载失败则直接返回
 
-        # 配置机器人的第三视角相机
-        from camera.camera_third_person_cfg import CameraThirdPersonCfg
+        cfg_camera = None
+        if cfg_camera_dict:
+            cfg_camera = CameraCfg(**cfg_camera_dict)
+
         cfg_camera_third_person = None
-        if cfg_camera_third_person_dict:  # 如果字典不为None且不为空
-            # from camera.camera_cfg import CameraCfg # 确保导入
+        if cfg_camera_third_person_dict:
             try:
                 cfg_camera_third_person = CameraThirdPersonCfg(**cfg_camera_third_person_dict)
             except ValidationError as e:
                 print(f"加载机器人 {cfg_body_dict.get('id')} 的相机配置失败: {e}")
-                cfg_camera_third_person = None  # 加载失败则不使用相机
 
-        # 实例化完整的机器人
-        robot = self.robot_class[robot_class_name](
-            cfg_body=cfg_body, cfg_camera=cfg_camera, cfg_camera_third_person=cfg_camera_third_person, scene=self.scene,
-            map_grid=self.map_grid,
-        )
+        # --- 5. 核心修改点: 智能地选择同步或异步创建 ---
+        robot_cls = self.robot_class[robot_class_name]
+
+        # 检查机器人class是否有 'create' 方法，并且它是一个异步函数
+        if hasattr(robot_cls, 'create') and inspect.iscoroutinefunction(robot_cls.create):
+            # 如果是，使用 await 调用异步工厂 create 方法
+            print(f"'{robot_class_name}' has an async factory. Using await .create()")
+            robot = await robot_cls.create(
+                cfg_body=cfg_body, cfg_camera=cfg_camera, cfg_camera_third_person=cfg_camera_third_person,
+                scene=self.scene,
+                map_grid=self.map_grid,
+                node=self.swarm_node
+            )
+        else:
+            # 如果不是，使用传统的同步 __init__ 方法
+            print(f"'{robot_class_name}' has a standard constructor. Using .__init__()")
+            robot = robot_cls(
+                cfg_body=cfg_body, cfg_camera=cfg_camera, cfg_camera_third_person=cfg_camera_third_person,
+                scene=self.scene,
+                map_grid=self.map_grid,
+                node=self.swarm_node
+            )
+
         self.robot_warehouse[robot_class_name].append(robot)
         return robot
 

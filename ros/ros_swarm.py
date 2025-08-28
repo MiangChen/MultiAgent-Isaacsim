@@ -7,8 +7,8 @@ from pxr import Usd, Tf, UsdGeom, Gf
 import omni.usd
 from geometry_msgs.msg import Transform as RosTransform
 from scene_msgs.msg import PrimTransform, SceneModifications
+from plan_msgs.msg import RobotFeedback, VelTwistPose
 from typing import Dict, Any, List
-
 
 class BaseNode(Node):
     def __init__(self, node_name: str):
@@ -399,13 +399,83 @@ class SceneMonitorNode(Node):
         self._prev_xforms = curr_xforms
 
 
-class SwarmNode(BaseNode):
+class SwarmNode(Node):
+
     def __init__(self):
         super().__init__('swarm')
-        self.robot_positions = {}
-        self.formation_config = {}
-        # 定时发布数据
-        self.create_timer(1.0, self.update_swarm_data)
+        # 结构: { robot_class: { robot_id: { "motion": publisher, "feedback": publisher } } }
+        self.publisher_dict: dict[str, dict[int, dict[str, any]]] = {}
+        self.subscriber_dict: dict[str, dict[int, dict[str, any]]] = {}
+
+    def register_feedback_publisher(self, robot_class: str, robot_id: int, qos=10):
+        """
+        注册一个 feedback publisher
+        topic 规则: /feedback/<robot_class>_<robot_id>
+        """
+        # 如果类别不存在，先建字典
+        if robot_class not in self.publisher_dict:
+            self.publisher_dict[robot_class] = {}
+        # 如果 robot_id 不存在，先建子字典
+        if robot_id not in self.publisher_dict[robot_class]:
+            self.publisher_dict[robot_class][robot_id] = {}
+
+        topic = f"/feedback/{robot_class}_{robot_id}"
+        pub = self.create_publisher(RobotFeedback, topic, qos)
+
+        # 存到子字典里
+        self.publisher_dict[robot_class][robot_id]["feedback"] = pub
+
+#        self.get_logger().info(
+#            f"Registered feedback publisher for {robot_class}[{robot_id}] on topic {topic}"
+#        )
+        return pub
+
+    def register_motion_publisher(self, robot_class: str, robot_id: int, qos=50):
+        """
+        注册一个 motion publisher
+        topic 规则: /motion/<robot_class>_<robot_id>
+        """
+        if robot_class not in self.publisher_dict:
+            self.publisher_dict[robot_class] = {}
+        if robot_id not in self.publisher_dict[robot_class]:
+            self.publisher_dict[robot_class][robot_id] = {}
+
+        topic = f"/motion/{robot_class}_{robot_id}"
+        pub = self.create_publisher(VelTwistPose, topic, qos)
+
+        self.publisher_dict[robot_class][robot_id]["motion"] = pub
+
+#        self.get_logger().info(
+#            f"Registered motion publisher for {robot_class}[{robot_id}] on topic {topic}"
+#        )
+        return pub
+
+    def register_cmd_subscriber(self, robot_class: str, robot_id: int, callback = None, qos = 50):
+        """
+        注册一个cmd subscriber
+        topic 规则： /cmd/<robot_class>_<robot_id>
+        """
+        if robot_class not in self.subscriber_dict:
+            self.subscriber_dict[robot_class] = {}
+        # 如果 robot_id 不存在，先建子字典
+        if robot_id not in self.subscriber_dict[robot_class]:
+            self.subscriber_dict[robot_class][robot_id] = {}
+
+        topic = f"/cmd/{robot_class}_{robot_id}"
+        sub = self.create_subscription(VelTwistPose, topic, callback, qos)
+
+        self.subscriber_dict[robot_class][robot_id]["cmd"] = sub
+
+#        self.get_logger().info(
+#            f"Registered cmd subscriber for {robot_class}[{robot_id}] on topic {topic}"
+#        )
+        return sub
+
+    def publish_navigation_feedback(self, robot_class: str, robot_id: int, msg: RobotFeedback):
+        self.publisher_dict[robot_class][robot_id]["feedback"].publish(msg)
+
+    def publish_motion(self, robot_class: str, robot_id: int, msg: VelTwistPose):
+        self.publisher_dict[robot_class][robot_id]["motion"].publish(msg)
 
     def update_swarm_data(self):
         self.shared_data['robot_count'] = len(self.robot_positions)
@@ -424,3 +494,10 @@ class SwarmNode(BaseNode):
 
         self.query_node_data('map', 'map_size', handle_map_response)
 
+_swarm_singleton = None
+
+def get_swarm_node():
+    global _swarm_singleton
+    if _swarm_singleton is None:
+        _swarm_singleton = SwarmNode()
+    return _swarm_singleton

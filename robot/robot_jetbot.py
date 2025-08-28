@@ -8,6 +8,7 @@ from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
+from ros.ros_swarm import SwarmNode
 from robot.robot_cfg_jetbot import RobotCfgJetbot
 
 import carb
@@ -16,28 +17,31 @@ from isaacsim.core.prims import Articulation
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.types import ArticulationActions
 
+from plan_msgs.msg import RobotFeedback, SkillInfo, Parameter
 
 class RobotJetbot(RobotBase):
     def __init__(self, cfg_body: RobotCfgJetbot, cfg_camera: CameraCfg = None,
                  cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None) -> None:
-        super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid)
+                 map_grid: GridMap = None, node: SwarmNode = None) -> None:
+        super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid, node)
 
         self.controller = ControllerJetbot()
         self.control_mode = 'joint_velocities'
         # # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
         self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
         self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
-        #
-        # self.traj = Trajectory(
-        #     robot_prim_path=self.config.prim_path + f'/{config.name_prefix}_{config.id}',
-        #     # name='traj' + f'_{cfg_body.id}',
-        #     id=config.id,
-        #     max_points=100,
-        #     color=(0.3, 1.0, 0.3),
-        #     scene=self.scene,
-        #     radius=0.05,
-        # )
+
+        self.counter = 0
+        self.pub_period = 10
+
+        self.node = node
+
+        self.node.register_feedback_publisher(
+            robot_class = self.cfg_body.name_prefix,
+            robot_id = self.cfg_body.id,
+            qos = 10
+        )
+
         self.init_ros2()
         return
 
@@ -128,12 +132,48 @@ class RobotJetbot(RobotBase):
         self.action = [v_left, v_right]
         return False  # 还没有到达
 
+    def _params_from_pose(self, pos: np.ndarray, quat: np.ndarray) -> list[Parameter]:
+        # 保证是 float -> str
+        px, py, pz = float(pos[0]), float(pos[1]), float(pos[2])
+        qx, qy, qz, qw = float(quat[0]), float(quat[1]), float(quat[2]), float(quat[3])
+        return [
+            Parameter(key="pos_x", value=str(px)),
+            Parameter(key="pos_y", value=str(py)),
+            Parameter(key="pos_z", value=str(pz)),
+            Parameter(key="quat_x", value=str(qx)),
+            Parameter(key="quat_y", value=str(qy)),
+            Parameter(key="quat_z", value=str(qz)),
+            Parameter(key="quat_w", value=str(qw)),
+        ]
+
+    def _publish_feedback_pose(self):
+        pos, quat = self.get_world_poses()
+
+        skill = SkillInfo(
+            skill = self.current_task_name,
+            params = self._params_from_pose(pos, quat),
+            object_id = "",
+            task_id = self.current_task_id,
+        )
+
+        msg = RobotFeedback(
+            robot_id = f"{self.cfg_body.name_prefix}_{self.cfg_body.id}",
+            skill_feedback = skill,
+        )
+
+        self.node.publish_navigation_feedback(msg)
+
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
+        self.counter += 1
+
         if self.flag_world_reset == True:
             if self.flag_action_navigation == True:
                 self.move_along_path()  # 每一次都计算下速度
                 self.step(self.action)
+                if self.counter % self.pub_period == 0:
+                    self._publish_feedback_pose()
+
         return
 
     def pick_up(self):

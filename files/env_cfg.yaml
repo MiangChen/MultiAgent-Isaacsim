@@ -1,7 +1,7 @@
-scene:
-  usd_path:  "/home/ubuntu/multiagent-isaacsim2/multiagent-isaacsim/scene/mvp2/small_city.usd" # 这里需要你根据实际情况填写usd文件的路径
+asset_path : "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5/"  # 根据本地的Isaac资产位置来配置
 
 world:
+  name: small_city_available.usd # 要使用的场的名字,和 asset / user_usd_files.json对应
   physics_dt: 0.005  # 1 / 200
 
 map:

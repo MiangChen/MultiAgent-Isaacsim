@@ -1,3 +1,11 @@
+cf2x:
+  - id: 0
+    body:
+      position: [ 7, 4 , 0.05 ]
+      orientation: [ 0.0, 0.0, 0.0, 1.0 ]
+    camera: {}
+    camera_third_person: False
+
 jetbot:
   - id: 0  # 激活jetbot中的0号机器人
     body:

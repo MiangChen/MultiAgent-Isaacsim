@@ -1,12 +1,11 @@
+import json
 import yaml
 import platform
 import os
 
-def load_config(file_path:str = None) -> dict:
+_current_dir = os.path.dirname(os.path.abspath(__file__))
 
-    _current_dir = os.path.dirname(os.path.abspath(__file__))
-    # absolute path
-    file_path = os.path.join(_current_dir, file_path)
+def load_config(file_path:str = None) -> dict:
     """从YAML文件加载配置。"""
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -19,4 +18,19 @@ def load_config(file_path:str = None) -> dict:
         return None
 
 
-ASSET_PATH = load_config('./usd_path.yaml')['asset_path']
+file_path = os.path.join(_current_dir, './env_cfg.yaml')
+ASSET_PATH = load_config(file_path)['asset_path']
+PATH_ISAACSIM_ASSETS = ASSET_PATH
+# 项目的位置
+PATH_PROJECT = f'/home/ubuntu/multiagent-isaacsimROS/src/multiagent_isaacsim/multiagent_isaacsim'
+
+WORLD_NAME = load_config(file_path)['world']['name']  # 获取需要的场景名字
+
+
+# 获取场景的绝对路径
+file_path = os.path.join(_current_dir, '../asset/user_usd_files.json')
+with open(file_path, 'r', encoding='utf-8') as file:
+    world_name_dic = json.load(file)
+
+WORLD_USD_PATH = world_name_dic[WORLD_NAME]
+print(WORLD_USD_PATH)

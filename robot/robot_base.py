@@ -1,5 +1,4 @@
-from typing import List, Optional, Tuple
-from pydantic import ValidationError  # 用于错误处理
+from typing import List, Tuple
 
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
@@ -8,8 +7,8 @@ from camera.camera_cfg import CameraCfg
 from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from robot.robot_cfg import RobotCfg
 from robot.robot_trajectory import Trajectory
-from pxr import Gf
-from pxr import Usd, UsdGeom
+
+from pxr import Usd, UsdGeom, Gf
 import numpy as np
 import carb
 from isaacsim.core.utils.numpy import rotations
@@ -19,18 +18,37 @@ from isaacsim.core.prims import Articulation
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
 import isaacsim.core.utils.prims as prims_utils
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
-from isaacsim.core.utils.viewports import create_viewport_for_camera, set_intrinsics_matrix
-from isaacsim.core.utils.viewports import set_camera_view as _set_camera_view
+from isaacsim.core.utils.viewports import create_viewport_for_camera, set_camera_view, set_intrinsics_matrix
+
+
+def _get_viewport_manager_from_container():
+    """
+    Get viewport manager from dependency injection container.
+
+    This function provides a fallback mechanism to obtain the viewport manager
+    when it's not directly injected into the constructor.
+
+    Returns:
+        ViewportManager: The viewport manager instance from the container
+    """
+    try:
+        from containers import get_container
+        container = get_container()
+        return container.viewport_manager()
+    except Exception as e:
+        raise Exception("ViewportManager not found in container") from e
 
 class RobotBase:
     """Base class of robot."""
 
     def __init__(self, cfg_body: RobotCfg = None, cfg_camera: CameraCfg = None,
                  cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None):
+                 map_grid: GridMap = None, node = None):
         self.cfg_body = cfg_body
         self.cfg_camera = cfg_camera
         self.scene = scene
+        self.node = node
+        self.viewport_manager = _get_viewport_manager_from_container()  # 通过依赖注入获取viewport_manager
         # 代表机器人的实体
         self.robot_entity: Articulation = None
         # 通用的机器人本体初始化代码
@@ -112,24 +130,12 @@ class RobotBase:
         # --- 新增：存储相机配置并初始化相机属性 ---
         self.cfg_camera_third_person = cfg_camera_third_person
         self.camera_prim_path = None
+        self.viewport_name = None  # 存储viewport名称
         self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
         self.transform_camera_pos = np.array([0, 0, 0])
 
-    def cleanup(self):
-        for controller in self.controllers.values():
-            controller.cleanup()
-        for sensor in self.cameras.values():
-            sensor.cleanup()
-        for rigid_body in self.get_rigid_bodies():
-            self._scene.remove_object(rigid_body.name_prefix)
-            log.debug(f'rigid body {rigid_body} removed')
-        log.debug(f'robot {self.name} clean up')
-
-    def forward(self, velocity=None):
-        raise NotImplementedError()
-
-    def get_controllers(self):
-        return self.controllers
+        self.current_task_id = None
+        self.current_task_name = None
 
     def get_obs(self) -> dict:
         """Get observation of robot, including controllers, cameras, and world pose.
@@ -138,34 +144,6 @@ class RobotBase:
             NotImplementedError: _description_
         """
         raise NotImplementedError()
-
-    def get_rigid_bodies(self) -> List[RigidPrim]:
-        raise NotImplementedError()
-
-    def get_robot_base(self) -> RigidPrim:
-        """
-        Get base link of robot.
-
-        Returns:
-            RigidPrim: rigid prim of robot base link.
-        """
-        raise NotImplementedError()
-
-    def get_robot_scale(self) -> np.ndarray:
-        """Get robot scale.
-
-        Returns:
-            np.ndarray: robot scale in (x, y, z).
-        """
-        return self.robot_entity.get_local_scale()
-
-    def get_robot_articulation(self) -> Articulation:
-        """Get isaac robots instance (articulation).
-
-        Returns:
-            Robot: robot articulation.
-        """
-        return self.robot_entity
 
     def get_world_poses(self) -> Tuple[np.ndarray, np.ndarray]:
         pos_IB, q_IB = self.robot_entity.get_world_poses()
@@ -176,46 +154,9 @@ class RobotBase:
         if self.cfg_camera is not None:
             self.camera.initialize()
 
-        # 第三视角相机初始化
-        # --- 新增：在初始化时创建相机和视口 ---
+        # 第三视角相机初始化 - 使用ViewportManager
         if self.cfg_camera_third_person and self.cfg_camera_third_person.enabled:
-            print(f"为机器人 {self.cfg_body.id} 创建第三人称相机...")
-
-            # 1. 为相机创建唯一的prim路径和视口名称
-            self.camera_prim_path = f"/World/Robot_{self.cfg_body.id}_Camera"
-            viewport_name = f"Viewport_Robot_{self.cfg_body.id}"
-
-            # 如果prim已存在，先删除（可选，用于热重载）
-            if prims_utils.is_prim_path_valid(self.camera_prim_path):
-                prims_utils.delete_prim(self.camera_prim_path)
-
-            # 2. 创建相机Prim
-            # prims_utils.create_prim(
-            #     prim_path=self.camera_prim_path,
-            #     prim_type="Camera",
-            #     # 初始位置不那么重要，因为每一步都会更新
-            #     position=np.array([0, 0, 10.0]),
-            # )
-            from isaacsim.sensors.camera import Camera
-            camera = Camera(
-                prim_path=self.camera_prim_path
-            )
-            camera.set_focal_length(2)
-
-            # 3. 创建视口
-            create_viewport_for_camera(
-                viewport_name=viewport_name,
-                camera_prim_path=self.camera_prim_path,
-                width=self.cfg_camera_third_person.viewport_size[0],
-                height=self.cfg_camera_third_person.viewport_size[1],
-                position_x=self.cfg_camera_third_person.viewport_position[0],
-                position_y=self.cfg_camera_third_person.viewport_position[1],
-            )
-            # set_intrinsics_matrix(viewport_api = viewport_name, focal_length = 15)
-
-            # 4. 将相对位置转换为numpy数组以便后续计算
-            self.relative_camera_pos = np.array(self.cfg_camera_third_person.relative_position)
-            self.transform_camera_pos = np.array(self.cfg_camera_third_person.transform_position)
+            self._initialize_third_person_camera()
 
     def move_to(self, target_position: np.ndarray, target_orientation: np.ndarray) -> bool:
         """
@@ -269,12 +210,7 @@ class RobotBase:
             raise ValueError("小车的z轴高度得在平面上")
         pos_robot = self.get_world_poses()[0]
 
-        print(pos_target)
-
         pos_index_target = self.map_grid.compute_index(pos_target)
-
-        print(pos_index_target)
-
         pos_index_robot = self.map_grid.compute_index(pos_robot)
         pos_index_robot[-1] = 0  # todo : 这也是因为机器人限制导致的
 
@@ -351,40 +287,6 @@ class RobotBase:
         yaw = atan2(matrix[1, 0], matrix[0, 0])
         return yaw
 
-    @classmethod
-    def register(cls, name: str) -> None:
-        """Register a robot class with its name_prefix(decorator).
-
-        Args:
-            name(str): name_prefix of the robot class.
-        """
-
-        def decorator(robot_class):
-            cls.robots[name] = robot_class
-
-            @wraps(robot_class)
-            def wrapped_function(*args, **kwargs):
-                return robot_class(*args, **kwargs)
-
-            return wrapped_function
-
-        return decorator
-
-    def set_up_to_scene(self, scene: Scene) -> None:
-        """Set up robot in the scene.
-
-        Args:
-            scene (Scene): scene to set up.
-        """
-        # self._scene = scene
-        robot_cfg = self.cfg_body
-        if self.robot_entity:
-            scene.add(self.robot_entity)
-            # log.debug('self.robot_entity: ' + str(self.robot_entity))
-        for rigid_body in self.get_rigid_bodies():
-            scene.add(rigid_body)
-        return
-
     def step(self, action: np.ndarray) -> Tuple[np.ndarray]:
         """
 
@@ -397,60 +299,45 @@ class RobotBase:
         """
         raise NotImplementedError
 
-    def explore_zone(self, zone_corners: list = None, scane_direction: str = "horizontal",
-                     reset_flag: bool = False) -> None:
-        """
-        用户输入一个方形区域的四个角落点, 需要根据感知范围来探索这个区域, 感知范围是一个扇形的区域, 假设视野为120, 半径为2m,
-        输入一个[[1,1], [1,10], [10,10], [10,1]]的方形区域, 该如何规划路径?
+    def _initialize_third_person_camera(self):
+        """初始化第三人称相机并注册到ViewportManager"""
+        print(f"为机器人 {self.cfg_body.id} 创建第三人称相机...")
 
-        """
-        # 1. 计算区域的边界
-        min_x = min(corner[0] for corner in zone_corners)
-        max_x = max(corner[0] for corner in zone_corners)
-        min_y = min(corner[1] for corner in zone_corners)
-        max_y = max(corner[1] for corner in zone_corners)
+        # 1. 为相机创建唯一的prim路径和视口名称
+        self.camera_prim_path = f"/World/Robot_{self.cfg_body.id}_Camera"
+        self.viewport_name = f"Viewport_Robot_{self.cfg_body.id}"
 
-        # 2. 确定扫描线的方向 (这里选择水平扫描)
-        scan_direction = scane_direction  # 可以选择 "horizontal" 或 "vertical"
+        # 如果prim已存在，先删除（可选，用于热重载）
+        if prims_utils.is_prim_path_valid(self.camera_prim_path):
+            prims_utils.delete_prim(self.camera_prim_path)
 
-        # 3. 计算扫描线之间的距离，保证覆盖整个区域
-        #    使用视野半径和视野角度来计算有效覆盖宽度
-        import math
-        effective_width = 2 * self.view_radius * math.sin(self.view_angle / 2)
-        scan_line_spacing = effective_width * 0.8  # 稍微重叠，确保覆盖
+        # 2. 创建相机Prim
+        from isaacsim.sensors.camera import Camera
+        camera = Camera(prim_path=self.camera_prim_path)
+        camera.set_focal_length(2)
 
-        # 4. 生成扫描线
-        scan_lines = []
-        if scan_direction == "horizontal":
-            y = min_y
-        while y <= max_y:
-            scan_lines.append(y)
-            y += scan_line_spacing
-        else:  # vertical
-            x = min_x
-            while x <= max_x:
-                scan_lines.append(x)
-                x += scan_line_spacing
+        # 3. 创建视口
+        viewport_obj = create_viewport_for_camera(
+            viewport_name=self.viewport_name,
+            camera_prim_path=self.camera_prim_path,
+            width=self.cfg_camera_third_person.viewport_size[0],
+            height=self.cfg_camera_third_person.viewport_size[1],
+            position_x=self.cfg_camera_third_person.viewport_position[0],
+            position_y=self.cfg_camera_third_person.viewport_position[1],
+        )
 
-        # 5. 生成路径点
-        path_points = []
-        if scan_direction == "horizontal":
-            for i, y in enumerate(scan_lines):
-                if i % 2 == 0:  # 偶数行，从左到右
-                    path_points.append([min_x, y])
-                    path_points.append([max_x, y])
-                else:  # 奇数行，从右到左
-                    path_points.append([max_x, y])
-                    path_points.append([min_x, y])
-        else:  # vertical
-            for i, x in enumerate(scan_lines):
-                if i % 2 == 0:  # 偶数列，从下到上
-                    path_points.append([x, min_y])
-                    path_points.append([x, max_y])
-                else:  # 奇数列，从上到下
-                    path_points.append([x, max_y])
-                    path_points.append([x, min_y])
-        return path_points
+        # 4. 注册viewport到ViewportManager
+        if viewport_obj and self.viewport_manager:
+            success = self.viewport_manager.register_viewport(self.viewport_name, viewport_obj)
+            if success:
+                self.viewport_manager.map_camera(self.viewport_name, self.camera_prim_path)
+                print(f"Robot {self.cfg_body.id} viewport registered to ViewportManager")
+            else:
+                raise RuntimeError(f"Failed to register viewport for robot {self.cfg_body.id}")
+
+        # 5. 将相对位置转换为numpy数组以便后续计算
+        self.relative_camera_pos = np.array(self.cfg_camera_third_person.relative_position)
+        self.transform_camera_pos = np.array(self.cfg_camera_third_person.transform_position)
 
     # --- 新增：独立的相机更新方法，保持代码整洁 ---
     def _update_camera_view(self):
@@ -464,26 +351,25 @@ class RobotBase:
             camera_target_position = robot_position
 
             # 3. 设置相机视图
-            safe_set_camera_view(
+            set_camera_view(
                 eye=camera_eye_position,
                 target=camera_target_position,
                 camera_prim_path=self.camera_prim_path,
             )
 
-def safe_set_camera_view(*, eye, target, camera_prim_path):
-    # 强制把 None 的 target 改成一个默认值（比如沿前向 1m）
-    if target is None:
-        tgt = np.asarray(eye, dtype=float).reshape(3,)
-        tgt[2] -= 1.0  # 例：Z 轴负方向
-        target = tgt
-    _set_camera_view(eye=_to_vec3d(eye), target=_to_vec3d(target), camera_prim_path=camera_prim_path)
+    def get_viewport_info(self):
+        """
+        获取robot的viewport信息，供ViewportManager批量操作使用
 
-def _to_vec3d(v):
-    # 把任意 (list/tuple/numpy) 转成 Gf.Vec3d，并做长度和 NaN 防守
-    a = np.asarray(v, dtype=float).reshape(3,)
-    if not np.all(np.isfinite(a)):
-        raise ValueError(f"camera vector has inf/NaN: {v}")
-    return Gf.Vec3d(float(a[0]), float(a[1]), float(a[2]))
+        Returns:
+            dict: 包含viewport_name, camera_path等信息的字典
+        """
+        return {
+            'viewport_name': self.viewport_name,
+            'camera_path': self.camera_prim_path,
+            'robot_id': self.cfg_body.id if self.cfg_body else None,
+            'enabled': self.cfg_camera_third_person.enabled if self.cfg_camera_third_person else False
+        }
 
 if __name__ == "__main__":
     pass

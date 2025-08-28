@@ -2,7 +2,7 @@ from typing import Optional
 
 from robot.robot_cfg import RobotCfg
 
-from files.variables import ASSET_PATHrclpy
+from files.variables import ASSET_PATH
 
 
 class RobotCfgCf2x(RobotCfg):
