@@ -31,7 +31,7 @@ try:
     rclpy.init(args=None)
     from rclpy.executors import MultiThreadedExecutor
     from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
-    from ros.ros_swarm import BaseNode, SceneMonitorNode, SwarmNode, get_swarm_node
+    from ros.ros_swarm import PlanNode, SceneMonitorNode, SwarmNode, get_swarm_node
     from plan_msgs.msg import Parameter, SkillInfo, RobotSkill, Plan as PlanMsg, TimestepSkills
 
     ROS_AVAILABLE = True
@@ -181,7 +181,7 @@ def build_ros_nodes() -> tuple:
         depth=50,
     )
 
-    plan_receiver = BaseNode('plan_receiver')
+    plan_receiver = PlanNode('plan_receiver')
     plan_receiver.create_subscription(PlanMsg, '/Plan', _plan_cb, qos)
     scene_monitor = SceneMonitorNode()
     swarm_node = get_swarm_node()
