@@ -8,7 +8,7 @@ from typing import Dict, Any
 from collections import defaultdict, deque
 
 # Third-party imports
-from dependency_injector.wiring import inject, Provide # Dependency injection imports
+from dependency_injector.wiring import inject, Provide  # Dependency injection imports
 import yaml
 
 # Isaac Sim related imports
@@ -16,10 +16,18 @@ from physics_engine.isaacsim_simulation_app import initialize_simulation_app_fro
 
 # Initialize simulation app
 parser = argparse.ArgumentParser(description="Initialize Isaac Sim from a YAML config.")
-parser.add_argument("--config", type=str, default="./files/sim_cfg.yaml",
-                    help="Path to the configuration physics engine.")
-parser.add_argument("--enable", type=str, action='append',
-                    help="Enable a feature. Can be used multiple times.")
+parser.add_argument(
+    "--config",
+    type=str,
+    default="./files/sim_cfg.yaml",
+    help="Path to the configuration physics engine.",
+)
+parser.add_argument(
+    "--enable",
+    type=str,
+    action="append",
+    help="Enable a feature. Can be used multiple times.",
+)
 parser.add_argument("--ros", type=bool, default=True)
 args = parser.parse_args()
 
@@ -40,8 +48,7 @@ from containers import AppContainer
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -51,7 +58,13 @@ try:
     from rclpy.executors import MultiThreadedExecutor
     from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
     from ros.ros_swarm import BaseNode, SceneMonitorNode
-    from plan_msgs.msg import Parameter, SkillInfo, RobotSkill, Plan as PlanMsg, TimestepSkills
+    from plan_msgs.msg import (
+        Parameter,
+        SkillInfo,
+        RobotSkill,
+        Plan as PlanMsg,
+        TimestepSkills,
+    )
 
     ROS_AVAILABLE = True
 except ImportError:
@@ -65,10 +78,10 @@ _skill_lock = threading.Lock()
 
 def _param_dict(params) -> Dict[str, Any]:
     """Convert ROS parameter list to dictionary
-    
+
     Args:
         params: List of ROS Parameter objects
-        
+
     Returns:
         Dict[str, Any]: Dictionary mapping parameter keys to values
     """
@@ -81,14 +94,15 @@ def _param_dict(params) -> Dict[str, Any]:
 
 def _parse_robot_id(robot_id: str) -> tuple[str, int]:
     """Parse robot ID string to extract robot class and index
-    
+
     Args:
         robot_id: Robot identifier string (e.g., "jetbot_1", "h1-2")
-        
+
     Returns:
         tuple[str, int]: Tuple of (robot_class_name, robot_index)
     """
     import re
+
     s = robot_id or ""
     m = re.match(r"^([A-Za-z]\w*?)[_-]?(\d+)$", s)
     if not m:
@@ -105,10 +119,10 @@ def _skill_navigate_to(
     rc: str,
     rid: int,
     params: Dict[str, Any],
-    semantic_map: MapSemantic = Provide[AppContainer.semantic_map]
+    semantic_map: MapSemantic = Provide[AppContainer.semantic_map],
 ) -> None:
     """Execute navigate-to skill with injected semantic map
-    
+
     Args:
         env: Environment instance
         rc: Robot class name
@@ -122,7 +136,7 @@ def _skill_navigate_to(
 
 def _skill_pick_up(env, rc: str, rid: int, params: Dict[str, Any]) -> None:
     """Execute pick-up skill
-    
+
     Args:
         env: Environment instance
         rc: Robot class name
@@ -134,7 +148,7 @@ def _skill_pick_up(env, rc: str, rid: int, params: Dict[str, Any]) -> None:
 
 def _skill_put_down(env, rc: str, rid: int, params: Dict[str, Any]) -> None:
     """Execute put-down skill
-    
+
     Args:
         env: Environment instance
         rc: Robot class name
@@ -153,7 +167,7 @@ _SKILL_TABLE = {
 
 def build_ros_nodes() -> tuple:
     """Build ROS nodes for plan receiving and scene monitoring
-    
+
     Returns:
         tuple: (plan_receiver_node, scene_monitor_node) or (None, None) if ROS unavailable
     """
@@ -166,7 +180,7 @@ def build_ros_nodes() -> tuple:
         depth=50,
     )
 
-    plan_receiver = BaseNode('plan_receiver')
+    plan_receiver = BaseNode("plan_receiver")
 
     def _plan_cb(msg: PlanMsg):
         """Plan callback to queue skills for robots"""
@@ -185,14 +199,14 @@ def build_ros_nodes() -> tuple:
         except Exception as e:
             logger.error(f"[PlanCB] Error: {e}")
 
-    plan_receiver.create_subscription(PlanMsg, '/Plan', _plan_cb, qos)
+    plan_receiver.create_subscription(PlanMsg, "/Plan", _plan_cb, qos)
     scene_monitor = SceneMonitorNode()
     return plan_receiver, scene_monitor
 
 
 def spin_ros_in_background(nodes: tuple, stop_evt: threading.Event) -> None:
     """Run ROS nodes in background thread
-    
+
     Args:
         nodes: Tuple of ROS nodes to run
         stop_evt: Threading event to signal shutdown
@@ -221,6 +235,7 @@ def spin_ros_in_background(nodes: tuple, stop_evt: threading.Event) -> None:
         if ROS_AVAILABLE:
             rclpy.shutdown()
 
+
 @inject
 def setup_simulation(
     swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
@@ -237,28 +252,24 @@ def setup_simulation(
         robot_class_cfg=RobotCfgJetbot,
     )
     swarm_manager.register_robot_class(
-        robot_class_name="h1",
-        robot_class=RobotH1,
-        robot_class_cfg=RobotCfgH1
+        robot_class_name="h1", robot_class=RobotH1, robot_class_cfg=RobotCfgH1
     )
     swarm_manager.register_robot_class(
-        robot_class_name="cf2x",
-        robot_class=RobotCf2x,
-        robot_class_cfg=RobotCfgCf2x
+        robot_class_name="cf2x", robot_class=RobotCf2x, robot_class_cfg=RobotCfgCf2x
     )
 
     # Initialize environment and swarm manager
     # Since Isaac Sim runs its own event loop, we need to schedule async tasks properly
-    
+
     # Create initialization tasks
     async def init_env_and_swarm():
         await env.initialize_async()
         await swarm_manager.initialize_async(
             scene=world.scene,
             robot_swarm_cfg_path=f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml",
-            robot_active_flag_path=f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml"
+            robot_active_flag_path=f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml",
         )
-    
+
     # Schedule the initialization in Isaac Sim's event loop
 
     loop = asyncio.get_event_loop()
@@ -338,7 +349,10 @@ def create_car_objects(scene_manager: SceneManager) -> list:
     }
 
     created_prim_paths = []
-    print("All semantics in scene:", scene_manager.count_semantics_in_scene().get('result'))
+    print(
+        "All semantics in scene:",
+        scene_manager.count_semantics_in_scene().get("result"),
+    )
 
     for cube_name, config in cubes_config.items():
         print(f"--- Processing: {cube_name} ---")
@@ -354,16 +368,19 @@ def create_car_objects(scene_manager: SceneManager) -> list:
 
             # Add semantic label
             semantic_result = scene_manager.add_semantic(
-                prim_path=prim_path,
-                semantic_label='car'
+                prim_path=prim_path, semantic_label="car"
             )
 
             if semantic_result.get("status") == "success":
                 print(f"  Successfully applied semantic label 'car' to {prim_path}")
             else:
-                print(f"  [ERROR] Failed to apply semantic label: {semantic_result.get('message')}")
+                print(
+                    f"  [ERROR] Failed to apply semantic label: {semantic_result.get('message')}"
+                )
         else:
-            print(f"  [ERROR] Failed to create shape '{cube_name}': {creation_result.get('message')}")
+            print(
+                f"  [ERROR] Failed to create shape '{cube_name}': {creation_result.get('message')}"
+            )
 
     return created_prim_paths
 
@@ -383,7 +400,7 @@ def save_scenes(scene_manager: SceneManager) -> None:
     save_result_flat = scene_manager.save_scene(
         scene_name="current_scene_with_cars_flattened",
         save_directory=save_dir,
-        flatten_scene=True
+        flatten_scene=True,
     )
     if save_result_flat.get("status") == "success":
         print(f"Flattened scene saved: {save_result_flat.get('message')}")
@@ -394,7 +411,7 @@ def save_scenes(scene_manager: SceneManager) -> None:
     save_result_ref = scene_manager.save_scene(
         scene_name="current_scene_with_cars_references",
         save_directory=save_dir,
-        flatten_scene=False
+        flatten_scene=False,
     )
     if save_result_ref.get("status") == "success":
         print(f"Reference scene saved: {save_result_ref.get('message')}")
@@ -402,10 +419,7 @@ def save_scenes(scene_manager: SceneManager) -> None:
         print(f"Failed to save reference scene: {save_result_ref.get('message')}")
 
 
-def process_semantic_detection(
-    semantic_camera,
-    map_semantic: MapSemantic
-) -> None:
+def process_semantic_detection(semantic_camera, map_semantic: MapSemantic) -> None:
     """
     Process semantic detection and car pose extraction using injected dependencies.
 
@@ -415,13 +429,15 @@ def process_semantic_detection(
     """
     try:
         current_frame = semantic_camera.get_current_frame()
-        if current_frame and 'bounding_box_2d_loose' in current_frame:
-            result = current_frame['bounding_box_2d_loose']
+        if current_frame and "bounding_box_2d_loose" in current_frame:
+            result = current_frame["bounding_box_2d_loose"]
             print("get bounding box 2d loose", result)
             if result:
-                car_prim, car_pose = map_semantic.get_prim_and_pose_by_semantic(result, 'car')
+                car_prim, car_pose = map_semantic.get_prim_and_pose_by_semantic(
+                    result, "car"
+                )
                 if car_prim is not None and car_pose is not None:
-                    print("get car prim and pose\n", car_prim, '\n', car_pose)
+                    print("get car prim and pose\n", car_prim, "\n", car_pose)
                 else:
                     print("No car detected in current frame")
             else:
@@ -432,12 +448,9 @@ def process_semantic_detection(
         print(f"Error getting semantic camera data: {e}")
 
 
-def process_ros_skills(
-    env,
-    swarm_manager: SwarmManager
-) -> None:
+def process_ros_skills(env, swarm_manager: SwarmManager) -> None:
     """Process ROS skill queue and execute skills with injected SwarmManager
-    
+
     Args:
         env: Environment instance
         swarm_manager: Injected swarm manager instance
@@ -490,9 +503,7 @@ def main():
             ros_nodes = build_ros_nodes()
             stop_evt = threading.Event()
             t_ros = threading.Thread(
-                target=spin_ros_in_background,
-                args=(ros_nodes, stop_evt),
-                daemon=True
+                target=spin_ros_in_background, args=(ros_nodes, stop_evt), daemon=True
             )
             t_ros.start()
             logger.info("ROS integration enabled")
@@ -526,7 +537,7 @@ def main():
         # Create car objects using scene manager
         created_prim_paths = create_car_objects(scene_manager)
         print("All prims with 'car' label:", created_prim_paths)
-        print(scene_manager.count_semantics_in_scene().get('result'))
+        print(scene_manager.count_semantics_in_scene().get("result"))
 
         # Reset environment to ensure all objects are properly initialized
         env.reset()
@@ -535,13 +546,18 @@ def main():
         for robot_class in swarm_manager.robot_class:
             for i, robot in enumerate(swarm_manager.robot_active[robot_class]):
                 callback_name = f"physics_step_{robot_class}_{i}"
-                env.world.add_physics_callback(callback_name, callback_fn=robot.on_physics_step)
+                env.world.add_physics_callback(
+                    callback_name, callback_fn=robot.on_physics_step
+                )
 
         # Create and initialize semantic camera
-        result = scene_manager.add_camera(position=[1, 4, 2], quat=scene_manager.euler_to_quaternion(roll=90),
-                                          prim_path='/World/semantic_camera')
-        semantic_camera = result.get('result').get('camera_instance')
-        semantic_camera_prim_path = result.get('result').get('prim_path')
+        result = scene_manager.add_camera(
+            position=[1, 4, 2],
+            quat=scene_manager.euler_to_quaternion(roll=90),
+            prim_path="/World/semantic_camera",
+        )
+        semantic_camera = result.get("result").get("camera_instance")
+        semantic_camera_prim_path = result.get("result").get("prim_path")
         semantic_camera.initialize()
 
         # Wait for camera and rendering pipeline to fully initialize
@@ -555,11 +571,15 @@ def main():
         from omni.kit.viewport.utility import get_viewport_from_window_name
 
         # isaacsim default viewport
-        viewport_manager.register_viewport(name='Viewport', viewport_obj=get_viewport_from_window_name('Viewport'))
-        viewport_manager.change_viewport(camera_prim_path=semantic_camera_prim_path, viewport_name='Viewport')
+        viewport_manager.register_viewport(
+            name="Viewport", viewport_obj=get_viewport_from_window_name("Viewport")
+        )
+        viewport_manager.change_viewport(
+            camera_prim_path=semantic_camera_prim_path, viewport_name="Viewport"
+        )
 
         # Build grid map for planning
-        grid_map.generate_grid_map('2d')
+        grid_map.generate_grid_map("2d")
 
         count = 0
         # Main simulation loop
@@ -596,6 +616,7 @@ def main():
         logger.info("--- Simulation finished. Manually closing application. ---")
         if simulation_app:
             simulation_app.__exit__(None, None, None)
+
 
 if __name__ == "__main__":
     # 直接调用同步 main 函数

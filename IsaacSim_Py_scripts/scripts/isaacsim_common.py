@@ -30,6 +30,8 @@ from std_msgs.msg import Header
 from std_srvs.srv import Empty
 from sensor_msgs.msg import PointCloud2, PointField, Image
 
+from map.map_semantic_map import MapSemantic
+
 # -----------------------------------------------------------------------------
 # Global variables (legacy single-UAV path)
 # -----------------------------------------------------------------------------
@@ -47,6 +49,7 @@ spawn_lock = threading.Lock()
 g_pending_move_requests = []
 move_lock = threading.Lock()
 g_node = None  # Global ROS2 node instance (first ctx)
+
 
 def generate_omap_fun(req, response):
     """callback for /generate_omap service."""
@@ -1158,7 +1161,37 @@ def run_simulation_loop(
 # =============================================================================
 
 
-def run_simulation_loop_multi(simulation_app, world, curr_stage, drone_ctxs: list[DroneSimCtx]):
+def process_semantic_detection(semantic_camera, map_semantic: MapSemantic) -> None:
+    """
+    Process semantic detection and car pose extraction using injected dependencies.
+
+    Args:
+        semantic_camera: Semantic camera instance
+        map_semantic: Injected semantic map instance
+    """
+    try:
+        current_frame = semantic_camera.get_current_frame()
+        if current_frame and "bounding_box_2d_loose" in current_frame:
+            result = current_frame["bounding_box_2d_loose"]
+            print("get bounding box 2d loose", result)
+            if result:
+                car_prim, car_pose = map_semantic.get_prim_and_pose_by_semantic(
+                    result, "car"
+                )
+                if car_prim is not None and car_pose is not None:
+                    print("get car prim and pose\n", car_prim, "\n", car_pose)
+                    return car_prim, car_pose
+                else:
+                    print("No car detected in current frame")
+            else:
+                print("No bounding box data available")
+        else:
+            print("No frame data or bounding box key available")
+    except Exception as e:
+        print(f"Error getting semantic camera data: {e}")
+
+
+def run_simulation_loop_multi(simulation_app, world, curr_stage, drone_ctxs: list[DroneSimCtx], semantic_camera, semantic_camera_prim_path, semantic_map):
     """Simulation loop that handles *multiple* DroneSimCtx objects.
 
     The original single-drone function is left untouched for backward
@@ -1178,6 +1211,21 @@ def run_simulation_loop_multi(simulation_app, world, curr_stage, drone_ctxs: lis
     world.reset()
     for _ in range(10):
         simulation_app.update()
+
+    semantic_camera.initialize()  # wait 10 frames
+
+    # Switch viewport to semantic camera
+    from omni.kit.viewport.utility import get_viewport_from_window_name
+    from ui.viewport_manager import ViewportManager
+    viewport_manager = ViewportManager()
+    # isaacsim default viewport
+    viewport_manager.register_viewport(
+        name="Viewport", viewport_obj=get_viewport_from_window_name("Viewport")
+    )
+    viewport_manager.change_viewport(
+        camera_prim_path=semantic_camera_prim_path, viewport_name="Viewport"
+    )
+
 
     rendering_dt = world.get_rendering_dt()
     assert rendering_dt > 0
@@ -1204,7 +1252,7 @@ def run_simulation_loop_multi(simulation_app, world, curr_stage, drone_ctxs: lis
         ctx.is_pose_dirty = True
 
     print(f"Starting multi-UAV simulation loop with {len(drone_ctxs)} drones")
-
+    count = 0
     while simulation_app.is_running():
         rate.sleep()
 
@@ -1229,6 +1277,11 @@ def run_simulation_loop_multi(simulation_app, world, curr_stage, drone_ctxs: lis
 
         # Run single simulation step
         world.step(render=True)
+
+        # semantic camera detection
+        if count % 120 == 0 and count > 0:
+            result = process_semantic_detection(semantic_camera, semantic_map)
+        count += 1
 
         # ------------------------------------------------------------------
         # Publish per-drone outputs

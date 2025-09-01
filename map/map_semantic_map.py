@@ -21,10 +21,6 @@ class MapSemantic():
                 cfg = yaml.safe_load(f)
             # Assumes the config file contains the 'map_semantic' key
             self.map_semantic = cfg['map_semantic']
-        except FileNotFoundError:
-            raise FileNotFoundError("Error: Configuration file 'files/env_cfg.yaml' not found.")
-        except KeyError:
-            raise KeyError("Error: The key 'map_semantic' is missing from the config file 'files/env_cfg.yaml'.")
         except Exception as e:
             raise RuntimeError(f"An unexpected error occurred while loading or parsing the config file: {e}") from e
 

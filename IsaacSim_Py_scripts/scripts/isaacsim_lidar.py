@@ -64,6 +64,8 @@ import os
 import shutil
 from isaacsim.core.utils.extensions import get_extension_path_from_name
 
+from scene.scene_manager import SceneManager
+from map.map_semantic_map import MapSemantic
 
 def copy_lidar_config(lidar_config):
     """Copy the lidar config from the current directory to the extension directory."""
@@ -193,13 +195,150 @@ def build_drone_ctx(namespace: str, idx: int):
     return partial_ctx
 
 
+def create_car_objects(scene_manager: SceneManager) -> list:
+    """
+    Create car objects in the scene with semantic labels using injected dependencies.
+
+    Args:
+        scene_manager: Injected scene manager instance for creating objects
+
+    Returns:
+        list: List of created prim paths
+    """
+    scale = [2, 5, 1.0]
+    cubes_config = {
+        "car0": {
+            "shape_type": "cuboid",
+            "prim_path": "/World/car0",
+            "size": scale,
+            "position": [11.6, 3.5, 0],
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+        "car1": {
+            "shape_type": "cuboid",
+            "prim_path": "/World/car1",
+            "size": scale,
+            "position": [0.3, 3.5, 0],
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+        "car2": {
+            "shape_type": "cuboid",
+            "prim_path": "/World/car2",
+            "size": scale,
+            "position": [-13.2, 3.5, 0],
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+        "car3": {
+            "shape_type": "cuboid",
+            "prim_path": "/World/car3",
+            "size": scale,
+            "position": [-7.1, 10, 0],
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+        "car4": {
+            "shape_type": "cuboid",
+            "prim_path": "/World/car4",
+            "size": scale,
+            "position": [-0.9, 30, 0],
+            "orientation": [0.707, 0, 0, 0.707],
+            "color": [255, 255, 255],
+            "make_dynamic": False,
+        },
+    }
+
+    created_prim_paths = []
+    print(
+        "All semantics in scene:",
+        scene_manager.count_semantics_in_scene().get("result"),
+    )
+
+    for cube_name, config in cubes_config.items():
+        print(f"--- Processing: {cube_name} ---")
+
+        # Create shape using unpacking
+        creation_result = scene_manager.create_shape(**config)
+
+        # Check the result
+        if creation_result.get("status") == "success":
+            prim_path = creation_result.get("result")
+            print(f"  Successfully created prim at: {prim_path}")
+            created_prim_paths.append(prim_path)
+
+            # Add semantic label
+            semantic_result = scene_manager.add_semantic(
+                prim_path=prim_path, semantic_label="car"
+            )
+
+            if semantic_result.get("status") == "success":
+                print(f"  Successfully applied semantic label 'car' to {prim_path}")
+            else:
+                print(
+                    f"  [ERROR] Failed to apply semantic label: {semantic_result.get('message')}"
+                )
+        else:
+            print(
+                f"  [ERROR] Failed to create shape '{cube_name}': {creation_result.get('message')}"
+            )
+
+    return created_prim_paths
+
+
+def process_semantic_detection(semantic_camera, map_semantic: MapSemantic) -> None:
+    """
+    Process semantic detection and car pose extraction using injected dependencies.
+
+    Args:
+        semantic_camera: Semantic camera instance
+        map_semantic: Injected semantic map instance
+    """
+    try:
+        current_frame = semantic_camera.get_current_frame()
+        if current_frame and "bounding_box_2d_loose" in current_frame:
+            result = current_frame["bounding_box_2d_loose"]
+            print("get bounding box 2d loose", result)
+            if result:
+                car_prim, car_pose = map_semantic.get_prim_and_pose_by_semantic(
+                    result, "car"
+                )
+                if car_prim is not None and car_pose is not None:
+                    print("get car prim and pose\n", car_prim, "\n", car_pose)
+                else:
+                    print("No car detected in current frame")
+            else:
+                print("No bounding box data available")
+        else:
+            print("No frame data or bounding box key available")
+    except Exception as e:
+        print(f"Error getting semantic camera data: {e}")
+
 def main():
     rendering_hz = 10.0
     global curr_stage  # Needed in build_drone_ctx
 
+    scene_manager = SceneManager()
     world, curr_stage = create_sim_environment(
         args.world, rendering_hz, g_simulation_app
     )
+
+    created_prim_paths = create_car_objects(scene_manager)
+    print("All prims with 'car' label:", created_prim_paths)
+    print(scene_manager.count_semantics_in_scene().get("result"))
+
+    # Create and initialize semantic camera
+    result = scene_manager.add_camera(
+        position=[1, 4, 2],
+        quat=scene_manager.euler_to_quaternion(roll=90),
+        prim_path="/World/semantic_camera",
+    )
+
+    semantic_map = MapSemantic()
+    semantic_camera = result.get("result").get("camera_instance")
+    semantic_camera_prim_path = result.get("result").get("prim_path")
+
 
     drone_ctxs: list[DroneSimCtx] = []
     for idx, ns in enumerate(namespace_list):
@@ -207,7 +346,7 @@ def main():
 
     # ---------------- Run simulation -----------------------------------
     run_simulation_loop_multi(
-        g_simulation_app, world, curr_stage, drone_ctxs
+        g_simulation_app, world, curr_stage, drone_ctxs, semantic_camera, semantic_camera_prim_path, semantic_map
     )
 
     # Cleanup copied lidar config files ---------------------------------
