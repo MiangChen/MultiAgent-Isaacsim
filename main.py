@@ -1,8 +1,9 @@
 # Standard library imports
-import argparse
 import asyncio
 import logging
 import os
+import signal
+import sys
 import threading
 from typing import Dict, Any
 from collections import defaultdict, deque
@@ -11,26 +12,16 @@ from collections import defaultdict, deque
 from dependency_injector.wiring import inject, Provide  # Dependency injection imports
 import yaml
 
+# Local imports - argument parsing
+from argument_parser import parse_arguments, get_argument_summary
+
 # Isaac Sim related imports
 from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
 
-# Initialize simulation app
-parser = argparse.ArgumentParser(description="Initialize Isaac Sim from a YAML config.")
-parser.add_argument(
-    "--config",
-    type=str,
-    default="./files/sim_cfg.yaml",
-    help="Path to the configuration physics engine.",
-)
-parser.add_argument(
-    "--enable",
-    type=str,
-    action="append",
-    help="Enable a feature. Can be used multiple times.",
-)
-parser.add_argument("--ros", type=bool, default=True)
-args = parser.parse_args()
+# Parse arguments first
+args = parse_arguments()
 
+# Initialize simulation app with parsed config
 simulation_app = initialize_simulation_app_from_yaml(args.config)
 from isaacsim.core.api import World
 
@@ -45,12 +36,44 @@ from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
 from containers import AppContainer
+from webmanager.integration import WebManagerSystem
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+
+# Setup logging with configurable level and file
+log_level = getattr(logging, args.log_level.upper())
+
+# Create log file directory if it doesn't exist
+from pathlib import Path
+log_path = Path(args.log_file)
+log_path.parent.mkdir(parents=True, exist_ok=True)
+
+# Configure logging with both console and file handlers
+console_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+file_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s")
+
+console_handler = logging.StreamHandler()
+console_handler.setLevel(log_level)
+console_handler.setFormatter(console_formatter)
+
+file_handler = logging.FileHandler(args.log_file, mode='a')
+file_handler.setLevel(log_level)
+file_handler.setFormatter(file_formatter)
+
+# Configure root logger
+root_logger = logging.getLogger()
+root_logger.setLevel(log_level)
+root_logger.handlers.clear()
+root_logger.addHandler(console_handler)
+root_logger.addHandler(file_handler)
+
 logger = logging.getLogger(__name__)
+
+# Log startup information with argument summary
+logger.info("Isaac Sim WebManager starting...")
+logger.info("\n" + get_argument_summary(args))
+
+# Determine if WebManager should be enabled
+webmanager_enabled = args.enable_webmanager and not args.disable_webmanager
 
 # ROS 2 imports (optional, only if ROS is available)
 try:
@@ -74,6 +97,61 @@ except ImportError:
 # Global variables for ROS integration
 _skill_queues = defaultdict(deque)
 _skill_lock = threading.Lock()
+
+# Global variables for WebManager integration
+_webmanager_system = None
+_webmanager_thread = None
+_webmanager_stop_event = None
+
+# Global shutdown flag and process manager
+_shutdown_requested = False
+_process_manager = None
+
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals gracefully"""
+    global _shutdown_requested, _process_manager
+    
+    signal_names = {
+        signal.SIGINT: "SIGINT (Ctrl+C)",
+        signal.SIGTERM: "SIGTERM"
+    }
+    
+    signal_name = signal_names.get(signum, f"Signal {signum}")
+    logger.info(f"Received {signal_name}, initiating graceful shutdown...")
+    
+    _shutdown_requested = True
+    
+    # Use process manager for coordinated shutdown
+    if _process_manager:
+        _process_manager.request_shutdown()
+    
+    # Stop WebManager system gracefully
+    if _webmanager_system:
+        logger.info("Stopping WebManager system due to shutdown signal...")
+        try:
+            stop_webmanager_system()
+            logger.info("WebManager system stopped successfully")
+        except Exception as e:
+            logger.error(f"Error stopping WebManager system: {e}")
+    
+    # Stop ROS nodes if running
+    global stop_evt, t_ros
+    if stop_evt:
+        logger.info("Stopping ROS nodes...")
+        stop_evt.set()
+        if t_ros and t_ros.is_alive():
+            t_ros.join(timeout=3.0)
+            if t_ros.is_alive():
+                logger.warning("ROS thread did not stop within timeout")
+    
+    # For SIGINT (Ctrl+C), we can exit immediately
+    if signum == signal.SIGINT:
+        logger.info("Immediate shutdown requested")
+        # Cleanup process manager before exit
+        if _process_manager:
+            _process_manager.cleanup()
+        sys.exit(0)
 
 
 def _param_dict(params) -> Dict[str, Any]:
@@ -163,6 +241,144 @@ _SKILL_TABLE = {
     "pick-up": _skill_pick_up,
     "put-down": _skill_put_down,
 }
+
+
+def initialize_webmanager_system(swarm_manager, viewport_manager, simulation_app, config, ros_monitor=None) -> WebManagerSystem:
+    """Initialize and configure the WebManager system for Isaac Sim integration
+    
+    Args:
+        swarm_manager: SwarmManager instance for robot data
+        viewport_manager: ViewportManager instance for camera data
+        simulation_app: Isaac Sim application instance
+        config: WebManagerConfig instance with configuration
+        ros_monitor: Optional ROS monitor node
+        
+    Returns:
+        WebManagerSystem: Configured WebManager system
+    """
+    global _webmanager_system
+    
+    try:
+        logger.info("Initializing WebManager system...")
+        logger.info(f"WebManager configuration: host={config.web_host}, port={config.web_port}")
+        logger.info(f"Data collection rate: {config.data_collection_rate}Hz, max history: {config.max_history}")
+        
+        # Create WebManager system with configuration
+        _webmanager_system = WebManagerSystem(
+            host=config.web_host,
+            port=config.web_port,
+            collection_rate=config.data_collection_rate,
+            max_history=config.max_history
+        )
+        
+        # Configure WebManager features from config
+        webmanager_config = {
+            'enable_camera_streaming': not config.disable_camera_streaming,
+            'camera_quality': config.camera_quality,
+            'enable_compression': config.enable_compression,
+            'log_level': config.log_level
+        }
+        
+        # Initialize with Isaac Sim components
+        _webmanager_system.initialize(
+            swarm_manager=swarm_manager,
+            isaac_sim_app=simulation_app,
+            viewport_manager=viewport_manager,
+            ros_monitor=ros_monitor,
+            config=webmanager_config
+        )
+        
+        logger.info("WebManager system initialized successfully")
+        logger.info(f"WebManager web interface will be available at http://{config.web_host}:{config.web_port}")
+        return _webmanager_system
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize WebManager system: {e}")
+        raise
+
+
+def start_webmanager_in_thread():
+    """Start WebManager system in a separate thread"""
+    global _webmanager_system, _webmanager_thread, _webmanager_stop_event
+    
+    if not _webmanager_system:
+        logger.error("WebManager system not initialized")
+        return
+    
+    def webmanager_thread_worker():
+        """Worker function for WebManager thread"""
+        try:
+            logger.info("Starting WebManager system in separate thread...")
+            _webmanager_system.start()
+            
+            # Keep thread alive while system is running
+            while not _webmanager_stop_event.is_set():
+                _webmanager_stop_event.wait(timeout=1.0)
+                
+        except Exception as e:
+            logger.error(f"Error in WebManager thread: {e}")
+        finally:
+            logger.info("WebManager thread shutting down")
+    
+    # Create stop event and thread
+    _webmanager_stop_event = threading.Event()
+    _webmanager_thread = threading.Thread(
+        target=webmanager_thread_worker,
+        name="WebManagerThread",
+        daemon=True
+    )
+    
+    # Start the thread
+    _webmanager_thread.start()
+    logger.info("WebManager thread started")
+
+
+def stop_webmanager_system():
+    """Stop the WebManager system and cleanup resources"""
+    global _webmanager_system, _webmanager_thread, _webmanager_stop_event
+    
+    try:
+        logger.info("Initiating WebManager system shutdown...")
+        
+        # Signal the thread to stop
+        if _webmanager_stop_event:
+            logger.debug("Setting WebManager stop event")
+            _webmanager_stop_event.set()
+        
+        # Stop the WebManager system
+        if _webmanager_system:
+            logger.debug("Stopping WebManager system")
+            _webmanager_system.stop()
+            
+            # Report final statistics
+            try:
+                stats = _webmanager_system.get_system_status()
+                logger.info(f"WebManager final status: {stats}")
+            except Exception as e:
+                logger.debug(f"Could not get final statistics: {e}")
+        
+        # Wait for thread to finish
+        if _webmanager_thread and _webmanager_thread.is_alive():
+            logger.debug("Waiting for WebManager thread to finish...")
+            _webmanager_thread.join(timeout=5.0)
+            
+            if _webmanager_thread.is_alive():
+                logger.warning("WebManager thread did not shut down gracefully within 5 seconds")
+                # Force thread termination is not recommended in Python
+                # The daemon thread will be terminated when the main process exits
+            else:
+                logger.debug("WebManager thread finished successfully")
+        
+        # Reset global variables
+        _webmanager_system = None
+        _webmanager_thread = None
+        _webmanager_stop_event = None
+        
+        logger.info("WebManager system stopped successfully")
+        
+    except Exception as e:
+        logger.error(f"Error stopping WebManager system: {e}")
+        # Continue with shutdown even if WebManager cleanup fails
 
 
 def build_ros_nodes() -> tuple:
@@ -385,40 +601,6 @@ def create_car_objects(scene_manager: SceneManager) -> list:
     return created_prim_paths
 
 
-def save_scenes(scene_manager: SceneManager) -> None:
-    """
-    Save current scene in both flattened and reference formats.
-
-    Args:
-        scene_manager: Scene manager instance for saving scenes
-    """
-    print("--- Saving current scene ---")
-
-    save_dir = os.path.abspath("./saved_scenes")
-
-    # Save flattened scene (complete with all assets)
-    save_result_flat = scene_manager.save_scene(
-        scene_name="current_scene_with_cars_flattened",
-        save_directory=save_dir,
-        flatten_scene=True,
-    )
-    if save_result_flat.get("status") == "success":
-        print(f"Flattened scene saved: {save_result_flat.get('message')}")
-    else:
-        print(f"Failed to save flattened scene: {save_result_flat.get('message')}")
-
-    # Save reference version (smaller file)
-    save_result_ref = scene_manager.save_scene(
-        scene_name="current_scene_with_cars_references",
-        save_directory=save_dir,
-        flatten_scene=False,
-    )
-    if save_result_ref.get("status") == "success":
-        print(f"Reference scene saved: {save_result_ref.get('message')}")
-    else:
-        print(f"Failed to save reference scene: {save_result_ref.get('message')}")
-
-
 def process_semantic_detection(semantic_camera, map_semantic: MapSemantic) -> None:
     """
     Process semantic detection and car pose extraction using injected dependencies.
@@ -491,6 +673,57 @@ def process_ros_skills(env, swarm_manager: SwarmManager) -> None:
 
 
 def main():
+    global _shutdown_requested, _process_manager
+    
+    # Create process manager configuration from command line arguments
+    try:
+        from webmanager.startup_config import WebManagerConfig
+        from webmanager.process_manager import ProcessManager
+        
+        # Create configuration object from parsed arguments
+        config = WebManagerConfig.from_args_direct(args)
+        
+        # Initialize process manager
+        _process_manager = ProcessManager(config)
+        _process_manager.set_status("starting")
+        
+        logger.info("Process manager initialized")
+        
+        # Register shutdown callbacks
+        def webmanager_shutdown_callback():
+            """Shutdown callback for WebManager system"""
+            if _webmanager_system:
+                try:
+                    stop_webmanager_system()
+                except Exception as e:
+                    logger.error(f"Error in WebManager shutdown callback: {e}")
+        
+        def ros_shutdown_callback():
+            """Shutdown callback for ROS system"""
+            global stop_evt, t_ros
+            if stop_evt:
+                logger.info("Stopping ROS nodes via shutdown callback...")
+                stop_evt.set()
+                if t_ros and t_ros.is_alive():
+                    t_ros.join(timeout=3.0)
+        
+        _process_manager.register_shutdown_callback(webmanager_shutdown_callback)
+        _process_manager.register_shutdown_callback(ros_shutdown_callback)
+        
+        # Start health monitoring
+        _process_manager.start_health_monitoring()
+        
+    except ImportError:
+        logger.warning("Enhanced process management not available, using basic signal handling")
+        _process_manager = None
+    except Exception as e:
+        logger.error(f"Failed to initialize process manager: {e}")
+        _process_manager = None
+    
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    logger.info("Signal handlers registered for graceful shutdown")
 
     # Initialize ROS if requested and available
     ros_nodes = (None, None)
@@ -581,28 +814,149 @@ def main():
         # Build grid map for planning
         grid_map.generate_grid_map("2d")
 
+        # Initialize and start WebManager system if enabled
+        if webmanager_enabled:
+            try:
+                logger.info("Starting WebManager system...")
+                # Get ROS monitor from nodes if available
+                ros_monitor = ros_nodes[1] if ros_nodes and ros_nodes[1] else None
+                
+                webmanager_system = initialize_webmanager_system(
+                    swarm_manager=swarm_manager,
+                    viewport_manager=viewport_manager,
+                    simulation_app=simulation_app,
+                    config=config,
+                    ros_monitor=ros_monitor
+                )
+                start_webmanager_in_thread()
+                
+                # Update process manager status
+                if _process_manager:
+                    _process_manager.set_status("running")
+                
+                logger.info("WebManager system started successfully")
+                logger.info(f"Access the web interface at: http://{args.web_host}:{args.web_port}")
+            except Exception as e:
+                logger.error(f"Failed to start WebManager system: {e}")
+                if _process_manager:
+                    _process_manager.report_error(f"WebManager startup failed: {e}")
+                logger.warning("Continuing simulation without WebManager")
+                # Continue without WebManager if it fails to start
+        else:
+            logger.info("WebManager disabled by command line arguments")
+            if _process_manager:
+                _process_manager.set_status("running")
+
         count = 0
+        logger.info("Starting main simulation loop...")
+        
         # Main simulation loop
-        while simulation_app.is_running():
-            # World step
-            env.step(action=None)
+        while simulation_app.is_running() and not _shutdown_requested:
+            try:
+                # Check if shutdown was requested via process manager
+                if _process_manager and _process_manager.is_shutdown_requested():
+                    logger.info("Shutdown requested via process manager")
+                    break
+                
+                # World step
+                env.step(action=None)
 
-            if count % 120 == 0 and count > 0:
-                process_semantic_detection(semantic_camera, semantic_map)
+                if count % 120 == 0 and count > 0:
+                    process_semantic_detection(semantic_camera, semantic_map)
 
-            # Process ROS skills if ROS is enabled
-            if args.ros:
-                process_ros_skills(env, swarm_manager)
-            count += 1
+                # Process ROS skills if ROS is enabled
+                if args.ros:
+                    process_ros_skills(env, swarm_manager)
+                    
+                count += 1
+                
+                # Update process manager with WebManager statistics
+                if _process_manager and _webmanager_system and count % 60 == 0:  # Every second at 60 FPS
+                    try:
+                        # Get WebManager connection count if available
+                        connection_count = 0
+                        if hasattr(_webmanager_system, 'web_server') and hasattr(_webmanager_system.web_server, 'websocket_manager'):
+                            connection_count = _webmanager_system.web_server.websocket_manager.get_connection_count()
+                        
+                        _process_manager.update_webmanager_stats(
+                            active_connections=connection_count,
+                            total_requests=count  # Use simulation steps as a proxy for activity
+                        )
+                    except Exception as e:
+                        logger.debug(f"Error updating WebManager stats: {e}")
+                
+                # Log status periodically
+                if count % 600 == 0:  # Every 10 seconds at 60 FPS
+                    logger.debug(f"Simulation running - step {count}")
+                    if _process_manager:
+                        status = _process_manager.get_status()
+                        logger.debug(f"Process status: {status.status}, uptime: {status.uptime_seconds:.1f}s, memory: {status.memory_usage_mb:.1f}MB")
+                    
+            except KeyboardInterrupt:
+                logger.info("Simulation interrupted by user")
+                break
+            except Exception as e:
+                logger.error(f"Error in simulation loop: {e}")
+                if _process_manager:
+                    _process_manager.report_error(f"Simulation loop error: {e}")
+                # Continue running unless it's a critical error
+                #continueboardInterrupt:
+                logger.info("Keyboard interrupt received in main loop")
+                _shutdown_requested = True
+                break
+            except Exception as e:
+                logger.error(f"Error in simulation loop: {e}")
+                # Continue running unless it's a critical error
+                if "critical" in str(e).lower():
+                    break
+        
+        if _shutdown_requested:
+            logger.info("Shutdown requested, exiting main loop")
+        elif not simulation_app.is_running():
+            logger.info("Simulation app stopped, exiting main loop")
 
     except Exception as e:
         raise Exception(f"Simulation failed: {e}")
     finally:
         # Clean shutdown
+        logger.info("Starting graceful shutdown...")
+        
+        # Stop WebManager system if it was enabled
+        if webmanager_enabled:
+            logger.info("Stopping WebManager system...")
+            stop_webmanager_system()
+        
+        # Stop ROS
         if stop_evt:
             stop_evt.set()
         if t_ros:
             t_ros.join(timeout=1.0)
+
+        logger.info("Simulation loop ended, starting cleanup...")
+        
+        # Cleanup process manager and report final status
+        if _process_manager:
+            try:
+                logger.info("Cleaning up process manager...")
+                _process_manager.set_status("stopping")
+                
+                # Wait for graceful shutdown if requested
+                if _process_manager.is_shutdown_requested():
+                    logger.info(f"Waiting for graceful shutdown (timeout: {args.shutdown_timeout}s)...")
+                    _process_manager.wait_for_shutdown(timeout=args.shutdown_timeout)
+                
+                # Get final status report
+                final_status = _process_manager.get_status()
+                logger.info(f"Final process status: uptime={final_status.uptime_seconds:.1f}s, "
+                           f"memory={final_status.memory_usage_mb:.1f}MB, "
+                           f"errors={final_status.error_count}")
+                
+                # Cleanup process manager resources
+                _process_manager.cleanup()
+                logger.info("Process manager cleanup completed")
+                
+            except Exception as e:
+                logger.error(f"Error during process manager cleanup: {e}")
 
         # Unwire the container
         try:

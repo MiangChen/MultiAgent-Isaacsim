@@ -1347,7 +1347,9 @@ class SceneManager:
             # 确定保存目录
             if save_directory is None:
                 save_directory = self.scene_repository_path
-            
+
+            save_directory = os.path.abspath(save_directory)
+
             # 确保保存目录存在
             os.makedirs(save_directory, exist_ok=True)
             
