@@ -1,16 +1,15 @@
 # Standard library imports
 import asyncio
+from collections import defaultdict, deque
 import logging
 import os
 import signal
 import sys
 import threading
 from typing import Dict, Any
-from collections import defaultdict, deque
 
 # Third-party imports
 from dependency_injector.wiring import inject, Provide  # Dependency injection imports
-import yaml
 
 # Local imports - argument parsing
 from argument_parser import parse_arguments, get_argument_summary
@@ -194,56 +193,52 @@ def _parse_robot_id(robot_id: str) -> tuple[str, int]:
 
 
 # Skill execution functions with dependency injection
-@inject
 def _skill_navigate_to(
-    env,
+    swarm_manager,
     rc: str,
     rid: int,
     params: Dict[str, Any],
-    semantic_map: MapSemantic = Provide[AppContainer.semantic_map]
+    semantic_map
 ) -> None:
     """Execute navigate-to skill with injected semantic map
 
     Args:
-        env: Environment instance
+        swarm_manager
         rc: Robot class name
         rid: Robot index
         params: Skill parameters containing 'goal' key
         semantic_map: Injected semantic map instance
     """
     pos = semantic_map.map_semantic[params["goal"]]
-    env.robot_swarm.robot_active[rc][rid].navigate_to(pos)
+    swarm_manager.robot_active[rc][rid].navigate_to(pos)
 
-
-def _skill_pick_up(env, rc: str, rid: int, params: Dict[str, Any]) -> None:
+def _skill_pick_up(swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> None:
     """Execute pick-up skill
 
     Args:
-        env: Environment instance
+        swarm_manager
         rc: Robot class name
         rid: Robot index
         params: Skill parameters (unused for pick-up)
     """
-    env.robot_swarm.robot_active[rc][rid].pick_up()
+    swarm_manager.robot_swarm.robot_active[rc][rid].pick_up()
 
-
-def _skill_put_down(env, rc: str, rid: int, params: Dict[str, Any]) -> None:
+def _skill_put_down(swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> None:
     """Execute put-down skill
 
     Args:
-        env: Environment instance
+        swarm_manager
         rc: Robot class name
         rid: Robot index
         params: Skill parameters (unused for put-down)
     """
-    env.robot_swarm.robot_active[rc][rid].put_down()
+    swarm_manager.robot_active[rc][rid].put_down()
 
 _SKILL_TABLE = {
     "navigate-to": _skill_navigate_to,
     "pick-up": _skill_pick_up,
     "put-down": _skill_put_down,
 }
-
 
 def initialize_webmanager_system(swarm_manager, viewport_manager, simulation_app, config, ros_monitor=None) -> WebManagerSystem:
     """Initialize and configure the WebManager system for Isaac Sim integration
@@ -648,13 +643,11 @@ def process_semantic_detection(semantic_camera, map_semantic: MapSemantic) -> No
 
 
 def process_ros_skills(
-    env,
     swarm_manager: SwarmManager
 ) -> None:
     """Process ROS skill queue and execute skills with injected SwarmManager
 
     Args:
-        env: Environment instance
         swarm_manager: Injected swarm manager instance
     """
     if not ROS_AVAILABLE:
@@ -687,7 +680,7 @@ def process_ros_skills(
                     logger.warning(f"[Scheduler] unsupported skill: {name}")
                 else:
                     try:
-                        fn(env, rc, rid, params)
+                        fn(swarm_manager, rc, rid, params)
                     except Exception as e:
                         logger.error(f"[Scheduler] start skill error: {e}")
 
@@ -766,230 +759,205 @@ def main():
     logger.info("Signal handlers registered for graceful shutdown")
 
 
-    try:
-        # Setup dependency injection container
-        from containers import get_container
+    # Setup dependency injection container
+    from containers import get_container
 
-        container = get_container()
+    container = get_container()
 
-        # Wire the container to this module for @inject decorators in skill functions
-        container.wire(modules=[__name__])
+    # Wire the container to this module for @inject decorators in skill functions
+    container.wire(modules=[__name__])
 
-        # Get services from container
-        swarm_manager = container.swarm_manager()
-        scene_manager = container.scene_manager()
-        grid_map = container.grid_map()
-        semantic_map = container.semantic_map()
-        viewport_manager = container.viewport_manager()
-        world = container.world()
-        env = container.env()
-        env.simulation_app = simulation_app
-        setup_simulation()
+    # Get services from container
+    swarm_manager = container.swarm_manager()
+    scene_manager = container.scene_manager()
+    grid_map = container.grid_map()
+    semantic_map = container.semantic_map()
+    viewport_manager = container.viewport_manager()
+    world = container.world()
+    env = container.env()
+    env.simulation_app = simulation_app
+    setup_simulation()
 
-        # Load scene
-        scene_manager.load_scene(usd_path=WORLD_USD_PATH)
+    # Load scene
+    scene_manager.load_scene(usd_path=WORLD_USD_PATH)
 
-        # Create car objects using scene manager
-        created_prim_paths = create_car_objects(scene_manager)
-        print("All prims with 'car' label:", created_prim_paths)
-        print(scene_manager.count_semantics_in_scene().get("result"))
+    # Create car objects using scene manager
+    created_prim_paths = create_car_objects(scene_manager)
+    print("All prims with 'car' label:", created_prim_paths)
+    print(scene_manager.count_semantics_in_scene().get("result"))
 
-        # Reset environment to ensure all objects are properly initialized
-        env.reset()
+    # Reset environment to ensure all objects are properly initialized
+    env.reset()
 
-        # Add physics callbacks for active robots
-        for robot_class in swarm_manager.robot_class:
-            for i, robot in enumerate(swarm_manager.robot_active[robot_class]):
-                callback_name = f"physics_step_{robot_class}_{i}"
-                env.world.add_physics_callback(
-                    callback_name, callback_fn=robot.on_physics_step
-                )
+    # Add physics callbacks for active robots
+    for robot_class in swarm_manager.robot_class:
+        for i, robot in enumerate(swarm_manager.robot_active[robot_class]):
+            callback_name = f"physics_step_{robot_class}_{i}"
+            env.world.add_physics_callback(
+                callback_name, callback_fn=robot.on_physics_step
+            )
 
-        # Create and initialize semantic camera
-        result = scene_manager.add_camera(
-            position=[1, 4, 2],
-            quat=scene_manager.euler_to_quaternion(roll=90),
-            prim_path="/World/semantic_camera",
-        )
-        semantic_camera = result.get("result").get("camera_instance")
-        semantic_camera_prim_path = result.get("result").get("prim_path")
-        semantic_camera.initialize()
+    # Create and initialize semantic camera
+    result = scene_manager.add_camera(
+        position=[1, 4, 2],
+        quat=scene_manager.euler_to_quaternion(roll=90),
+        prim_path="/World/semantic_camera",
+    )
+    semantic_camera = result.get("result").get("camera_instance")
+    semantic_camera_prim_path = result.get("result").get("prim_path")
+    semantic_camera.initialize()
 
-        # Wait for camera and rendering pipeline to fully initialize
-        for _ in range(10):
-            env.step(action=None)
+    # Wait for camera and rendering pipeline to fully initialize
+    for _ in range(10):
+        env.step(action=None)
 
-        # Enable bounding box detection after initialization period
-        semantic_camera.add_bounding_box_2d_loose_to_frame()
+    # Enable bounding box detection after initialization period
+    semantic_camera.add_bounding_box_2d_loose_to_frame()
 
-        # Switch viewport to semantic camera
-        from omni.kit.viewport.utility import get_viewport_from_window_name
+    # Switch viewport to semantic camera
+    from omni.kit.viewport.utility import get_viewport_from_window_name
 
 
-        viewport_manager.register_viewport(
-            name="Viewport", viewport_obj=get_viewport_from_window_name("Viewport")
-        )         # isaacsim default viewport
-        viewport_manager.change_viewport(
-            camera_prim_path=semantic_camera_prim_path, viewport_name="Viewport"
-        )
+    viewport_manager.register_viewport(
+        name="Viewport", viewport_obj=get_viewport_from_window_name("Viewport")
+    )         # isaacsim default viewport
+    viewport_manager.change_viewport(
+        camera_prim_path=semantic_camera_prim_path, viewport_name="Viewport"
+    )
 
-        # Build grid map for planning
-        grid_map.generate_grid_map("2d")
+    # Build grid map for planning
+    grid_map.generate_grid_map("2d")
 
-        # Initialize and start WebManager system if enabled
-        if webmanager_enabled:
-            try:
-                logger.info("Starting WebManager system...")
-                # Get ROS monitor from nodes if available
-                ros_monitor = ros_nodes[1] if ros_nodes and ros_nodes[1] else None
+    # Initialize and start WebManager system if enabled
+    if webmanager_enabled:
+        try:
+            logger.info("Starting WebManager system...")
+            # Get ROS monitor from nodes if available
+            ros_monitor = ros_nodes[1] if ros_nodes and ros_nodes[1] else None
 
-                webmanager_system = initialize_webmanager_system(
-                    swarm_manager=swarm_manager,
-                    viewport_manager=viewport_manager,
-                    simulation_app=simulation_app,
-                    config=config,
-                    ros_monitor=ros_monitor
-                )
-                start_webmanager_in_thread()
+            webmanager_system = initialize_webmanager_system(
+                swarm_manager=swarm_manager,
+                viewport_manager=viewport_manager,
+                simulation_app=simulation_app,
+                config=config,
+                ros_monitor=ros_monitor
+            )
+            start_webmanager_in_thread()
 
-                # Update process manager status
-                if _process_manager:
-                    _process_manager.set_status("running")
-
-                logger.info("WebManager system started successfully")
-                logger.info(f"Access the web interface at: http://{args.web_host}:{args.web_port}")
-            except Exception as e:
-                logger.error(f"Failed to start WebManager system: {e}")
-                if _process_manager:
-                    _process_manager.report_error(f"WebManager startup failed: {e}")
-                logger.warning("Continuing simulation without WebManager")
-                # Continue without WebManager if it fails to start
-        else:
-            logger.info("WebManager disabled by command line arguments")
+            # Update process manager status
             if _process_manager:
                 _process_manager.set_status("running")
 
-        count = 0
-        logger.info("Starting main simulation loop...")
-
-        # Main simulation loop
-        while simulation_app.is_running() and not _shutdown_requested:
-            try:
-                # Check if shutdown was requested via process manager
-                if _process_manager and _process_manager.is_shutdown_requested():
-                    logger.info("Shutdown requested via process manager")
-                    break
-
-                # World step
-                env.step(action=None)
-
-                if count % 120 == 0 and count > 0:
-                    process_semantic_detection(semantic_camera, semantic_map)
-
-                # Process ROS skills if ROS is enabled
-                if args.ros:
-                    process_ros_skills(env, swarm_manager)
-
-                count += 1
-
-                # Update process manager with WebManager statistics
-                if _process_manager and _webmanager_system and count % 60 == 0:  # Every second at 60 FPS
-                    try:
-                        # Get WebManager connection count if available
-                        connection_count = 0
-                        if hasattr(_webmanager_system, 'web_server') and hasattr(_webmanager_system.web_server,
-                                                                                 'websocket_manager'):
-                            connection_count = _webmanager_system.web_server.websocket_manager.get_connection_count()
-
-                        _process_manager.update_webmanager_stats(
-                            active_connections=connection_count,
-                            total_requests=count  # Use simulation steps as a proxy for activity
-                        )
-                    except Exception as e:
-                        logger.debug(f"Error updating WebManager stats: {e}")
-
-                # Log status periodically
-                if count % 600 == 0:  # Every 10 seconds at 60 FPS
-                    logger.debug(f"Simulation running - step {count}")
-                    if _process_manager:
-                        status = _process_manager.get_status()
-                        logger.debug(
-                            f"Process status: {status.status}, uptime: {status.uptime_seconds:.1f}s, memory: {status.memory_usage_mb:.1f}MB")
-
-            except KeyboardInterrupt:
-                logger.info("Simulation interrupted by user")
-                break
-            except Exception as e:
-                logger.error(f"Error in simulation loop: {e}")
-                if _process_manager:
-                    _process_manager.report_error(f"Simulation loop error: {e}")
-                # Continue running unless it's a critical error
-                # continueboardInterrupt:
-                logger.info("Keyboard interrupt received in main loop")
-                _shutdown_requested = True
-                break
-            except Exception as e:
-                logger.error(f"Error in simulation loop: {e}")
-                # Continue running unless it's a critical error
-                if "critical" in str(e).lower():
-                    break
-
-        if _shutdown_requested:
-            logger.info("Shutdown requested, exiting main loop")
-        elif not simulation_app.is_running():
-            logger.info("Simulation app stopped, exiting main loop")
-
-    except Exception as e:
-        raise Exception(f"Simulation failed: {e}")
-    finally:
-        # Clean shutdown
-        logger.info("Starting graceful shutdown...")
-
-        # Stop WebManager system if it was enabled
-        if webmanager_enabled:
-            logger.info("Stopping WebManager system...")
-            stop_webmanager_system()
-
-        # Stop ROS
-        if stop_evt:
-            stop_evt.set()
-        if t_ros:
-            t_ros.join(timeout=1.0)
-
-        logger.info("Simulation loop ended, starting cleanup...")
-
-        # Cleanup process manager and report final status
+            logger.info("WebManager system started successfully")
+            logger.info(f"Access the web interface at: http://{args.web_host}:{args.web_port}")
+        except Exception as e:
+            logger.error(f"Failed to start WebManager system: {e}")
+            if _process_manager:
+                _process_manager.report_error(f"WebManager startup failed: {e}")
+            logger.warning("Continuing simulation without WebManager")
+            # Continue without WebManager if it fails to start
+    else:
+        logger.info("WebManager disabled by command line arguments")
         if _process_manager:
+            _process_manager.set_status("running")
+
+    count = 0
+    logger.info("Starting main simulation loop...")
+
+    # Main simulation loop
+    while simulation_app.is_running() and not _shutdown_requested:
+
+        # Check if shutdown was requested via process manager
+        if _process_manager and _process_manager.is_shutdown_requested():
+            logger.info("Shutdown requested via process manager")
+            break
+
+        # World step
+        env.step(action=None)
+
+        if count % 120 == 0 and count > 0:
+            process_semantic_detection(semantic_camera, semantic_map)
+
+        # Process ROS skills if ROS is enabled
+        if args.ros:
+            process_ros_skills(swarm_manager)
+
+        count += 1
+
+        # Update process manager with WebManager statistics
+        if _process_manager and _webmanager_system and count % 60 == 0:  # Every second at 60 FPS
             try:
-                logger.info("Cleaning up process manager...")
-                _process_manager.set_status("stopping")
+                # Get WebManager connection count if available
+                connection_count = 0
+                if hasattr(_webmanager_system, 'web_server') and hasattr(_webmanager_system.web_server,
+                                                                         'websocket_manager'):
+                    connection_count = _webmanager_system.web_server.websocket_manager.get_connection_count()
 
-                # Wait for graceful shutdown if requested
-                if _process_manager.is_shutdown_requested():
-                    logger.info(f"Waiting for graceful shutdown (timeout: {args.shutdown_timeout}s)...")
-                    _process_manager.wait_for_shutdown(timeout=args.shutdown_timeout)
-
-                # Get final status report
-                final_status = _process_manager.get_status()
-                logger.info(f"Final process status: uptime={final_status.uptime_seconds:.1f}s, "
-                            f"memory={final_status.memory_usage_mb:.1f}MB, "
-                            f"errors={final_status.error_count}")
-
-                # Cleanup process manager resources
-                _process_manager.cleanup()
-                logger.info("Process manager cleanup completed")
-
+                _process_manager.update_webmanager_stats(
+                    active_connections=connection_count,
+                    total_requests=count  # Use simulation steps as a proxy for activity
+                )
             except Exception as e:
-                logger.error(f"Error during process manager cleanup: {e}")
+                logger.debug(f"Error updating WebManager stats: {e}")
+
+        # Log status periodically
+        if count % 600 == 0:  # Every 10 seconds at 60 FPS
+            logger.debug(f"Simulation running - step {count}")
+            if _process_manager:
+                status = _process_manager.get_status()
+                logger.debug(
+                    f"Process status: {status.status}, uptime: {status.uptime_seconds:.1f}s, memory: {status.memory_usage_mb:.1f}MB")
+
+
+    if _shutdown_requested:
+        logger.info("Shutdown requested, exiting main loop")
+    elif not simulation_app.is_running():
+        logger.info("Simulation app stopped, exiting main loop")
+
+
+    # Clean shutdown
+    logger.info("Starting graceful shutdown...")
+
+    # Stop WebManager system if it was enabled
+    if webmanager_enabled:
+        logger.info("Stopping WebManager system...")
+        stop_webmanager_system()
+
+    # Stop ROS
+    if stop_evt:
+        stop_evt.set()
+    if t_ros:
+        t_ros.join(timeout=1.0)
+
+    logger.info("Simulation loop ended, starting cleanup...")
+
+    # Cleanup process manager and report final status
+    if _process_manager:
+        logger.info("Cleaning up process manager...")
+        _process_manager.set_status("stopping")
+
+        # Wait for graceful shutdown if requested
+        if _process_manager.is_shutdown_requested():
+            logger.info(f"Waiting for graceful shutdown (timeout: {args.shutdown_timeout}s)...")
+            _process_manager.wait_for_shutdown(timeout=args.shutdown_timeout)
+
+        # Get final status report
+        final_status = _process_manager.get_status()
+        logger.info(f"Final process status: uptime={final_status.uptime_seconds:.1f}s, "
+                    f"memory={final_status.memory_usage_mb:.1f}MB, "
+                    f"errors={final_status.error_count}")
+
+        # Cleanup process manager resources
+        _process_manager.cleanup()
+        logger.info("Process manager cleanup completed")
+
 
         # Unwire the container
-        try:
-            from containers import get_container
+        from containers import get_container
 
-            container = get_container()
-            container.unwire()
-        except Exception:
-            pass  # Ignore unwiring errors during shutdown
+        container = get_container()
+        container.unwire()
+
 
         logger.info("--- Simulation finished. Manually closing application. ---")
         if simulation_app:

@@ -1,11 +1,28 @@
+# GSI Messages Path Setup
+import sys
+from pathlib import Path
+
+# 添加 gsi_msgs 到 Python 路径
+_current_dir = Path(__file__).parent.parent.absolute()
+_plan_msgs_path = _current_dir / "test_gsi_msgs_ws/install/plan_msgs/local/lib/python3.10/dist-packages"
+_scene_msgs_path = _current_dir / "test_gsi_msgs_ws/install/scene_msgs/local/lib/python3.10/dist-packages"
+
+if _plan_msgs_path.exists() and str(_plan_msgs_path) not in sys.path:
+    sys.path.insert(0, str(_plan_msgs_path))
+
+if _scene_msgs_path.exists() and str(_scene_msgs_path) not in sys.path:
+    sys.path.insert(0, str(_scene_msgs_path))
+
+
 import omni.usd
 from rclpy.node import Node
 from pxr import Tf, Gf
 
 # 基础消息接口
 from geometry_msgs.msg import Transform as RosTransform
-from scene_msgs.msg import PrimTransform, SceneModifications
-from plan_msgs.msg import RobotFeedback, VelTwistPose
+# from scene_msgs.msg import PrimTransform, SceneModifications
+# from plan_msgs.msg import RobotFeedback, VelTwistPose
+from gsi_msgs.gsi_msgs_helper import PrimTransform, SceneModifications, RobotFeedback, VelTwistPose
 
 
 # class BaseNode(Node):
@@ -158,7 +175,7 @@ class SceneMonitorNode(Node):
         )
 
     def _get_local_xform(self, prim_or_path) -> Gf.Matrix4d:
-        from pxr import Sdf, UsdGeom, Gf, Usd
+        from pxr import UsdGeom, Gf, Usd
 
         # 统一成 Usd.Prim
         if isinstance(prim_or_path, Usd.Prim):

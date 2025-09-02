@@ -3,6 +3,8 @@ from pydantic import ValidationError
 from typing import Dict, List, Type
 import yaml
 
+from camera.camera_cfg import CameraCfg
+from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from map.map_grid_map import GridMap
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
@@ -56,25 +58,23 @@ class SwarmManager:
         """
         Complete async initialization of the swarm manager.
         """
-        try:
-            # Validate scene parameter
-            if scene is None:
-                raise ValueError("Scene parameter cannot be None")
 
-            # Set scene reference
-            self.scene = scene
+        # Validate scene parameter
+        if scene is None:
+            raise ValueError("Scene parameter cannot be None")
 
-            # Load robot swarm configuration if path provided
-            if robot_swarm_cfg_path is not None:
-                await self.load_robot_swarm_cfg(robot_swarm_cfg_path)
+        # Set scene reference
+        self.scene = scene
 
-            # Activate robots if flag path provided
-            if robot_active_flag_path is not None:
-                self.activate_robot(robot_active_flag_path)
+        # Load robot swarm configuration if path provided
+        if robot_swarm_cfg_path is not None:
+            await self.load_robot_swarm_cfg(robot_swarm_cfg_path)
 
-        except Exception as e:
-            # Re-raise with context for better error handling
-            raise Exception(f"SwarmManager initialization failed: {str(e)}")
+        # Activate robots if flag path provided
+        if robot_active_flag_path is not None:
+            self.activate_robot(robot_active_flag_path)
+
+
 
     async def load_robot_swarm_cfg(
             self, robot_swarm_cfg_file: str = None, dict: Dict = None
