@@ -1,13 +1,13 @@
+import json
+
 # 基础消息接口
-import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
-import json
-from pxr import Usd, Tf, UsdGeom, Gf
-import omni.usd
 from geometry_msgs.msg import Transform as RosTransform
-from scene_msgs.msg import PrimTransform, SceneModifications
-from typing import Dict, Any, List
+# from scene_msgs.msg import PrimTransform, SceneModifications
+
+from pxr import Usd, Tf, Gf
+import omni.usd
 
 
 class BaseNode(Node):
