@@ -8,9 +8,10 @@ from robot.robot_cfg_jetbot import RobotCfgJetbot
 
 from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 from isaacsim.core.api.scenes import Scene
+from ros.ros_swarm import SwarmNode
 
 class RobotJetbot(RobotBase):
-    def __init__(self, config: RobotCfgG1, scene: Scene = None, map_grid: GridMap = None) -> None:
+    def __init__(self, config: RobotCfgG1, scene: Scene = None, map_grid: GridMap = None, node: SwarmNode = None) -> None:
         super().__init__(config, scene, map_grid)
         self.robot_entity = WheeledRobot(
             prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
@@ -30,6 +31,8 @@ class RobotJetbot(RobotBase):
         # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
         self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
         self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
+
+        self.node = node
 
         self.traj = Trajectory(
             robot_prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',

@@ -1,6 +1,3 @@
-# Isaac Sim WebManager - Main Dependencies
-
-# Core Isaac Sim and simulation
 # python-pid # pid控制，后来自己写pid了，不需要了
 # pathfinding # 一个A*的包，后来也自己写了
 matplotlib>=3.7.0  # 绘图

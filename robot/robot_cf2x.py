@@ -14,7 +14,9 @@ from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_drone_cf2x import RobotCfgCf2x
 import rclpy
-from geometry_msgs.msg import Pose, Twist
+from ros.ros_swarm import SwarmNode
+from geometry_msgs.msg import Pose, Twist, Vector3
+from plan_msgs.msg import VelTwistPose
 import threading
 
 
@@ -33,7 +35,7 @@ class RobotCf2x(RobotBase):
 
     def __init__(self, cfg_body: RobotCfgCf2x, cfg_camera: CameraCfg = None,
                  cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None) -> None:
+                 map_grid: GridMap = None, node: SwarmNode = None) -> None:
         super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid)
 
         self.is_drone = True  # 标记为无人机
@@ -64,24 +66,32 @@ class RobotCf2x(RobotBase):
 
         # ROS2初始化
         self.ros2_initialized = False
-        self._ros2_lock = threading.Lock()
-        try:
-            rclpy.init(args=None)
-            from rclpy.node import Node
-            self.ros2_node = rclpy.create_node(f"cf2x_publisher_{getattr(cfg_body, 'id', '0')}")
-            self.pose_pub = self.ros2_node.create_publisher(Pose, 'drone/pose', 10)
-            self.twist_pub = self.ros2_node.create_publisher(Twist, 'drone/twist', 10)
-            # 订阅无人机目标速度
-            self.cmd_vel_sub = self.ros2_node.create_subscription(
-                Twist, 'drone/cmd_vel', self.cmd_vel_callback, 10)
-            self.ros2_initialized = True
-        except Exception as e:
-            print(f"ROS2初始化失败: {e}")
+        self._ros2_lock = threading.Lock()  # ← 这里初始化了互斥锁
+
+        self.node = node
+
+        self.node.register_feedback_publisher(
+            robot_class = self.cfg_body.name_prefix,
+            robot_id = self.cfg_body.id,
+            qos = 10
+        )
+        self.node.register_motion_publisher(
+            robot_class = self.cfg_body.name_prefix,
+            robot_id = self.cfg_body.id,
+            qos = 50
+        )
+
+        self.node.register_cmd_subscriber(
+            robot_class = self.cfg_body.name_prefix,
+            robot_id = self.cfg_body.id,
+            callback = self.cmd_vel_callback,
+            qos = 50
+        )
+
+        self.ros2_initialized = True
 
         # 初始化键盘事件监听
         self._setup_keyboard_events()
-
-        return
 
     def _setup_keyboard_events(self):
         """设置键盘事件监听"""
@@ -194,60 +204,7 @@ class RobotCf2x(RobotBase):
             print(f"无人机降落到高度: {self.land_height}m")
         else:
             print("无人机已在地面状态")
-        # import omni.physx  # 导入 PhysX 接口
-        # from pxr import PhysxSchema, UsdPhysics, Gf  # 如果需要，导入 USD 和 PhysX Schema
-        #
-        # # 假设在您的类中已经有 PhysX 接口可用，或者在初始化时获取
-        # # 示例：获取 PhysX 接口
-        # physx_interface = omni.physx.acquire_physx_interface()
-        #
-        # # 修改降落逻辑
-        # if self.flight_state == 'hovering':
-        #     # 获取当前位置
-        #     positions, orientations = self.robot_entity.get_world_poses()
-        #     current_pos = positions[0]
-        #
-        #     # 执行 raycast 来检测地面高度
-        #     # 从当前 x, y 位置向下投射射线，查询 z 方向的碰撞点
-        #     ray_origin = Gf.Vec3f(float(current_pos[0]), float(current_pos[1]), float(current_pos[2]))  # 起始点：当前无人机位置
-        #     ray_direction = Gf.Vec3f(0, 0, -1)  # 向下方向（负 z 轴）
-        #     max_distance = 10.0  # 最大射线长度，单位米，根据场景调整
-        #
-        #     # 执行 raycast 查询
-        #     hit_results = physx_interface.raycast(ray_origin, ray_direction, max_distance)
-        #
-        #     if hit_results and len(hit_results) > 0:
-        #         # hit_results 是一个列表，包含命中信息
-        #         # 假设 hit_results[0] 是第一个命中点，获取 hit position
-        #         hit_position = hit_results[0].position  # 或者根据实际 API 获取
-        #         ground_height = hit_position[2]  # z 坐标是地面高度
-        #     else:
-        #         # 如果没有命中，假设一个默认高度，例如 0
-        #         ground_height = 0.0
-        #         print("警告：射线未命中任何物体，假设地面高度为 0")
-        #
-        #     # 设置降落高度，确保有一个小间隙避免直接碰撞（例如 +0.1m）
-        #     land_z = ground_height + 0.1  # 或者根据无人机大小调整
-        #
-        #     # 设置目标位置，使用 raycast 获取的地面高度
-        #     self.position = np.array([current_pos[0], current_pos[1], land_z], dtype=np.float32)
-        #
-        #     # 为了避免直接瞬移引起的碰撞，最好使用平滑移动
-        #     # 这里可以添加一个降落控制循环，或者使用 PhysX 的关节控制
-        #     # 但如果必须瞬移，确保位置是安全的
-        #     orientation = orientations[0]
-        #     self.robot_entity.set_world_poses([self.position], [orientation])
-        #
-        #     # 立即清零所有运动相关变量
-        #     self.velocity = np.zeros(3, dtype=np.float32)  # 清零速度
-        #     self._movement_command = np.zeros(3, dtype=np.float32)  # 清除移动命令
-        #
-        #     # 更新状态
-        #     self.flight_state = 'landed'
-        #
-        #     print(f"无人机降落到高度: {land_z}m，基于 raycast 检测的地面高度")
-        # else:
-        #     print("无人机已在地面状态")
+
 
     def update_position_with_velocity(self, dt):
         """基于速度和时间步长更新位置 (ds = v * dt)"""
@@ -350,17 +307,41 @@ class RobotCf2x(RobotBase):
                 self.update_position_with_velocity(step_size)
         # ROS2发布无人机状态，并处理订阅回调
         if getattr(self, 'ros2_initialized', False):
-            pose = Pose()
-            pose.position.x = float(self.position[0])
-            pose.position.y = float(self.position[1])
-            pose.position.z = float(self.position[2])
-            twist = Twist()
-            twist.linear.x = float(self.velocity[0])
-            twist.linear.y = float(self.velocity[1])
-            twist.linear.z = float(self.velocity[2])
-            self.pose_pub.publish(pose)
-            self.twist_pub.publish(twist)
-            rclpy.spin_once(self.ros2_node, timeout_sec=0)
+            msg = VelTwistPose()
+
+            # vel 字段全置 0
+            msg.vel.x = 0.0
+            msg.vel.y = 0.0
+            msg.vel.z = 0.0
+
+            # twist 使用无人机的线速度
+            msg.twist.linear.x = float(self.velocity[0])
+            msg.twist.linear.y = float(self.velocity[1])
+            msg.twist.linear.z = float(self.velocity[2])
+            # 角速度暂时全置 0
+            msg.twist.angular.x = 0.0
+            msg.twist.angular.y = 0.0
+            msg.twist.angular.z = 0.0
+
+            # pose 使用无人机当前位置
+            msg.pose.position.x = float(self.position[0])
+            msg.pose.position.y = float(self.position[1])
+            msg.pose.position.z = float(self.position[2])
+            # orientation 从仿真获取
+            _, orientations = self.robot_entity.get_world_poses()
+            orientation = orientations[0]
+            msg.pose.orientation.x = float(orientation.x)
+            msg.pose.orientation.y = float(orientation.y)
+            msg.pose.orientation.z = float(orientation.z)
+            msg.pose.orientation.w = float(orientation.w)
+
+            # 发布一次
+            self.node.publish_motion(
+                robot_class = self.cfg_body.name_prefix,
+                robot_id = self.cfg_body.id,
+                msg = msg
+            )
+
         if hasattr(self, 'flag_world_reset') and self.flag_world_reset:
             if hasattr(self, 'flag_action_navigation') and self.flag_action_navigation:
                 self.move_along_path()
@@ -378,12 +359,6 @@ class RobotCf2x(RobotBase):
 
     def __del__(self):
         self._cleanup_keyboard_events()
-        if getattr(self, 'ros2_initialized', False):
-            try:
-                self.ros2_node.destroy_node()
-                rclpy.shutdown()
-            except Exception as e:
-                print(f"ROS2关闭失败: {e}")
 
     def _cleanup_keyboard_events(self):
         if self._keyboard_sub is not None:

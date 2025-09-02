@@ -43,10 +43,11 @@ class RobotBase:
 
     def __init__(self, cfg_body: RobotCfg = None, cfg_camera: CameraCfg = None,
                  cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None):
+                 map_grid: GridMap = None, node = None):
         self.cfg_body = cfg_body
         self.cfg_camera = cfg_camera
         self.scene = scene
+        self.node = node
         self.viewport_manager = _get_viewport_manager_from_container()  # 通过依赖注入获取viewport_manager
         # 代表机器人的实体
         self.robot_entity: Articulation = None
@@ -132,6 +133,9 @@ class RobotBase:
         self.viewport_name = None  # 存储viewport名称
         self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
         self.transform_camera_pos = np.array([0, 0, 0])
+
+        self.current_task_id = None
+        self.current_task_name = None
 
     def get_obs(self) -> dict:
         """Get observation of robot, including controllers, cameras, and world pose.
@@ -356,7 +360,7 @@ class RobotBase:
     def get_viewport_info(self):
         """
         获取robot的viewport信息，供ViewportManager批量操作使用
-        
+
         Returns:
             dict: 包含viewport_name, camera_path等信息的字典
         """

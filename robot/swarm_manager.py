@@ -3,13 +3,13 @@ from pydantic import ValidationError
 from typing import Dict, List, Type
 import yaml
 
-from isaacsim.core.api.scenes import Scene
-
-from camera.camera_cfg import CameraCfg # 确保导入
-from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from map.map_grid_map import GridMap
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
+from ros.ros_swarm import SwarmNode
+from ros.ros_swarm import get_swarm_node
+
+from isaacsim.core.api.scenes import Scene
 
 
 class SwarmManager:
@@ -22,7 +22,7 @@ class SwarmManager:
     第四个,需要能中途加入机器人和删除机器人(但是前期试过, 好像在加入机器人后, 必须要reset world, 那么世界也就完全重置了, 所以我们可以定一个机器人仓库, 比如已经有这么多机器人了, 我们现在要一些新的机器人, 那么仓库里的机器人会加入行动, 非常合理)
     """
 
-    def __init__(self, map_grid: GridMap = None, ):
+    def __init__(self, map_grid: GridMap = None):
         self.scene: Scene = None
         self.robot_warehouse: Dict[str, List[RobotBase]] = {}
         self.flag_active: Dict[str, List[int]] = {}
@@ -34,6 +34,7 @@ class SwarmManager:
         }
         self.robot_class_cfg = {}  # 对应的机器人
         self.map_grid = map_grid
+        self.swarm_node = get_swarm_node()
 
     def register_robot_class(
             self,
@@ -48,7 +49,7 @@ class SwarmManager:
         self.robot_class[robot_class_name] = robot_class
         self.robot_class_cfg[robot_class_name] = robot_class_cfg
 
-    async def initialize_async(self, 
+    async def initialize_async(self,
                               scene: Scene,
                               robot_swarm_cfg_path: str = None,
                               robot_active_flag_path: str = None) -> None:
@@ -59,18 +60,18 @@ class SwarmManager:
             # Validate scene parameter
             if scene is None:
                 raise ValueError("Scene parameter cannot be None")
-            
+
             # Set scene reference
             self.scene = scene
-            
+
             # Load robot swarm configuration if path provided
             if robot_swarm_cfg_path is not None:
                 await self.load_robot_swarm_cfg(robot_swarm_cfg_path)
-            
+
             # Activate robots if flag path provided
             if robot_active_flag_path is not None:
                 self.activate_robot(robot_active_flag_path)
-                    
+
         except Exception as e:
             # Re-raise with context for better error handling
             raise Exception(f"SwarmManager initialization failed: {str(e)}")
@@ -150,6 +151,7 @@ class SwarmManager:
                 cfg_body=cfg_body, cfg_camera=cfg_camera, cfg_camera_third_person=cfg_camera_third_person,
                 scene=self.scene,
                 map_grid=self.map_grid,
+                node=self.swarm_node
             )
         else:
             # 如果不是，使用传统的同步 __init__ 方法
@@ -158,6 +160,7 @@ class SwarmManager:
                 cfg_body=cfg_body, cfg_camera=cfg_camera, cfg_camera_third_person=cfg_camera_third_person,
                 scene=self.scene,
                 map_grid=self.map_grid,
+                node=self.swarm_node
             )
 
         self.robot_warehouse[robot_class_name].append(robot)

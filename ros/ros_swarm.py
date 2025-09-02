@@ -1,126 +1,129 @@
-import json
+import omni.usd
+from rclpy.node import Node
+from pxr import Tf, Gf
 
 # 基础消息接口
-from rclpy.node import Node
-from std_msgs.msg import String
 from geometry_msgs.msg import Transform as RosTransform
-# from scene_msgs.msg import PrimTransform, SceneModifications
-
-from pxr import Usd, Tf, Gf
-import omni.usd
+from scene_msgs.msg import PrimTransform, SceneModifications
+from plan_msgs.msg import RobotFeedback, VelTwistPose
 
 
-class BaseNode(Node):
-    def __init__(self, node_name: str):
-        super().__init__(node_name)
-        self.node_name = node_name
-        self.shared_data = {}
+# class BaseNode(Node):
+#     def __init__(self, node_name: str):
+#         super().__init__(node_name)
+#         self.node_name = node_name
+#         self.shared_data = {}
+#
+#         # 创建发布者和订阅者
+#         self.data_publisher = self.create_publisher(String, f'/{node_name}/data', 10)
+#         self.query_publisher = self.create_publisher(String, '/query_request', 10)
+#         self.response_publisher = self.create_publisher(String, '/query_response', 10)
+#
+#         # 订阅其他节点的数据
+#         self.create_subscription(String, '/query_request', self.handle_query, 10)
+#         self.create_subscription(String, '/query_response', self.handle_response, 10)
+#
+#         self.pending_queries = {}
+#
+#     def publish_data(self, key, value):
+#         """发布数据"""
+#         msg = String()
+#         data = {
+#             'node': self.node_name,
+#             'key': key,
+#             'value': value,
+#             'timestamp': self.get_clock().now().to_msg()
+#         }
+#         msg.data = json.dumps(data)
+#         self.data_publisher.publish(msg)
+#
+#     def query_node_data(self, target_node, key, callback):
+#         """查询其他节点的数据"""
+#         query_id = f"{self.node_name}_{target_node}_{key}_{self.get_clock().now().nanoseconds}"
+#
+#         msg = String()
+#         query = {
+#             'query_id': query_id,
+#             'from_node': self.node_name,
+#             'target_node': target_node,
+#             'key': key
+#         }
+#         msg.data = json.dumps(query)
+#
+#         self.pending_queries[query_id] = callback
+#         self.query_publisher.publish(msg)
+#
+#     def handle_query(self, msg):
+#         """处理查询请求"""
+#         query = json.loads(msg.data)
+#         if query['target_node'] == self.node_name:
+#             response_msg = String()
+#             response = {
+#                 'query_id': query['query_id'],
+#                 'from_node': self.node_name,
+#                 'to_node': query['from_node'],
+#                 'key': query['key'],
+#                 'value': self.shared_data.get(query['key'], None)
+#             }
+#             response_msg.data = json.dumps(response)
+#             self.response_publisher.publish(response_msg)
+#
+#     def handle_response(self, msg):
+#         """处理查询响应"""
+#         response = json.loads(msg.data)
+#         query_id = response['query_id']
+#         if query_id in self.pending_queries:
+#             callback = self.pending_queries.pop(query_id)
+#             callback(response['value'])
+#
+# # Map 节点
+# class MapNode(BaseNode):
+#     def __init__(self):
+#         super().__init__('map')
+#         self.map_data = None
+#         self.obstacles = []
+#
+#         self.create_timer(2.0, self.update_map_data)
+#
+#     def update_map_data(self):
+#         self.shared_data['map_size'] = [100, 100]
+#         self.shared_data['obstacle_count'] = len(self.obstacles)
+#         self.publish_data('map_size', [100, 100])
+#
+#     def get_safe_zones(self):
+#         return [(10, 10), (20, 20), (30, 30)]
+#
+#
+# # Planning 节点
+# class PlanningNode(BaseNode):
+#     def __init__(self):
+#         super().__init__('planning')
+#         self.current_path = []
+#         self.goals = []
+#
+#         self.create_timer(1.5, self.update_planning_data)
+#
+#     def update_planning_data(self):
+#         self.shared_data['path_length'] = len(self.current_path)
+#         self.shared_data['goals_count'] = len(self.goals)
+#         self.publish_data('path_length', len(self.current_path))
+#
+#     def request_swarm_and_map_info(self):
+#         """同时请求群体和地图信息"""
+#
+#         def handle_robot_count(value):
+#             self.get_logger().info(f"Planning for {value} robots")
+#
+#         def handle_map_size(value):
+#             self.get_logger().info(f"Planning on map size: {value}")
+#
+#         self.query_node_data('swarm', 'robot_count', handle_robot_count)
+#         self.query_node_data('map', 'map_size', handle_map_size)
 
-        # 创建发布者和订阅者
-        self.data_publisher = self.create_publisher(String, f'/{node_name}/data', 10)
-        self.query_publisher = self.create_publisher(String, '/query_request', 10)
-        self.response_publisher = self.create_publisher(String, '/query_response', 10)
 
-        # 订阅其他节点的数据
-        self.create_subscription(String, '/query_request', self.handle_query, 10)
-        self.create_subscription(String, '/query_response', self.handle_response, 10)
-
-        self.pending_queries = {}
-
-    def publish_data(self, key, value):
-        """发布数据"""
-        msg = String()
-        data = {
-            'node': self.node_name,
-            'key': key,
-            'value': value,
-            'timestamp': self.get_clock().now().to_msg()
-        }
-        msg.data = json.dumps(data)
-        self.data_publisher.publish(msg)
-
-    def query_node_data(self, target_node, key, callback):
-        """查询其他节点的数据"""
-        query_id = f"{self.node_name}_{target_node}_{key}_{self.get_clock().now().nanoseconds}"
-
-        msg = String()
-        query = {
-            'query_id': query_id,
-            'from_node': self.node_name,
-            'target_node': target_node,
-            'key': key
-        }
-        msg.data = json.dumps(query)
-
-        self.pending_queries[query_id] = callback
-        self.query_publisher.publish(msg)
-
-    def handle_query(self, msg):
-        """处理查询请求"""
-        query = json.loads(msg.data)
-        if query['target_node'] == self.node_name:
-            response_msg = String()
-            response = {
-                'query_id': query['query_id'],
-                'from_node': self.node_name,
-                'to_node': query['from_node'],
-                'key': query['key'],
-                'value': self.shared_data.get(query['key'], None)
-            }
-            response_msg.data = json.dumps(response)
-            self.response_publisher.publish(response_msg)
-
-    def handle_response(self, msg):
-        """处理查询响应"""
-        response = json.loads(msg.data)
-        query_id = response['query_id']
-        if query_id in self.pending_queries:
-            callback = self.pending_queries.pop(query_id)
-            callback(response['value'])
-
-# Map 节点
-class MapNode(BaseNode):
-    def __init__(self):
-        super().__init__('map')
-        self.map_data = None
-        self.obstacles = []
-
-        self.create_timer(2.0, self.update_map_data)
-
-    def update_map_data(self):
-        self.shared_data['map_size'] = [100, 100]
-        self.shared_data['obstacle_count'] = len(self.obstacles)
-        self.publish_data('map_size', [100, 100])
-
-    def get_safe_zones(self):
-        return [(10, 10), (20, 20), (30, 30)]
-
-
-# Planning 节点
-class PlanningNode(BaseNode):
-    def __init__(self):
-        super().__init__('planning')
-        self.current_path = []
-        self.goals = []
-
-        self.create_timer(1.5, self.update_planning_data)
-
-    def update_planning_data(self):
-        self.shared_data['path_length'] = len(self.current_path)
-        self.shared_data['goals_count'] = len(self.goals)
-        self.publish_data('path_length', len(self.current_path))
-
-    def request_swarm_and_map_info(self):
-        """同时请求群体和地图信息"""
-
-        def handle_robot_count(value):
-            self.get_logger().info(f"Planning for {value} robots")
-
-        def handle_map_size(value):
-            self.get_logger().info(f"Planning on map size: {value}")
-
-        self.query_node_data('swarm', 'robot_count', handle_robot_count)
-        self.query_node_data('map', 'map_size', handle_map_size)
+class PlanNode(Node):
+    def __int__(self):
+        super().__init__('PlanNode')
 
 class SceneMonitorNode(Node):
     def __init__(self):
@@ -399,13 +402,83 @@ class SceneMonitorNode(Node):
         self._prev_xforms = curr_xforms
 
 
-class SwarmNode(BaseNode):
+class SwarmNode(Node):
+
     def __init__(self):
         super().__init__('swarm')
-        self.robot_positions = {}
-        self.formation_config = {}
-        # 定时发布数据
-        self.create_timer(1.0, self.update_swarm_data)
+        # 结构: { robot_class: { robot_id: { "motion": publisher, "feedback": publisher } } }
+        self.publisher_dict: dict[str, dict[int, dict[str, any]]] = {}
+        self.subscriber_dict: dict[str, dict[int, dict[str, any]]] = {}
+
+    def register_feedback_publisher(self, robot_class: str, robot_id: int, qos=10):
+        """
+        注册一个 feedback publisher
+        topic 规则: /feedback/<robot_class>_<robot_id>
+        """
+        # 如果类别不存在，先建字典
+        if robot_class not in self.publisher_dict:
+            self.publisher_dict[robot_class] = {}
+        # 如果 robot_id 不存在，先建子字典
+        if robot_id not in self.publisher_dict[robot_class]:
+            self.publisher_dict[robot_class][robot_id] = {}
+
+        topic = f"/feedback/{robot_class}_{robot_id}"
+        pub = self.create_publisher(RobotFeedback, topic, qos)
+
+        # 存到子字典里
+        self.publisher_dict[robot_class][robot_id]["feedback"] = pub
+
+#        self.get_logger().info(
+#            f"Registered feedback publisher for {robot_class}[{robot_id}] on topic {topic}"
+#        )
+        return pub
+
+    def register_motion_publisher(self, robot_class: str, robot_id: int, qos=50):
+        """
+        注册一个 motion publisher
+        topic 规则: /motion/<robot_class>_<robot_id>
+        """
+        if robot_class not in self.publisher_dict:
+            self.publisher_dict[robot_class] = {}
+        if robot_id not in self.publisher_dict[robot_class]:
+            self.publisher_dict[robot_class][robot_id] = {}
+
+        topic = f"/motion/{robot_class}_{robot_id}"
+        pub = self.create_publisher(VelTwistPose, topic, qos)
+
+        self.publisher_dict[robot_class][robot_id]["motion"] = pub
+
+#        self.get_logger().info(
+#            f"Registered motion publisher for {robot_class}[{robot_id}] on topic {topic}"
+#        )
+        return pub
+
+    def register_cmd_subscriber(self, robot_class: str, robot_id: int, callback = None, qos = 50):
+        """
+        注册一个cmd subscriber
+        topic 规则： /cmd/<robot_class>_<robot_id>
+        """
+        if robot_class not in self.subscriber_dict:
+            self.subscriber_dict[robot_class] = {}
+        # 如果 robot_id 不存在，先建子字典
+        if robot_id not in self.subscriber_dict[robot_class]:
+            self.subscriber_dict[robot_class][robot_id] = {}
+
+        topic = f"/cmd/{robot_class}_{robot_id}"
+        sub = self.create_subscription(VelTwistPose, topic, callback, qos)
+
+        self.subscriber_dict[robot_class][robot_id]["cmd"] = sub
+
+#        self.get_logger().info(
+#            f"Registered cmd subscriber for {robot_class}[{robot_id}] on topic {topic}"
+#        )
+        return sub
+
+    def publish_navigation_feedback(self, robot_class: str, robot_id: int, msg: RobotFeedback):
+        self.publisher_dict[robot_class][robot_id]["feedback"].publish(msg)
+
+    def publish_motion(self, robot_class: str, robot_id: int, msg: VelTwistPose):
+        self.publisher_dict[robot_class][robot_id]["motion"].publish(msg)
 
     def update_swarm_data(self):
         self.shared_data['robot_count'] = len(self.robot_positions)
@@ -424,3 +497,10 @@ class SwarmNode(BaseNode):
 
         self.query_node_data('map', 'map_size', handle_map_response)
 
+_swarm_singleton = None
+
+def get_swarm_node():
+    global _swarm_singleton
+    if _swarm_singleton is None:
+        _swarm_singleton = SwarmNode()
+    return _swarm_singleton

@@ -10,6 +10,7 @@ from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_h1 import RobotCfgH1
 from controller.controller_policy_h1 import H1FlatTerrainPolicy
+from ros.ros_swarm import SwarmNode
 
 import carb
 from isaacsim.core.prims import Articulation
@@ -30,8 +31,7 @@ class RobotH1(RobotBase):
     # 1. __init__ 方法现在是完全同步的，不再创建策略控制器
     def __init__(self, cfg_body: RobotCfgH1, cfg_camera: CameraCfg = None,
                  cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None) -> None:
-
+                 map_grid: GridMap = None, node: SwarmNode = None) -> None:
         super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid)
         self.control_mode = 'joint_positions'
 
@@ -46,13 +46,15 @@ class RobotH1(RobotBase):
         self.controller_policy: H1FlatTerrainPolicy | None = None
         self.base_command = np.zeros(3)
 
+        self.node = node
+
         return
 
     # 2. 新增的异步工厂 @classmethod
     @classmethod
     async def create(cls, cfg_body: RobotCfgH1, cfg_camera: CameraCfg = None,
                      cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                     map_grid: GridMap = None) -> "RobotH1":
+                     map_grid: GridMap = None, node: SwarmNode = None) -> "RobotH1":
         """
         Asynchronously creates and fully initializes a RobotH1 instance,
         including its asynchronous policy controller.
@@ -63,7 +65,38 @@ class RobotH1(RobotBase):
             cfg_camera=cfg_camera,
             cfg_camera_third_person=cfg_camera_third_person,
             scene=scene,
-            map_grid=map_grid
+            map_grid=map_grid,
+            node=node
+        )
+
+        # 然后，异步地创建并加载 H1FlatTerrainPolicy 控制器
+        # print(f"Creating policy controller for robot {instance.type}...")
+        instance.controller_policy = await H1FlatTerrainPolicy.create(
+            prim_path=instance.cfg_body.prim_path
+            # 如果 H1FlatTerrainPolicy.create 需要更多参数，请在这里传递
+        )
+
+        # 最后，返回一个完全准备好的实例
+        return instance
+
+    # 3. initialize 方法保持不变
+    # 2. 新增的异步工厂 @classmethod
+    @classmethod
+    async def create(cls, cfg_body: RobotCfgH1, cfg_camera: CameraCfg = None,
+                     cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
+                     map_grid: GridMap = None, node: SwarmNode = None) -> "RobotH1":
+        """
+        Asynchronously creates and fully initializes a RobotH1 instance,
+        including its asynchronous policy controller.
+        """
+        # 首先，同步调用 __init__ 创建一个“半成品”实例
+        instance = cls(
+            cfg_body=cfg_body,
+            cfg_camera=cfg_camera,
+            cfg_camera_third_person=cfg_camera_third_person,
+            scene=scene,
+            map_grid=map_grid,
+            node=node
         )
 
         # 然后，异步地创建并加载 H1FlatTerrainPolicy 控制器

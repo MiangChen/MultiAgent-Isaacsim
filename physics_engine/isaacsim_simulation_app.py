@@ -12,8 +12,11 @@ def initialize_simulation_app_from_yaml(config_path):
     Args:
         config_path (str): Path to the YAML configuration file.
     """
+    print("DEBUG:" + config_path)
+
     # 1. 读取YAML配置文件
     with open(config_path, 'r') as f:
+        print("DEBUG:" + config_path)
         config = yaml.safe_load(f)
 
     # 2. 获取SimulationApp的构造函数配置

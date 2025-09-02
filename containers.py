@@ -14,6 +14,7 @@ from scene.scene_manager import SceneManager
 from ui.viewport_manager import ViewportManager
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
+from ros.ros_swarm import get_swarm_node
 
 
 class AppContainer(containers.DeclarativeContainer):
