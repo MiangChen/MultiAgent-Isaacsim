@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Isaac Sim WebManager</title>
+    
+    <!-- CSS Styles -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    
+    <!-- JavaScript Libraries -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.0/dist/echarts.min.js"></script>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <!-- Vue.js Application Mount Point -->
+    <div id="app">
+        <!-- Dashboard Header -->
+        <header class="dashboard-header">
+            <h1>Isaac Sim WebManager</h1>
+            <div class="connection-status" :class="connectionStatus">
+                <span class="status-indicator"></span>
+                {{ connectionStatus === 'connected' ? 'Connected' : 'Disconnected' }}
+            </div>
+        </header>
+        
+        <!-- Main Dashboard Grid Layout -->
+        <main class="dashboard-grid">
+            <!-- Robot Status Panel -->
+            <section class="panel robot-panel" id="robot-status-panel">
+                <div class="panel-header">
+                    <h2>Robot Status</h2>
+                    <div class="panel-controls">
+                        <button class="refresh-btn" @click="refreshRobotData">↻</button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <robot-status-panel :robots="robotData"></robot-status-panel>
+                </div>
+            </section>
+            
+            <!-- Performance Metrics Panel -->
+            <section class="panel performance-panel" id="performance-panel">
+                <div class="panel-header">
+                    <h2>Performance Metrics</h2>
+                    <div class="panel-controls">
+                        <button class="refresh-btn" @click="refreshPerformanceData">↻</button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <performance-panel :metrics="performanceMetrics"></performance-panel>
+                </div>
+            </section>
+            
+            <!-- Robot Trajectories Chart Panel -->
+            <section class="panel chart-panel trajectory-chart" id="trajectory-chart-panel">
+                <div class="panel-header">
+                    <h2>Robot Trajectories</h2>
+                    <div class="panel-controls">
+                        <button class="refresh-btn" @click="requestChartUpdate('robot_trajectories')">↻</button>
+                        <select class="chart-options" v-model="trajectoryTimeRange">
+                            <option value="1h">Last Hour</option>
+                            <option value="6h">Last 6 Hours</option>
+                            <option value="24h">Last 24 Hours</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <chart-panel 
+                        :chart-data="chartData" 
+                        chart-id="trajectory-chart"
+                        chart-type="trajectory">
+                    </chart-panel>
+                </div>
+            </section>
+            
+            <!-- Performance Trends Chart Panel -->
+            <section class="panel chart-panel performance-chart" id="performance-chart-panel">
+                <div class="panel-header">
+                    <h2>Performance Trends</h2>
+                    <div class="panel-controls">
+                        <button class="refresh-btn" @click="requestChartUpdate('performance_trends')">↻</button>
+                        <select class="chart-options" v-model="performanceTimeRange">
+                            <option value="5m">Last 5 Minutes</option>
+                            <option value="30m">Last 30 Minutes</option>
+                            <option value="1h">Last Hour</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <chart-panel 
+                        :chart-data="performanceChartData" 
+                        chart-id="performance-chart"
+                        chart-type="performance">
+                    </chart-panel>
+                </div>
+            </section>
+            
+            <!-- ROS Graph Visualization Panel -->
+            <section class="panel ros-panel" id="ros-graph-panel">
+                <div class="panel-header">
+                    <h2>ROS Communication Graph</h2>
+                    <div class="panel-controls">
+                        <button class="refresh-btn" @click="refreshRosGraph">↻</button>
+                        <button class="layout-btn" @click="resetGraphLayout">⚏</button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <ros-graph-panel :graph-data="rosGraphData"></ros-graph-panel>
+                </div>
+            </section>
+            
+            <!-- Camera Stream Panel -->
+            <section class="panel camera-panel" id="camera-panel">
+                <div class="panel-header">
+                    <h2>Camera Feed</h2>
+                    <div class="panel-controls">
+                        <select class="camera-selector" v-model="selectedCamera">
+                            <option value="camera1">Camera 1</option>
+                            <option value="camera2">Camera 2</option>
+                            <option value="camera3">Camera 3</option>
+                        </select>
+                        <button class="fullscreen-btn" @click="toggleCameraFullscreen">⛶</button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <camera-panel 
+                        :stream-url="cameraStreamUrl"
+                        :selected-camera="selectedCamera">
+                    </camera-panel>
+                </div>
+            </section>
+        </main>
+        
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" v-show="isLoading">
+            <div class="loading-spinner"></div>
+            <p>Loading dashboard data...</p>
+        </div>
+        
+        <!-- Error Toast -->
+        <div class="error-toast" v-show="errorMessage" :class="{ 'show': errorMessage }">
+            <span>{{ errorMessage }}</span>
+            <button @click="clearError">×</button>
+        </div>
+    </div>
+
+    <!-- Message Validation -->
+    <script src="/static/js/message-validator.js"></script>
+    
+    <!-- WebSocket Message Handler -->
+    <script src="/static/js/websocket-handler.js"></script>
+    
+    <!-- Vue.js Components -->
+    <script src="/static/js/components/robot-status-panel.js"></script>
+    <script src="/static/js/components/performance-panel.js"></script>
+    <script src="/static/js/components/chart-panel.js"></script>
+    <script src="/static/js/components/ros-graph-panel.js"></script>
+    <script src="/static/js/components/camera-panel.js"></script>
+    
+    <!-- Main Dashboard Application -->
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

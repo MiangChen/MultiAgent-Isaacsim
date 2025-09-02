@@ -1,0 +1,55 @@
+{
+  "name": "isaac-sim-webmanager",
+  "version": "1.0.0",
+  "description": "Web-based monitoring and control interface for Isaac Sim",
+  "main": "UI/static/js/dashboard.js",
+  "scripts": {
+    "serve": "python -m http.server 8000 --directory UI",
+    "dev": "python main.py --web-port 8080 --web-host 0.0.0.0",
+    "lint": "echo 'No linting configured for JavaScript files (using CDN)'",
+    "test": "echo 'No tests configured for frontend'"
+  },
+  "dependencies": {
+    "vue": "^3.3.0",
+    "echarts": "^5.4.0",
+    "vis-network": "^9.1.0",
+    "three": "^0.158.0"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "."
+  },
+  "keywords": [
+    "isaac-sim",
+    "robotics",
+    "simulation",
+    "web-interface",
+    "monitoring",
+    "vue",
+    "websocket",
+    "real-time"
+  ],
+  "author": "Isaac Sim WebManager Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ],
+  "notes": {
+    "frontend": "Frontend dependencies are loaded via CDN in production. This package.json is for documentation and potential local development setup.",
+    "cdn_libraries": {
+      "vue": "https://unpkg.com/vue@3/dist/vue.global.js",
+      "echarts": "https://cdn.jsdelivr.net/npm/echarts@5.4.0/dist/echarts.min.js",
+      "vis-network": "https://unpkg.com/vis-network/standalone/umd/vis-network.min.js",
+      "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+    }
+  }
+}
