@@ -19,6 +19,34 @@ class ConfigManager:
 
         self.load()
 
+    def _create_argument_parser(self) -> argparse.ArgumentParser:
+        """
+        创建并配置参数解析器，取代 argument_parser.py 的功能。
+        """
+        parser = argparse.ArgumentParser(description="Isaac Sim Multi-Agent Simulation")
+
+        parser.add_argument(
+            "--config",
+            type=str,
+            default="./config/config_parameter.yaml",
+            help="Path to the main YAML configuration file.",
+        )
+
+        parser.add_argument(
+            "--ros",
+            type=lambda x: str(x).lower() in ["true", "1", "yes"],
+            metavar="{true,false}",
+            help="Override ROS2 integration setting from the config file.",
+        )
+
+        parser.add_argument(
+            "--enable",
+            type=str,
+            action="append",
+            help="Enable a feature. Can be used multiple times.",
+        )
+        return parser
+
     def load(self, args: List[str] = None):
         """
         加载、合并和处理所有配置。
@@ -98,34 +126,6 @@ class ConfigManager:
         summary += pprint.pformat(self.config)
         summary += "\n==================================="
         return summary
-
-    def _create_argument_parser(self) -> argparse.ArgumentParser:
-        """
-        创建并配置参数解析器，取代 argument_parser.py 的功能。
-        """
-        parser = argparse.ArgumentParser(description="Isaac Sim Multi-Agent Simulation")
-
-        parser.add_argument(
-            "--config",
-            type=str,
-            default="./config/config_parameter.yaml",
-            help="Path to the main YAML configuration file.",
-        )
-
-        parser.add_argument(
-            "--ros",
-            type=lambda x: str(x).lower() in ["true", "1", "yes"],
-            metavar="{true,false}",
-            help="Override ROS2 integration setting from the config file.",
-        )
-
-        parser.add_argument(
-            "--enable",
-            type=str,
-            action="append",
-            help="Enable a feature. Can be used multiple times.",
-        )
-        return parser
 
 
 config_manager = ConfigManager()
