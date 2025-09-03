@@ -150,11 +150,11 @@ def _add_webmanager_args(parser: argparse.ArgumentParser) -> None:
         help="Enable data compression for WebSocket messages"
     )
 
-
+#
 def _add_logging_args(parser: argparse.ArgumentParser) -> None:
     """Add logging-related arguments."""
     logging_group = parser.add_argument_group('Logging Configuration')
-    
+
     logging_group.add_argument(
         "--log-level",
         type=str,
@@ -162,7 +162,7 @@ def _add_logging_args(parser: argparse.ArgumentParser) -> None:
         default="INFO",
         help="Logging level (default: INFO)"
     )
-    
+
     logging_group.add_argument(
         "--log-file",
         type=str,
@@ -271,7 +271,7 @@ def parse_arguments(args=None) -> Any:
     args = parser.parse_args(args)
     
     # Validate argument combinations
-    _validate_arguments(args)
+    # _validate_arguments(args)
     
     return args
 
