@@ -127,4 +127,5 @@ skill是上层用的
 
 [![Lines of Code](https://img.shields.io/badge/LoC-32328-blue)](https://github.com/MiangChen/multiagent-isaacsim)
 
-cloc . --exclude-dir=IsaacLab 
+
+ cloc --exclude-dir=$(tr '\n' ',' < .clocignore) 
