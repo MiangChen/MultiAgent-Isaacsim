@@ -14,7 +14,7 @@ from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_drone_cf2x import RobotCfgCf2x
 import rclpy
-from ros.ros_swarm import SwarmNode
+from ros.ros_node import SwarmNode
 from geometry_msgs.msg import Pose, Twist, Vector3
 from plan_msgs.msg import VelTwistPose
 import threading

@@ -10,7 +10,7 @@ from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from map.map_grid_map import GridMap
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
-from ros.ros_swarm import SwarmNode
+from ros.ros_node import SwarmNode
 
 
 class SwarmManager:

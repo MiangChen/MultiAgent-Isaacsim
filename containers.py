@@ -21,7 +21,7 @@ rclpy.init(args=None)
 
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from ros.ros_manager import RosManager
-from ros.ros_swarm import PlanNode, SceneMonitorNode, SwarmNode
+from ros.ros_node import PlanNode, SceneMonitorNode, SwarmNode
 from gsi_msgs.gsi_msgs_helper import Parameter, SkillInfo, RobotSkill, Plan as PlanMsg, TimestepSkills
 from skill.skill import _plan_cb
 
