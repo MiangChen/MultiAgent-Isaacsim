@@ -4,8 +4,14 @@ from pathlib import Path
 
 # 添加 gsi_msgs 到 Python 路径
 _current_dir = Path(__file__).parent.parent.absolute()
-_plan_msgs_path = _current_dir / "test_gsi_msgs_ws/install/plan_msgs/local/lib/python3.10/dist-packages"
-_scene_msgs_path = _current_dir / "test_gsi_msgs_ws/install/scene_msgs/local/lib/python3.10/dist-packages"
+_plan_msgs_path = (
+    _current_dir
+    / "test_gsi_msgs_ws/install/plan_msgs/local/lib/python3.10/dist-packages"
+)
+_scene_msgs_path = (
+    _current_dir
+    / "test_gsi_msgs_ws/install/scene_msgs/local/lib/python3.10/dist-packages"
+)
 
 if _plan_msgs_path.exists() and str(_plan_msgs_path) not in sys.path:
     sys.path.insert(0, str(_plan_msgs_path))
@@ -13,139 +19,34 @@ if _plan_msgs_path.exists() and str(_plan_msgs_path) not in sys.path:
 if _scene_msgs_path.exists() and str(_scene_msgs_path) not in sys.path:
     sys.path.insert(0, str(_scene_msgs_path))
 
-
 import omni.usd
 from rclpy.node import Node
 from pxr import Tf, Gf
 
 # 基础消息接口
 from geometry_msgs.msg import Transform as RosTransform
+
 # from scene_msgs.msg import PrimTransform, SceneModifications
 # from plan_msgs.msg import RobotFeedback, VelTwistPose
-from gsi_msgs.gsi_msgs_helper import PrimTransform, SceneModifications, RobotFeedback, VelTwistPose
-
-
-# class BaseNode(Node):
-#     def __init__(self, node_name: str):
-#         super().__init__(node_name)
-#         self.node_name = node_name
-#         self.shared_data = {}
-#
-#         # 创建发布者和订阅者
-#         self.data_publisher = self.create_publisher(String, f'/{node_name}/data', 10)
-#         self.query_publisher = self.create_publisher(String, '/query_request', 10)
-#         self.response_publisher = self.create_publisher(String, '/query_response', 10)
-#
-#         # 订阅其他节点的数据
-#         self.create_subscription(String, '/query_request', self.handle_query, 10)
-#         self.create_subscription(String, '/query_response', self.handle_response, 10)
-#
-#         self.pending_queries = {}
-#
-#     def publish_data(self, key, value):
-#         """发布数据"""
-#         msg = String()
-#         data = {
-#             'node': self.node_name,
-#             'key': key,
-#             'value': value,
-#             'timestamp': self.get_clock().now().to_msg()
-#         }
-#         msg.data = json.dumps(data)
-#         self.data_publisher.publish(msg)
-#
-#     def query_node_data(self, target_node, key, callback):
-#         """查询其他节点的数据"""
-#         query_id = f"{self.node_name}_{target_node}_{key}_{self.get_clock().now().nanoseconds}"
-#
-#         msg = String()
-#         query = {
-#             'query_id': query_id,
-#             'from_node': self.node_name,
-#             'target_node': target_node,
-#             'key': key
-#         }
-#         msg.data = json.dumps(query)
-#
-#         self.pending_queries[query_id] = callback
-#         self.query_publisher.publish(msg)
-#
-#     def handle_query(self, msg):
-#         """处理查询请求"""
-#         query = json.loads(msg.data)
-#         if query['target_node'] == self.node_name:
-#             response_msg = String()
-#             response = {
-#                 'query_id': query['query_id'],
-#                 'from_node': self.node_name,
-#                 'to_node': query['from_node'],
-#                 'key': query['key'],
-#                 'value': self.shared_data.get(query['key'], None)
-#             }
-#             response_msg.data = json.dumps(response)
-#             self.response_publisher.publish(response_msg)
-#
-#     def handle_response(self, msg):
-#         """处理查询响应"""
-#         response = json.loads(msg.data)
-#         query_id = response['query_id']
-#         if query_id in self.pending_queries:
-#             callback = self.pending_queries.pop(query_id)
-#             callback(response['value'])
-#
-# # Map 节点
-# class MapNode(BaseNode):
-#     def __init__(self):
-#         super().__init__('map')
-#         self.map_data = None
-#         self.obstacles = []
-#
-#         self.create_timer(2.0, self.update_map_data)
-#
-#     def update_map_data(self):
-#         self.shared_data['map_size'] = [100, 100]
-#         self.shared_data['obstacle_count'] = len(self.obstacles)
-#         self.publish_data('map_size', [100, 100])
-#
-#     def get_safe_zones(self):
-#         return [(10, 10), (20, 20), (30, 30)]
-#
-#
-# # Planning 节点
-# class PlanningNode(BaseNode):
-#     def __init__(self):
-#         super().__init__('planning')
-#         self.current_path = []
-#         self.goals = []
-#
-#         self.create_timer(1.5, self.update_planning_data)
-#
-#     def update_planning_data(self):
-#         self.shared_data['path_length'] = len(self.current_path)
-#         self.shared_data['goals_count'] = len(self.goals)
-#         self.publish_data('path_length', len(self.current_path))
-#
-#     def request_swarm_and_map_info(self):
-#         """同时请求群体和地图信息"""
-#
-#         def handle_robot_count(value):
-#             self.get_logger().info(f"Planning for {value} robots")
-#
-#         def handle_map_size(value):
-#             self.get_logger().info(f"Planning on map size: {value}")
-#
-#         self.query_node_data('swarm', 'robot_count', handle_robot_count)
-#         self.query_node_data('map', 'map_size', handle_map_size)
+from gsi_msgs.gsi_msgs_helper import (
+    PrimTransform,
+    SceneModifications,
+    RobotFeedback,
+    VelTwistPose,
+)
 
 
 class PlanNode(Node):
     def __int__(self):
-        super().__init__('PlanNode')
+        super().__init__("PlanNode")
+
 
 class SceneMonitorNode(Node):
     def __init__(self):
-        super().__init__('SceneMonitor')
-        self.modification_publisher = self.create_publisher(SceneModifications, '/SceneModification', 10)
+        super().__init__("SceneMonitor")
+        self.modification_publisher = self.create_publisher(
+            SceneModifications, "/SceneModification", 10
+        )
 
         self._stage = omni.usd.get_context().get_stage()
 
@@ -158,20 +59,16 @@ class SceneMonitorNode(Node):
                 root = self._stage.GetPseudoRoot()  # 兜底
 
         self._prev_paths = {
-            str(p.GetPath())
-            for p in Usd.PrimRange(root)  # 遍历 root 子树（含 root）
+            str(p.GetPath()) for p in Usd.PrimRange(root)  # 遍历 root 子树（含 root）
         }
         self._prev_xforms = {p: self._get_local_xform(p) for p in self._prev_paths}
 
         self._prev_transforms = {
-            path: self._get_local_xform(path)
-            for path in self._prev_paths
+            path: self._get_local_xform(path) for path in self._prev_paths
         }
 
         self._key = Tf.Notice.Register(
-            Usd.Notice.ObjectsChanged,
-            self.on_usd_objects_changed,
-            self._stage
+            Usd.Notice.ObjectsChanged, self.on_usd_objects_changed, self._stage
         )
 
     def _get_local_xform(self, prim_or_path) -> Gf.Matrix4d:
@@ -182,7 +79,11 @@ class SceneMonitorNode(Node):
             prim = prim_or_path
         else:
             # 支持 str / Sdf.Path
-            path = str(prim_or_path) if not hasattr(prim_or_path, "pathString") else prim_or_path.pathString
+            path = (
+                str(prim_or_path)
+                if not hasattr(prim_or_path, "pathString")
+                else prim_or_path.pathString
+            )
             prim = self._stage.GetPrimAtPath(path)
 
         if not prim or not prim.IsValid():
@@ -202,6 +103,7 @@ class SceneMonitorNode(Node):
 
     def _mat_to_ros(self, mat):
         from pxr import Gf
+
         ros_t = RosTransform()
         if mat is None:
             # 平移保持 0，旋转保持单位四元数(默认)
@@ -253,12 +155,13 @@ class SceneMonitorNode(Node):
             return False
         return not m1.AlmostEqual(m2, tol)
 
-    def _pose_delta_is_significant(self,
-                                   prev: Gf.Matrix4d,
-                                   curr: Gf.Matrix4d,
-                                   trans_eps: float = 100,  # 2 cm
-                                   rot_eps_deg: float = 100  # 2°
-                                   ) -> bool:
+    def _pose_delta_is_significant(
+        self,
+        prev: Gf.Matrix4d,
+        curr: Gf.Matrix4d,
+        trans_eps: float = 100,  # 2 cm
+        rot_eps_deg: float = 100,  # 2°
+    ) -> bool:
         """稳健比较：只用位移差和四元数差，任何一步失败都当 0 差，不误报。"""
         if prev is None or curr is None:
             return False
@@ -313,19 +216,19 @@ class SceneMonitorNode(Node):
         # 数值安全
         if dot > 1.0:
             dot = 1.0
-        half_angle = 2.0 * (dot ** 2 - 0.5) ** 0.5 if dot >= (2 ** -0.5) else None
+        half_angle = 2.0 * (dot**2 - 0.5) ** 0.5 if dot >= (2**-0.5) else None
         # 更稳定：直接用 acos
         import math
+
         half = math.acos(max(-1.0, min(1.0, dot)))
         rot_deg = 2.0 * half * 180.0 / math.pi
 
         # 判定（任一超过阈值才算“显著变化”）
         return (trans_norm >= trans_eps) or (rot_deg >= rot_eps_deg)
 
-
     def on_usd_objects_changed(self, notice, sender_stage):
 
-    #    print("Changed!!")
+        #    print("Changed!!")
 
         from pxr import Usd, Sdf
 
@@ -367,7 +270,9 @@ class SceneMonitorNode(Node):
 
         # 6) 集合差异（都是 Prim 路径字符串）
         added = [p for p in resynced if (p in self._curr_paths and p not in prev_paths)]
-        deleted = [p for p in resynced if (p not in self._curr_paths and p in prev_paths)]
+        deleted = [
+            p for p in resynced if (p not in self._curr_paths and p in prev_paths)
+        ]
 
         # 只对 Prim 路径做 xform 检查
         xform_changed = []
@@ -422,7 +327,7 @@ class SceneMonitorNode(Node):
 class SwarmNode(Node):
 
     def __init__(self):
-        super().__init__('swarm')
+        super().__init__("swarm")
         # 结构: { robot_class: { robot_id: { "motion": publisher, "feedback": publisher } } }
         self.publisher_dict: dict[str, dict[int, dict[str, any]]] = {}
         self.subscriber_dict: dict[str, dict[int, dict[str, any]]] = {}
@@ -445,9 +350,9 @@ class SwarmNode(Node):
         # 存到子字典里
         self.publisher_dict[robot_class][robot_id]["feedback"] = pub
 
-#        self.get_logger().info(
-#            f"Registered feedback publisher for {robot_class}[{robot_id}] on topic {topic}"
-#        )
+        #        self.get_logger().info(
+        #            f"Registered feedback publisher for {robot_class}[{robot_id}] on topic {topic}"
+        #        )
         return pub
 
     def register_motion_publisher(self, robot_class: str, robot_id: int, qos=50):
@@ -465,12 +370,14 @@ class SwarmNode(Node):
 
         self.publisher_dict[robot_class][robot_id]["motion"] = pub
 
-#        self.get_logger().info(
-#            f"Registered motion publisher for {robot_class}[{robot_id}] on topic {topic}"
-#        )
+        #        self.get_logger().info(
+        #            f"Registered motion publisher for {robot_class}[{robot_id}] on topic {topic}"
+        #        )
         return pub
 
-    def register_cmd_subscriber(self, robot_class: str, robot_id: int, callback = None, qos = 50):
+    def register_cmd_subscriber(
+        self, robot_class: str, robot_id: int, callback=None, qos=50
+    ):
         """
         注册一个cmd subscriber
         topic 规则： /cmd/<robot_class>_<robot_id>
@@ -486,22 +393,24 @@ class SwarmNode(Node):
 
         self.subscriber_dict[robot_class][robot_id]["cmd"] = sub
 
-#        self.get_logger().info(
-#            f"Registered cmd subscriber for {robot_class}[{robot_id}] on topic {topic}"
-#        )
+        #        self.get_logger().info(
+        #            f"Registered cmd subscriber for {robot_class}[{robot_id}] on topic {topic}"
+        #        )
         return sub
 
-    def publish_navigation_feedback(self, robot_class: str, robot_id: int, msg: RobotFeedback):
+    def publish_navigation_feedback(
+        self, robot_class: str, robot_id: int, msg: RobotFeedback
+    ):
         self.publisher_dict[robot_class][robot_id]["feedback"].publish(msg)
 
     def publish_motion(self, robot_class: str, robot_id: int, msg: VelTwistPose):
         self.publisher_dict[robot_class][robot_id]["motion"].publish(msg)
 
     def update_swarm_data(self):
-        self.shared_data['robot_count'] = len(self.robot_positions)
-        self.shared_data['formation_type'] = 'triangle'
-        self.publish_data('robot_count', len(self.robot_positions))
-        self.publish_data('formation_type', 'triangle')
+        self.shared_data["robot_count"] = len(self.robot_positions)
+        self.shared_data["formation_type"] = "triangle"
+        self.publish_data("robot_count", len(self.robot_positions))
+        self.publish_data("formation_type", "triangle")
 
     def get_robot_positions(self):
         return self.robot_positions
@@ -512,9 +421,11 @@ class SwarmNode(Node):
         def handle_map_response(value):
             self.get_logger().info(f"Received map size: {value}")
 
-        self.query_node_data('map', 'map_size', handle_map_response)
+        self.query_node_data("map", "map_size", handle_map_response)
+
 
 _swarm_singleton = None
+
 
 def get_swarm_node():
     global _swarm_singleton

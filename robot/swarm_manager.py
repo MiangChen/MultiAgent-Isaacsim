@@ -3,15 +3,14 @@ from pydantic import ValidationError
 from typing import Dict, List, Type
 import yaml
 
+from isaacsim.core.api.scenes import Scene
+
 from camera.camera_cfg import CameraCfg
 from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from map.map_grid_map import GridMap
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
 from ros.ros_swarm import SwarmNode
-from ros.ros_swarm import get_swarm_node
-
-from isaacsim.core.api.scenes import Scene
 
 
 class SwarmManager:
@@ -24,7 +23,9 @@ class SwarmManager:
     第四个,需要能中途加入机器人和删除机器人(但是前期试过, 好像在加入机器人后, 必须要reset world, 那么世界也就完全重置了, 所以我们可以定一个机器人仓库, 比如已经有这么多机器人了, 我们现在要一些新的机器人, 那么仓库里的机器人会加入行动, 非常合理)
     """
 
-    def __init__(self, map_grid: GridMap = None):
+    def __init__(
+        self, map_grid: GridMap = None, ros_integration_manager: SwarmNode = None
+    ):
         self.scene: Scene = None
         self.robot_warehouse: Dict[str, List[RobotBase]] = {}
         self.flag_active: Dict[str, List[int]] = {}
@@ -36,13 +37,13 @@ class SwarmManager:
         }
         self.robot_class_cfg = {}  # 对应的机器人
         self.map_grid = map_grid
-        self.swarm_node = get_swarm_node()
+        self.ros_integration_manager = ros_integration_manager
 
     def register_robot_class(
-            self,
-            robot_class_name: str,
-            robot_class: Type[RobotBase],
-            robot_class_cfg: Type[RobotCfg],
+        self,
+        robot_class_name: str,
+        robot_class: Type[RobotBase],
+        robot_class_cfg: Type[RobotCfg],
     ) -> None:
         """注册新的机器人类型"""
         self.robot_warehouse[robot_class_name] = []
@@ -51,10 +52,12 @@ class SwarmManager:
         self.robot_class[robot_class_name] = robot_class
         self.robot_class_cfg[robot_class_name] = robot_class_cfg
 
-    async def initialize_async(self,
-                              scene: Scene,
-                              robot_swarm_cfg_path: str = None,
-                              robot_active_flag_path: str = None) -> None:
+    async def initialize_async(
+        self,
+        scene: Scene,
+        robot_swarm_cfg_path: str = None,
+        robot_active_flag_path: str = None,
+    ) -> None:
         """
         Complete async initialization of the swarm manager.
         """
@@ -74,10 +77,8 @@ class SwarmManager:
         if robot_active_flag_path is not None:
             self.activate_robot(robot_active_flag_path)
 
-
-
     async def load_robot_swarm_cfg(
-            self, robot_swarm_cfg_file: str = None, dict: Dict = None
+        self, robot_swarm_cfg_file: str = None, dict: Dict = None
     ) -> None:
         """异步加载并创建配置文件中定义的所有机器人。"""
 
@@ -89,12 +90,14 @@ class SwarmManager:
             return  # 加上 return 避免下面出错
 
         for robot_class_name in dict.keys():
-            for robot_cfg in dict[robot_class_name]:  # 可能有多个机器人  这里可以优化一下 让yaml的格式就和robot cfg一样
-                robot_id = robot_cfg['id']
-                cfg_body_dict = robot_cfg['body']
-                cfg_body_dict['id'] = robot_id
-                cfg_camera_dict = robot_cfg.get('camera')
-                cfg_camera_third_person_dict = robot_cfg.get('camera_third_person')
+            for robot_cfg in dict[
+                robot_class_name
+            ]:  # 可能有多个机器人  这里可以优化一下 让yaml的格式就和robot cfg一样
+                robot_id = robot_cfg["id"]
+                cfg_body_dict = robot_cfg["body"]
+                cfg_body_dict["id"] = robot_id
+                cfg_camera_dict = robot_cfg.get("camera")
+                cfg_camera_third_person_dict = robot_cfg.get("camera_third_person")
 
                 # --- 3. 修改点: 使用 await 调用现在是异步的 create_robot ---
                 await self.create_robot(
@@ -106,12 +109,12 @@ class SwarmManager:
                 )
 
     async def create_robot(
-            self,
-            robot_class_name: str = None,
-            robot_class_cfg: Type[RobotCfg] = None,
-            cfg_body_dict: Dict = None,
-            cfg_camera_dict: Dict = None,
-            cfg_camera_third_person_dict: Dict = None,
+        self,
+        robot_class_name: str = None,
+        robot_class_cfg: Type[RobotCfg] = None,
+        cfg_body_dict: Dict = None,
+        cfg_camera_dict: Dict = None,
+        cfg_camera_third_person_dict: Dict = None,
     ):
         """
         异步创建新机器人并加入仓库。
@@ -136,7 +139,9 @@ class SwarmManager:
         cfg_camera_third_person = None
         if cfg_camera_third_person_dict:
             try:
-                cfg_camera_third_person = CameraThirdPersonCfg(**cfg_camera_third_person_dict)
+                cfg_camera_third_person = CameraThirdPersonCfg(
+                    **cfg_camera_third_person_dict
+                )
             except ValidationError as e:
                 print(f"加载机器人 {cfg_body_dict.get('id')} 的相机配置失败: {e}")
 
@@ -144,30 +149,36 @@ class SwarmManager:
         robot_cls = self.robot_class[robot_class_name]
 
         # 检查机器人class是否有 'create' 方法，并且它是一个异步函数
-        if hasattr(robot_cls, 'create') and inspect.iscoroutinefunction(robot_cls.create):
+        if hasattr(robot_cls, "create") and inspect.iscoroutinefunction(
+            robot_cls.create
+        ):
             # 如果是，使用 await 调用异步工厂 create 方法
             print(f"'{robot_class_name}' has an async factory. Using await .create()")
             robot = await robot_cls.create(
-                cfg_body=cfg_body, cfg_camera=cfg_camera, cfg_camera_third_person=cfg_camera_third_person,
+                cfg_body=cfg_body,
+                cfg_camera=cfg_camera,
+                cfg_camera_third_person=cfg_camera_third_person,
                 scene=self.scene,
                 map_grid=self.map_grid,
-                node=self.swarm_node
+                node=self.ros_integration_manager,
             )
         else:
             # 如果不是，使用传统的同步 __init__ 方法
             print(f"'{robot_class_name}' has a standard constructor. Using .__init__()")
             robot = robot_cls(
-                cfg_body=cfg_body, cfg_camera=cfg_camera, cfg_camera_third_person=cfg_camera_third_person,
+                cfg_body=cfg_body,
+                cfg_camera=cfg_camera,
+                cfg_camera_third_person=cfg_camera_third_person,
                 scene=self.scene,
                 map_grid=self.map_grid,
-                node=self.swarm_node
+                node=self.ros_integration_manager,
             )
 
         self.robot_warehouse[robot_class_name].append(robot)
         return robot
 
     def activate_robot(
-            self, flag_file_path: str = None, flag_dict: Dict = None
+        self, flag_file_path: str = None, flag_dict: Dict = None
     ) -> None:
         # 两种寄存器配置模式, 一个是从文件读取, 适合初始化时后加载大量机器人, 另一个是通过dict来配置, 时候后续少量的处理;
         if flag_file_path is not None:

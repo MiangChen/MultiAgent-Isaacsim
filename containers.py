@@ -14,8 +14,35 @@ from scene.scene_manager import SceneManager
 from ui.viewport_manager import ViewportManager
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
-from ros.ros_swarm import get_swarm_node
 
+# ROS
+import rclpy
+rclpy.init(args=None)
+
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+from ros.ros_manager import RosManager
+from ros.ros_swarm import PlanNode, SceneMonitorNode, SwarmNode
+from gsi_msgs.gsi_msgs_helper import Parameter, SkillInfo, RobotSkill, Plan as PlanMsg, TimestepSkills
+from skill.skill import _plan_cb
+
+
+def ros_node_subscriber(node_provider, msg_type, topic, callback, qos_profile):
+    """Resource initializer for creating and destroying a ROS2 subscription."""
+    # 1. 从 provider 获取真正的 node 实例
+    node = node_provider
+
+    # 2. 在实例上创建订阅
+    subscription = node.create_subscription(msg_type, topic, callback, qos_profile)
+    print(f"Subscription created for topic '{topic}'")
+
+    # 3. 使用 yield 将 node 实例提供给容器的其他部分
+    yield node
+
+    # 4. (yield 之后的部分) 在程序退出、容器关闭时执行清理工作
+    print(f"Destroying subscription for topic '{topic}'")
+    node.destroy_subscription(subscription)
+    # 如果需要，也可以销毁节点本身
+    # node.destroy_node()
 
 class AppContainer(containers.DeclarativeContainer):
     """
@@ -37,6 +64,27 @@ class AppContainer(containers.DeclarativeContainer):
     viewport_manager = providers.Singleton(ViewportManager)
     scene_manager = providers.Singleton(SceneManager)
     semantic_map = providers.Singleton(MapSemantic)
+    swarm_node = providers.Singleton(SwarmNode)
+    scene_monitor_node = providers.Singleton(SceneMonitorNode)
+
+    # Plan Node
+    ros_qos_profile = providers.Object(
+        QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=50,
+        )
+    )
+    # plan_receiver_node = providers.Singleton(PlanNode('plan_receiver'))
+    # plan_receiver_node.create_subscription(PlanMsg, '/Plan', _plan_cb, ros_qos_profile)
+    plan_receiver_node = providers.Resource(
+        ros_node_subscriber,
+        node_provider=providers.Singleton(PlanNode, 'plan_receiver'),
+        msg_type=PlanMsg,
+        topic='/Plan',
+        callback=_plan_cb,
+        qos_profile=ros_qos_profile
+    )
 
     # GridMap with configuration injection
     grid_map = providers.Singleton(
@@ -51,11 +99,18 @@ class AppContainer(containers.DeclarativeContainer):
     )
     
     # Managers with dependency injection
-    
+    ros_manager = providers.Singleton(
+        RosManager,
+        plan_receiver_node=plan_receiver_node,
+        scene_monitor_node=scene_monitor_node,
+        swarm_node=swarm_node,
+    )
     swarm_manager = providers.Singleton(
         SwarmManager,
-        map_grid=grid_map
+        map_grid=grid_map,
+        ros_integration_manager=swarm_node,
     )
+
 
     env = providers.Factory(
         Env,
@@ -136,6 +191,7 @@ def safe_container_setup(config_path: List[str] = ['./files/env_cfg.yaml', './fi
         container.swarm_manager.provider
         container.semantic_map.provider
         container.env.provider
+        container.ros_manager.provider
 
         return container
         
