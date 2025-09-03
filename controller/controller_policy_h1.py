@@ -1,22 +1,14 @@
-# Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
-#
-# NVIDIA CORPORATION and its licensors retain all intellectual property
-# and proprietary rights in and to this software, related documentation
-# and any modifications thereto. Any use, reproduction, disclosure or
-# distribution of this software and related documentation without an express
-# license agreement from NVIDIA CORPORATION is strictly prohibited.
-#
-
 from typing import Optional
-import asyncio
+
 from controller.controller_policy import PolicyController
 
 import numpy as np
-import omni
-import omni.kit.commands
+
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
 from isaacsim.core.utils.types import ArticulationActions
-from config.variables import ASSET_PATH
+from config.config_manager import config_manager
+
+ASSET_PATH = config_manager.get("asset_path")
 
 
 class H1FlatTerrainPolicy(PolicyController):
@@ -149,7 +141,7 @@ class H1FlatTerrainPolicy(PolicyController):
             obs = self._compute_observation(command, robot)
             self.action = self._compute_action(obs)
             self._previous_action = self.action.copy()
-        position = np.tile(np.array(self.default_pos + (self.action * self._action_scale)), (1,1))
+        position = np.tile(np.array(self.default_pos + (self.action * self._action_scale)), (1, 1))
         self._policy_counter += 1
         return position
 

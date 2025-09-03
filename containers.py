@@ -1,10 +1,8 @@
 import sys
 from dependency_injector import containers, providers
 
-# --- 导入所有需要的 Manager ---
 from isaacsim.core.api import World
-
-from config.config_manager import ConfigManager
+from config.config_manager import config_manager
 from environment.env import Env
 from log.log_manager import LogManager
 from map.map_semantic_map import MapSemantic
@@ -21,7 +19,7 @@ class AppContainer(containers.DeclarativeContainer):
     ConfigManager 是所有服务的配置源头。
     """
 
-    config_manager = providers.Singleton(ConfigManager)
+    config_manager = providers.Object(config_manager)
     config = providers.Factory(lambda manager: manager.config, manager=config_manager)
 
     log_manager = providers.Singleton(

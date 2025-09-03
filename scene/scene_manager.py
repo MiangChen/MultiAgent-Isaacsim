@@ -10,8 +10,9 @@ import numpy as np
 import omni
 from pxr import Gf, Sdf, UsdGeom, UsdPhysics
 
-# Local imports
-from config.variables import ASSET_PATH
+from config.config_manager import config_manager
+
+ASSET_PATH = config_manager.get("asset_path")
 
 class SceneManager:
     """

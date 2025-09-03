@@ -1,8 +1,6 @@
 from typing import Optional
 
-from robot.robot_cfg import RobotCfg
-
-from config.variables import ASSET_PATH
+from robot.robot_cfg import RobotCfg, ASSET_PATH
 
 
 class RobotCfgCf2x(RobotCfg):
@@ -16,5 +14,5 @@ class RobotCfgCf2x(RobotCfg):
 
     default_speed: float = 1  # m/s
     takeoff_height: float = 2.0  # 起飞悬停高度，单位米
-    land_height: float = 0.0     # 降落高度，地面
+    land_height: float = 0.0  # 降落高度，地面
     control_mode: str = "velocity"  # "velocity" or "teleport"

@@ -61,7 +61,7 @@ class ConfigManager:
 
     def _derive_paths(self):
         """
-        计算所有派生路径，取代 variables.py 的功能。
+        计算所有派生路径
         """
         # 关键: 自动计算项目根目录，消除硬编码
         # config/config_manager.py -> config -> project_root
@@ -108,7 +108,7 @@ class ConfigManager:
         parser.add_argument(
             "--config",
             type=str,
-            default="./config/sim_cfg.yaml",
+            default="./config/config_parameter.yaml",
             help="Path to the main YAML configuration file.",
         )
 
@@ -126,3 +126,6 @@ class ConfigManager:
             help="Enable a feature. Can be used multiple times.",
         )
         return parser
+
+
+config_manager = ConfigManager()

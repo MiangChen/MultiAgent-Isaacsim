@@ -1,7 +1,10 @@
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 from pydantic import BaseModel
 
-from config.variables import ASSET_PATH
+from config.config_manager import config_manager
+
+ASSET_PATH = config_manager.get("asset_path")
+
 
 class BaseCfg(BaseModel):
     def update(self, **kwargs):
@@ -13,7 +16,7 @@ class RobotCfg(BaseCfg):
     name_prefix: str = 'robot'
     type: str = 'robot'
     prim_path: str = '/World/robots'
-    usd_path: str
+    usd_path: str = None
 
     # common config
     position: Optional[Tuple[float, float, float]] = (0.0, 0.0, 0.0)
@@ -22,4 +25,4 @@ class RobotCfg(BaseCfg):
     scale: Optional[Tuple[float, float, float]] = (1.0, 1.0, 1.0)
     # controllers: Optional[List[ControllerCfg]] = None
     # cameras: Optional[List[SensorCfg]] = None
-    camera_path: Optional[str]  = None
+    camera_path: Optional[str] = None

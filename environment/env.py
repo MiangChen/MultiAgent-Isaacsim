@@ -11,7 +11,7 @@ class Env(gym.Env):
     def __init__(self,
                  simulation_app,
                  world: World,
-                 scene_manager: SceneManager,
+                 scene_manager: SceneManager = None,
                  swarm_manager: SwarmManager = None,
                  grid_map: GridMap = None,
                  ) -> None:

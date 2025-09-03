@@ -1,24 +1,44 @@
+import argparse
+from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
+
+
+def pre_initialize():
+    """
+    执行最小化的启动，只为了创建 SimulationApp 实例。
+    """
+    # 1. 创建一个临时的、极简的参数解析器，只为了拿到 --config 的值
+    #    我们不在这里使用重量级的 ConfigManager
+    parser = argparse.ArgumentParser(
+        add_help=False
+    )  # add_help=False 避免与后续的解析器冲突
+    parser.add_argument("--config", type=str, default="./config/config_parameter.yaml")
+
+    # parse_known_args 会解析它认识的参数，并忽略其他所有参数
+    args, unknown = parser.parse_known_args()
+
+    # 2. 使用获取到的配置文件路径，初始化 Isaac Sim
+    #    这是整个程序中第一次接触 Isaac Sim 的地方
+    simulation_app = initialize_simulation_app_from_yaml(args.config)
+
+    # 3. 返回已创建的 app 实例
+    return simulation_app
+
+
+simulation_app = pre_initialize()
+
+###################################################################################################################
 import asyncio
 
 # Third-party imports
 from dependency_injector.wiring import inject, Provide  # Dependency injection imports
 
-# Local imports - argument parsing
-from argument_parser import parse_arguments, get_argument_summary
-
-# Isaac Sim related imports
-from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
-
-# Parse arguments first
-args = parse_arguments()
-
-# Initialize simulation app with parsed config
-simulation_app = initialize_simulation_app_from_yaml(args.config)
 from isaacsim.core.api import World
 
 # Local imports
+from config.config_manager import config_manager
+from containers import AppContainer, get_container
 from environment.env import Env
-from config.variables import WORLD_USD_PATH, PATH_PROJECT
+from log.log_manager import LogManager
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
 from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
@@ -26,15 +46,13 @@ from robot.robot_h1 import RobotH1, RobotCfgH1
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
-from containers import AppContainer
-from log.log_manager import LogManager
 
 # Log startup information with argument summary
 logger = LogManager.get_logger(__name__)
 logger.info("Isaac Sim WebManager starting...")
-logger.info("\n" + get_argument_summary(args))
 
-ROS_AVAILABLE = True
+WORLD_USD_PATH = config_manager.get("world_usd_path")
+PROJECT_ROOT = config_manager.get("project_root")
 
 
 @inject
@@ -67,8 +85,8 @@ def setup_simulation(
         await env.initialize_async()
         await swarm_manager.initialize_async(
             scene=world.scene,
-            robot_swarm_cfg_path=f"{PATH_PROJECT}/config/robot_swarm_cfg.yaml",
-            robot_active_flag_path=f"{PATH_PROJECT}/config/robot_swarm_active_flag.yaml",
+            robot_swarm_cfg_path=f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml",
+            robot_active_flag_path=f"{PROJECT_ROOT}/config/robot_swarm_active_flag.yaml",
         )
 
     # Schedule the initialization in Isaac Sim's event loop
@@ -220,8 +238,6 @@ def main():
         "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ninto the main\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
     )
     # Setup dependency injection container
-    from containers import get_container
-
     container = get_container()
 
     # Wire the container to this module for @inject decorators in skill functions
@@ -229,6 +245,7 @@ def main():
 
     # Get services from container
     config_manager = container.config_manager()
+
     log_manager = container.log_manager()
     ros_manager = container.ros_manager()
     swarm_manager = container.swarm_manager()
@@ -240,7 +257,6 @@ def main():
     env = container.env()
     env.simulation_app = simulation_app
     setup_simulation()
-
     ros_manager.start()
 
     # Load scene
@@ -305,7 +321,7 @@ def main():
             process_semantic_detection(semantic_camera, semantic_map)
 
         # Process ROS skills if ROS is enabled
-        if args.ros:
+        if config_manager.get("ros"):
             from skill.skill import process_ros_skills
 
             process_ros_skills(swarm_manager)
@@ -314,10 +330,6 @@ def main():
 
     ros_manager.stop()
 
-    # Unwire the container
-    from containers import get_container
-
-    container = get_container()
     container.unwire()
 
     logger.info("--- Simulation finished. Manually closing application. ---")

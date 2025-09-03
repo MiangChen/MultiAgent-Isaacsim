@@ -2,7 +2,7 @@ import os
 import yaml
 
 from isaacsim import SimulationApp
-import omni
+
 
 
 def initialize_simulation_app_from_yaml(config_path):
