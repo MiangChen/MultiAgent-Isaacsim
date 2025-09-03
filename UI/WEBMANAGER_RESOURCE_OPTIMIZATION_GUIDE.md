@@ -69,8 +69,9 @@ python3 main.py --enable-webmanager \
 - 在无客户端连接时禁用图表生成
 
 **代码示例**:
+
 ```python
-from webmanager_resource_optimization import WebManagerResourceOptimizer, OptimizationLevel
+from UI.webmanager_resource_optimization import WebManagerResourceOptimizer, OptimizationLevel
 
 optimizer = WebManagerResourceOptimizer()
 optimizer.apply_optimization(webmanager_system, OptimizationLevel.LOW)
@@ -118,7 +119,7 @@ max_connections = 5
 ### 实时监控
 
 ```python
-from webmanager_resource_monitor import create_resource_monitor_for_webmanager
+from UI.webmanager_resource_monitor import create_resource_monitor_for_webmanager
 
 # 创建资源监控器
 monitor = create_resource_monitor_for_webmanager(

@@ -320,7 +320,7 @@ def main_enhanced():
             return 1
         
         # Check if main.py exists
-        if not Path("main.py").exists():
+        if not Path("../main.py").exists():
             logger.error("main.py not found in current directory")
             logger.error("Please run this script from the Isaac Sim project root directory")
             return 1
@@ -507,7 +507,7 @@ Examples:
             return 1
     
     # Check if main.py exists
-    if not Path("main.py").exists():
+    if not Path("../main.py").exists():
         logger.error("main.py not found in current directory")
         logger.error("Please run this script from the Isaac Sim project root directory")
         return 1

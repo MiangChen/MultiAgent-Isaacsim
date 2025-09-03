@@ -75,8 +75,9 @@ python3 start_webmanager_lightweight.py --with-monitoring
 ## 📈 自动化优化功能
 
 ### 1. 资源监控器
+
 ```python
-from webmanager_resource_monitor import create_resource_monitor_for_webmanager
+from UI.webmanager_resource_monitor import create_resource_monitor_for_webmanager
 
 monitor = create_resource_monitor_for_webmanager(webmanager_system)
 monitor.start_monitoring()
@@ -89,8 +90,9 @@ monitor.start_monitoring()
 - 📊 资源使用历史记录
 
 ### 2. 动态优化
+
 ```python
-from webmanager_resource_optimization import WebManagerResourceOptimizer
+from UI.webmanager_resource_optimization import WebManagerResourceOptimizer
 
 optimizer = WebManagerResourceOptimizer()
 optimizer.apply_optimization(webmanager_system, OptimizationLevel.LOW)
