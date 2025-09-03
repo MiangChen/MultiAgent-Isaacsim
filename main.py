@@ -235,7 +235,7 @@ def process_semantic_detection(semantic_camera, map_semantic: MapSemantic) -> No
 
 def main():
     print(
-        "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ninto the main\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        "\n\n\n\ninto the main\n\n\n\n"
     )
     # Setup dependency injection container
     container = get_container()

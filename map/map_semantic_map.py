@@ -1,12 +1,7 @@
 from typing import List
 
-# Third-party imports
-import numpy as np
-import yaml
 from typing import Dict, Any, Tuple, Optional
 
-# Isaac Sim related imports
-import omni
 from isaacsim.core.prims import XFormPrim
 from pxr import Usd
 
@@ -63,7 +58,8 @@ class MapSemantic():
                 break
 
         if target_semantic_id is None:
-            print(f"Warning: The semantic class '{target_semantic_class}' was not found in the sensor result's label map.")
+            print(
+                f"Warning: The semantic class '{target_semantic_class}' was not found in the sensor result's label map.")
             return None, None
 
         # --- Step 2: Iterate through detected objects to find a matching semanticId ---
@@ -72,7 +68,8 @@ class MapSemantic():
                 try:
                     prim_path = prim_paths[i]
                 except IndexError:
-                    print(f"Error: Found object with semantic class '{target_semantic_class}', but its index {i} is out of bounds for the prim_paths list.")
+                    print(
+                        f"Error: Found object with semantic class '{target_semantic_class}', but its index {i} is out of bounds for the prim_paths list.")
                     return None, None
 
                 # --- Step 3: Get the Prim and its pose ---
@@ -83,7 +80,8 @@ class MapSemantic():
                     # Get the underlying Usd.Prim from the high-level wrapper
                     usd_prim = xform_prim.prims[0]
                     if not usd_prim.IsValid():
-                        print(f"Error: Successfully created an XFormPrim, but could not retrieve a valid underlying Usd.Prim.")
+                        print(
+                            f"Error: Successfully created an XFormPrim, but could not retrieve a valid underlying Usd.Prim.")
                         return None, None
 
                     pose = {
@@ -99,5 +97,6 @@ class MapSemantic():
                     return None, None
 
         # If the loop completes without finding any matching instance
-        print(f"Warning: Found the semantic class '{target_semantic_class}' in the label map, but no instance of it was detected.")
+        print(
+            f"Warning: Found the semantic class '{target_semantic_class}' in the label map, but no instance of it was detected.")
         return None, None
