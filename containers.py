@@ -7,18 +7,19 @@ from isaacsim.core.api import World
 
 # Import manager classes
 from environment.env import Env
+from log.log_manager import LogManager
+from map.map_semantic_map import MapSemantic
+from map.map_grid_map import GridMap
 from robot.swarm_manager import SwarmManager
+from ros.ros_manager import RosManager
 from scene.scene_manager import SceneManager
 from ui.viewport_manager import ViewportManager
-from map.map_grid_map import GridMap
-from map.map_semantic_map import MapSemantic
-from ros.ros_manager import RosManager
 
 
 class AppContainer(containers.DeclarativeContainer):
     """
     Clean dependency injection container for Isaac Sim application
-    
+
     This container manages all manager instances as singletons with automatic
     dependency resolution. It uses the dependency-injector library's proven
     patterns for professional dependency management.
@@ -28,14 +29,12 @@ class AppContainer(containers.DeclarativeContainer):
     config = providers.Configuration()
 
     # Core singletons (no dependencies)
-    world = providers.Singleton(
-        World,
-        physics_dt=config.simulation.physics_dt
-    )
-    viewport_manager = providers.Singleton(ViewportManager)
+    log_manager = providers.Singleton(LogManager)
+    ros_manager = providers.Singleton(RosManager)
     scene_manager = providers.Singleton(SceneManager)
     semantic_map = providers.Singleton(MapSemantic)
-    ros_manager = providers.Singleton(RosManager)
+    viewport_manager = providers.Singleton(ViewportManager)
+    world = providers.Singleton(World, physics_dt=config.simulation.physics_dt)
 
     # GridMap with configuration injection
     grid_map = providers.Singleton(
@@ -50,15 +49,15 @@ class AppContainer(containers.DeclarativeContainer):
     )
 
     # Managers with dependency injection
+
     swarm_manager = providers.Singleton(
         SwarmManager,
         map_grid=grid_map,
         ros_manager=ros_manager,
     )
-
     env = providers.Factory(
         Env,
-        simulation_app=providers.Object(None),  # simulation_app 比较特殊，可能需要在运行时提供
+        simulation_app=providers.Object(None),
         world=world,
         scene_manager=scene_manager,
         swarm_manager=swarm_manager,
@@ -75,18 +74,20 @@ def merge_dicts(d1, d2):
     return d1
 
 
-def create_container(config_path: List[str] = ['./files/env_cfg.yaml', './files/env_cfg.yaml'],
-                     wire_modules: bool = True) -> AppContainer:
+def create_container(
+    config_path: List[str] = ["./files/env_cfg.yaml", "./files/env_cfg.yaml"],
+    wire_modules: bool = True,
+) -> AppContainer:
     """
     Create and configure the dependency injection container
-    
+
     This function creates the container, loads configuration from YAML,
     and optionally wires modules for dependency injection.
     """
     container = AppContainer()
     final_config = {}
     for path in config_path:
-        with open(path, 'r') as f:
+        with open(path, "r") as f:
             current_config = yaml.safe_load(f)
             final_config = merge_dicts(final_config, current_config)
 
@@ -102,10 +103,11 @@ def create_container(config_path: List[str] = ['./files/env_cfg.yaml', './files/
 
             # Always try to wire main module since it has @inject decorators
             import sys
-            if 'main' in sys.modules:
-                modules_to_wire.append('main')
-            elif '__main__' in sys.modules:
-                modules_to_wire.append('__main__')
+
+            if "main" in sys.modules:
+                modules_to_wire.append("main")
+            elif "__main__" in sys.modules:
+                modules_to_wire.append("__main__")
 
             container.wire(modules=modules_to_wire)
 
@@ -117,11 +119,13 @@ def create_container(config_path: List[str] = ['./files/env_cfg.yaml', './files/
     return container
 
 
-def safe_container_setup(config_path: List[str] = ['./files/env_cfg.yaml', './files/env_cfg.yaml'],
-                         wire_modules: bool = True) -> AppContainer:
+def safe_container_setup(
+    config_path: List[str] = ["./files/env_cfg.yaml", "./files/env_cfg.yaml"],
+    wire_modules: bool = True,
+) -> AppContainer:
     """
     Safely setup container with comprehensive error handling
-    
+
     This function provides a safe wrapper around container creation with
     detailed error messages and graceful failure handling.
     """
@@ -129,7 +133,7 @@ def safe_container_setup(config_path: List[str] = ['./files/env_cfg.yaml', './fi
         container = create_container(config_path, wire_modules)
 
         # Validate that container was properly configured
-        if not hasattr(container, 'config') or container.config is None:
+        if not hasattr(container, "config") or container.config is None:
             raise RuntimeError("Container configuration was not properly loaded")
 
         # Test basic provider resolution without instantiation
@@ -152,16 +156,21 @@ def validate_configuration(config: Dict[str, Any]) -> None:
     Validate configuration dictionary for required fields
     """
     # Check required top-level sections
-    required_sections = ['map']
+    required_sections = ["map"]
     for section in required_sections:
         if section not in config:
             raise ValueError(f"Required configuration section '{section}' is missing")
 
     # Validate map configuration
-    map_config = config['map']
+    map_config = config["map"]
     required_map_fields = [
-        'cell_size', 'start_point', 'min_bounds', 'max_bounds',
-        'occupied_cell', 'empty_cell', 'invisible_cell'
+        "cell_size",
+        "start_point",
+        "min_bounds",
+        "max_bounds",
+        "occupied_cell",
+        "empty_cell",
+        "invisible_cell",
     ]
 
     for field in required_map_fields:
@@ -169,16 +178,28 @@ def validate_configuration(config: Dict[str, Any]) -> None:
             raise ValueError(f"Required map configuration field '{field}' is missing")
 
     # Validate data types
-    if not isinstance(map_config['cell_size'], (int, float)) or map_config['cell_size'] <= 0:
+    if (
+        not isinstance(map_config["cell_size"], (int, float))
+        or map_config["cell_size"] <= 0
+    ):
         raise ValueError("Map cell_size must be a positive number")
 
-    if not isinstance(map_config['start_point'], list) or len(map_config['start_point']) != 3:
+    if (
+        not isinstance(map_config["start_point"], list)
+        or len(map_config["start_point"]) != 3
+    ):
         raise ValueError("Map start_point must be a list of 3 coordinates")
 
-    if not isinstance(map_config['min_bounds'], list) or len(map_config['min_bounds']) != 3:
+    if (
+        not isinstance(map_config["min_bounds"], list)
+        or len(map_config["min_bounds"]) != 3
+    ):
         raise ValueError("Map min_bounds must be a list of 3 coordinates")
 
-    if not isinstance(map_config['max_bounds'], list) or len(map_config['max_bounds']) != 3:
+    if (
+        not isinstance(map_config["max_bounds"], list)
+        or len(map_config["max_bounds"]) != 3
+    ):
         raise ValueError("Map max_bounds must be a list of 3 coordinates")
 
 
@@ -199,7 +220,7 @@ def get_container() -> AppContainer:
 def reset_container() -> None:
     """
     Reset the global container instance
-    
+
     This is useful for testing or when configuration changes require
     a fresh container instance.
     """

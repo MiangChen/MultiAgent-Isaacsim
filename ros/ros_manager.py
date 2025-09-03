@@ -5,6 +5,7 @@ logger = logging.getLogger(__name__)
 
 from gsi_msgs.gsi_msgs_helper import Plan
 import rclpy
+rclpy.init(None)
 from rclpy.executors import MultiThreadedExecutor
 from ros.ros_node import PlanNode, SceneMonitorNode, SwarmNode, get_swarm_node
 from skill.skill import _plan_cb

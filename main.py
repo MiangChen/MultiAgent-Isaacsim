@@ -1,6 +1,5 @@
 # Standard library imports
 import asyncio
-import logging
 import signal
 import sys
 import threading
@@ -33,42 +32,10 @@ from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
 from containers import AppContainer
 from webmanager.integration import WebManagerSystem
-
-# Setup logging with configurable level and file
-log_level = getattr(logging, args.log_level.upper())
-
-# Create log file directory if it doesn't exist
-from pathlib import Path
-
-log_path = Path(args.log_file)
-log_path.parent.mkdir(parents=True, exist_ok=True)
-
-# Configure logging with both console and file handlers
-console_formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-file_formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
-)
-
-console_handler = logging.StreamHandler()
-console_handler.setLevel(log_level)
-console_handler.setFormatter(console_formatter)
-
-file_handler = logging.FileHandler(args.log_file, mode="a")
-file_handler.setLevel(log_level)
-file_handler.setFormatter(file_formatter)
-
-# Configure root logger
-root_logger = logging.getLogger()
-root_logger.setLevel(log_level)
-root_logger.handlers.clear()
-root_logger.addHandler(console_handler)
-root_logger.addHandler(file_handler)
-
-logger = logging.getLogger(__name__)
+from log.log_manager import LogManager
 
 # Log startup information with argument summary
+logger = LogManager.get_logger(__name__)
 logger.info("Isaac Sim WebManager starting...")
 logger.info("\n" + get_argument_summary(args))
 
@@ -76,12 +43,6 @@ logger.info("\n" + get_argument_summary(args))
 webmanager_enabled = args.enable_webmanager and not args.disable_webmanager
 
 ROS_AVAILABLE = True
-
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
 
 # Global variables for WebManager integration
 _webmanager_system = None
