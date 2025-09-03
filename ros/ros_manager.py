@@ -1,34 +1,39 @@
 import threading
 import logging
-import rclpy
-from rclpy.executors import MultiThreadedExecutor
 
 logger = logging.getLogger(__name__)
 
+from gsi_msgs.gsi_msgs_helper import Plan
+import rclpy
+from rclpy.executors import MultiThreadedExecutor
+from ros.ros_node import PlanNode, SceneMonitorNode, SwarmNode, get_swarm_node
+from skill.skill import _plan_cb
+
 
 class RosManager:
-    def __init__(self, plan_receiver_node, scene_monitor_node, swarm_node):
-        # self.plan_callback = plan_callback
-        self.plan_receiver_node = plan_receiver_node
-        self.scene_monitor_node = scene_monitor_node
-        self.swarm_node = swarm_node
+    def __init__(self):
+        self.plan_receiver_node = None
+        self.scene_monitor_node = None
+        self.swarm_node = None
         self.executor = None
         self.stop_event = threading.Event()
         self.thread = None
 
-    # def build_nodes(self):
-    #     """构建所有ROS节点"""
-    #     qos = QoSProfile(
-    #         reliability=ReliabilityPolicy.RELIABLE,
-    #         history=HistoryPolicy.KEEP_LAST,
-    #         depth=50,
-    #     )
-    #     self.plan_receiver = PlanNode('plan_receiver')
-    #     self.plan_receiver.create_subscription(PlanMsg, '/Plan', self.plan_callback, qos)
-    #     self.scene_monitor_node = SceneMonitorNode()
-    #     self.swarm_node = get_swarm_node()
-    #     logger.info("ROS nodes built successfully.")
-    #     return self.plan_receiver, self.scene_monitor_node, self.swarm_node
+        self.build_nodes()
+
+    def build_nodes(self):
+        """构建所有ROS节点"""
+        from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+        qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=50,
+        )
+        self.plan_receiver_node = PlanNode('plan_receiver')
+        self.plan_receiver_node.create_subscription(Plan, '/Plan', _plan_cb, qos)
+        self.scene_monitor_node = SceneMonitorNode()
+        self.swarm_node = get_swarm_node()
+        logger.info("ROS nodes built successfully.")
 
     def start(self):
         """在后台线程中启动ROS节点"""

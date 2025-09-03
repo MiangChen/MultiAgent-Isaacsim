@@ -13,8 +13,8 @@ from typing import Dict, List, Set, Optional, Tuple
 import logging
 from dataclasses import dataclass
 
-from .config import CleanupConfig
-from .models import FileAnalysis, FileType, SafetyLevel
+from code_cleanup.config import CleanupConfig
+from code_cleanup.models import FileAnalysis, FileType, SafetyLevel
 
 
 @dataclass
