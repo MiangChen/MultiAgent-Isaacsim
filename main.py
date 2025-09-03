@@ -1,12 +1,9 @@
 # Standard library imports
 import asyncio
-from collections import defaultdict, deque
 import logging
-import os
 import signal
 import sys
 import threading
-from typing import Dict, Any
 
 # Third-party imports
 from dependency_injector.wiring import inject, Provide  # Dependency injection imports
@@ -140,7 +137,7 @@ def signal_handler(signum, frame):
 
 
 def initialize_webmanager_system(
-    swarm_manager, viewport_manager, simulation_app, config, ros_monitor=None
+        swarm_manager, viewport_manager, simulation_app, config, ros_monitor=None
 ) -> WebManagerSystem:
     """Initialize and configure the WebManager system for Isaac Sim integration
 
@@ -288,46 +285,11 @@ def stop_webmanager_system():
         # Continue with shutdown even if WebManager cleanup fails
 
 
-def spin_ros_in_background(nodes: tuple, stop_evt: threading.Event) -> None:
-    """Run ROS nodes in background thread
-
-    Args:
-        nodes: Tuple of ROS nodes to run
-        stop_evt: Threading event to signal shutdown
-    """
-    if not ROS_AVAILABLE or not nodes[0]:
-        return
-
-    import rclpy
-    from rclpy.executors import MultiThreadedExecutor
-
-    exec_ = MultiThreadedExecutor(num_threads=4)
-    for n in nodes:
-        if n:
-            exec_.add_node(n)
-    try:
-        while not stop_evt.is_set():
-            exec_.spin_once(timeout_sec=0.05)
-    finally:
-        for n in nodes:
-            if n:
-                try:
-                    exec_.remove_node(n)
-                except:
-                    pass
-                try:
-                    n.destroy_node()
-                except:
-                    pass
-        if ROS_AVAILABLE:
-            rclpy.shutdown()
-
-
 @inject
 def setup_simulation(
-    swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
-    env: Env = Provide[AppContainer.env],
-    world: World = Provide[AppContainer.world],
+        swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
+        env: Env = Provide[AppContainer.env],
+        world: World = Provide[AppContainer.world],
 ) -> None:
     """
     Setup simulation environment with injected dependencies.
@@ -678,13 +640,13 @@ def main():
 
         # Update process manager with WebManager statistics
         if (
-            _process_manager and _webmanager_system and count % 60 == 0
+                _process_manager and _webmanager_system and count % 60 == 0
         ):  # Every second at 60 FPS
             try:
                 # Get WebManager connection count if available
                 connection_count = 0
                 if hasattr(_webmanager_system, "web_server") and hasattr(
-                    _webmanager_system.web_server, "websocket_manager"
+                        _webmanager_system.web_server, "websocket_manager"
                 ):
                     connection_count = (
                         _webmanager_system.web_server.websocket_manager.get_connection_count()

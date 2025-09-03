@@ -1,24 +1,4 @@
 # GSI Messages Path Setup
-import sys
-from pathlib import Path
-
-# 添加 gsi_msgs 到 Python 路径
-_current_dir = Path(__file__).parent.parent.absolute()
-_plan_msgs_path = (
-    _current_dir
-    / "test_gsi_msgs_ws/install/plan_msgs/local/lib/python3.10/dist-packages"
-)
-_scene_msgs_path = (
-    _current_dir
-    / "test_gsi_msgs_ws/install/scene_msgs/local/lib/python3.10/dist-packages"
-)
-
-if _plan_msgs_path.exists() and str(_plan_msgs_path) not in sys.path:
-    sys.path.insert(0, str(_plan_msgs_path))
-
-if _scene_msgs_path.exists() and str(_scene_msgs_path) not in sys.path:
-    sys.path.insert(0, str(_scene_msgs_path))
-
 import omni.usd
 from rclpy.node import Node
 from pxr import Tf, Gf
@@ -26,8 +6,6 @@ from pxr import Tf, Gf
 # 基础消息接口
 from geometry_msgs.msg import Transform as RosTransform
 
-# from scene_msgs.msg import PrimTransform, SceneModifications
-# from plan_msgs.msg import RobotFeedback, VelTwistPose
 from gsi_msgs.gsi_msgs_helper import (
     PrimTransform,
     SceneModifications,
@@ -156,11 +134,11 @@ class SceneMonitorNode(Node):
         return not m1.AlmostEqual(m2, tol)
 
     def _pose_delta_is_significant(
-        self,
-        prev: Gf.Matrix4d,
-        curr: Gf.Matrix4d,
-        trans_eps: float = 100,  # 2 cm
-        rot_eps_deg: float = 100,  # 2°
+            self,
+            prev: Gf.Matrix4d,
+            curr: Gf.Matrix4d,
+            trans_eps: float = 100,  # 2 cm
+            rot_eps_deg: float = 100,  # 2°
     ) -> bool:
         """稳健比较：只用位移差和四元数差，任何一步失败都当 0 差，不误报。"""
         if prev is None or curr is None:
@@ -216,7 +194,7 @@ class SceneMonitorNode(Node):
         # 数值安全
         if dot > 1.0:
             dot = 1.0
-        half_angle = 2.0 * (dot**2 - 0.5) ** 0.5 if dot >= (2**-0.5) else None
+        half_angle = 2.0 * (dot ** 2 - 0.5) ** 0.5 if dot >= (2 ** -0.5) else None
         # 更稳定：直接用 acos
         import math
 
@@ -376,7 +354,7 @@ class SwarmNode(Node):
         return pub
 
     def register_cmd_subscriber(
-        self, robot_class: str, robot_id: int, callback=None, qos=50
+            self, robot_class: str, robot_id: int, callback=None, qos=50
     ):
         """
         注册一个cmd subscriber
@@ -399,7 +377,7 @@ class SwarmNode(Node):
         return sub
 
     def publish_navigation_feedback(
-        self, robot_class: str, robot_id: int, msg: RobotFeedback
+            self, robot_class: str, robot_id: int, msg: RobotFeedback
     ):
         self.publisher_dict[robot_class][robot_id]["feedback"].publish(msg)
 
