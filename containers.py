@@ -1,11 +1,9 @@
-from collections.abc import Mapping
+import sys
 from dependency_injector import containers, providers
-from typing import Dict, Any, List
-import yaml
 
+# --- 导入所有需要的 Manager ---
 from isaacsim.core.api import World
 
-# Import manager classes
 from config.config_manager import ConfigManager
 from environment.env import Env
 from log.log_manager import LogManager
@@ -16,53 +14,51 @@ from ros.ros_manager import RosManager
 from scene.scene_manager import SceneManager
 from ui.viewport_manager import ViewportManager
 
+
 class AppContainer(containers.DeclarativeContainer):
     """
-    Clean dependency injection container for Isaac Sim application
-
-    This container manages all manager instances as singletons with automatic
-    dependency resolution. It uses the dependency-injector library's proven
-    patterns for professional dependency management.
+    最终版的依赖注入容器。
+    ConfigManager 是所有服务的配置源头。
     """
 
-    # Configuration provider for YAML config loading
-    config = providers.Configuration()
+    config_manager = providers.Singleton(ConfigManager)
+    config = providers.Factory(lambda manager: manager.config, manager=config_manager)
 
-    # Core singletons (no dependencies)
+    log_manager = providers.Singleton(
+        LogManager,
+        log_level=config.provided["logging"]["level"],
+        log_file=config.provided["logging"]["file"],
+    )
+
+    world = providers.Singleton(
+        World, physics_dt=config.provided["world"]["physics_dt"]
+    )
+
+    grid_map = providers.Singleton(
+        GridMap,
+        cell_size=config.provided["map"]["cell_size"],
+        start_point=config.provided["map"]["start_point"],
+        min_bounds=config.provided["map"]["min_bounds"],
+        max_bounds=config.provided["map"]["max_bounds"],
+        occupied_cell=config.provided["map"]["occupied_cell"],
+        empty_cell=config.provided["map"]["empty_cell"],
+        invisible_cell=config.provided["map"]["invisible_cell"],
+    )
+
     ros_manager = providers.Singleton(RosManager)
     scene_manager = providers.Singleton(SceneManager)
     semantic_map = providers.Singleton(MapSemantic)
     viewport_manager = providers.Singleton(ViewportManager)
-    world = providers.Singleton(World, physics_dt=config.simulation.physics_dt)
-
-    # GridMap with configuration injection
-    grid_map = providers.Singleton(
-        GridMap,
-        cell_size=config.map.cell_size,
-        start_point=config.map.start_point,
-        min_bounds=config.map.min_bounds,
-        max_bounds=config.map.max_bounds,
-        occupied_cell=config.map.occupied_cell,
-        empty_cell=config.map.empty_cell,
-        invisible_cell=config.map.invisible_cell,
-    )
-
-    log_manager = providers.Singleton(
-        LogManager,
-        log_level=config.log_level,
-        log_file=config.log_file
-    )
-
-    # Managers with dependency injection
 
     swarm_manager = providers.Singleton(
         SwarmManager,
         map_grid=grid_map,
         ros_manager=ros_manager,
     )
+
     env = providers.Factory(
         Env,
-        simulation_app=providers.Object(None),
+        simulation_app=providers.Object(None),  # 保持不变，由 main.py 运行时提供
         world=world,
         scene_manager=scene_manager,
         swarm_manager=swarm_manager,
@@ -70,169 +66,34 @@ class AppContainer(containers.DeclarativeContainer):
     )
 
 
-def merge_dicts(d1, d2):
-    for k, v in d2.items():
-        if k in d1 and isinstance(d1[k], Mapping) and isinstance(v, Mapping):
-            d1[k] = merge_dicts(d1[k], v)
-        else:
-            d1[k] = v
-    return d1
-
-
-def create_container(
-    config_path: List[str] = ["./config/env_cfg.yaml", "./config/log_cfg.yaml"],
-    wire_modules: bool = True,
-) -> AppContainer:
-    """
-    Create and configure the dependency injection container
-
-    This function creates the container, loads configuration from YAML,
-    and optionally wires modules for dependency injection.
-    """
-    container = AppContainer()
-    final_config = {}
-    for path in config_path:
-        with open(path, "r") as f:
-            current_config = yaml.safe_load(f)
-            final_config = merge_dicts(final_config, current_config)
-
-    validate_configuration(final_config)
-    container.config.from_dict(final_config)
-
-    # Wire modules for dependency injection (optional for performance)
-    # This enables @inject decorators to work in the specified modules
-    if wire_modules:
-        try:
-            # Wire essential modules - containers module and main module
-            modules_to_wire = [__name__]
-
-            # Always try to wire main module since it has @inject decorators
-            import sys
-
-            if "main" in sys.modules:
-                modules_to_wire.append("main")
-            elif "__main__" in sys.modules:
-                modules_to_wire.append("__main__")
-
-            container.wire(modules=modules_to_wire)
-
-        except Exception as e:
-            # Don't fail container creation if wiring fails
-            # This allows container to work without @inject decorators
-            raise Exception(f"Error wiring modules: {e}")
-
-    return container
-
-
-def safe_container_setup(
-    config_path: List[str] = ["./config/env_cfg.yaml", "./config/log_cfg.yaml"],
-    wire_modules: bool = True,
-) -> AppContainer:
-    """
-    Safely setup container with comprehensive error handling
-
-    This function provides a safe wrapper around container creation with
-    detailed error messages and graceful failure handling.
-    """
-    try:
-        container = create_container(config_path, wire_modules)
-
-        # Validate that container was properly configured
-        if not hasattr(container, "config") or container.config is None:
-            raise RuntimeError("Container configuration was not properly loaded")
-
-        # Test basic provider resolution without instantiation
-        container.viewport_manager.provider
-        container.grid_map.provider
-        container.scene_manager.provider
-        container.swarm_manager.provider
-        container.semantic_map.provider
-        container.env.provider
-        container.ros_manager.provider
-
-        return container
-
-    except Exception as e:
-        raise RuntimeError(f"Container setup failed: {e}")
-
-
-def validate_configuration(config: Dict[str, Any]) -> None:
-    """
-    Validate configuration dictionary for required fields
-    """
-    # Check required top-level sections
-    required_sections = ["map"]
-    for section in required_sections:
-        if section not in config:
-            raise ValueError(f"Required configuration section '{section}' is missing")
-
-    # Validate map configuration
-    map_config = config["map"]
-    required_map_fields = [
-        "cell_size",
-        "start_point",
-        "min_bounds",
-        "max_bounds",
-        "occupied_cell",
-        "empty_cell",
-        "invisible_cell",
-    ]
-
-    for field in required_map_fields:
-        if field not in map_config:
-            raise ValueError(f"Required map configuration field '{field}' is missing")
-
-    # Validate data types
-    if (
-        not isinstance(map_config["cell_size"], (int, float))
-        or map_config["cell_size"] <= 0
-    ):
-        raise ValueError("Map cell_size must be a positive number")
-
-    if (
-        not isinstance(map_config["start_point"], list)
-        or len(map_config["start_point"]) != 3
-    ):
-        raise ValueError("Map start_point must be a list of 3 coordinates")
-
-    if (
-        not isinstance(map_config["min_bounds"], list)
-        or len(map_config["min_bounds"]) != 3
-    ):
-        raise ValueError("Map min_bounds must be a list of 3 coordinates")
-
-    if (
-        not isinstance(map_config["max_bounds"], list)
-        or len(map_config["max_bounds"]) != 3
-    ):
-        raise ValueError("Map max_bounds must be a list of 3 coordinates")
-
-
-# Global container instance
+# 全局容器实例
 _container: AppContainer = None
 
 
 def get_container() -> AppContainer:
     """
-    Get the global container instance with safe initialization
+    获取全局容器实例。
+    这个函数现在变得极其简单，因为它不再负责加载配置。
     """
     global _container
     if _container is None:
-        _container = safe_container_setup()
+        _container = AppContainer()
+
+        # 自动绑定需要 @inject 装饰器的模块
+        modules_to_wire = [__name__, "main", "skill.skill"]  # 添加所有需要注入的模块
+        _container.wire(modules=[m for m in modules_to_wire if m in sys.modules])
+
     return _container
 
 
 def reset_container() -> None:
     """
-    Reset the global container instance
-
-    This is useful for testing or when configuration changes require
-    a fresh container instance.
+    重置全局容器实例 (用于测试)。
     """
     global _container
     if _container is not None:
         try:
             _container.unwire()
         except Exception:
-            pass  # Ignore unwiring errors during reset
+            pass
     _container = None

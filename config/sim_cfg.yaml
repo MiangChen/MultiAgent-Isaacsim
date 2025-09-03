@@ -1,3 +1,28 @@
+asset_path : "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5/"  # 根据本地的Isaac资产位置来配置
+
+world:
+  name: small_city_available.usd # 要使用的场的名字,和 asset / user_usd_files.json对应
+  physics_dt: 0.005  # 1 / 200
+
+map:
+  cell_size: 1  # grid map的分辨率
+  start_point: [0, 0, 0]  # 构建gridmap的起点, 要保证这里是没有障碍物的
+  min_bounds: [-34, 0, 0] #
+  max_bounds: [19, 32, 1]
+  occupied_cell: 1
+  empty_cell: 0
+  invisible_cell: 2
+
+
+map_semantic:
+  depot0: [ 5, 4, 0 ]
+  depot1: [ 5, 3, 0 ]  # 这里的坐标可根据实际情况调整
+  depot2: [ 5, 2, 0 ]  # 这里的坐标可根据实际情况调整
+  depot3: [ 5, 1, 0 ]  # 这里的坐标可根据实际情况调整
+  place1: [-4.5, 11.4, 0]
+  place2: [5.6, 11.4, 0]
+  place3: [-4.7, 22.5, 0]
+
 simulation_app_config:
   renderer: "RaytracedLighting"
 

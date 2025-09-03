@@ -1,16 +1,10 @@
-# Standard library imports
-import argparse
 import asyncio
-import signal
-import sys
-import threading
 
 # Third-party imports
 from dependency_injector.wiring import inject, Provide  # Dependency injection imports
 
 # Local imports - argument parsing
 from argument_parser import parse_arguments, get_argument_summary
-from config.config_manager import ConfigManager
 
 # Isaac Sim related imports
 from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
@@ -225,8 +219,6 @@ def main():
     print(
         "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ninto the main\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
     )
-
-    config_manager = ConfigManager(config_path=args.config)
     # Setup dependency injection container
     from containers import get_container
 
@@ -236,6 +228,7 @@ def main():
     container.wire(modules=[__name__])
 
     # Get services from container
+    config_manager = container.config_manager()
     log_manager = container.log_manager()
     ros_manager = container.ros_manager()
     swarm_manager = container.swarm_manager()
