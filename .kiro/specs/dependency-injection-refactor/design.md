@@ -127,7 +127,7 @@ def create_container() -> AppContainer:
     container = AppContainer()
     
     # Load and set configuration
-    with open('./files/env_cfg.yaml', 'r') as f:
+    with open('./config/env_cfg.yaml', 'r') as f:
         config = yaml.safe_load(f)
     container.config.from_dict(config)
     

@@ -220,8 +220,8 @@ Examples:
     parser.add_argument(
         "--config",
         type=str,
-        default="./files/sim_cfg.yaml",
-        help="Path to Isaac Sim configuration file (default: ./files/sim_cfg.yaml)"
+        default="./config/sim_cfg.yaml",
+        help="Path to Isaac Sim configuration file (default: ./config/sim_cfg.yaml)"
     )
     
     parser.add_argument(

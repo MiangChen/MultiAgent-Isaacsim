@@ -17,7 +17,7 @@ class MapSemantic():
         Initializes the MapSemantic class by loading a semantic mapping from a config file.
         """
         try:
-            with open('files/env_cfg.yaml', 'r') as f:
+            with open('config/env_cfg.yaml', 'r') as f:
                 cfg = yaml.safe_load(f)
             # Assumes the config file contains the 'map_semantic' key
             self.map_semantic = cfg['map_semantic']

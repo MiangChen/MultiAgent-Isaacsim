@@ -80,8 +80,8 @@ async def setup_simulation(simulation_app) -> Env:
     # Initialize swarm manager after environment is ready
     await swarm_manager.initialize_async(
         scene=env.world.scene,
-        robot_swarm_cfg_path=f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml",
-        robot_active_flag_path=f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml"
+        robot_swarm_cfg_path=f"{PATH_PROJECT}/config/robot_swarm_cfg.yaml",
+        robot_active_flag_path=f"{PATH_PROJECT}/config/robot_swarm_active_flag.yaml"
     )
     
     return env

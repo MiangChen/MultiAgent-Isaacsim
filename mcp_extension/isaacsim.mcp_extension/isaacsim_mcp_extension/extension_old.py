@@ -19,7 +19,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 files_parent_dir = os.path.abspath(os.path.join(current_dir, "../../../"))
 sys.path.append(files_parent_dir)  # 将项目根目录添加到 sys.path 中
-from files.variables import PATH_PROJECT, PATH_ISAACSIM_ASSETS, ASSET_PATH
+from config.variables import PATH_PROJECT, PATH_ISAACSIM_ASSETS, ASSET_PATH
 
 
 
@@ -576,7 +576,7 @@ class MCPExtension(omni.ext.IExt):
 
     def create_robot(self, robot_type: str = "g1", position: List[float] = [0, 0, 0]) -> Dict[str, Any]:
         from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
-        from files.variables import ASSET_PATH
+        from config.variables import ASSET_PATH
         from isaacsim.core.prims import Articulation
 
         ROBOT_CONFIGS = {

@@ -11,7 +11,7 @@ import omni
 from pxr import Gf, Sdf, UsdGeom, UsdPhysics
 
 # Local imports
-from files.variables import ASSET_PATH
+from config.variables import ASSET_PATH
 
 class SceneManager:
     """
@@ -591,7 +591,7 @@ class SceneManager:
 
     def create_robot(self, robot_type: str = "g1", position: List[float] = [0, 0, 0]) -> Dict[str, Any]:
         from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
-        from files.variables import ASSET_PATH
+        from config.variables import ASSET_PATH
         from isaacsim.core.prims import Articulation
 
         ROBOT_CONFIGS = {

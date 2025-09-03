@@ -92,7 +92,7 @@ pip install ros2node>=0.18.0
 The WebManager uses the same configuration file as the main Isaac Sim application:
 
 ```yaml
-# files/sim_cfg.yaml
+# config/sim_cfg.yaml
 webmanager:
   enabled: true
   host: "0.0.0.0"

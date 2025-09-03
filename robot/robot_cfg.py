@@ -1,7 +1,7 @@
 from typing import List, Optional, Tuple
 from pydantic import BaseModel
 
-from files.variables import ASSET_PATH
+from config.variables import ASSET_PATH
 
 class BaseCfg(BaseModel):
     def update(self, **kwargs):

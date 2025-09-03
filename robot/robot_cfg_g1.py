@@ -1,7 +1,7 @@
 from typing import Optional
 
 from robot.robot_cfg import RobotCfg
-from files.variables import ASSET_PATH
+from config.variables import ASSET_PATH
 
 class RobotCfgG1(RobotCfg):
     # meta info

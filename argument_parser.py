@@ -61,8 +61,8 @@ def _add_simulation_args(parser: argparse.ArgumentParser) -> None:
     sim_group.add_argument(
         "--config",
         type=str,
-        default="./files/sim_cfg.yaml",
-        help="Path to the simulation configuration YAML file (default: ./files/sim_cfg.yaml)"
+        default="./config/sim_cfg.yaml",
+        help="Path to the simulation configuration YAML file (default: ./config/sim_cfg.yaml)"
     )
     
     sim_group.add_argument(

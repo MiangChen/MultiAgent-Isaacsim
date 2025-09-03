@@ -29,7 +29,6 @@ class AppContainer(containers.DeclarativeContainer):
     config = providers.Configuration()
 
     # Core singletons (no dependencies)
-    log_manager = providers.Singleton(LogManager)
     ros_manager = providers.Singleton(RosManager)
     scene_manager = providers.Singleton(SceneManager)
     semantic_map = providers.Singleton(MapSemantic)
@@ -46,6 +45,12 @@ class AppContainer(containers.DeclarativeContainer):
         occupied_cell=config.map.occupied_cell,
         empty_cell=config.map.empty_cell,
         invisible_cell=config.map.invisible_cell,
+    )
+
+    log_manager = providers.Singleton(
+        LogManager,
+        log_level=config.log_level,
+        log_file=config.log_file
     )
 
     # Managers with dependency injection
@@ -75,7 +80,7 @@ def merge_dicts(d1, d2):
 
 
 def create_container(
-    config_path: List[str] = ["./files/env_cfg.yaml", "./files/env_cfg.yaml"],
+    config_path: List[str] = ["./config/env_cfg.yaml", "./config/log_cfg.yaml"],
     wire_modules: bool = True,
 ) -> AppContainer:
     """
@@ -120,7 +125,7 @@ def create_container(
 
 
 def safe_container_setup(
-    config_path: List[str] = ["./files/env_cfg.yaml", "./files/env_cfg.yaml"],
+    config_path: List[str] = ["./config/env_cfg.yaml", "./config/log_cfg.yaml"],
     wire_modules: bool = True,
 ) -> AppContainer:
     """

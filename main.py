@@ -22,7 +22,7 @@ from isaacsim.core.api import World
 
 # Local imports
 from environment.env import Env
-from files.variables import WORLD_USD_PATH, PATH_PROJECT
+from config.variables import WORLD_USD_PATH, PATH_PROJECT
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
 from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
@@ -78,15 +78,6 @@ def signal_handler(signum, frame):
         except Exception as e:
             logger.error(f"Error stopping WebManager system: {e}")
 
-    # Stop ROS nodes if running
-    global stop_evt, t_ros
-    if stop_evt:
-        logger.info("Stopping ROS nodes...")
-        stop_evt.set()
-        if t_ros and t_ros.is_alive():
-            t_ros.join(timeout=3.0)
-            if t_ros.is_alive():
-                logger.warning("ROS thread did not stop within timeout")
 
     # For SIGINT (Ctrl+C), we can exit immediately
     if signum == signal.SIGINT:
@@ -276,8 +267,8 @@ def setup_simulation(
         await env.initialize_async()
         await swarm_manager.initialize_async(
             scene=world.scene,
-            robot_swarm_cfg_path=f"{PATH_PROJECT}/files/robot_swarm_cfg.yaml",
-            robot_active_flag_path=f"{PATH_PROJECT}/files/robot_swarm_active_flag.yaml",
+            robot_swarm_cfg_path=f"{PATH_PROJECT}/config/robot_swarm_cfg.yaml",
+            robot_active_flag_path=f"{PATH_PROJECT}/config/robot_swarm_active_flag.yaml",
         )
 
     # Schedule the initialization in Isaac Sim's event loop
@@ -468,6 +459,7 @@ def main():
     logger.info("Signal handlers registered for graceful shutdown")
 
     # Get services from container
+    log_manager = container.log_manager()
     ros_manager = container.ros_manager()
     swarm_manager = container.swarm_manager()
     scene_manager = container.scene_manager()
@@ -642,11 +634,7 @@ def main():
         logger.info("Stopping WebManager system...")
         stop_webmanager_system()
 
-    # Stop ROS
-    if stop_evt:
-        stop_evt.set()
-    if t_ros:
-        t_ros.join(timeout=1.0)
+    ros_manager.stop()
 
     logger.info("Simulation loop ended, starting cleanup...")
 

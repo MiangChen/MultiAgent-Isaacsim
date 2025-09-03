@@ -2,7 +2,7 @@ from typing import Optional, List, Dict
 
 from robot.robot_cfg import RobotCfg
 
-from files.variables import ASSET_PATH
+from config.variables import ASSET_PATH
 
 
 class RobotCfgH1(RobotCfg):

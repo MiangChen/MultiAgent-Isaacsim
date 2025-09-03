@@ -49,7 +49,7 @@ class ProcessStatus:
 
 
 class ProcessManager:
-    """Manages process lifecycle, PID files, and status reporting."""
+    """Manages process lifecycle, PID config, and status reporting."""
     
     def __init__(self, config):
         """Initialize process manager with configuration."""
@@ -276,7 +276,7 @@ class ProcessManager:
         return self.shutdown_requested
     
     def cleanup(self):
-        """Cleanup resources and files."""
+        """Cleanup resources and config."""
         self.logger.info("Cleaning up process manager resources...")
         
         # Stop health monitoring

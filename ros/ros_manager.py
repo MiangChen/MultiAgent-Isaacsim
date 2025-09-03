@@ -1,15 +1,16 @@
 import threading
-import logging
-
-logger = logging.getLogger(__name__)
 
 from gsi_msgs.gsi_msgs_helper import Plan
 import rclpy
-rclpy.init(None)
+
+rclpy.init(args=None)
 from rclpy.executors import MultiThreadedExecutor
+
+from log.log_manager import LogManager
 from ros.ros_node import PlanNode, SceneMonitorNode, SwarmNode, get_swarm_node
 from skill.skill import _plan_cb
 
+logger = LogManager.get_logger(__name__)
 
 class RosManager:
     def __init__(self):
@@ -41,9 +42,8 @@ class RosManager:
         if not self.plan_receiver_node:
             logger.warning("ROS nodes not built. Cannot start.")
             return
-        nodes = [self.plan_receiver_node, self.scene_monitor_node, self.swarm_node]
         self.thread = threading.Thread(
-            target=self._spin_in_background, args=(nodes, self.stop_event), daemon=True
+            target=self._spin_in_background, daemon=True
         )
         self.thread.start()
         logger.info("ROS manager thread started.")

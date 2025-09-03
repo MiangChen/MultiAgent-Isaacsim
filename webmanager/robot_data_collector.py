@@ -31,7 +31,7 @@ class SwarmManagerRobotDataSource(RobotDataSource):
             config_path: Path to robot configuration file
         """
         self.swarm_manager = swarm_manager
-        self.config_path = config_path or "files/robot_swarm_cfg.yaml"
+        self.config_path = config_path or "config/robot_swarm_cfg.yaml"
         
         # Robot tracking data
         self.robot_positions: RobotPositions = {}

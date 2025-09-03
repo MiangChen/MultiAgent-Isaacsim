@@ -16,7 +16,7 @@ import omni
 import omni.kit.commands
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
 from isaacsim.core.utils.types import ArticulationActions
-from files.variables import ASSET_PATH
+from config.variables import ASSET_PATH
 
 
 class H1FlatTerrainPolicy(PolicyController):
