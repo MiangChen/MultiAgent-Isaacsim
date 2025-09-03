@@ -6,6 +6,7 @@ import yaml
 from isaacsim.core.api import World
 
 # Import manager classes
+from config.config_manager import ConfigManager
 from environment.env import Env
 from log.log_manager import LogManager
 from map.map_semantic_map import MapSemantic
@@ -14,7 +15,6 @@ from robot.swarm_manager import SwarmManager
 from ros.ros_manager import RosManager
 from scene.scene_manager import SceneManager
 from ui.viewport_manager import ViewportManager
-
 
 class AppContainer(containers.DeclarativeContainer):
     """

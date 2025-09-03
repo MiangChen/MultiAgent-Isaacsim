@@ -10,7 +10,7 @@ from dependency_injector.wiring import inject, Provide  # Dependency injection i
 
 # Local imports - argument parsing
 from argument_parser import parse_arguments, get_argument_summary
-# from config.config_manager import ConfigManager
+from config.config_manager import ConfigManager
 
 # Isaac Sim related imports
 from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
@@ -225,28 +225,8 @@ def main():
     print(
         "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\ninto the main\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
     )
-    parser = argparse.ArgumentParser(description="Isaac Sim Multi-Agent Simulation")
-    parser.add_argument(
-        "-c",
-        "--config",
-        type=str,
-        default="./config/sim_cfg.yaml",
-        help="Path to the main configuration file.",
-    )
-    parser.add_argument(
-        "--enable",
-        type=str,
-        action="append",
-        help="Enable a feature. Can be used multiple times.",
-    )
-    parser.add_argument(
-        "--ros",
-        type=str,
-        default=True,
-        help="Enable ROS2",
-    )
-    args = parser.parse_args()
-    # config_manager = ConfigManager(config_path=args.config)
+
+    config_manager = ConfigManager(config_path=args.config)
     # Setup dependency injection container
     from containers import get_container
 
