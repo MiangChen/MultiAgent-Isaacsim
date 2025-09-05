@@ -9,22 +9,6 @@ _skill_queues = defaultdict(deque)
 _skill_lock = threading.Lock()
 
 
-def _param_dict(params) -> Dict[str, Any]:
-    """Convert ROS parameter list to dictionary
-
-    Args:
-        params: List of ROS Parameter objects
-
-    Returns:
-        Dict[str, Any]: Dictionary mapping parameter keys to values
-    """
-    d = {}
-    if params:
-        for p in params:
-            d[p.key] = p.value
-    return d
-
-
 def _parse_robot_id(robot_id: str) -> tuple[str, int]:
     """Parse robot ID string to extract robot class and index
 
@@ -36,13 +20,11 @@ def _parse_robot_id(robot_id: str) -> tuple[str, int]:
     """
     import re
 
-    s = robot_id or ""
-    m = re.match(r"^([A-Za-z]\w*?)[_-]?(\d+)$", s)
-    if not m:
+    # 使用 := 将 re.match 的结果赋值给 m 并同时进行判断
+    if m := re.match(r"^([A-Za-z]\w*?)[_-]?(\d+)$", robot_id or ""):
+        return m.group(1), int(m.group(2))
+    else:
         return "jetbot", 0
-    name = m.group(1)
-    idx = int(m.group(2))
-    return name, idx
 
 
 def _plan_cb(msg: Plan):
@@ -54,8 +36,7 @@ def _plan_cb(msg: Plan):
                 for rs in ts.robots:
                     rc, rid = _parse_robot_id(rs.robot_id)
                     q = _skill_queues[(rc, rid)]
-                    for sk in rs.skill_list:
-                        q.append(sk)
+                    q.extend(rs.skill_list)
     except Exception as e:
         logger.error(f"[PlanCB] Error: {e}")
 
@@ -66,39 +47,41 @@ def process_ros_skills(swarm_manager) -> None:
     Args:
         swarm_manager: Injected swarm manager instance
     """
-    # Check if all robots have completed their current skills
+    # 1. Check if all robots have completed their current skills
 
-    state_skill_complete_all = True
-    for robot_class in swarm_manager.robot_class:
-        for robot in swarm_manager.robot_active[robot_class]:
-            done = getattr(robot, "state_skill_complete", True)
-            state_skill_complete_all = state_skill_complete_all and bool(done)
+    state_skill_complete_all = all(
+        getattr(robot, "state_skill_complete", True)
+        for robot_class in swarm_manager.robot_class
+        for robot in swarm_manager.robot_active[robot_class]
+    )
+    if not state_skill_complete_all:
+        return
 
-    if state_skill_complete_all:
-        # All robots completed -> get next skill for each robot
-        from skill.skill import _skill_queues, _skill_lock, _param_dict, _SKILL_TABLE
+    # 2. 采用 "先收集任务，再执行" 的模式优化锁的使用
+    skills_to_execute = []
+    with _skill_lock:
+        # 使用 list() 创建一个副本进行迭代，以安全地在循环中修改字典
+        for (rc, rid), dq in list(_skill_queues.items()):
+            if dq:  # 检查队列是否非空
+                next_skill = dq.popleft()
+                skills_to_execute.append((rc, rid, next_skill))
+                if not dq:  # 如果弹出后队列为空，则从字典中移除
+                    del _skill_queues[(rc, rid)]
 
-        with _skill_lock:
-            keys = list(_skill_queues.keys())
+    # 3. 在锁之外执行可能耗时的技能调用
+    for rc, rid, skill_msg in skills_to_execute:
+        name = skill_msg.skill.strip().lower()
+        fn = _SKILL_TABLE.get(name)
 
-        for rc, rid in keys:
-            with _skill_lock:
-                dq = _skill_queues.get((rc, rid))
-                next_skill = dq.popleft() if (dq and len(dq) > 0) else None
-                if dq is not None and len(dq) == 0:
-                    _skill_queues.pop((rc, rid), None)
+        if fn is None:
+            logger.warning(f"[Scheduler] unsupported skill: {name}")
+            continue
 
-            if next_skill is not None:
-                name = next_skill.skill.strip().lower()
-                params = _param_dict(next_skill.params)
-                fn = _SKILL_TABLE.get(name)
-                if fn is None:
-                    logger.warning(f"[Scheduler] unsupported skill: {name}")
-                else:
-                    try:
-                        fn(swarm_manager, rc, rid, params)
-                    except Exception as e:
-                        logger.error(f"[Scheduler] start skill error: {e}")
+        try:
+            params = {p.key: p.value for p in skill_msg.params}
+            fn(swarm_manager, rc, rid, params)
+        except Exception as e:
+            logger.error(f"[Scheduler] start skill '{name}' error: {e}")
 
 
 # Skill execution functions with dependency injection
