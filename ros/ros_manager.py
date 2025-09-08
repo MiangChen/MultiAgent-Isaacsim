@@ -8,7 +8,7 @@ from rclpy.executors import MultiThreadedExecutor
 
 from log.log_manager import LogManager
 from ros.ros_node import PlanNode, SceneMonitorNode, SwarmNode, get_swarm_node
-from skill.skill import _plan_cb
+from skill.skill_manager import _plan_cb
 
 logger = LogManager.get_logger(__name__)
 

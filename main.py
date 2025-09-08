@@ -247,6 +247,7 @@ def main():
     scene_manager = container.scene_manager()
     grid_map = container.grid_map()
     semantic_map = container.semantic_map()
+    skill_manager = container.skill_manager()
     viewport_manager = container.viewport_manager()
     world = container.world()
     env = container.env()
@@ -412,8 +413,7 @@ def main():
 
         # Process ROS skills if ROS is enabled
         if config_manager.get("ros"):
-            from skill.skill import process_ros_skills
-            process_ros_skills(swarm_manager, semantic_map)
+            skill_manager.process_ros_skills()
 
         count += 1
 
