@@ -52,6 +52,7 @@ class AppContainer(containers.DeclarativeContainer):
         SwarmManager,
         map_grid=grid_map,
         ros_manager=ros_manager,
+        scene_manager=scene_manager,
     )
 
     env = providers.Factory(

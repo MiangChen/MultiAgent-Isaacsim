@@ -25,6 +25,7 @@ map_semantic:
   place1: [-4.5, 11.4, 0]
   place2: [5.6, 11.4, 0]
   place3: [-4.7, 22.5, 0]
+  place4: [5, 6.5, 0]
 
 simulation_app_config:
   renderer: "RaytracedLighting"

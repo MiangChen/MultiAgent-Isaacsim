@@ -110,7 +110,10 @@ def _skill_pick_up(swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> 
         rid: Robot index
         params: Skill parameters (unused for pick-up)
     """
-    swarm_manager.robot_swarm.robot_active[rc][rid].pick_up()
+    object_prim_path = params.get("object_prim_path")
+    robot_prim_path = params.get("robot_prim_path")
+    return swarm_manager.robot_active[rc][rid].pickup_object_if_close_unified(robot_hand_prim_path=robot_prim_path, object_prim_path=object_prim_path)
+
 
 
 def _skill_put_down(swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> None:
@@ -122,7 +125,9 @@ def _skill_put_down(swarm_manager, rc: str, rid: int, params: Dict[str, Any]) ->
         rid: Robot index
         params: Skill parameters (unused for put-down)
     """
-    swarm_manager.robot_active[rc][rid].put_down()
+    object_prim_path = params.get("object_prim_path")
+    robot_prim_path = params.get("robot_prim_path")
+    swarm_manager.robot_active[rc][rid].put_down(robot_hand_prim_path=robot_prim_path, object_prim_path=object_prim_path)
 
 
 _SKILL_TABLE = {

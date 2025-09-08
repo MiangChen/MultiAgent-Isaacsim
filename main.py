@@ -57,9 +57,9 @@ PROJECT_ROOT = config_manager.get("project_root")
 
 @inject
 def setup_simulation(
-    swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
-    env: Env = Provide[AppContainer.env],
-    world: World = Provide[AppContainer.world],
+        swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
+        env: Env = Provide[AppContainer.env],
+        world: World = Provide[AppContainer.world],
 ) -> None:
     """
     Setup simulation environment with injected dependencies.
@@ -128,37 +128,38 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "shape_type": "cuboid",
             "prim_path": "/World/car0",
             "size": scale,
+            "scene_name": "car0",
             "position": [11.6, 3.5, 0],
             "color": [255, 255, 255],
-            "make_dynamic": False,
         },
         "car1": {
             "shape_type": "cuboid",
             "prim_path": "/World/car1",
             "size": scale,
+            "scene_name": "car1",
             "position": [0.3, 3.5, 0],
             "color": [255, 255, 255],
-            "make_dynamic": False,
         },
         "car2": {
             "shape_type": "cuboid",
             "prim_path": "/World/car2",
             "size": scale,
+            "scene_name": "car2",
             "position": [-13.2, 3.5, 0],
             "color": [255, 255, 255],
-            "make_dynamic": False,
         },
         "car3": {
             "shape_type": "cuboid",
             "prim_path": "/World/car3",
+            "scene_name": "car3",
             "size": scale,
             "position": [-7.1, 10, 0],
             "color": [255, 255, 255],
-            "make_dynamic": False,
         },
         "car4": {
             "shape_type": "cuboid",
             "prim_path": "/World/car4",
+            "scene_name": "car4",
             "size": scale,
             "position": [-0.9, 30, 0],
             "orientation": [0.707, 0, 0, 0.707],
@@ -311,20 +312,47 @@ def main():
     count = 0
     logger.info("Starting main simulation loop...")
 
+    from skill.skill import _skill_navigate_to, _skill_pick_up, _skill_put_down
+    _skill_navigate_to(swarm_manager, rc='jetbot', rid=0, params={"goal": "place4"}, semantic_map=semantic_map)
+
+    robot_prim_path = "/World/robot/jetbot/jetbot/jetbot_0/chassis"
+    object_prim_path = "/World/object"
+    object = {
+        "shape_type": "cuboid",
+        "prim_path": object_prim_path,
+        # "scene_name": "object",
+        "name": "object",
+        "size": [0.1, 0.1, 0.1],
+        # "position": semantic_map.map_semantic['place4'],
+        "position": [5, 6.5, 0.1],
+        "orientation": [0.707, 0, 0, 0.707],
+        "color": [255, 255, 255],
+        "mass": 0.1,
+    }
+    scene_manager.create_shape_unified(**object)
+
+
+    flag = 0
     # Main simulation loop
     while simulation_app.is_running():
 
         # World step
         env.step(action=None)
+        if flag == 0:
+            result =  _skill_pick_up(swarm_manager, rc='jetbot', rid=0, params={"object_prim_path": object_prim_path, "robot_prim_path": robot_prim_path})
+            if result!=None and result.get("status") == "success":
+                flag = 1
 
-        if count % 120 == 0 and count > 0:
-            process_semantic_detection(semantic_camera, semantic_map)
+        elif count > 240  and flag == 1:
+            result = _skill_put_down(swarm_manager, rc='jetbot', rid=0, params={"object_prim_path": object_prim_path, "robot_prim_path": robot_prim_path})
+            flag = 2
+        # process_semantic_detection(semantic_camera, semantic_map)
 
         # Process ROS skills if ROS is enabled
-        if config_manager.get("ros"):
-            from skill.skill import process_ros_skills
-
-            process_ros_skills(swarm_manager)
+        # if config_manager.get("ros"):
+        #     from skill.skill import process_ros_skills
+        #
+        #     process_ros_skills(swarm_manager)
 
         count += 1
 

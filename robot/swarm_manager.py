@@ -11,6 +11,7 @@ from map.map_grid_map import GridMap
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
 from ros.ros_manager import RosManager
+from scene.scene_manager import SceneManager
 
 
 class SwarmManager:
@@ -24,9 +25,10 @@ class SwarmManager:
     """
 
     def __init__(
-            self, map_grid: GridMap = None, ros_manager: RosManager = None
+            self, map_grid: GridMap = None, ros_manager: RosManager = None, scene_manager: SceneManager = None,
     ):
         self.scene: Scene = None
+        self.scene_manager = scene_manager
         self.robot_warehouse: Dict[str, List[RobotBase]] = {}
         self.flag_active: Dict[str, List[int]] = {}
         self.robot_active: Dict[str, List[RobotBase]] = {}
@@ -161,6 +163,7 @@ class SwarmManager:
                 scene=self.scene,
                 map_grid=self.map_grid,
                 node=self.ros_manager.swarm_node,
+                scene_manager=self.scene_manager,
             )
         else:
             # 如果不是，使用传统的同步 __init__ 方法
@@ -172,6 +175,7 @@ class SwarmManager:
                 scene=self.scene,
                 map_grid=self.map_grid,
                 node=self.ros_manager.swarm_node,
+                scene_manager=self.scene_manager,
             )
 
         self.robot_warehouse[robot_class_name].append(robot)

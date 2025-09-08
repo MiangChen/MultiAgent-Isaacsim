@@ -35,7 +35,7 @@ class RobotCf2x(RobotBase):
 
     def __init__(self, cfg_body: RobotCfgCf2x, cfg_camera: CameraCfg = None,
                  cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None, node: SwarmNode = None) -> None:
+                 map_grid: GridMap = None, node: SwarmNode = None, scene_manager = None) -> None:
         super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid)
 
         self.is_drone = True  # 标记为无人机

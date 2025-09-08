@@ -23,7 +23,7 @@ class SceneManager:
 
     def __init__(self):
         self.prim_info = []
-        self._stage = None
+        self._stage = omni.usd.get_context().get_stage()
         # 设置场景保存路径，默认为项目根目录下的scenes文件夹
         self.scene_repository_path = "./scenes"
         # A dictionary mapping command names to their corresponding methods
@@ -44,6 +44,7 @@ class SceneManager:
             "create_object": self.create_object,
             "create_robot": self.create_robot,
             "create_shape": self.create_shape,
+            "create_shape_unified": self.create_shape_unified,
             "browse_scene_repository": self.browse_scene_repository,
             "load_scene": self.load_scene,
             "save_scene": self.save_scene,
@@ -210,77 +211,25 @@ class SceneManager:
         删除指定路径的prim
         """
         try:
-            # 获取当前USD stage
-            self._stage = omni.usd.get_context().get_stage()
-            if not self._stage:
-                return {"status": "error", "message": "No USD stage is open."}
+            stage = omni.usd.get_context().get_stage()
+            if not stage:
+                return {"status": "error", "message": "No active USD stage."}
 
-            # 验证路径格式
-            if not prim_path or not prim_path.startswith('/'):
-                return {"status": "error", "message": f"Invalid prim path format: {prim_path}"}
+            # 检查Prim是否存在
+            prim_to_delete = stage.GetPrimAtPath(prim_path)
+            if not prim_to_delete.IsValid():
+                # Prim不存在，可以认为删除“成功”或“已完成”
+                return {"status": "skipped", "message": f"Prim at '{prim_path}' does not exist. Nothing to delete."}
 
-            # 获取prim对象
-            prim = self._stage.GetPrimAtPath(prim_path)
-            if not prim or not prim.IsValid():
-                return {"status": "error", "message": f"Prim not found or invalid: {prim_path}"}
+            # 直接删除
+            stage.RemovePrim(Sdf.Path(prim_path))
 
-            # 检查prim是否处于激活状态
-            if not prim.IsActive():
-                return {"status": "warning", "message": f"Prim is already inactive: {prim_path}"}
-
-            # 尝试多种删除方法
-            success = False
-
-            # 方法1: 使用RemovePrim (您原来的方法)
-            try:
-                self._stage.RemovePrim(prim_path)
-                success = True
-            except Exception as e1:
-                print(f"RemovePrim failed: {e1}")
-
-                # 方法2: 先设置为非激活状态，然后删除
-                try:
-                    prim.SetActive(False)
-                    self._stage.RemovePrim(prim_path)
-                    success = True
-                except Exception as e2:
-                    print(f"SetActive + RemovePrim failed: {e2}")
-
-                    # 方法3: 使用编辑上下文
-                    try:
-                        with Sdf.ChangeBlock():
-                            self._stage.RemovePrim(prim_path)
-                        success = True
-                    except Exception as e3:
-                        print(f"ChangeBlock + RemovePrim failed: {e3}")
-
-                        # 方法4: 递归删除所有子prim然后删除父prim
-                        try:
-                            # 获取所有子prim
-                            children = prim.GetChildren()
-                            for child in children:
-                                self._stage.RemovePrim(child.GetPath())
-
-                            # 删除父prim
-                            self._stage.RemovePrim(prim_path)
-                            success = True
-                        except Exception as e4:
-                            print(f"Recursive deletion failed: {e4}")
-
-            # 验证删除是否成功
-            if success:
-                # 检查prim是否真的被删除了
-                check_prim = self._stage.GetPrimAtPath(prim_path)
-                if check_prim and check_prim.IsValid() and check_prim.IsActive():
-                    return {"status": "warning",
-                            "message": f"Prim still exists after deletion attempt: {prim_path}"}
-                else:
-                    return {"status": "success", "message": f"Successfully deleted {prim_path}"}
-            else:
-                return {"status": "error", "message": f"All deletion methods failed for: {prim_path}"}
+            return {"status": "success", "message": f"Successfully deleted {prim_path}."}
 
         except Exception as e:
-            return {"status": "error", "message": f"Unexpected error while deleting {prim_path}: {str(e)}"}
+            import traceback
+            traceback.print_exc()
+            return {"status": "error", "message": f"An error occurred while deleting {prim_path}: {str(e)}"}
 
     def get_scene_info(self, max_depth: int = 2) -> Dict[str, Any]:
         try:
@@ -662,15 +611,219 @@ class SceneManager:
         return {"status": "success", "message": f"{robot_type} robot created at {new_prim_path}"}
 
 
-    def create_shape(
+    def create_isaac_shape(
             self,
             shape_type: str,
-            prim_path: str = None,
+            prim_path: str,
+            scene_name: str,
+            position: List[float] = [0, 0, 0],
+            orientation: List[float] = [1, 0, 0, 0],  # Isaac Sim 使用 WXYZ
+            scale: List[float] = None,  # 使用 scale 代替 size 更通用
+            size: float = None,  # 仅用于Cube/Sphere的快捷方式
+            radius: float = None,  # 仅用于Sphere/Cone的快捷方式
+            height: float = None,  # 仅用于Cone的快捷方式
+            color: List[float] = [0.8, 0.1, 0.1],
+            mass: float = None,  # 让Isaac Sim根据体积和密度自动计算，或手动指定
+            linear_velocity: List[float] = None  # 可以指定初始速度
+    ) -> Dict[str, Any]:
+        """
+        在场景中使用 Isaac Sim 的高级 API 创建一个物理形状 (Cuboid, Sphere, Cone)。
+
+        Args:
+            shape_type (str): 支持: "cuboid", "sphere", "cone"。
+            prim_path (str): 创建 prim 的路径。
+            scene_name (str): 在 Isaac Sim Scene 中用于追踪的唯一名称。
+            position (List[float]): 世界坐标 [x, y, z]。
+            orientation (List[float]): 世界朝向 [w, x, y, z] 四元数。
+            scale (List[float]): 统一的缩放 [x, y, z]。会覆盖size/radius/height。
+            size (float): (仅用于Cube) 立方体的边长。
+            radius (float): (仅用于Sphere/Cone) 球体/圆锥体的半径。
+            height (float): (仅用于Cone) 圆锥体的高度。
+            color (List[float]): 显示颜色 [r, g, b]。
+            mass (float): 物体的质量 (kg)。
+            linear_velocity (List[float]): 初始线速度 [vx, vy, vz]。
+
+        Returns:
+            Dict[str, Any]: 包含操作状态和结果的字典。
+        """
+        try:
+            from omni.isaac.core.objects import DynamicCuboid, DynamicSphere, DynamicCone
+            # 获取 World 和 Scene 的实例
+            world = World.instance()
+            scene = world.scene
+
+            # 检查场景名是否已存在
+            if scene.object_exists(scene_name):
+                return {"status": "error", "message": f"An object with scene_name '{scene_name}' already exists."}
+
+            shape_type = shape_type.lower()
+
+            # 根据类型选择 Isaac Sim 的高级类并创建实例
+            if shape_type == "cuboid":
+                # DynamicCuboid 会自动处理所有物理和碰撞设置
+                shape_object = DynamicCuboid(
+                    prim_path=prim_path,
+                    name=scene_name,
+                    position=np.array(position),
+                    orientation=np.array(orientation),
+                    scale=np.array(scale) if scale else np.array([1.0, 1.0, 1.0]),
+                    size=size,  # size 是 scale 的一个快捷方式
+                    color=np.array(color),
+                    mass=mass,
+                    linear_velocity=np.array(linear_velocity) if linear_velocity else None
+                )
+            elif shape_type == "sphere":
+                shape_object = DynamicSphere(
+                    prim_path=prim_path,
+                    name=scene_name,
+                    position=np.array(position),
+                    orientation=np.array(orientation),
+                    radius=radius,
+                    scale=np.array(scale) if scale else np.array([1.0, 1.0, 1.0]),
+                    color=np.array(color),
+                    mass=mass,
+                    linear_velocity=np.array(linear_velocity) if linear_velocity else None
+                )
+            elif shape_type == "cone":
+                shape_object = DynamicCone(
+                    prim_path=prim_path,
+                    name=scene_name,
+                    position=np.array(position),
+                    orientation=np.array(orientation),
+                    radius=radius,
+                    height=height,
+                    scale=np.array(scale) if scale else np.array([1.0, 1.0, 1.0]),
+                    color=np.array(color),
+                    mass=mass,
+                    linear_velocity=np.array(linear_velocity) if linear_velocity else None
+                )
+            else:
+                return {"status": "error", "message": f"Unsupported shape type: {shape_type}"}
+
+            # 将创建好的高级对象实例添加到场景中
+            # 这一步会自动在USD舞台上创建所有底层的Prims和属性
+            scene.add(shape_object)
+
+            return {
+                "status": "success",
+                "message": f"Successfully created Isaac Sim shape '{shape_type}' at {prim_path} and registered as '{scene_name}'",
+                "result": {
+                    "prim_path": prim_path,
+                    "scene_name": scene_name,
+                    "isaac_object": shape_object  # 返回创建的对象实例，方便直接操作
+                }
+            }
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {"status": "error", "message": str(e)}
+
+    def create_shape_unified(
+            self,
+            shape_type: str,
+            prim_path: str,
+            name: str,  # 使用 'name' 代替 'scene_name' 以匹配API
             position: List[float] = [0, 0, 0],
             orientation: List[float] = [1, 0, 0, 0],  # WXYZ 四元数
             size: Union[float, List[float]] = 1.0,
             color: List[float] = [0.8, 0.1, 0.1],
-            mass: float = 1.0,
+            mass: float = None,  # 推荐设为None，让物理引擎根据密度和体积自动计算
+            make_dynamic: bool = True
+    ) -> Dict[str, Any]:
+        """
+        在场景中创建一个几何形状，此版本统一使用 omni.isaac.core 高层级API。
+
+        这个函数会自动处理Prim的创建、物理属性的添加以及在仿真世界中的注册。
+        """
+        from omni.isaac.core.objects import cuboid, sphere  # 这些是对象工厂模块
+        from omni.isaac.core.world import World
+        # 2. [统一] 检查 World 实例，因为高层级API依赖它
+        world = World.instance()
+        if world is None:
+            return {"status": "error", "message": "Isaac Sim World is not initialized."}
+
+        shape_type = shape_type.lower()
+        created_object = None
+
+        # 3. [统一] 根据类型和是否动态，选择并实例化正确的高层级工厂类
+        #    这些工厂类在内部完成了所有底层的 PXR/USD 操作。
+        if shape_type in ["cube", "cuboid"]:
+            # 将 user-friendly 的 'size' 转换为 'scale' 参数
+            scale = np.array(size) if isinstance(size, list) else np.array([size, size, size])
+
+            if make_dynamic:
+                # DynamicCuboid 会自动应用 RigidBodyAPI, CollisionAPI, MassAPI
+                created_object = cuboid.DynamicCuboid(
+                    prim_path=prim_path,
+                    name=name,
+                    position=np.array(position),
+                    orientation=np.array(orientation),
+                    scale=scale,
+                    color=np.array(color),
+                    mass=mass
+                )
+            else:
+                # FixedCuboid 会自动应用 CollisionAPI，但不会应用 RigidBodyAPI
+                created_object = cuboid.FixedCuboid(
+                    prim_path=prim_path,
+                    name=name,
+                    position=np.array(position),
+                    orientation=np.array(orientation),
+                    scale=scale,
+                    color=np.array(color)
+                )
+
+        elif shape_type == "sphere":
+            if not isinstance(size, (int, float)):
+                return {"status": "error", "message": "Size for 'sphere' (radius) must be a float."}
+
+            if make_dynamic:
+                created_object = sphere.DynamicSphere(
+                    prim_path=prim_path,
+                    name=name,
+                    position=np.array(position),
+                    orientation=np.array(orientation),
+                    radius=size,
+                    color=np.array(color),
+                    mass=mass
+                )
+            else:
+                created_object = sphere.FixedSphere(
+                    prim_path=prim_path,
+                    name=name,
+                    position=np.array(position),
+                    orientation=np.array(orientation),
+                    radius=size,
+                    color=np.array(color)
+                )
+        else:
+            return {"status": "error", "message": f"Unsupported shape type: {shape_type}"}
+
+        # 4. [统一] 将创建的对象添加到场景中，使其“生效”
+        #    这是一个好习惯：先检查并移除同名旧对象，避免冲突。
+        if world.scene.object_exists(name):
+            world.scene.remove_object(name)
+
+        world.scene.add(created_object)
+
+        return {
+            "status": "success",
+            "message": f"Successfully created shape '{shape_type}' at {prim_path} using unified API.",
+            "prim_path": prim_path,
+            "object": created_object  # 返回创建的高层级对象，方便后续直接操作
+        }
+
+
+    def create_shape(
+            self,
+            shape_type: str,
+            prim_path: str = None,
+            scene_name: str = None,
+            position: List[float] = [0, 0, 0],
+            orientation: List[float] = [1, 0, 0, 0],  # WXYZ 四元数
+            size: Union[float, List[float]] = 1.0,
+            color: List[float] = [0.8, 0.1, 0.1],
+            mass: float = 0.01,
             make_dynamic: bool = True
     ) -> Dict[str, Any]:
         """
@@ -747,13 +900,26 @@ class SceneManager:
             # --- 5. 添加物理属性 (如果需要) ---
             if make_dynamic:
                 # 应用刚体 API
-                UsdPhysics.RigidBodyAPI.Apply(prim)
+                usd_prim = prim.GetPrim()
+                UsdPhysics.RigidBodyAPI.Apply(usd_prim)
                 # 应用碰撞 API (对于基本体，默认碰撞形状就足够了)
-                UsdPhysics.CollisionAPI.Apply(prim)
+                UsdPhysics.CollisionAPI.Apply(usd_prim)
                 # 应用质量 API 并设置质量
-                mass_api = UsdPhysics.MassAPI.Apply(prim)
+                mass_api = UsdPhysics.MassAPI.Apply(usd_prim)
                 mass_api.CreateMassAttr().Set(mass)
 
+            # 6.
+            from omni.isaac.core.world import World
+            from omni.isaac.core.prims import RigidPrim
+            scene = World.instance().scene
+            managed_prim = RigidPrim(
+                prim_path=prim_path,
+                name=scene_name  # <--- 使用我们新增的参数
+            )
+
+            # 2. 将这个高级封装器对象添加到 Scene 中。
+            #    现在 World 就知道要管理和更新这个物体了。
+            scene.add(managed_prim)
             return {
                 "status": "success",
                 "message": f"Successfully created shape '{shape_type}' at {prim_path}",
@@ -938,30 +1104,13 @@ class SceneManager:
             return {"status": "error", "message": f"Failed to set collision offsets: {e}"}
 
     def set_collision_enabled(self, prim_path: str, collision_enabled: bool) -> dict:
-        try:
-            # 获取 Stage
-            self._stage = omni.usd.get_context().get_stage()
-            if not self._stage:
-                return {"status": "error", "message": "No USD stage is currently open."}
+        # 禁用碰撞属性
+        from isaacsim.core.prims import RigidPrim
+        from pxr import UsdPhysics
 
-            prim = self._stage.GetPrimAtPath(prim_path)
-            if not prim.IsValid():
-                return {"status": "error", "message": f"Prim {prim_path} not found."}
-
-            from pxr import UsdPhysics, PhysxSchema
-            UsdPhysics.CollisionAPI.Apply(prim)
-
-            # 设置 collision enabled 属性
-            physx_api = PhysxSchema.PhysxCollisionAPI.Apply(prim)
-
-            return {
-                "status": "success",
-                "message": f"Collision enabled set for {prim_path}",
-                "result": prim_path
-            }
-
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to set collision enabled: {str(e)}"}
+        rigid_prim = RigidPrim(prim_paths_expr=prim_path)
+        collision_api = UsdPhysics.CollisionAPI.Apply(rigid_prim.prims[0])
+        collision_api.GetCollisionEnabledAttr().Set(collision_enabled)
 
     def set_physics_properties(self, prim_path: str, mass: float, velocity: list, gravity_enabled: bool) -> dict:
         try:

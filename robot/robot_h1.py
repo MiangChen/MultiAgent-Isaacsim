@@ -31,7 +31,7 @@ class RobotH1(RobotBase):
     # 1. __init__ 方法现在是完全同步的，不再创建策略控制器
     def __init__(self, cfg_body: RobotCfgH1, cfg_camera: CameraCfg = None,
                  cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None, node: SwarmNode = None) -> None:
+                 map_grid: GridMap = None, node: SwarmNode = None, scene_manager = None) -> None:
         super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid)
         self.control_mode = 'joint_positions'
 

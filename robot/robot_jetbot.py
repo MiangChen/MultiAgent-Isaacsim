@@ -22,8 +22,8 @@ from plan_msgs.msg import RobotFeedback, SkillInfo, Parameter
 class RobotJetbot(RobotBase):
     def __init__(self, cfg_body: RobotCfgJetbot, cfg_camera: CameraCfg = None,
                  cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None, node: SwarmNode = None) -> None:
-        super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid, node)
+                 map_grid: GridMap = None, node: SwarmNode = None, scene_manager = None) -> None:
+        super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid, node=node, scene_manager=scene_manager)
 
         self.controller = ControllerJetbot()
         self.control_mode = 'joint_velocities'
@@ -171,17 +171,9 @@ class RobotJetbot(RobotBase):
             if self.flag_action_navigation == True:
                 self.move_along_path()  # 每一次都计算下速度
                 self.step(self.action)
-                if self.counter % self.pub_period == 0:
-                    self._publish_feedback_pose()
+                # if self.counter % self.pub_period == 0:
+                #     self._publish_feedback_pose()
 
-        return
-
-    def pick_up(self):
-        pass
-        return
-
-    def put_down(self):
-        pass
         return
 
     def step(self, action):

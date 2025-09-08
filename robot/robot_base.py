@@ -7,10 +7,12 @@ from camera.camera_cfg import CameraCfg
 from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from robot.robot_cfg import RobotCfg
 from robot.robot_trajectory import Trajectory
+from scene.scene_manager import SceneManager
 
 from pxr import Usd, UsdGeom
 import numpy as np
 import carb
+
 from isaacsim.core.utils.numpy import rotations
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import RigidPrim
@@ -38,15 +40,17 @@ def _get_viewport_manager_from_container():
     except Exception as e:
         raise Exception("ViewportManager not found in container") from e
 
+
 class RobotBase:
     """Base class of robot."""
 
     def __init__(self, cfg_body: RobotCfg = None, cfg_camera: CameraCfg = None,
                  cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None, node = None):
+                 map_grid: GridMap = None, scene_manager: SceneManager = None, node=None):
         self.cfg_body = cfg_body
         self.cfg_camera = cfg_camera
         self.scene = scene
+        self.scene_manager = scene_manager
         self.node = node
         self.viewport_manager = _get_viewport_manager_from_container()  # 通过依赖注入获取viewport_manager
         # 代表机器人的实体
@@ -261,19 +265,86 @@ class RobotBase:
             sensor.post_reset()
         return
 
-    def put_down(self) -> None:
+    def put_down(self, robot_hand_prim_path: str, object_prim_path: str) -> dict:
         """
-        让机器人把一个东西放下, 可以指定
-        Returns:
+        通过删除关节并恢复物理属性来“放下”一个被抓取的物体。
+        此函数统一使用 omni.isaac.core API 进行运行时交互。
         """
-        raise NotImplementedError()
 
-    def pick_up(self) -> None:
+        hand_prim = RigidPrim(prim_paths_expr=robot_hand_prim_path)
+        object_prim = RigidPrim(prim_paths_expr=object_prim_path)
+
+        # 定位并删除用于抓取的固定关节
+
+        joint_path = f"/World/grasp_joint_{object_prim.name}"
+        stage = self.scene_manager._stage
+        joint_prim = stage.GetPrimAtPath(joint_path)
+        from pxr import UsdPhysics
+        if joint_prim.IsValid():
+            joint = UsdPhysics.Joint(joint_prim)
+            joint.GetJointEnabledAttr().Set(False)  # <-- 关键的状态切换！
+            # 碰撞属性
+            self.scene_manager.set_collision_enabled(object_prim_path, collision_enabled=True)
+            # 模拟惯性
+            hand_lin_vel = hand_prim.get_linear_velocities()
+            hand_ang_vel = hand_prim.get_angular_velocities()
+            object_prim.set_linear_velocities(hand_lin_vel)
+            object_prim.set_angular_velocities(hand_ang_vel)
+        else:
+            print(f"WARNING: Joint '{joint_path}' not found, cannot disable.")
+
+        print(f"INFO: Object '{object_prim.name}' dropped and physics restored.")
+        return {"status": "success", "message": "Object dropped successfully."}
+
+    def pickup_object_if_close_unified(self, robot_hand_prim_path: str, object_prim_path: str,
+                                       distance_threshold: float = 2.0) -> dict:
         """
-        让机器人拿起来某一个东西, 需要指定物品的名称, 并且在操作范围内
-        Returns:
+        检查机器人手部与物体的距离，如果小于阈值，则执行一个稳定、健壮的抓取序列。
+        此函数统一使用 omni.isaac.core.prims.RigidPrim API 进行运行时交互。
         """
-        raise NotImplementedError()
+        hand_prim = RigidPrim(prim_paths_expr=robot_hand_prim_path)
+        object_prim = RigidPrim(prim_paths_expr=object_prim_path)
+
+        hand_pos, _ = hand_prim.get_world_poses()
+        object_pos, _ = object_prim.get_world_poses()
+
+        distance = np.linalg.norm(hand_pos - object_pos)
+
+        if distance <= distance_threshold:
+
+            # 停止物体当前的任何运动，清除惯性
+            object_prim.set_linear_velocities(np.zeros(3))
+            object_prim.set_angular_velocities(np.zeros(3))
+
+            # 将物体传送到精确的抓取位置
+            object_prim.set_world_poses(positions=hand_pos)
+
+            # 禁用碰撞属性
+            self.scene_manager.set_collision_enabled(prim_path=object_prim_path, collision_enabled=False)
+
+            # 创建物理连接 (关节)
+            joint_path = f"/World/grasp_joint_{object_prim.name}"
+            stage = self.scene_manager._stage  # 假设可以从SceneManager获取stage
+            joint_prim = stage.GetPrimAtPath(joint_path)
+
+            # 如果关节不存在，就创建一个。这通常只在第一次抓取时发生。
+            if not joint_prim.IsValid():
+                print(f"INFO: Joint '{joint_path}' not found, creating it for the first time.")
+                self.scene_manager.create_joint(
+                    joint_path=joint_path, joint_type="fixed",
+                    body0=robot_hand_prim_path, body1=object_prim_path,
+                    local_pos0=[0, 0, 1], local_pos1=[0, 0, 0], axis=[0, 0, 1]
+                )
+                joint_prim = stage.GetPrimAtPath(joint_path)
+            from pxr import UsdPhysics
+            joint = UsdPhysics.Joint(joint_prim)
+            joint.GetJointEnabledAttr().Set(True)  # <-- 关键的状态切换！
+            return {"status": "success"}
+        else:
+            return {
+                "status": "skipped",
+                "message": f"Object is too far to pick up ({distance:.2f}m > {distance_threshold}m)."
+            }
 
     def quaternion_to_yaw(self, quaternion: Tuple[float, float, float, float]) -> float:
         """
@@ -370,6 +441,7 @@ class RobotBase:
             'robot_id': self.cfg_body.id if self.cfg_body else None,
             'enabled': self.cfg_camera_third_person.enabled if self.cfg_camera_third_person else False
         }
+
 
 if __name__ == "__main__":
     pass

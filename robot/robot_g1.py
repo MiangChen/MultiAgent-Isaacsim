@@ -11,7 +11,7 @@ from isaacsim.core.api.scenes import Scene
 from ros.ros_node import SwarmNode
 
 class RobotJetbot(RobotBase):
-    def __init__(self, config: RobotCfgG1, scene: Scene = None, map_grid: GridMap = None, node: SwarmNode = None) -> None:
+    def __init__(self, config: RobotCfgG1, scene: Scene = None, map_grid: GridMap = None, node: SwarmNode = None, scene_manager = None) -> None:
         super().__init__(config, scene, map_grid)
         self.robot_entity = WheeledRobot(
             prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',
