@@ -29,6 +29,7 @@ def _parse_robot_id(robot_id: str) -> tuple[str, int]:
 
 def _plan_cb(msg: Plan):
     """Plan callback to queue skills for robots"""
+    print("\n\n\n\n\n\n\n\n\n\nMSG Received!!!\n\n\n\n\n\n\n\n\n\n\n")
     try:
         steps = sorted(msg.steps, key=lambda s: s.timestep)
         with _skill_lock:
@@ -94,14 +95,16 @@ def _skill_navigate_to(
         swarm_manager
         rc: Robot class name
         rid: Robot index
-        params: Skill parameters containing 'goal' key
+        params: Skill parameters containing 'area' key
         semantic_map: Injected semantic map instance
     """
-    pos = semantic_map.map_semantic[params["goal"]]
+#    pos = semantic_map.map_semantic[json.loads(params["area"])]
+    pos = json.loads(params["area"])
+    pos = [-4.5, 11.4, 0]
     swarm_manager.robot_active[rc][rid].navigate_to(pos)
 
 
-def _skill_pick_up(swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> None:
+def _skill_pick_up(swarm_manager, rc: str, rid: int, params: Dict[str, Any], semantic_map) -> None:
     """Execute pick-up skill
 
     Args:
@@ -116,7 +119,7 @@ def _skill_pick_up(swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> 
                                                                               object_prim_path=object_prim_path)
 
 
-def _skill_put_down(swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> None:
+def _skill_put_down(swarm_manager, rc: str, rid: int, params: Dict[str, Any], semantic_map) -> None:
     """Execute put-down skill
 
     Args:
@@ -135,7 +138,7 @@ def _skill_take_photo(swarm_manager, rc: str, rid: int, params: Dict[str, Any]) 
     swarm_manager.robot_active[rc][rid].take_photo(file_path=params.get("file_path"))
 
 _SKILL_TABLE = {
-    "navigate-to": _skill_navigate_to,
+    "navigate": _skill_navigate_to,
     "pick-up": _skill_pick_up,
     "put-down": _skill_put_down,
 }

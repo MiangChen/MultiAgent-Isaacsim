@@ -160,7 +160,7 @@ class RobotJetbot(RobotBase):
             skill_feedback = skill,
         )
 
-        self.node.publish_navigation_feedback(msg)
+        self.node.publish_navigation_feedback(self.cfg_body.name_prefix,self.cfg_body.id, msg)
 
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)

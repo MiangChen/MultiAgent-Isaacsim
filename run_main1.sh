@@ -62,13 +62,13 @@ else
   exit 1
 fi
 
-if [[ -f "$HOME/ws_msgs/install/setup.bash" ]]; then
+if [[ -f "$HOME/gsi_msgs/install/setup.bash" ]]; then
   set +u
   # shellcheck disable=SC1091
-  source "$HOME/ws_msgs/install/setup.bash"
+  source "$HOME/gsi_msgs/install/setup.bash"
   set -u
 else
-  echo "[WARN] 未找到 ~/ws_msgs/install/setup.bash，消息包可能无法被导入。"
+  echo "[WARN] 未找到 ~/gsi_msgs/install/setup.bash，消息包可能无法被导入。"
 fi
 
 # ===== 环境变量（你要求的）=====

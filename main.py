@@ -10,7 +10,7 @@ def pre_initialize():
     parser = argparse.ArgumentParser(
         add_help=False
     )  # add_help=False 避免与后续的解析器冲突
-    parser.add_argument("--config", type=str, default="./config/config_parameter.yaml")
+    parser.add_argument("--config", type=str, default="/home/ubuntu/multiagent-isaacsimROS/src/multiagent_isaacsim/multiagent_isaacsim/config/config_parameter.yaml")
 
     args, unknown = parser.parse_known_args()
 
@@ -411,10 +411,9 @@ def main():
         # process_semantic_detection(semantic_camera, semantic_map)
 
         # Process ROS skills if ROS is enabled
-        # if config_manager.get("ros"):
-        #     from skill.skill import process_ros_skills
-        #
-        #     process_ros_skills(swarm_manager)
+        if config_manager.get("ros"):
+            from skill.skill import process_ros_skills
+            process_ros_skills(swarm_manager, semantic_map)
 
         count += 1
 

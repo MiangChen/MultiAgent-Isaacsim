@@ -138,8 +138,8 @@ class RobotBase:
         self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
         self.transform_camera_pos = np.array([0, 0, 0])
 
-        self.current_task_id = None
-        self.current_task_name = None
+        self.current_task_id = "0"
+        self.current_task_name = "n"
 
     def get_obs(self) -> dict:
         """Get observation of robot, including controllers, cameras, and world pose.
