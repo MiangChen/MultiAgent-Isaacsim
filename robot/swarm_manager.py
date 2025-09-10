@@ -126,13 +126,8 @@ class SwarmManager:
             raise ValueError(f"Unknown robot type: {robot_class_name}")
 
         # 定义对应的机器人的位置和姿态, 以及编号
-        cfg_body = None
-        try:
-            print(f"尝试加载{robot_class_name} {cfg_body_dict['id']}号的配置文件")
-            cfg_body = robot_class_cfg(**cfg_body_dict)
-        except ValidationError as e:
-            print(f"加载失败,检查{robot_class_name}的配置文件: {e}")
-            return  # 加载失败则直接返回
+        print(f"尝试加载{robot_class_name} {cfg_body_dict['id']}号的配置文件")
+        cfg_body = robot_class_cfg(**cfg_body_dict)
 
         cfg_camera = None
         if cfg_camera_dict:
@@ -140,12 +135,9 @@ class SwarmManager:
 
         cfg_camera_third_person = None
         if cfg_camera_third_person_dict:
-            try:
-                cfg_camera_third_person = CameraThirdPersonCfg(
-                    **cfg_camera_third_person_dict
-                )
-            except ValidationError as e:
-                print(f"加载机器人 {cfg_body_dict.get('id')} 的相机配置失败: {e}")
+            cfg_camera_third_person = CameraThirdPersonCfg(
+                **cfg_camera_third_person_dict
+            )
 
         # --- 5. 核心修改点: 智能地选择同步或异步创建 ---
         robot_cls = self.robot_class[robot_class_name]
@@ -199,7 +191,6 @@ class SwarmManager:
                         robot.flag_active = True  # 机器人自身记录一份
                         self.robot_active[key].append(robot)
                         self.scene.add(robot.robot_entity)
-                        pass
         return
 
     def deactivate_robot(self, name: str):

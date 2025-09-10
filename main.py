@@ -6,21 +6,16 @@ def pre_initialize():
     """
     执行最小化的启动，只为了创建 SimulationApp 实例。
     """
-    # 1. 创建一个临时的、极简的参数解析器，只为了拿到 --config 的值
-    #    我们不在这里使用重量级的 ConfigManager
+
     parser = argparse.ArgumentParser(
         add_help=False
     )  # add_help=False 避免与后续的解析器冲突
     parser.add_argument("--config", type=str, default="./config/config_parameter.yaml")
 
-    # parse_known_args 会解析它认识的参数，并忽略其他所有参数
     args, unknown = parser.parse_known_args()
 
-    # 2. 使用获取到的配置文件路径，初始化 Isaac Sim
-    #    这是整个程序中第一次接触 Isaac Sim 的地方
     simulation_app = initialize_simulation_app_from_yaml(args.config)
 
-    # 3. 返回已创建的 app 实例
     return simulation_app
 
 
@@ -36,7 +31,7 @@ from isaacsim.core.api import World
 
 # Local imports
 from config.config_manager import config_manager
-from containers import AppContainer, get_container
+from containers import AppContainer, get_container, reset_container
 from environment.env import Env
 from log.log_manager import LogManager
 from map.map_grid_map import GridMap
@@ -235,10 +230,9 @@ def process_semantic_detection(semantic_camera, map_semantic: MapSemantic) -> No
 
 
 def main():
-    print(
-        "\n\n\n\ninto the main\n\n\n\n"
-    )
+    print("\n\n\n\ninto the main\n\n\n\n")
     # Setup dependency injection container
+    reset_container()
     container = get_container()
 
     # Wire the container to this module for @inject decorators in skill functions
@@ -261,7 +255,8 @@ def main():
     ros_manager.start()
 
     # Load scene
-    scene_manager.load_scene(usd_path=WORLD_USD_PATH)
+    scene_manager.load_scene(usd_path=WORLD_USD_PATH, prim_path_root="/World/Scene")
+    # scene_manager.enable_raycasting_for_prim(prim_path="/World/Scene")
 
     # Create car objects using scene manager
     created_prim_paths = create_car_objects(scene_manager)
@@ -312,8 +307,7 @@ def main():
     count = 0
     logger.info("Starting main simulation loop...")
 
-    from skill.skill import _skill_navigate_to, _skill_pick_up, _skill_put_down
-    _skill_navigate_to(swarm_manager, rc='jetbot', rid=0, params={"goal": "place4"}, semantic_map=semantic_map)
+    from skill.skill import _skill_navigate_to, _skill_pick_up, _skill_put_down, _skill_take_photo
 
     robot_prim_path = "/World/robot/jetbot/jetbot/jetbot_0/chassis"
     object_prim_path = "/World/object"
@@ -331,21 +325,89 @@ def main():
     }
     scene_manager.create_shape_unified(**object)
 
-
+    _skill_navigate_to(
+        swarm_manager,
+        rc="jetbot",
+        rid=0,
+        params={"goal": "place4"},
+        semantic_map=semantic_map,
+    )
     flag = 0
     # Main simulation loop
     while simulation_app.is_running():
 
         # World step
         env.step(action=None)
+
+        if count %60 == 0 and count !=0 :
+            _skill_take_photo(
+                swarm_manager,
+                rc="jetbot",
+                rid=0,
+                params={"file_path": "/home/ubuntu/test.jpg"}
+            )
+
         if flag == 0:
-            result =  _skill_pick_up(swarm_manager, rc='jetbot', rid=0, params={"object_prim_path": object_prim_path, "robot_prim_path": robot_prim_path})
-            if result!=None and result.get("status") == "success":
+            result = _skill_pick_up(
+                swarm_manager,
+                rc="jetbot",
+                rid=0,
+                params={
+                    "object_prim_path": object_prim_path,
+                    "robot_prim_path": robot_prim_path,
+                },
+            )
+            if result != None and result.get("status") == "success":
                 flag = 1
 
-        elif count > 240  and flag == 1:
-            result = _skill_put_down(swarm_manager, rc='jetbot', rid=0, params={"object_prim_path": object_prim_path, "robot_prim_path": robot_prim_path})
+        elif count > 500 and flag == 1:
+            result = _skill_put_down(
+                swarm_manager,
+                rc="jetbot",
+                rid=0,
+                params={
+                    "object_prim_path": object_prim_path,
+                    "robot_prim_path": robot_prim_path,
+                },
+            )
             flag = 2
+
+        # if count > 400:
+        # _skill_navigate_to(
+        #     swarm_manager,
+        #     rc="jetbot",
+        #     rid=0,
+        #     params={"goal": "place4"},
+        #     semantic_map=semantic_map,
+        # )
+        # _skill_navigate_to(
+        #     swarm_manager,
+        #     rc="jetbot",
+        #     rid=1,
+        #     params={"goal": "place1"},
+        #     semantic_map=semantic_map,
+        # )
+        # _skill_navigate_to(
+        #     swarm_manager,
+        #     rc="jetbot",
+        #     rid=2,
+        #     params={"goal": "place2"},
+        #     semantic_map=semantic_map,
+        # )
+        # _skill_navigate_to(
+        #     swarm_manager,
+        #     rc="jetbot",
+        #     rid=3,
+        #     params={"goal": "place3"},
+        #     semantic_map=semantic_map,
+        # )
+        # _skill_navigate_to(
+        #     swarm_manager,
+        #     rc="h1",
+        #     rid=0,
+        #     params={"goal": "place3"},
+        #     semantic_map=semantic_map,
+        # )
         # process_semantic_detection(semantic_camera, semantic_map)
 
         # Process ROS skills if ROS is enabled

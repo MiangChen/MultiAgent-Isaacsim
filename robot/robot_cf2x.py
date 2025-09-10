@@ -36,7 +36,7 @@ class RobotCf2x(RobotBase):
     def __init__(self, cfg_body: RobotCfgCf2x, cfg_camera: CameraCfg = None,
                  cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
                  map_grid: GridMap = None, node: SwarmNode = None, scene_manager = None) -> None:
-        super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid)
+        super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid, node=node, scene_manager=scene_manager)
 
         self.is_drone = True  # 标记为无人机
         self.controller = ControllerCf2x()
@@ -171,14 +171,63 @@ class RobotCf2x(RobotBase):
             # 直接设置位置（瞬移到悬停高度）
             orientation = orientations[0]
             self.robot_entity.set_world_poses([self.position], [orientation])
+            # 设置速度为0
+            zero_velocities = np.zeros((1, 6), dtype=np.float32)
+            self.robot_entity.set_velocities(velocities=zero_velocities)
 
             # 更新状态
             self.flight_state = 'hovering'
             self.velocity = np.zeros(3, dtype=np.float32)  # 悬停时速度为0
 
+            # 取消重力
+            M = 1
+            K = self.robot_entity.num_bodies
+            values_array = np.full((M, K), fill_value=True, dtype=bool)
+            self.robot_entity.set_body_disable_gravity(values=values_array)
+
             print(f"无人机起飞到高度: {self.takeoff_height}m，进入悬停状态")
         else:
             print("无人机已在飞行状态")
+
+
+
+    def get_ground_height_with_raycast(self, current_position: np.ndarray) -> float:
+        """
+        使用光线投射来精确获取机器人正下方的地面高度。
+
+        Args:
+            current_position (np.ndarray): 机器人当前的 [x, y, z] 世界坐标。
+
+        Returns:
+            float: 检测到的地面Z坐标。如果未检测到地面，则返回None。
+        """
+        # 1. 获取 Isaac Sim 的物理场景接口
+        import omni.physx
+        import carb
+        physx_interface = omni.physx.get_physx_scene_query_interface()
+
+        # 2. 定义光线投射的起点和方向
+        #    起点应该在机器人当前位置的正上方，以避免光线从机器人内部开始
+        ray_origin = carb.Float3(current_position[0], current_position[1], current_position[2] + 1.0)
+        #    方向是垂直向下
+        ray_direction = carb.Float3(0, 0, -1)
+
+        # 3. 设置最大探测距离
+        max_distance = 100.0  # 例如，最大向下探测100米
+
+        # 4. 执行光线投射
+        #    hit_report_multiple 会返回所有碰到的物体
+        hit = physx_interface.raycast_closest(ray_origin, ray_direction, max_distance)
+
+        # 5. 处理结果
+        if hit["hit"]:
+            # "position" 字段是光线与物体碰撞点的精确世界坐标
+            ground_position = hit["position"]
+            print(f"DEBUG: Raycast hit ground at Z={ground_position[2]:.3f}")
+            return ground_position[2]
+        else:
+            print("WARNING: Raycast did not hit any surface below the robot.")
+            return None  # 或者返回一个默认的安全高度，比如 0.0
 
     def land(self):
         """降落到地面"""
@@ -187,12 +236,19 @@ class RobotCf2x(RobotBase):
             positions, orientations = self.robot_entity.get_world_poses()
             current_pos = positions[0]
 
+            # 获取地面的高度
+            ground_z = self.get_ground_height_with_raycast(current_pos)
+
             # 设置降落位置
-            self.position = np.array([current_pos[0], current_pos[1], self.land_height], dtype=np.float32)
+            self.position = np.array([current_pos[0], current_pos[1], current_pos[2] - ground_z], dtype=np.float32)
 
             # 直接设置位置（瞬移到地面）
             orientation = orientations[0]
             self.robot_entity.set_world_poses([self.position], [orientation])
+
+            # 设置速度为0
+            zero_velocities = np.zeros((1, 6), dtype=np.float32)
+            self.robot_entity.set_velocities(velocities=zero_velocities)
 
             # 立即清零所有运动相关变量
             self.velocity = np.zeros(3, dtype=np.float32)  # 清零速度
@@ -201,7 +257,7 @@ class RobotCf2x(RobotBase):
             # 更新状态
             self.flight_state = 'landed'
 
-            print(f"无人机降落到高度: {self.land_height}m")
+            print(f"无人机降落到高度: {self.current_pos[2] - ground_z}m")
         else:
             print("无人机已在地面状态")
 
@@ -330,10 +386,10 @@ class RobotCf2x(RobotBase):
             # orientation 从仿真获取
             _, orientations = self.robot_entity.get_world_poses()
             orientation = orientations[0]
-            msg.pose.orientation.x = float(orientation.x)
-            msg.pose.orientation.y = float(orientation.y)
-            msg.pose.orientation.z = float(orientation.z)
-            msg.pose.orientation.w = float(orientation.w)
+            msg.pose.orientation.w = float(orientation[0])
+            msg.pose.orientation.x = float(orientation[1])
+            msg.pose.orientation.y = float(orientation[2])
+            msg.pose.orientation.z = float(orientation[3])
 
             # 发布一次
             self.node.publish_motion(

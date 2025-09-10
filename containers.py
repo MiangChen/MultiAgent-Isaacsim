@@ -80,7 +80,8 @@ def get_container() -> AppContainer:
 
         # 自动绑定需要 @inject 装饰器的模块
         modules_to_wire = [__name__, "main", "skill.skill"]  # 添加所有需要注入的模块
-        _container.wire(modules=[m for m in modules_to_wire if m in sys.modules])
+        modules_in_sys = [sys.modules.get(m) for m in modules_to_wire]
+        _container.wire(modules=[m for m in modules_in_sys if m is not None])
 
     return _container
 

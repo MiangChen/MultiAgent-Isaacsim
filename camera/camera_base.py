@@ -146,11 +146,15 @@ class CameraBase:
 
             # **【核心要求】检查张量是否为3个维度**
             if rgb_tensor_gpu.ndim != 3:
-                logging.error(
-                    f"张量维度错误：期望3个维度 [H, W, C]，但收到了 {rgb_tensor_gpu.ndim} 个维度。"
-                    f" 张量形状为: {rgb_tensor_gpu.shape}"
-                )
-                return False
+                if rgb_tensor_gpu[0].ndim != 3:
+                    logging.error(
+                        f"张量维度错误：期望3个维度 [H, W, C]，但收到了 {rgb_tensor_gpu.ndim} 个维度。"
+                        f" 张量形状为: {rgb_tensor_gpu.shape}"
+                    )
+                    return False
+                else:
+                    rgb_tensor_gpu = rgb_tensor_gpu[0]
+
 
             # 检查通道数是否为3 (RGB)
             if rgb_tensor_gpu.shape[2] != 3:

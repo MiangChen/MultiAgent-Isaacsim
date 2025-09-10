@@ -53,20 +53,20 @@ jetbot:
     camera: {}
     camera_third_person: False
 
-#h1:
-#  - id: 0
-#    body:
-#      position: [ 3, 2, 1.05 ]
-#      quat: [ 0.0, 0.0, 0.0, 1.0 ]
-#      alias: Hellen
-#    camera: {}
-#    camera_third_person:
-#      enabled: False
-#      relative_position: [ 0, -3, 0 ]  # 相机相对于机器人的位置 (后方2米, 上方3米)
-#      transform_position: [0, 0, 0.5]  # 用于相机的相对位移
-#      viewport_position: [ 800, 0 ]        # Viewport在Isaac Sim窗口中的起始位置 (x, y)
-#      viewport_size: [ 360, 360 ]          # Viewport的尺寸 (宽, 高)
-#      focal_length: 20
+h1:
+  - id: 0
+    body:
+      position: [ 3, 2, 1.05 ]
+      quat: [ 0.0, 0.0, 0.0, 1.0 ]
+      alias: Hellen
+    camera: {}
+    camera_third_person:
+      enabled: False
+      relative_position: [ 0, -3, 0 ]  # 相机相对于机器人的位置 (后方2米, 上方3米)
+      transform_position: [0, 0, 0.5]  # 用于相机的相对位移
+      viewport_position: [ 800, 0 ]        # Viewport在Isaac Sim窗口中的起始位置 (x, y)
+      viewport_size: [ 360, 360 ]          # Viewport的尺寸 (宽, 高)
+      focal_length: 20
 
 
 #    camera:

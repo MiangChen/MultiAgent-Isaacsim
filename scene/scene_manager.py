@@ -8,11 +8,12 @@ import numpy as np
 
 # Isaac Sim related imports
 import omni
-from pxr import Gf, Sdf, UsdGeom, UsdPhysics
+from pxr import Gf, Sdf, UsdGeom, UsdPhysics, PhysxSchema, Usd
 
 from config.config_manager import config_manager
 
 ASSET_PATH = config_manager.get("asset_path")
+
 
 class SceneManager:
     """
@@ -114,7 +115,8 @@ class SceneManager:
             Dict[str, Any]: 包含操作状态和消息的字典。
         """
         try:
-            from isaacsim.core.utils.semantics import add_update_semantics # isaacsim 4.5; will be deprecated in isaacsim 5.0
+            from isaacsim.core.utils.semantics import \
+                add_update_semantics  # isaacsim 4.5; will be deprecated in isaacsim 5.0
 
             stage = omni.usd.get_context().get_stage()
             if not stage:
@@ -179,7 +181,6 @@ class SceneManager:
             import traceback
             traceback.print_exc()
             return {"status": "error", "message": str(e)}
-
 
     def count_semantics_in_scene(self, prim_path: str = '/') -> Dict[str, Any]:
         """
@@ -401,10 +402,10 @@ class SceneManager:
         return {"status": "success", "message": f"Prim '{prim_path}' focused in viewport"}
 
     def add_camera(self,
-                            position: List[float],
-                            quat: List[float],
-                            focal_length: float = 2.0,
-                            prim_path: str = "/World/MyCam",) -> Dict[str, Any]:
+                   position: List[float],
+                   quat: List[float],
+                   focal_length: float = 2.0,
+                   prim_path: str = "/World/MyCam", ) -> Dict[str, Any]:
         """
         使用 Isaac Sim 的高层 API 创建或封装一个相机。
 
@@ -449,7 +450,6 @@ class SceneManager:
 
         except Exception as e:
             raise RuntimeError(f"add semantic camera failed '{prim_path}': {e}") from e
-
 
     def create_camera(self,
                       position: List[float],
@@ -538,7 +538,6 @@ class SceneManager:
 
         return {"status": "success", "result": new_prim_path}
 
-
     def create_robot(self, robot_type: str = "g1", position: List[float] = [0, 0, 0]) -> Dict[str, Any]:
         from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
         from config.variables import ASSET_PATH
@@ -609,7 +608,6 @@ class SceneManager:
         # 设置初始位姿
         robot.set_world_poses(positions=np.array([position]) / get_stage_units())
         return {"status": "success", "message": f"{robot_type} robot created at {new_prim_path}"}
-
 
     def create_isaac_shape(
             self,
@@ -813,7 +811,6 @@ class SceneManager:
             "object": created_object  # 返回创建的高层级对象，方便后续直接操作
         }
 
-
     def create_shape(
             self,
             shape_type: str,
@@ -956,7 +953,6 @@ class SceneManager:
         z = quat_xyzw[2]
 
         return [w, x, y, z]
-
 
     def set_prim_scale(self, prim_path: str, scale: list) -> dict:
         try:
@@ -1444,7 +1440,61 @@ class SceneManager:
                 "result": None,
             }
 
-    def load_scene(self, usd_path: str, prim_path_root: str = "/World/Scene"):
+    def disable_gravity_for_hierarchy(self, root_prim_path: str) -> dict:
+        """
+        递归地遍历指定路径下的所有Prim，并禁用任何找到的刚体的重力。
+
+        这是处理从外部文件加载的、作为静态背景的场景的最佳方法。
+
+        Args:
+            root_prim_path (str): 您加载的USD场景的根路径 (e.g., "/World/MyBuilding").
+
+        Returns:
+            dict: 操作结果的状态字典，包含修改的Prim数量。
+        """
+        try:
+            stage = omni.usd.get_context().get_stage()
+            if not stage:
+                return {"status": "error", "message": "No active USD stage."}
+
+            root_prim = stage.GetPrimAtPath(root_prim_path)
+            if not root_prim.IsValid():
+                return {"status": "error", "message": f"Root prim '{root_prim_path}' not found."}
+
+            print(f"INFO: Starting to disable gravity for all rigid bodies under '{root_prim_path}'...")
+
+            modified_prims_count = 0
+
+            # Usd.PrimRange 是一个高效的、可以遍历所有子孙节点的迭代器
+            for prim in Usd.PrimRange(root_prim):
+
+                # 1. 检查这个 Prim 是否是一个物理刚体
+                if True:
+                    # if prim.HasAPI(UsdPhysics.RigidBodyAPI):
+                    # 2. 应用 PhysX 专有的 API 以访问 'disableGravity' 属性
+                    physx_rigid_body_api = PhysxSchema.PhysxRigidBodyAPI.Apply(prim)
+
+                    # 3. 获取 'disableGravity' 属性并将其设置为 True
+                    #    (我们之前已经通过 dir() 验证了这个属性的存在)
+                    disable_gravity_attr = physx_rigid_body_api.GetDisableGravityAttr()
+                    disable_gravity_attr.Set(True)
+
+                    modified_prims_count += 1
+                    # print(f"  - Disabled gravity for: {prim.GetPath()}")
+
+            print(f"INFO: Gravity disabled for a total of {modified_prims_count} rigid bodies.")
+            return {
+                "status": "success",
+                "message": f"Disabled gravity for {modified_prims_count} prims under '{root_prim_path}'.",
+                "modified_count": modified_prims_count
+            }
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {"status": "error", "message": f"An unexpected error occurred: {str(e)}"}
+
+    def load_scene(self, usd_path: str, prim_path_root: str):
         """
 
         Create a scene from config.(But just input usd file yet.)
@@ -1459,7 +1509,7 @@ class SceneManager:
         ):
 
             from isaacsim.core.utils.prims import create_prim
-            create_prim(
+            root_prim = create_prim(
                 prim_path_root,
                 usd_path=usd_path,
                 # scale=self.simulation.scene_scale,
@@ -1467,6 +1517,10 @@ class SceneManager:
                 # translation=[0, 0, 0.81696],
                 # orientation=[0.610, -0.789, -0.05184, 0.040] # wxyz, xyz还是zyx顺序不确定
             )
+            # for prim in Usd.PrimRange(root_prim):
+            #     UsdPhysics.RigidBodyAPI.Apply(prim)
+            self.disable_gravity_for_hierarchy(root_prim_path=prim_path_root)
+
         else:
             raise RuntimeError("Env file path needs to end with .usd, .usda or .usdc .")
         return
@@ -1493,7 +1547,7 @@ class SceneManager:
         try:
             import os
             from pxr import Usd, Sdf
-            
+
             # 确定保存目录
             if save_directory is None:
                 save_directory = self.scene_repository_path
@@ -1502,17 +1556,17 @@ class SceneManager:
 
             # 确保保存目录存在
             os.makedirs(save_directory, exist_ok=True)
-            
+
             # 如果没有提供场景名称，使用时间戳
             if scene_name is None:
                 import datetime
                 scene_name = f"scene_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            
+
             # 构建完整的保存路径
             if not scene_name.endswith('.usd'):
                 scene_name += '.usd'
             save_path = os.path.join(save_directory, scene_name)
-            
+
             # 获取当前stage
             stage = omni.usd.get_context().get_stage()
             if not stage:
@@ -1521,24 +1575,24 @@ class SceneManager:
                     "message": "No active USD stage to save",
                     "result": None,
                 }
-            
+
             if flatten_scene:
                 # 方法1: 扁平化保存 - 将所有引用的资产嵌入到单个文件中
                 print(f"Flattening and saving scene to: {save_path}")
-                
+
                 # 创建一个新的stage用于扁平化
                 flattened_stage = Usd.Stage.CreateNew(save_path)
-                
+
                 # 复制根层的所有内容
                 root_layer = stage.GetRootLayer()
                 flattened_layer = flattened_stage.GetRootLayer()
-                
+
                 # 扁平化stage - 这会将所有引用的内容合并到一个文件中
                 stage.Flatten().Export(save_path)
-                
+
                 # 获取文件大小信息
                 file_size = os.path.getsize(save_path) / (1024 * 1024)  # MB
-                
+
                 return {
                     "status": "success",
                     "message": f"Scene flattened and saved successfully as {scene_name} at {save_path} (Size: {file_size:.2f} MB)",
@@ -1552,10 +1606,10 @@ class SceneManager:
                 # 方法2: 引用保存 - 只保存引用，文件较小
                 print(f"Saving scene with references to: {save_path}")
                 omni.usd.get_context().save_as_stage(save_path, None)
-                
+
                 # 获取文件大小信息
                 file_size = os.path.getsize(save_path) / 1024  # KB
-                
+
                 return {
                     "status": "success",
                     "message": f"Scene saved with references as {scene_name} at {save_path} (Size: {file_size:.2f} KB)",
@@ -1565,7 +1619,7 @@ class SceneManager:
                         "flattened": False
                     },
                 }
-                
+
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -1574,3 +1628,40 @@ class SceneManager:
                 "message": f"Failed to save scene: {e}",
                 "result": None,
             }
+
+    def enable_raycasting_for_prim(self, prim_path: str) -> dict:
+        """
+        为一个Prim显式地启用场景查询功能，使其可以被光线投射检测到。
+
+        Args:
+            prim_path (str): 目标Prim的USD路径。
+
+        Returns:
+            dict: 操作结果的状态字典。
+        """
+        try:
+            stage = omni.usd.get_context().get_stage()
+            if not stage:
+                return {"status": "error", "message": "No active USD stage."}
+
+            prim = stage.GetPrimAtPath(prim_path)
+            if not prim.IsValid():
+                return {"status": "error", "message": f"Prim at '{prim_path}' is not valid."}
+
+            # 1. 场景查询的属性属于 UsdPhysics.CollisionAPI
+            if not prim.HasAPI(UsdPhysics.CollisionAPI):
+                print(f"INFO: CollisionAPI not found on '{prim_path}'. Applying it now.")
+                collision_api = UsdPhysics.CollisionAPI.Apply(prim)
+            else:
+                collision_api = UsdPhysics.CollisionAPI(prim)
+
+            # 2. 核心操作：获取并设置'sceneQueryEnabled'属性为 True
+            #    这个属性默认是 False！
+            # collision_api.GetSceneQueryEnabledAttr().Set(True)
+
+            return {"status": "success", "message": f"Raycasting (Scene Query) successfully enabled for '{prim_path}'."}
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {"status": "error", "message": f"An unexpected error occurred: {str(e)}"}

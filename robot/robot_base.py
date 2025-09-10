@@ -268,7 +268,6 @@ class RobotBase:
     def put_down(self, robot_hand_prim_path: str, object_prim_path: str) -> dict:
         """
         通过删除关节并恢复物理属性来“放下”一个被抓取的物体。
-        此函数统一使用 omni.isaac.core API 进行运行时交互。
         """
 
         hand_prim = RigidPrim(prim_paths_expr=robot_hand_prim_path)
@@ -299,8 +298,7 @@ class RobotBase:
     def pickup_object_if_close_unified(self, robot_hand_prim_path: str, object_prim_path: str,
                                        distance_threshold: float = 2.0) -> dict:
         """
-        检查机器人手部与物体的距离，如果小于阈值，则执行一个稳定、健壮的抓取序列。
-        此函数统一使用 omni.isaac.core.prims.RigidPrim API 进行运行时交互。
+        检查机器人手部与物体的距离，如果小于阈值，则执行抓取。
         """
         hand_prim = RigidPrim(prim_paths_expr=robot_hand_prim_path)
         object_prim = RigidPrim(prim_paths_expr=object_prim_path)
@@ -346,10 +344,19 @@ class RobotBase:
                 "message": f"Object is too far to pick up ({distance:.2f}m > {distance_threshold}m)."
             }
 
+    def take_photo(self, file_path: str = None):
+        if self.camera is not None:
+            rgb = self.camera.get_rgb()
+            if rgb !=None and file_path is not None:
+                self.camera.save_rgb_to_file(rgb_tensor_gpu=rgb, file_path=file_path)
+            return rgb
+        else:
+            return None
+
     def quaternion_to_yaw(self, quaternion: Tuple[float, float, float, float]) -> float:
         """
         Args:
-            quaternion: 四元数
+            quaternion: 四元数, 顺序是
         Returns:
             yaw: 绕着z轴的旋转角度
         """

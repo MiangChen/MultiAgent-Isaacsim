@@ -86,7 +86,7 @@ def process_ros_skills(swarm_manager) -> None:
 
 # Skill execution functions with dependency injection
 def _skill_navigate_to(
-    swarm_manager, rc: str, rid: int, params: Dict[str, Any], semantic_map
+        swarm_manager, rc: str, rid: int, params: Dict[str, Any], semantic_map
 ) -> None:
     """Execute navigate-to skill with injected semantic map
 
@@ -112,8 +112,8 @@ def _skill_pick_up(swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> 
     """
     object_prim_path = params.get("object_prim_path")
     robot_prim_path = params.get("robot_prim_path")
-    return swarm_manager.robot_active[rc][rid].pickup_object_if_close_unified(robot_hand_prim_path=robot_prim_path, object_prim_path=object_prim_path)
-
+    return swarm_manager.robot_active[rc][rid].pickup_object_if_close_unified(robot_hand_prim_path=robot_prim_path,
+                                                                              object_prim_path=object_prim_path)
 
 
 def _skill_put_down(swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> None:
@@ -127,8 +127,12 @@ def _skill_put_down(swarm_manager, rc: str, rid: int, params: Dict[str, Any]) ->
     """
     object_prim_path = params.get("object_prim_path")
     robot_prim_path = params.get("robot_prim_path")
-    swarm_manager.robot_active[rc][rid].put_down(robot_hand_prim_path=robot_prim_path, object_prim_path=object_prim_path)
+    swarm_manager.robot_active[rc][rid].put_down(robot_hand_prim_path=robot_prim_path,
+                                                 object_prim_path=object_prim_path)
 
+def _skill_take_photo(swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> None:
+
+    swarm_manager.robot_active[rc][rid].take_photo(file_path=params.get("file_path"))
 
 _SKILL_TABLE = {
     "navigate-to": _skill_navigate_to,
