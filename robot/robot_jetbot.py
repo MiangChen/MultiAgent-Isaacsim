@@ -41,7 +41,7 @@ class RobotJetbot(RobotBase):
         self.node.register_feedback_publisher(
             robot_class = self.cfg_body.name_prefix,
             robot_id = self.cfg_body.id,
-            qos = 10
+            qos = 50
         )
 
         self.init_ros2()
@@ -116,12 +116,18 @@ class RobotJetbot(RobotBase):
         v_rotation = self.pid_angle.compute(delta_angle, dt=1 / 60)
         # 前进速度，和距离成正比
         k_forward = 1
-        v_forward = 30
+        # 前进速度：更大常数
+        v_forward = 60.0  # 原来 30
 
         # 合速度
         v_left = v_forward + v_rotation
         v_right = v_forward - v_rotation
-        v_max = 40
+
+        v_max = 80.0  # 原来 40
+
+        # 限幅
+        v_left = np.clip(v_left, -v_max, v_max)
+        v_right = np.clip(v_right, -v_max, v_max)
         if v_left > v_max:
             v_left = v_max
         elif v_left < -v_max:

@@ -10,7 +10,7 @@ def pre_initialize():
     parser = argparse.ArgumentParser(
         add_help=False
     )  # add_help=False 避免与后续的解析器冲突
-    parser.add_argument("--config", type=str, default="/home/ubuntu/multiagent-isaacsimROS/src/multiagent_isaacsim/multiagent_isaacsim/config/config_parameter.yaml")
+    parser.add_argument("--config", type=str, default="./config/config_parameter.yaml")
 
     args, unknown = parser.parse_known_args()
 
@@ -308,8 +308,6 @@ def main():
     count = 0
     logger.info("Starting main simulation loop...")
 
-    from skill.skill import _skill_navigate_to, _skill_pick_up, _skill_put_down, _skill_take_photo
-
     robot_prim_path = "/World/robot/jetbot/jetbot/jetbot_0/chassis"
     object_prim_path = "/World/object"
     object = {
@@ -326,12 +324,10 @@ def main():
     }
     scene_manager.create_shape_unified(**object)
 
-    _skill_navigate_to(
-        swarm_manager,
+    skill_manager._skill_navigate_to(
         rc="jetbot",
         rid=0,
         params={"goal": "place4"},
-        semantic_map=semantic_map,
     )
     flag = 0
     # Main simulation loop
@@ -341,16 +337,14 @@ def main():
         env.step(action=None)
 
         if count %60 == 0 and count !=0 :
-            _skill_take_photo(
-                swarm_manager,
+            skill_manager._skill_take_photo(
                 rc="jetbot",
                 rid=0,
                 params={"file_path": "/home/ubuntu/test.jpg"}
             )
 
         if flag == 0:
-            result = _skill_pick_up(
-                swarm_manager,
+            result = skill_manager._skill_pick_up(
                 rc="jetbot",
                 rid=0,
                 params={
@@ -362,8 +356,7 @@ def main():
                 flag = 1
 
         elif count > 500 and flag == 1:
-            result = _skill_put_down(
-                swarm_manager,
+            result = skill_manager._skill_put_down(
                 rc="jetbot",
                 rid=0,
                 params={

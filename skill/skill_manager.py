@@ -112,7 +112,7 @@ class SkillManager:
 
     # Skill execution functions with dependency injection
     def _skill_navigate_to(self,
-        swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> None:
+        rc: str, rid: int, params: Dict[str, Any]) -> None:
         """Execute navigate-to skill with injected semantic map
 
         Args:
@@ -121,12 +121,12 @@ class SkillManager:
             rid: Robot index
             params: Skill parameters containing 'area' key
         """
-        pos = json.loads(params["area"])
+#        pos = json.loads(params["area"])
         pos = [-4.5, 11.4, 0]  # FIXME: 临时覆盖
         logger.info(f"[Skill] {rc}-{rid} navigating to {pos}")
-        swarm_manager.robot_active[rc][rid].navigate_to(pos)
+        return self.swarm_manager.robot_active[rc][rid].navigate_to(pos)
 
-    def _skill_pick_up(self, swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> None:
+    def _skill_pick_up(self, rc: str, rid: int, params: Dict[str, Any]) -> None:
         """Execute pick-up skill
 
         Args:
@@ -136,9 +136,12 @@ class SkillManager:
             params: Skill parameters (unused for pick-up)
         """
         logger.info(f"[Skill] {rc}-{rid} executing pick-up")
-        self.swarm_manager.robot_active[rc][rid].pick_up()
+        object_prim_path = params.get("object_prim_path")
+        robot_prim_path = params.get("robot_prim_path")
+        return self.swarm_manager.robot_active[rc][rid].pickup_object_if_close_unified(robot_hand_prim_path=robot_prim_path,
+                                                                                  object_prim_path=object_prim_path)
 
-    def _skill_put_down(self, swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> None:
+    def _skill_put_down(self, rc: str, rid: int, params: Dict[str, Any]) -> None:
         """Execute put-down skill
 
         Args:
@@ -148,4 +151,24 @@ class SkillManager:
             params: Skill parameters (unused for put-down)
         """
         logger.info(f"[Skill] {rc}-{rid} executing put-down")
-        self.swarm_manager.robot_active[rc][rid].put_down()
+        object_prim_path = params.get("object_prim_path")
+        robot_prim_path = params.get("robot_prim_path")
+        return self.swarm_manager.robot_active[rc][rid].put_down(robot_hand_prim_path=robot_prim_path,
+                                                     object_prim_path=object_prim_path)
+
+    def _skill_take_photo(self, rc: str, rid: int, params: Dict[str, Any]) -> None:
+        """Execute take-photo skill
+
+        Args:
+            swarm_manager
+            rc: Robot class name
+            rid: Robot index
+            params: Skill parameters (requires 'file_path')
+        """
+        logger.info(f"[Skill] {rc}-{rid} executing take-photo")
+        file_path = params.get("file_path")
+        return self.swarm_manager.robot_active[rc][rid].take_photo(file_path=file_path)
+
+
+
+

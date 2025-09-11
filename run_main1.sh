@@ -97,6 +97,15 @@ fi
 "$PY_CONDA" -c "import importlib, sys; m=importlib.util.find_spec('rclpy');
 print('[CHECK] rclpy OK' if m else '[WARN] rclpy 未安装或不可用')" || true
 
+# ===== 设置 Python 的工作目录 =====
+PY_WORKDIR="${PY_WORKDIR:-/home/ubuntu/multiagent-isaacsimROS/src/multiagent_isaacsim/multiagent_isaacsim}"
+if [[ -d "$PY_WORKDIR" ]]; then
+  cd "$PY_WORKDIR"
+else
+  echo "[ERROR] 工作目录不存在: $PY_WORKDIR"
+  exit 1
+fi
+
 # ===== 启动 =====
 echo "[INFO] Python: $("$PY_CONDA" -V) @ $PY_CONDA"
 echo "[INFO] Launch: $MAIN_PY"

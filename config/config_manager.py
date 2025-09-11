@@ -28,7 +28,7 @@ class ConfigManager:
         parser.add_argument(
             "--config",
             type=str,
-            default="/home/ubuntu/multiagent-isaacsimROS/src/multiagent_isaacsim/multiagent_isaacsim/config/config_parameter.yaml",
+            default="./config/config_parameter.yaml",
             help="Path to the main YAML configuration file.",
         )
 

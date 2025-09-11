@@ -407,7 +407,7 @@ class RobotCf2x(RobotBase):
         v_world = np.array([dir_xy[0] * spd, dir_xy[1] * spd, 0.0], dtype=np.float32)
 
         # === 把速度交给“根刚体”（交给引擎积分） ===
-        self.robot_entity.set_linear_velocity(v_world)
+        self.robot_entity.set_linear_velocities(v_world)
 
         # 可选：如果希望机体绕 z 朝速度方向缓慢对齐，也可以给一个角速度：
         # self.robot_entity.set_angular_velocity(np.array([0.0, 0.0, yaw_rate], dtype=np.float32))
@@ -416,9 +416,21 @@ class RobotCf2x(RobotBase):
 
     def _params_from_pose(self, pos: np.ndarray, quat: np.ndarray) -> list[Parameter]:
 
+        p = np.asarray(pos, dtype=float)
+        q = np.asarray(quat, dtype=float)
+        if p.ndim >= 2:
+            p = p[0]
+        if q.ndim >= 2:
+            q = q[0]
+
+        # 现在期望 p.shape == (3,), q.shape == (4,)
+        if p.size < 3 or q.size < 4:
+            raise ValueError(f"Invalid pose shapes: pos={p.shape}, quat={q.shape}")
+
         # 保证是 float -> str
-        px, py, pz = float(pos[0]), float(pos[1]), float(pos[2])
-        qx, qy, qz, qw = float(quat[0]), float(quat[1]), float(quat[2]), float(quat[3])
+        px, py, pz = float(p[0]), float(p[1]), float(p[2])
+        # 这里假定四元数顺序为 [x, y, z, w]；如果你的数据是 wxyz，请对调
+        qx, qy, qz, qw = float(q[0]), float(q[1]), float(q[2]), float(q[3])
 
         base_return = [
             Parameter(key="pos_x", value=str(px)),
@@ -429,6 +441,8 @@ class RobotCf2x(RobotBase):
             Parameter(key="quat_z", value=str(qz)),
             Parameter(key="quat_w", value=str(qw)),
         ]
+
+        print(base_return)
 
         normal_return = [Parameter(key="status", value="normal"), *base_return]
         abnormal_return = [Parameter(key="status", value="abnormal"), *base_return]
@@ -474,7 +488,7 @@ class RobotCf2x(RobotBase):
         pos = positions[0]
         orn = orientations[0]
 
-        #    注：这些 API 返回 (N, 3) 的数组/张量；这里只取第 0 个
+        # 这些 API 返回 (N, 3) 的数组/张量；这里只取第 0 个
         lin_v = self.robot_entity.get_linear_velocities(indices=[0], clone=True)
         ang_v = self.robot_entity.get_angular_velocities(indices=[0], clone=True)
 
@@ -503,10 +517,17 @@ class RobotCf2x(RobotBase):
         msg.pose.position.y = float(pos[1])
         msg.pose.position.z = float(pos[2])
 
-        msg.pose.orientation.x = float(orn.x)
-        msg.pose.orientation.y = float(orn.y)
-        msg.pose.orientation.z = float(orn.z)
-        msg.pose.orientation.w = float(orn.w)
+        # 兼容 ndarray（常见返回）与带属性的四元数对象两种情况
+        if hasattr(orn, "x"):
+            qx, qy, qz, qw = orn.x, orn.y, orn.z, orn.w
+        else:
+            # 约定顺序为 [x, y, z, w]；若你的资源是 wxyz，请按需调整
+            qx, qy, qz, qw = float(orn[0]), float(orn[1]), float(orn[2]), float(orn[3])
+
+        msg.pose.orientation.x = float(qx)
+        msg.pose.orientation.y = float(qy)
+        msg.pose.orientation.z = float(qz)
+        msg.pose.orientation.w = float(qw)
 
         self.node.publish_motion(
             robot_class=self.cfg_body.name_prefix,
