@@ -61,6 +61,8 @@ class AppContainer(containers.DeclarativeContainer):
         swarm_manager = swarm_manager,
     )
 
+
+
     env = providers.Factory(
         Env,
         simulation_app=providers.Object(None),  # 保持不变，由 main.py 运行时提供

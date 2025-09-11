@@ -6,7 +6,6 @@ import json
 from log.log_manager import LogManager
 from gsi_msgs.gsi_msgs_helper import Plan
 from map.map_semantic_map import MapSemantic
-from robot.swarm_manager import SwarmManager
 
 # Global variables for ROS integration
 _skill_queues = defaultdict(deque)
@@ -16,7 +15,7 @@ logger = LogManager.get_logger(__name__)
 
 class SkillManager:
 
-    def __init__(self, semantic_map: MapSemantic, swarm_manager: SwarmManager):
+    def __init__(self, semantic_map: MapSemantic, swarm_manager):
 
         self.previous_skill = []
         self.semantic_map = semantic_map
@@ -85,8 +84,6 @@ class SkillManager:
         if not state_skill_complete_all:
             return
 
-        logger.info("[Scheduler] All robots idle, starting to schedule new skills")
-
         # 2. 采用 "先收集任务，再执行" 的模式优化锁的使用
         skills_to_execute = []
         with _skill_lock:
@@ -115,7 +112,7 @@ class SkillManager:
 
     # Skill execution functions with dependency injection
     def _skill_navigate_to(self,
-        swarm_manager: SwarmManager, rc: str, rid: int, params: Dict[str, Any]) -> None:
+        swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> None:
         """Execute navigate-to skill with injected semantic map
 
         Args:
@@ -129,7 +126,7 @@ class SkillManager:
         logger.info(f"[Skill] {rc}-{rid} navigating to {pos}")
         swarm_manager.robot_active[rc][rid].navigate_to(pos)
 
-    def _skill_pick_up(self, swarm_manager : SwarmManager, rc: str, rid: int, params: Dict[str, Any]) -> None:
+    def _skill_pick_up(self, swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> None:
         """Execute pick-up skill
 
         Args:
@@ -141,7 +138,7 @@ class SkillManager:
         logger.info(f"[Skill] {rc}-{rid} executing pick-up")
         self.swarm_manager.robot_active[rc][rid].pick_up()
 
-    def _skill_put_down(self, swarm_manager : SwarmManager, rc: str, rid: int, params: Dict[str, Any]) -> None:
+    def _skill_put_down(self, swarm_manager, rc: str, rid: int, params: Dict[str, Any]) -> None:
         """Execute put-down skill
 
         Args:

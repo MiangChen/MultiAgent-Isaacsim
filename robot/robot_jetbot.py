@@ -17,7 +17,7 @@ from isaacsim.core.prims import Articulation
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.types import ArticulationActions
 
-from plan_msgs.msg import RobotFeedback, SkillInfo, Parameter
+from gsi_msgs.gsi_msgs_helper import Plan, RobotFeedback, SkillInfo, Parameter, VelTwistPose
 
 class RobotJetbot(RobotBase):
     def __init__(self, cfg_body: RobotCfgJetbot, cfg_camera: CameraCfg = None,
@@ -32,7 +32,9 @@ class RobotJetbot(RobotBase):
         self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
 
         self.counter = 0
-        self.pub_period = 10
+        self.pub_period = 50
+        self.previous_pos = None
+        self.movement_threshold = 0.1 # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
 
         self.node = node
 
@@ -114,12 +116,12 @@ class RobotJetbot(RobotBase):
         v_rotation = self.pid_angle.compute(delta_angle, dt=1 / 60)
         # 前进速度，和距离成正比
         k_forward = 1
-        v_forward = 15
+        v_forward = 30
 
         # 合速度
         v_left = v_forward + v_rotation
         v_right = v_forward - v_rotation
-        v_max = 20
+        v_max = 40
         if v_left > v_max:
             v_left = v_max
         elif v_left < -v_max:
@@ -135,7 +137,8 @@ class RobotJetbot(RobotBase):
         # 保证是 float -> str
         px, py, pz = float(pos[0]), float(pos[1]), float(pos[2])
         qx, qy, qz, qw = float(quat[0]), float(quat[1]), float(quat[2]), float(quat[3])
-        return [
+
+        base_return = [
             Parameter(key="pos_x", value=str(px)),
             Parameter(key="pos_y", value=str(py)),
             Parameter(key="pos_z", value=str(pz)),
@@ -144,6 +147,21 @@ class RobotJetbot(RobotBase):
             Parameter(key="quat_z", value=str(qz)),
             Parameter(key="quat_w", value=str(qw)),
         ]
+
+        normal_return = [Parameter(key="status", value="normal"), *base_return]
+        abnormal_return = [Parameter(key="status", value="abnormal"), *base_return]
+
+        if self.previous_pos:
+            if np.sqrt((self.previous_pos[0] - px) ** 2 + (self.previous_pos[1] - py) ** 2 + (self.previous_pos[2] - pz) ** 2) < self.movement_threshold:
+                self.previous_pos = [px, py, pz]
+                return abnormal_return
+            else:
+                self.previous_pos = [px, py, pz]
+                return normal_return
+
+        else:
+            self.previous_pos = [px, py, pz]
+            return normal_return
 
     def _publish_feedback_pose(self):
         pos, quat = self.get_world_poses()
@@ -162,12 +180,65 @@ class RobotJetbot(RobotBase):
 
         self.node.publish_navigation_feedback(self.cfg_body.name_prefix,self.cfg_body.id, msg)
 
+    def _publish_status_pose(self):
+
+        if not getattr(self, 'ros2_initialized', False):
+            return
+
+        import numpy as np
+
+        positions, orientations = self.robot_entity.get_world_poses()
+        pos = positions[0]
+        orn = orientations[0]
+
+        #    注：这些 API 返回 (N, 3) 的数组/张量；这里只取第 0 个
+        lin_v = self.robot_entity.get_linear_velocities(indices=[0], clone=True)
+        ang_v = self.robot_entity.get_angular_velocities(indices=[0], clone=True)
+
+        # 统一成 numpy，做个健壮性兜底
+        lin_v0 = np.asarray(lin_v)[0] if np.size(lin_v) else np.zeros(3, dtype=float)
+        ang_v0 = np.asarray(ang_v)[0] if np.size(ang_v) else np.zeros(3, dtype=float)
+
+        msg = VelTwistPose()
+
+        # vel 字段：保持与你原逻辑一致，全部置 0
+        msg.vel.x = 0.0
+        msg.vel.y = 0.0
+        msg.vel.z = 0.0
+
+        # twist：使用仿真里的实时速度
+        msg.twist.linear.x = float(lin_v0[0])
+        msg.twist.linear.y = float(lin_v0[1])
+        msg.twist.linear.z = float(lin_v0[2])
+
+        msg.twist.angular.x = float(ang_v0[0])
+        msg.twist.angular.y = float(ang_v0[1])
+        msg.twist.angular.z = float(ang_v0[2])
+
+        # pose：使用仿真里的实时位置与朝向
+        msg.pose.position.x = float(pos[0])
+        msg.pose.position.y = float(pos[1])
+        msg.pose.position.z = float(pos[2])
+
+        msg.pose.orientation.x = float(orn.x)
+        msg.pose.orientation.y = float(orn.y)
+        msg.pose.orientation.z = float(orn.z)
+        msg.pose.orientation.w = float(orn.w)
+
+        self.node.publish_motion(
+            robot_class=self.cfg_body.name_prefix,
+            robot_id=self.cfg_body.id,
+            msg=msg
+        )
+
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
+
+        self._publish_status_pose()
         self.counter += 1
 
-        if self.flag_world_reset == True:
-            if self.flag_action_navigation == True:
+        if self.flag_world_reset:
+            if self.flag_action_navigation:
                 self.move_along_path()  # 每一次都计算下速度
                 self.step(self.action)
                 # if self.counter % self.pub_period == 0:
