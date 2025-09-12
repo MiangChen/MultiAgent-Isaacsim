@@ -8,6 +8,9 @@ from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from robot.robot_cfg import RobotCfg
 from robot.robot_trajectory import Trajectory
 from scene.scene_manager import SceneManager
+from log.log_manager import LogManager
+
+logger = LogManager.get_logger(__name__)
 
 from pxr import Usd, UsdGeom
 import numpy as np
@@ -22,6 +25,7 @@ import isaacsim.core.utils.prims as prims_utils
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.viewports import create_viewport_for_camera, set_camera_view, set_intrinsics_matrix
 
+from gsi_msgs.gsi_msgs_helper import Plan, RobotFeedback, SkillInfo, Parameter, VelTwistPose
 
 def _get_viewport_manager_from_container():
     """
@@ -85,9 +89,9 @@ class RobotBase:
             cfg_body.euler_degree = None
         else:
             if prim:
-                print(f"Prim at {prim.GetPath()} is not Xformable or does not exist.")
+                logger.info(f"Prim at {prim.GetPath()} is not Xformable or does not exist.")
             else:
-                print(f"Prim not found at path {prim.GetPath()}")
+                logger.info(f"Prim not found at path {prim.GetPath()}")
 
         # 角度和4元数转化
         if cfg_body.euler_degree is not None:
@@ -126,7 +130,7 @@ class RobotBase:
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
         if cfg_camera is not None:
-            print(f"create camera for {self.cfg_body.name_prefix}")
+            logger.info(f"create camera for {self.cfg_body.name_prefix}")
             self.camera = CameraBase(cfg_body, cfg_camera)
             self.camera.create_camera(camera_path=self.cfg_body.camera_path)
 
@@ -140,6 +144,11 @@ class RobotBase:
 
         self.current_task_id = "0"
         self.current_task_name = "n"
+
+        # 以下三个变量用于记录navigate开始时的机器人位置，用于计算feedback里的progress
+        self.nav_begin = None
+        self.nav_end = None
+        self.nav_dist = 1.0
 
     def get_obs(self) -> dict:
         """Get observation of robot, including controllers, cameras, and world pose.
@@ -193,6 +202,9 @@ class RobotBase:
             self.state_skill_complete = True
             return True
 
+    def _calc_dist(self, pos1: np.ndarray = None, pos2: np.ndarray = None):
+        return ( (pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2 + (pos1[2] - pos2[2]) ** 2 ) ** 0.5
+
     def navigate_to(self, pos_target: np.ndarray = None, orientation_target: np.ndarray = None,
                     reset_flag: bool = False, load_from_file: bool = False) -> None:
         """
@@ -211,8 +223,12 @@ class RobotBase:
         if pos_target == None:
             raise ValueError("no target position")
         elif pos_target[2] != 0:
-            raise ValueError("小车的z轴高度得在平面上")
+            raise ValueError("The z-axis height of the robot must be on the plane")
         pos_robot = self.get_world_poses()[0]
+
+        self.nav_begin = pos_robot
+        self.nav_end = pos_target
+        self.nav_dist = self._calc_dist(self.nav_begin, self.nav_end)
 
         pos_index_target = self.map_grid.compute_index(pos_target)
         pos_index_robot = self.map_grid.compute_index(pos_robot)
@@ -237,7 +253,7 @@ class RobotBase:
         for i in range(path.shape[0]):  # 把index变成连续实际世界的坐标
             real_path[i] = self.map_grid.pos_map[tuple(path[i])]
             real_path[i][-1] = 0
-        print(real_path)
+        logger.info(real_path)
 
         self.move_along_path(real_path, flag_reset=True)
 
@@ -278,6 +294,9 @@ class RobotBase:
         joint_path = f"/World/grasp_joint_{object_prim.name}"
         stage = self.scene_manager._stage
         joint_prim = stage.GetPrimAtPath(joint_path)
+
+
+
         from pxr import UsdPhysics
         if joint_prim.IsValid():
             joint = UsdPhysics.Joint(joint_prim)
@@ -285,14 +304,29 @@ class RobotBase:
             # 碰撞属性
             self.scene_manager.set_collision_enabled(object_prim_path, collision_enabled=True)
             # 模拟惯性
+            self._publish_feedback(
+                params=[Parameter(key="status", value="normal"),
+                        Parameter(key="reason", value="")],
+                progress=50
+            )
             hand_lin_vel = hand_prim.get_linear_velocities()
             hand_ang_vel = hand_prim.get_angular_velocities()
             object_prim.set_linear_velocities(hand_lin_vel)
             object_prim.set_angular_velocities(hand_ang_vel)
         else:
-            print(f"WARNING: Joint '{joint_path}' not found, cannot disable.")
+            self._publish_feedback(
+                params=[Parameter(key="status", value="failed"),
+                        Parameter(key="reason", value="Joint not found")],
+                progress=0
+            )
+            logger.info(f"WARNING: Joint '{joint_path}' not found, cannot disable.")
 
-        print(f"INFO: Object '{object_prim.name}' dropped and physics restored.")
+        logger.info(f"INFO: Object '{object_prim.name}' dropped and physics restored.")
+        self._publish_feedback(
+            params=[Parameter(key="status", value="normal"),
+                    Parameter(key="reason", value="")],
+            progress=100
+        )
         return {"status": "success", "message": "Object dropped successfully."}
 
     def pickup_object_if_close_unified(self, robot_hand_prim_path: str, object_prim_path: str,
@@ -310,6 +344,11 @@ class RobotBase:
 
         if distance <= distance_threshold:
 
+            self._publish_feedback(
+                params=[Parameter(key="status", value="normal"),
+                        Parameter(key="reason", value="")],
+                progress=30
+            )
             # 停止物体当前的任何运动，清除惯性
             object_prim.set_linear_velocities(np.zeros(3))
             object_prim.set_angular_velocities(np.zeros(3))
@@ -325,9 +364,15 @@ class RobotBase:
             stage = self.scene_manager._stage  # 假设可以从SceneManager获取stage
             joint_prim = stage.GetPrimAtPath(joint_path)
 
+            self._publish_feedback(
+                params=[Parameter(key="status", value="normal"),
+                        Parameter(key="reason", value="")],
+                progress=60
+            )
+
             # 如果关节不存在，就创建一个。这通常只在第一次抓取时发生。
             if not joint_prim.IsValid():
-                print(f"INFO: Joint '{joint_path}' not found, creating it for the first time.")
+                logger.info(f"INFO: Joint '{joint_path}' not found, creating it for the first time.")
                 self.scene_manager.create_joint(
                     joint_path=joint_path, joint_type="fixed",
                     body0=robot_hand_prim_path, body1=object_prim_path,
@@ -337,8 +382,19 @@ class RobotBase:
             from pxr import UsdPhysics
             joint = UsdPhysics.Joint(joint_prim)
             joint.GetJointEnabledAttr().Set(True)  # <-- 关键的状态切换！
+
+            self._publish_feedback(
+                params=[Parameter(key="status", value="normal"),
+                        Parameter(key="reason", value="")],
+                progress=100
+            )
+
             return {"status": "success"}
         else:
+            self._publish_feedback(
+                params = [Parameter(key="status", value="failed"),Parameter(key="reason", value="Object is too far to pick up")],
+                progress = 0
+            )
             return {
                 "status": "skipped",
                 "message": f"Object is too far to pick up ({distance:.2f}m > {distance_threshold}m)."
@@ -379,7 +435,7 @@ class RobotBase:
 
     def _initialize_third_person_camera(self):
         """初始化第三人称相机并注册到ViewportManager"""
-        print(f"为机器人 {self.cfg_body.id} 创建第三人称相机...")
+        logger.info(f"Creating third-person camera for robot {self.cfg_body.id}...")
 
         # 1. 为相机创建唯一的prim路径和视口名称
         self.camera_prim_path = f"/World/Robot_{self.cfg_body.id}_Camera"
@@ -409,7 +465,7 @@ class RobotBase:
             success = self.viewport_manager.register_viewport(self.viewport_name, viewport_obj)
             if success:
                 self.viewport_manager.map_camera(self.viewport_name, self.camera_prim_path)
-                print(f"Robot {self.cfg_body.id} viewport registered to ViewportManager")
+                logger.info(f"Robot {self.cfg_body.id} viewport registered to ViewportManager")
             else:
                 raise RuntimeError(f"Failed to register viewport for robot {self.cfg_body.id}")
 
@@ -448,6 +504,126 @@ class RobotBase:
             'robot_id': self.cfg_body.id if self.cfg_body else None,
             'enabled': self.cfg_camera_third_person.enabled if self.cfg_camera_third_person else False
         }
+
+    def _params_from_pose(self, pos: np.ndarray, quat: np.ndarray) -> list[Parameter]:
+    # TODO:对齐这个param的类型
+        p = np.asarray(pos, dtype=float)
+        q = np.asarray(quat, dtype=float)
+        if p.ndim >= 2:
+            p = p[0]
+        if q.ndim >= 2:
+            q = q[0]
+
+        # 现在期望 p.shape == (3,), q.shape == (4,)
+        if p.size < 3 or q.size < 4:
+            raise ValueError(f"Invalid pose shapes: pos={p.shape}, quat={q.shape}")
+
+        # 保证是 float -> str
+        px, py, pz = float(p[0]), float(p[1]), float(p[2])
+        # 这里假定四元数顺序为 [x, y, z, w]；如果你的数据是 wxyz，请对调
+        qx, qy, qz, qw = float(q[0]), float(q[1]), float(q[2]), float(q[3])
+
+        base_return = [
+            Parameter(key="pos_x", value=str(px)),
+            Parameter(key="pos_y", value=str(py)),
+            Parameter(key="pos_z", value=str(pz)),
+            Parameter(key="quat_x", value=str(qx)),
+            Parameter(key="quat_y", value=str(qy)),
+            Parameter(key="quat_z", value=str(qz)),
+            Parameter(key="quat_w", value=str(qw)),
+        ]
+
+        print(base_return)
+
+        normal_return = [Parameter(key="status", value="normal"), *base_return]
+        abnormal_return = [Parameter(key="status", value="abnormal"), *base_return]
+
+        if self.previous_pos:
+            if np.sqrt((self.previous_pos[0] - px) ** 2 + (self.previous_pos[1] - py) ** 2 + (self.previous_pos[2] - pz) ** 2) < self.movement_threshold:
+                self.previous_pos = [px, py, pz]
+                return abnormal_return
+            else:
+                self.previous_pos = [px, py, pz]
+                return normal_return
+
+        else:
+            self.previous_pos = [px, py, pz]
+            return normal_return
+
+    def _publish_feedback(self, params, progress: int = 1, object_id: str = ""):
+
+        pos, quat = self.robot_entity.get_world_poses()
+        params = self._params_from_pose(pos, quat),
+
+        skill = SkillInfo(
+            skill = self.current_task_name,
+            params = params,
+            object_id = object_id,
+            task_id = self.current_task_id,
+            progress = progress, # progress 是当前技能的执行进度，progress是从0到100的一个 int32
+        )
+
+        msg = RobotFeedback(
+            robot_id = f"{self.cfg_body.name_prefix}_{self.cfg_body.id}",
+            skill_feedback = skill,
+        )
+
+        self.node.publish_feedback(self.cfg_body.name_prefix,self.cfg_body.id, msg)
+
+    def _publish_status_pose(self):
+
+        import numpy as np
+
+        positions, orientations = self.robot_entity.get_world_poses()
+        pos = positions[0]
+        orn = orientations[0]
+
+        # 这些 API 返回 (N, 3) 的数组/张量；这里只取第 0 个
+        lin_v = self.robot_entity.get_linear_velocities(indices=[0], clone=True)
+        ang_v = self.robot_entity.get_angular_velocities(indices=[0], clone=True)
+
+        # 统一成 numpy，做个健壮性兜底
+        lin_v0 = np.asarray(lin_v)[0] if np.size(lin_v) else np.zeros(3, dtype=float)
+        ang_v0 = np.asarray(ang_v)[0] if np.size(ang_v) else np.zeros(3, dtype=float)
+
+        msg = VelTwistPose()
+
+        # vel 字段：保持与你原逻辑一致，全部置 0
+        msg.vel.x = 0.0
+        msg.vel.y = 0.0
+        msg.vel.z = 0.0
+
+        # twist：使用仿真里的实时速度
+        msg.twist.linear.x = float(lin_v0[0])
+        msg.twist.linear.y = float(lin_v0[1])
+        msg.twist.linear.z = float(lin_v0[2])
+
+        msg.twist.angular.x = float(ang_v0[0])
+        msg.twist.angular.y = float(ang_v0[1])
+        msg.twist.angular.z = float(ang_v0[2])
+
+        # pose：使用仿真里的实时位置与朝向
+        msg.pose.position.x = float(pos[0])
+        msg.pose.position.y = float(pos[1])
+        msg.pose.position.z = float(pos[2])
+
+        # 兼容 ndarray（常见返回）与带属性的四元数对象两种情况
+        if hasattr(orn, "x"):
+            qx, qy, qz, qw = orn.x, orn.y, orn.z, orn.w
+        else:
+            # 约定顺序为 [x, y, z, w]；若你的资源是 wxyz，请按需调整
+            qx, qy, qz, qw = float(orn[0]), float(orn[1]), float(orn[2]), float(orn[3])
+
+        msg.pose.orientation.x = float(qx)
+        msg.pose.orientation.y = float(qy)
+        msg.pose.orientation.z = float(qz)
+        msg.pose.orientation.w = float(qw)
+
+        self.node.publish_motion(
+            robot_class=self.cfg_body.name_prefix,
+            robot_id=self.cfg_body.id,
+            msg=msg
+        )
 
 
 if __name__ == "__main__":

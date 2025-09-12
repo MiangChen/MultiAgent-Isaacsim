@@ -8,7 +8,7 @@ from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
-from ros.ros_node import SwarmNode
+from ros.node import SwarmNode
 from robot.robot_cfg_jetbot import RobotCfgJetbot
 
 import carb
@@ -43,8 +43,11 @@ class RobotJetbot(RobotBase):
             robot_id = self.cfg_body.id,
             qos = 50
         )
-
-        self.init_ros2()
+        self.node.register_motion_publisher(
+            robot_class = self.cfg_body.name_prefix,
+            robot_id = self.cfg_body.id,
+            qos = 50
+        )
 
     def initialize(self) -> None:
         super().initialize()
@@ -96,6 +99,10 @@ class RobotJetbot(RobotBase):
         速度有两个分两，自转的分量 + 前进的分量
         """
         pos, quat = self.get_world_poses()  # self.get_world_pose()  ## type np.array
+
+        if self.counter % self.pub_period == 0:
+            self._publish_feedback(params = self._params_from_pose(pos, quat), progress = self._calc_dist(pos, self.nav_end)*100 / self.nav_dist)
+
         # 获取2D方向的朝向，逆时针是正
         yaw = self.quaternion_to_yaw(quat)
         # 获取机器人和目标连线的XY平面上的偏移角度
@@ -110,6 +117,7 @@ class RobotJetbot(RobotBase):
             delta_angle -= 2 * np.pi
         if np.linalg.norm(target_pos[0:2] - pos[0:2]) < 0.1:
             self.action = [0, 0]
+            self._publish_feedback(params = self._params_from_pose(pos, quat), progress = 100)
             return True  # 已经到达目标点附近10cm, 停止运动
 
         k_rotate = 1 / np.pi
@@ -139,104 +147,6 @@ class RobotJetbot(RobotBase):
         self.action = [v_left, v_right]
         return False  # 还没有到达
 
-    def _params_from_pose(self, pos: np.ndarray, quat: np.ndarray) -> list[Parameter]:
-        # 保证是 float -> str
-        px, py, pz = float(pos[0]), float(pos[1]), float(pos[2])
-        qx, qy, qz, qw = float(quat[0]), float(quat[1]), float(quat[2]), float(quat[3])
-
-        base_return = [
-            Parameter(key="pos_x", value=str(px)),
-            Parameter(key="pos_y", value=str(py)),
-            Parameter(key="pos_z", value=str(pz)),
-            Parameter(key="quat_x", value=str(qx)),
-            Parameter(key="quat_y", value=str(qy)),
-            Parameter(key="quat_z", value=str(qz)),
-            Parameter(key="quat_w", value=str(qw)),
-        ]
-
-        normal_return = [Parameter(key="status", value="normal"), *base_return]
-        abnormal_return = [Parameter(key="status", value="abnormal"), *base_return]
-
-        if self.previous_pos:
-            if np.sqrt((self.previous_pos[0] - px) ** 2 + (self.previous_pos[1] - py) ** 2 + (self.previous_pos[2] - pz) ** 2) < self.movement_threshold:
-                self.previous_pos = [px, py, pz]
-                return abnormal_return
-            else:
-                self.previous_pos = [px, py, pz]
-                return normal_return
-
-        else:
-            self.previous_pos = [px, py, pz]
-            return normal_return
-
-    def _publish_feedback_pose(self):
-        pos, quat = self.get_world_poses()
-
-        skill = SkillInfo(
-            skill = self.current_task_name,
-            params = self._params_from_pose(pos, quat),
-            object_id = "",
-            task_id = self.current_task_id,
-        )
-
-        msg = RobotFeedback(
-            robot_id = f"{self.cfg_body.name_prefix}_{self.cfg_body.id}",
-            skill_feedback = skill,
-        )
-
-        self.node.publish_navigation_feedback(self.cfg_body.name_prefix,self.cfg_body.id, msg)
-
-    def _publish_status_pose(self):
-
-        if not getattr(self, 'ros2_initialized', False):
-            return
-
-        import numpy as np
-
-        positions, orientations = self.robot_entity.get_world_poses()
-        pos = positions[0]
-        orn = orientations[0]
-
-        #    注：这些 API 返回 (N, 3) 的数组/张量；这里只取第 0 个
-        lin_v = self.robot_entity.get_linear_velocities(indices=[0], clone=True)
-        ang_v = self.robot_entity.get_angular_velocities(indices=[0], clone=True)
-
-        # 统一成 numpy，做个健壮性兜底
-        lin_v0 = np.asarray(lin_v)[0] if np.size(lin_v) else np.zeros(3, dtype=float)
-        ang_v0 = np.asarray(ang_v)[0] if np.size(ang_v) else np.zeros(3, dtype=float)
-
-        msg = VelTwistPose()
-
-        # vel 字段：保持与你原逻辑一致，全部置 0
-        msg.vel.x = 0.0
-        msg.vel.y = 0.0
-        msg.vel.z = 0.0
-
-        # twist：使用仿真里的实时速度
-        msg.twist.linear.x = float(lin_v0[0])
-        msg.twist.linear.y = float(lin_v0[1])
-        msg.twist.linear.z = float(lin_v0[2])
-
-        msg.twist.angular.x = float(ang_v0[0])
-        msg.twist.angular.y = float(ang_v0[1])
-        msg.twist.angular.z = float(ang_v0[2])
-
-        # pose：使用仿真里的实时位置与朝向
-        msg.pose.position.x = float(pos[0])
-        msg.pose.position.y = float(pos[1])
-        msg.pose.position.z = float(pos[2])
-
-        msg.pose.orientation.x = float(orn.x)
-        msg.pose.orientation.y = float(orn.y)
-        msg.pose.orientation.z = float(orn.z)
-        msg.pose.orientation.w = float(orn.w)
-
-        self.node.publish_motion(
-            robot_class=self.cfg_body.name_prefix,
-            robot_id=self.cfg_body.id,
-            msg=msg
-        )
-
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
 
@@ -247,8 +157,8 @@ class RobotJetbot(RobotBase):
             if self.flag_action_navigation:
                 self.move_along_path()  # 每一次都计算下速度
                 self.step(self.action)
-                # if self.counter % self.pub_period == 0:
-                #     self._publish_feedback_pose()
+                if self.counter % self.pub_period == 0:
+                    self._publish_feedback_pose()
 
         return
 
