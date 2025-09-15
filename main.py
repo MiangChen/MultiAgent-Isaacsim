@@ -247,6 +247,7 @@ def main():
     scene_manager = container.scene_manager()
     grid_map = container.grid_map()
     semantic_map = container.semantic_map()
+    skill_manager = container.skill_manager()
     viewport_manager = container.viewport_manager()
     world = container.world()
     env = container.env()
@@ -307,8 +308,6 @@ def main():
     count = 0
     logger.info("Starting main simulation loop...")
 
-    from skill.skill import _skill_navigate_to, _skill_pick_up, _skill_put_down, _skill_take_photo
-
     robot_prim_path = "/World/robot/jetbot/jetbot/jetbot_0/chassis"
     object_prim_path = "/World/object"
     object = {
@@ -325,12 +324,10 @@ def main():
     }
     scene_manager.create_shape_unified(**object)
 
-    _skill_navigate_to(
-        swarm_manager,
+    skill_manager._skill_navigate_to(
         rc="jetbot",
         rid=0,
         params={"goal": "place4"},
-        semantic_map=semantic_map,
     )
     flag = 0
     # Main simulation loop
@@ -339,18 +336,15 @@ def main():
         # World step
         env.step(action=None)
 
-        if count %60 == 0 and count !=0 :
-            # _skill_take_photo(
-            #     swarm_manager,
-            #     rc="jetbot",
-            #     rid=0,
-            #     params={"file_path": "/home/ubuntu/test.jpg"}
-            # )
-            pass
+        if count % 60 == 0 and count != 0:
+            skill_manager._skill_take_photo(
+                rc="jetbot",
+                rid=0,
+                params={"file_path": "/home/ubuntu/test.jpg"}
+            )
 
         if flag == 0:
-            result = _skill_pick_up(
-                swarm_manager,
+            result = skill_manager._skill_pick_up(
                 rc="jetbot",
                 rid=0,
                 params={
@@ -362,8 +356,7 @@ def main():
                 flag = 1
 
         elif count > 500 and flag == 1:
-            result = _skill_put_down(
-                swarm_manager,
+            result = skill_manager._skill_put_down(
                 rc="jetbot",
                 rid=0,
                 params={
@@ -412,10 +405,8 @@ def main():
         # process_semantic_detection(semantic_camera, semantic_map)
 
         # Process ROS skills if ROS is enabled
-        # if config_manager.get("ros"):
-        #     from skill.skill import process_ros_skills
-        #
-        #     process_ros_skills(swarm_manager)
+        if config_manager.get("ros"):
+            skill_manager.process_ros_skills()
 
         count += 1
 

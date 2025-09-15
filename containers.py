@@ -11,6 +11,7 @@ from robot.swarm_manager import SwarmManager
 from ros.ros_manager import RosManager
 from scene.scene_manager import SceneManager
 from ui.viewport_manager import ViewportManager
+from skill.skill_manager import SkillManager
 
 
 class AppContainer(containers.DeclarativeContainer):
@@ -53,6 +54,12 @@ class AppContainer(containers.DeclarativeContainer):
         map_grid=grid_map,
         ros_manager=ros_manager,
         scene_manager=scene_manager,
+    )
+
+    skill_manager = providers.Singleton(
+        SkillManager,
+        semantic_map=semantic_map,
+        swarm_manager=swarm_manager,
     )
 
     env = providers.Factory(

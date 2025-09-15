@@ -2,9 +2,7 @@ import numpy as np
 import omni
 import omni.appwindow
 from isaacsim.core.api.scenes import Scene
-# from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 
-# from controller.controller_pid import ControllerPID
 from camera.camera_cfg import CameraCfg
 from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from map.map_grid_map import GridMap
@@ -15,8 +13,10 @@ from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_drone_cf2x import RobotCfgCf2x
 import rclpy
 from ros.ros_node import SwarmNode
+
 from geometry_msgs.msg import Pose, Twist, Vector3
-from plan_msgs.msg import VelTwistPose
+from gsi_msgs.gsi_msgs_helper import Plan, RobotFeedback, SkillInfo, Parameter, VelTwistPose
+
 import threading
 
 
@@ -35,8 +35,9 @@ class RobotCf2x(RobotBase):
 
     def __init__(self, cfg_body: RobotCfgCf2x, cfg_camera: CameraCfg = None,
                  cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None, node: SwarmNode = None, scene_manager = None) -> None:
-        super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid, node=node, scene_manager=scene_manager)
+                 map_grid: GridMap = None, node: SwarmNode = None, scene_manager=None) -> None:
+        super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid, node=node,
+                         scene_manager=scene_manager)
 
         self.is_drone = True  # 标记为无人机
         self.controller = ControllerCf2x()
@@ -68,24 +69,35 @@ class RobotCf2x(RobotBase):
         self.ros2_initialized = False
         self._ros2_lock = threading.Lock()  # ← 这里初始化了互斥锁
 
+        self.counter = 0
+        self.pub_period = 50
+        self.previous_pos = None
+        self.movement_threshold = 0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
+
+        # —— 平滑导航配置（无人机专用）——
+        self.nav_target_xy = None  # 目标点的 XY
+        self.nav_max_speed = 0.5  # 导航最大水平速度
+        self.nav_slow_radius = 3.0  # 减速起始半径（m）
+        self.nav_stop_radius = 0.30  # 到点判定半径（m）
+
         self.node = node
 
         self.node.register_feedback_publisher(
-            robot_class = self.cfg_body.name_prefix,
-            robot_id = self.cfg_body.id,
-            qos = 10
+            robot_class=self.cfg_body.name_prefix,
+            robot_id=self.cfg_body.id,
+            qos=50
         )
         self.node.register_motion_publisher(
-            robot_class = self.cfg_body.name_prefix,
-            robot_id = self.cfg_body.id,
-            qos = 50
+            robot_class=self.cfg_body.name_prefix,
+            robot_id=self.cfg_body.id,
+            qos=50
         )
 
         self.node.register_cmd_subscriber(
-            robot_class = self.cfg_body.name_prefix,
-            robot_id = self.cfg_body.id,
-            callback = self.cmd_vel_callback,
-            qos = 50
+            robot_class=self.cfg_body.name_prefix,
+            robot_id=self.cfg_body.id,
+            callback=self.cmd_vel_callback,
+            qos=50
         )
 
         self.ros2_initialized = True
@@ -189,8 +201,6 @@ class RobotCf2x(RobotBase):
         else:
             print("无人机已在飞行状态")
 
-
-
     def get_ground_height_with_raycast(self, current_position: np.ndarray) -> float:
         """
         使用光线投射来精确获取机器人正下方的地面高度。
@@ -260,7 +270,6 @@ class RobotCf2x(RobotBase):
             print(f"无人机降落到高度: {self.current_pos[2] - ground_z}m")
         else:
             print("无人机已在地面状态")
-
 
     def update_position_with_velocity(self, dt):
         """基于速度和时间步长更新位置 (ds = v * dt)"""
@@ -351,58 +360,203 @@ class RobotCf2x(RobotBase):
             self._movement_command[1] = float(msg.linear.y)
             self._movement_command[2] = float(msg.linear.z)
 
+    def move_to(self):
+
+        import numpy as np
+
+        # 落地就先起飞到悬停高度（一次性瞬移到 hover 高度即可）
+        if self.flight_state == 'landed':
+            self.takeoff()
+
+        # === 读取当前位姿（用仿真里的真实位姿，不再用 self.position 作为“真值”） ===
+        positions, orientations = self.robot_entity.get_world_poses()
+
+        cur_pos = np.array(positions[0], dtype=np.float32)
+        pos_xy = cur_pos[:2]
+
+        target_xy = self.nav_target_xy.astype(np.float32)
+        delta = target_xy - pos_xy
+        dist = float(np.linalg.norm(delta))
+
+        # 到点判定
+        stop_r = float(self.nav_stop_radius)
+
+        if dist <= stop_r:
+            # 停车：把刚体速度清零（由引擎保持当前位置），必要时可做一次微小贴合
+            self.robot_entity.set_linear_velocity(np.zeros(3, dtype=np.float32))
+            self.robot_entity.set_angular_velocity(np.zeros(3, dtype=np.float32))
+
+            # 状态与对外发布保持一致
+            self.velocity = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+            self.nav_target_xy = None
+            if hasattr(self, 'flag_action_navigation'):
+                self.flag_action_navigation = False
+            if hasattr(self, 'state_skill_complete'):
+                self.state_skill_complete = True
+            print("Cf2X arrived at the target point!")
+            return
+
+        # 期望速度：指向目标，近处线性减速
+        vmax = float(self.nav_max_speed)
+        slow_r = float(self.nav_slow_radius)
+        dir_xy = delta / (dist + 1e-6)
+        spd = vmax * (dist / slow_r) if dist < slow_r else vmax
+        v_world = np.array([dir_xy[0] * spd, dir_xy[1] * spd, 0.0], dtype=np.float32)
+
+        # === 把速度交给“根刚体”（交给引擎积分） ===
+        self.robot_entity.set_linear_velocities(v_world)
+
+        # 可选：如果希望机体绕 z 朝速度方向缓慢对齐，也可以给一个角速度：
+        # self.robot_entity.set_angular_velocity(np.array([0.0, 0.0, yaw_rate], dtype=np.float32))
+
+        self.velocity = v_world
+
+    def _params_from_pose(self, pos: np.ndarray, quat: np.ndarray) -> list[Parameter]:
+
+        p = np.asarray(pos, dtype=float)
+        q = np.asarray(quat, dtype=float)
+        if p.ndim >= 2:
+            p = p[0]
+        if q.ndim >= 2:
+            q = q[0]
+
+        # 现在期望 p.shape == (3,), q.shape == (4,)
+        if p.size < 3 or q.size < 4:
+            raise ValueError(f"Invalid pose shapes: pos={p.shape}, quat={q.shape}")
+
+        # 保证是 float -> str
+        px, py, pz = float(p[0]), float(p[1]), float(p[2])
+        # 这里假定四元数顺序为 [x, y, z, w]；如果你的数据是 wxyz，请对调
+        qx, qy, qz, qw = float(q[0]), float(q[1]), float(q[2]), float(q[3])
+
+        base_return = [
+            Parameter(key="pos_x", value=str(px)),
+            Parameter(key="pos_y", value=str(py)),
+            Parameter(key="pos_z", value=str(pz)),
+            Parameter(key="quat_x", value=str(qx)),
+            Parameter(key="quat_y", value=str(qy)),
+            Parameter(key="quat_z", value=str(qz)),
+            Parameter(key="quat_w", value=str(qw)),
+        ]
+
+        print(base_return)
+
+        normal_return = [Parameter(key="status", value="normal"), *base_return]
+        abnormal_return = [Parameter(key="status", value="abnormal"), *base_return]
+
+        if self.previous_pos:
+            if np.sqrt((self.previous_pos[0] - px) ** 2 + (self.previous_pos[1] - py) ** 2 + (
+                    self.previous_pos[2] - pz) ** 2) < self.movement_threshold:
+                self.previous_pos = [px, py, pz]
+                return abnormal_return
+            else:
+                self.previous_pos = [px, py, pz]
+                return normal_return
+
+        else:
+            self.previous_pos = [px, py, pz]
+            return normal_return
+
+    def _publish_feedback_pose(self):
+
+        pos, quat = self.robot_entity.get_world_poses()
+
+        skill = SkillInfo(
+            skill=self.current_task_name,
+            params=self._params_from_pose(pos, quat),
+            object_id="",
+            task_id=self.current_task_id,
+        )
+
+        msg = RobotFeedback(
+            robot_id=f"{self.cfg_body.name_prefix}_{self.cfg_body.id}",
+            skill_feedback=skill,
+        )
+
+        self.node.publish_navigation_feedback(self.cfg_body.name_prefix, self.cfg_body.id, msg)
+
+    def _publish_status_pose(self):
+
+        if not getattr(self, 'ros2_initialized', False):
+            return
+
+        import numpy as np
+
+        positions, orientations = self.robot_entity.get_world_poses()
+        pos = positions[0]
+        orn = orientations[0]
+
+        # 这些 API 返回 (N, 3) 的数组/张量；这里只取第 0 个
+        lin_v = self.robot_entity.get_linear_velocities(indices=[0], clone=True)
+        ang_v = self.robot_entity.get_angular_velocities(indices=[0], clone=True)
+
+        # 统一成 numpy，做个健壮性兜底
+        lin_v0 = np.asarray(lin_v)[0] if np.size(lin_v) else np.zeros(3, dtype=float)
+        ang_v0 = np.asarray(ang_v)[0] if np.size(ang_v) else np.zeros(3, dtype=float)
+
+        msg = VelTwistPose()
+
+        # vel 字段：保持与你原逻辑一致，全部置 0
+        msg.vel.x = 0.0
+        msg.vel.y = 0.0
+        msg.vel.z = 0.0
+
+        # twist：使用仿真里的实时速度
+        msg.twist.linear.x = float(lin_v0[0])
+        msg.twist.linear.y = float(lin_v0[1])
+        msg.twist.linear.z = float(lin_v0[2])
+
+        msg.twist.angular.x = float(ang_v0[0])
+        msg.twist.angular.y = float(ang_v0[1])
+        msg.twist.angular.z = float(ang_v0[2])
+
+        # pose：使用仿真里的实时位置与朝向
+        msg.pose.position.x = float(pos[0])
+        msg.pose.position.y = float(pos[1])
+        msg.pose.position.z = float(pos[2])
+
+        # 兼容 ndarray（常见返回）与带属性的四元数对象两种情况
+        if hasattr(orn, "x"):
+            qx, qy, qz, qw = orn.x, orn.y, orn.z, orn.w
+        else:
+            # 约定顺序为 [x, y, z, w]；若你的资源是 wxyz，请按需调整
+            qx, qy, qz, qw = float(orn[0]), float(orn[1]), float(orn[2]), float(orn[3])
+
+        msg.pose.orientation.x = float(qx)
+        msg.pose.orientation.y = float(qy)
+        msg.pose.orientation.z = float(qz)
+        msg.pose.orientation.w = float(qw)
+
+        self.node.publish_motion(
+            robot_class=self.cfg_body.name_prefix,
+            robot_id=self.cfg_body.id,
+            msg=msg
+        )
+
     def on_physics_step(self, step_size):
+
         super().on_physics_step(step_size)
-        if self.is_drone:
+
+        # 未激活或无目标：什么都不做
+        if getattr(self, 'flag_action_navigation', False) and self.nav_target_xy is not None and hasattr(self,
+                                                                                                         'flag_world_reset') and self.flag_world_reset:
+            self.move_to()
+            if self.counter % self.pub_period == 0:
+                self._publish_feedback_pose()
+
+        else:
+
             if self.keyboard_control_enabled:
                 self.keyboard_control(step_size)
+
             else:
                 if hasattr(self, 'waypoints') and self.waypoints:
                     self.execute_waypoint_sequence()
             if self.flight_state == 'hovering':
                 self.update_position_with_velocity(step_size)
-        # ROS2发布无人机状态，并处理订阅回调
-        if getattr(self, 'ros2_initialized', False):
-            msg = VelTwistPose()
 
-            # vel 字段全置 0
-            msg.vel.x = 0.0
-            msg.vel.y = 0.0
-            msg.vel.z = 0.0
-
-            # twist 使用无人机的线速度
-            msg.twist.linear.x = float(self.velocity[0])
-            msg.twist.linear.y = float(self.velocity[1])
-            msg.twist.linear.z = float(self.velocity[2])
-            # 角速度暂时全置 0
-            msg.twist.angular.x = 0.0
-            msg.twist.angular.y = 0.0
-            msg.twist.angular.z = 0.0
-
-            # pose 使用无人机当前位置
-            msg.pose.position.x = float(self.position[0])
-            msg.pose.position.y = float(self.position[1])
-            msg.pose.position.z = float(self.position[2])
-            # orientation 从仿真获取
-            _, orientations = self.robot_entity.get_world_poses()
-            orientation = orientations[0]
-            msg.pose.orientation.w = float(orientation[0])
-            msg.pose.orientation.x = float(orientation[1])
-            msg.pose.orientation.y = float(orientation[2])
-            msg.pose.orientation.z = float(orientation[3])
-
-            # 发布一次
-            self.node.publish_motion(
-                robot_class = self.cfg_body.name_prefix,
-                robot_id = self.cfg_body.id,
-                msg = msg
-            )
-
-        if hasattr(self, 'flag_world_reset') and self.flag_world_reset:
-            if hasattr(self, 'flag_action_navigation') and self.flag_action_navigation:
-                self.move_along_path()
-            if hasattr(self, 'velocity') and not self.is_drone:
-                self.apply_action(action=self.velocity)
+        self._publish_status_pose()
+        self.counter += 1
 
     def enable_keyboard_control(self, enable=True):
         """启用或禁用键盘控制"""
@@ -427,61 +581,58 @@ class RobotCf2x(RobotBase):
                 print(f"键盘事件清理失败: {e}")
 
     # 以下方法保留用于兼容性，主要用于地面机器人
-    def move_to(self, target_postion):
-        """移动到目标位置"""
-        import numpy as np
-        positions, orientations = self.robot_entity.get_world_poses()
-        car_yaw_angle = self.quaternion_to_yaw(orientations[0])
-
-        car_to_target_angle = np.arctan2(target_postion[1] - positions[0][1], target_postion[0] - positions[0][0])
-        delta_angle = car_to_target_angle - car_yaw_angle
-
-        if abs(delta_angle) < 0.017:
-            delta_angle = 0
-        elif delta_angle < -np.pi:
-            delta_angle += 2 * np.pi
-        elif delta_angle > np.pi:
-            delta_angle -= 2 * np.pi
-
-        if np.linalg.norm(target_postion[0:2] - positions[0][0:2]) < 0.1:
-            self.velocity = [0, 0]
-            return True
-
-        v_rotation = self.pid_angle.compute(delta_angle, dt=1 / 60)
-        v_forward = 15
-
-        v_left = v_forward + v_rotation
-        v_right = v_forward - v_rotation
-        v_max = 20
-
-        v_left = np.clip(v_left, -v_max, v_max)
-        v_right = np.clip(v_right, -v_max, v_max)
-
-        self.velocity = [v_left, v_right]
-        return False
 
     def move_along_path(self, path: list = None, flag_reset: bool = False):
         """让机器人沿着路径点运动"""
-        if flag_reset == True:
-            self.path_index = 0
-            self.path = path
-
-        if hasattr(self, 'path') and hasattr(self, 'path_index') and self.path_index < len(self.path):
-            reach_flat = self.move_to(self.path[self.path_index])
-            if reach_flat == True:
-                self.path_index += 1
-            return False
-        else:
-            if hasattr(self, 'flag_action_navigation'):
-                self.flag_action_navigation = False
-            if hasattr(self, 'state_skill_complete'):
-                self.state_skill_complete = True
-            return True
+        # if flag_reset:
+        #     self.path_index = 0
+        #     self.path = path
+        #
+        # if hasattr(self, 'path') and hasattr(self, 'path_index') and self.path_index < len(self.path):
+        #     reach_flat = self.move_to(self.path[self.path_index])
+        #     if reach_flat:
+        #         self.path_index += 1
+        #     return False
+        # else:
+        #     if hasattr(self, 'flag_action_navigation'):
+        #         self.flag_action_navigation = False
+        #     if hasattr(self, 'state_skill_complete'):
+        #         self.state_skill_complete = True
+        #     return True
+        return False
 
     def navigate_to(self, pos_target: np.array = None, reset_flag: bool = False):
-        """导航到目标位置"""
+        """导航到目标位置
+        - 无人机: 平滑直线飞行到目标 XY（忽略障碍），Z 锁定为悬停高度
+        - 地面车: 维持原有 A* 路径 + 差速控制
+        """
+        import numpy as np
+
         if pos_target is None:
             raise ValueError("no target position")
+
+        # —— 无人机分支：不做 A*，仅直线导航 ——
+        if getattr(self, 'is_drone', False):
+            # 支持传入 2D 或 3D；若含 Z 则忽略
+            pos_target = np.array(pos_target, dtype=np.float32)
+            self.nav_target_xy = pos_target[:2].copy()
+            self.nav_active = True
+
+            # （可选）防止键盘抢占：关闭键盘控制
+            self.keyboard_control_enabled = False
+
+            # 状态字段（与你现有状态机对齐）
+            if hasattr(self, 'flag_action_navigation'):
+                self.flag_action_navigation = True
+            if hasattr(self, 'state_skill'):
+                self.state_skill = 'navigate_to'
+            if hasattr(self, 'state_skill_complete'):
+                self.state_skill_complete = False
+
+            print(f"无人机开始导航到 XY: {self.nav_target_xy}（Z 将保持悬停高度 {self.hovering_height}）")
+            return True
+
+        # —— 地面车分支：保持你原有实现（A* + 差速） ——
         elif pos_target[2] != 0:
             raise ValueError("小车的z轴高度得在平面上")
 
@@ -508,7 +659,7 @@ class RobotCf2x(RobotBase):
             self.state_skill = 'navigate_to'
         if hasattr(self, 'state_skill_complete'):
             self.state_skill_complete = False
-        return
+        return True
 
     def pick_up(self):
         """拾取物品"""

@@ -62,13 +62,13 @@ else
   exit 1
 fi
 
-if [[ -f "$HOME/ws_msgs/install/setup.bash" ]]; then
+if [[ -f "$HOME/gsi_msgs/install/setup.bash" ]]; then
   set +u
   # shellcheck disable=SC1091
-  source "$HOME/ws_msgs/install/setup.bash"
+  source "$HOME/gsi_msgs/install/setup.bash"
   set -u
 else
-  echo "[WARN] 未找到 ~/ws_msgs/install/setup.bash，消息包可能无法被导入。"
+  echo "[WARN] 未找到 ~/gsi_msgs/install/setup.bash，消息包可能无法被导入。"
 fi
 
 # ===== 环境变量（你要求的）=====
@@ -96,6 +96,15 @@ fi
 
 "$PY_CONDA" -c "import importlib, sys; m=importlib.util.find_spec('rclpy');
 print('[CHECK] rclpy OK' if m else '[WARN] rclpy 未安装或不可用')" || true
+
+# ===== 设置 Python 的工作目录 =====
+PY_WORKDIR="${PY_WORKDIR:-/home/ubuntu/multiagent-isaacsimROS/src/multiagent_isaacsim/multiagent_isaacsim}"
+if [[ -d "$PY_WORKDIR" ]]; then
+  cd "$PY_WORKDIR"
+else
+  echo "[ERROR] 工作目录不存在: $PY_WORKDIR"
+  exit 1
+fi
 
 # ===== 启动 =====
 echo "[INFO] Python: $("$PY_CONDA" -V) @ $PY_CONDA"

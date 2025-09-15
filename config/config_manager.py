@@ -36,6 +36,7 @@ class ConfigManager:
             "--ros",
             type=lambda x: str(x).lower() in ["true", "1", "yes"],
             metavar="{true,false}",
+            default="true",
             help="Override ROS2 integration setting from the config file.",
         )
 

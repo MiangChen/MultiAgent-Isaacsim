@@ -8,12 +8,19 @@ from rclpy.executors import MultiThreadedExecutor
 
 from log.log_manager import LogManager
 from ros.ros_node import PlanNode, SceneMonitorNode, SwarmNode, get_swarm_node
-from skill.skill import _plan_cb
 
 logger = LogManager.get_logger(__name__)
 
+
+def plan_cb_wrapper(msg):
+    from containers import get_container
+    skill_manager = get_container().skill_manager()
+    skill_manager._plan_cb(msg)
+
+
 class RosManager:
     def __init__(self):
+
         self.plan_receiver_node = None
         self.scene_monitor_node = None
         self.swarm_node = None
@@ -32,7 +39,7 @@ class RosManager:
             depth=50,
         )
         self.plan_receiver_node = PlanNode('plan_receiver')
-        self.plan_receiver_node.create_subscription(Plan, '/Plan', _plan_cb, qos)
+        self.plan_receiver_node.create_subscription(Plan, '/Plan', plan_cb_wrapper, qos)
         self.scene_monitor_node = SceneMonitorNode()
         self.swarm_node = get_swarm_node()
         logger.info("ROS nodes built successfully.")
