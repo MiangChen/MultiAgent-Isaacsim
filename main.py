@@ -340,12 +340,13 @@ def main():
         env.step(action=None)
 
         if count %60 == 0 and count !=0 :
-            _skill_take_photo(
-                swarm_manager,
-                rc="jetbot",
-                rid=0,
-                params={"file_path": "/home/ubuntu/test.jpg"}
-            )
+            # _skill_take_photo(
+            #     swarm_manager,
+            #     rc="jetbot",
+            #     rid=0,
+            #     params={"file_path": "/home/ubuntu/test.jpg"}
+            # )
+            pass
 
         if flag == 0:
             result = _skill_pick_up(

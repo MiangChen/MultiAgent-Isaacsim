@@ -8,6 +8,7 @@ import numpy as np
 from pxr import Usd, UsdGeom, Gf
 from PIL import Image
 import torch
+from torchvision.utils import save_image
 
 from isaacsim.sensors.camera import CameraView
 from isaacsim.core.utils.numpy import rotations
@@ -128,15 +129,16 @@ class CameraBase:
     def get_world_pose(self, camera_axes: str = 'usd') -> Tuple[np.ndarray, np.ndarray]:
         return self.camera_view.get_world_pose(camera_axes=camera_axes)
 
-    def save_rgb_to_file(self, rgb_tensor_gpu:torch.Tensor, file_path:str=None) -> bool:
+    def save_rgb_to_file(self, rgb_tensor_gpu: torch.Tensor, file_path: str = None) -> bool:
         """
+        使用 torchvision.utils.save_image 简化版本
 
         Args:
-            rgb_tensor_gpu: [height, width, 3] RGB
-            file_path: str
+            rgb_tensor_gpu: [height, width, 3] 或 [batch, height, width, 3] RGB Tensor
+            file_path: 保存路径
 
         Returns:
-
+            bool: 是否保存成功
         """
         try:
             # --- 1. 输入验证 ---
@@ -144,65 +146,44 @@ class CameraBase:
                 logging.error(f"输入无效：期望一个 torch.Tensor，但收到了 {type(rgb_tensor_gpu)}。")
                 return False
 
-            # **【核心要求】检查张量是否为3个维度**
-            if rgb_tensor_gpu.ndim != 3:
-                if rgb_tensor_gpu[0].ndim != 3:
-                    logging.error(
-                        f"张量维度错误：期望3个维度 [H, W, C]，但收到了 {rgb_tensor_gpu.ndim} 个维度。"
-                        f" 张量形状为: {rgb_tensor_gpu.shape}"
-                    )
-                    return False
-                else:
-                    rgb_tensor_gpu = rgb_tensor_gpu[0]
-
-
-            # 检查通道数是否为3 (RGB)
-            if rgb_tensor_gpu.shape[2] != 3:
-                logging.error(
-                    f"通道数错误：期望最后一个维度为 3 (RGB)，但收到了 {rgb_tensor_gpu.shape[2]}。"
-                    f" 张量形状为: {rgb_tensor_gpu.shape}"
-                )
-                return False
-
             if not isinstance(file_path, str) or not file_path:
                 logging.error(f"文件路径无效：路径必须是一个非空字符串，但收到了 '{file_path}'。")
                 return False
 
-            # --- 2. 数据处理与转换 ---
+            # --- 2. 维度检查与调整 ---
+            # 如果是4维张量 (batch, H, W, C)，则只取第一张图
+            if rgb_tensor_gpu.ndim == 4:
+                logging.warning(f"输入为4维张量，将只保存第一张图像。形状: {rgb_tensor_gpu.shape}")
+                rgb_tensor_gpu = rgb_tensor_gpu[0]
+
+            # 核心检查：必须是3维张量
+            if rgb_tensor_gpu.ndim != 3 or rgb_tensor_gpu.shape[2] != 3:
+                logging.error(
+                    f"张量形状错误：期望 [H, W, 3]，但收到了 {rgb_tensor_gpu.shape}"
+                )
+                return False
+
             logging.info(f"开始处理图像，准备保存到 {file_path}...")
 
-            # 将数据从 GPU 移至 CPU
-            rgb_tensor_cpu = rgb_tensor_gpu.cpu()
+            # --- 3. 核心保存操作 ---
+            # save_image 要求浮点张量在 [0,1] 范围内，或直接是 uint8 张量
+            if rgb_tensor_gpu.dtype == torch.float32 and rgb_tensor_gpu.max() > 1.0:
+                # 将 [0, 255] 的浮点张量归一化到 [0, 1] 范围
+                logging.debug("检测到浮点张量范围为 [0, 255]，将其归一化到 [0, 1]。")
+                rgb_tensor_gpu = rgb_tensor_gpu / 255.0
+            # torchvision 需要 [C, H, W] 格式，因此需要重排维度
+            # permute(2, 0, 1) 将 [H, W, C] 变为 [C, H, W]
+            tensor_chw = rgb_tensor_gpu.permute(2, 0, 1)
 
-            # 将 PyTorch 张量转换为 NumPy 数组
-            rgb_numpy_array = rgb_tensor_cpu.numpy()
-
-            # 稳健地将 float 类型转换为 uint8
-            # 如果原始数据是 0-1 范围的浮点数，先乘以 255
-            if np.issubdtype(rgb_numpy_array.dtype, np.floating) and rgb_numpy_array.max() <= 1.0:
-                rgb_numpy_array = rgb_numpy_array * 255.0
-
-            # 使用 np.clip 确保数值在 0-255 范围内，然后才转换类型，防止数据溢出
-            image_uint8_array = np.clip(rgb_numpy_array, 0, 255).astype(np.uint8)
-
-            # --- 3. 文件系统操作 ---
-            # 从完整文件路径中获取目录路径
-            directory = os.path.dirname(file_path)
-
-            # 如果存在目录路径，则创建它（如果它还不存在）
-            if directory:
-                os.makedirs(directory, exist_ok=True)
-
-            # 从 NumPy 数组创建 Pillow 图像对象
-            image = Image.fromarray(image_uint8_array, 'RGB')
-
-            # 保存图像
-            image.save(file_path)
+            # save_image 会自动处理从 GPU 到 CPU 的移动，
+            # 并将 0-1 范围的浮点数转换为 0-255 的 uint8 图像。
+            # 它也会自动创建目录。
+            save_image(tensor_chw, file_path)
 
             logging.info(f"图像已成功保存到: {file_path}")
             return True
 
         except Exception as e:
-            # 捕获任何可能发生的异常（如权限错误、磁盘已满等）
+            # 捕获任何可能发生的异常
             logging.error(f"保存文件到 {file_path} 时发生未知错误: {e}", exc_info=True)
             return False
