@@ -1,12 +1,7 @@
-import logging
-import os
 from typing import List, Optional, Tuple
-
-
 
 import numpy as np
 from pxr import Usd, UsdGeom, Gf
-from PIL import Image
 import torch
 from torchvision.utils import save_image
 
@@ -16,6 +11,9 @@ from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 
 from camera.camera_cfg import CameraCfg
 from robot.robot_cfg import RobotCfg
+from log.log_manager import LogManager
+
+logger = LogManager.get_logger(__name__)
 
 
 class CameraBase:
@@ -24,7 +22,7 @@ class CameraBase:
         self.cfg_camera = cfg_camera
         self.cfg_body = cfg_body
 
-    def create_camera(self, camera_path: str=None):
+    def create_camera(self, camera_path: str = None):
         if camera_path is None:
             self.cfg_camera.prim_path = self.cfg_body.prim_path + '/camera/Camera'
         else:
@@ -68,9 +66,11 @@ class CameraBase:
             # 配置相机角度必须是4元数
             if self.cfg_camera.euler_degree is not None:
                 # 注意角度和弧度模式
-                self.cfg_camera.quat = rotations.euler_angles_to_quats(np.array(self.cfg_camera.euler_degree), degrees=True)
+                self.cfg_camera.quat = rotations.euler_angles_to_quats(np.array(self.cfg_camera.euler_degree),
+                                                                       degrees=True)
             else:
-                self.cfg_camera.euler_degree = rotations.quats_to_euler_angles(np.array(self.cfg_camera.quat), degrees=True)
+                self.cfg_camera.euler_degree = rotations.quats_to_euler_angles(np.array(self.cfg_camera.quat),
+                                                                               degrees=True)
 
             self.camera_view = CameraView(
                 prim_paths_expr=self.cfg_camera.prim_path,
@@ -141,49 +141,40 @@ class CameraBase:
             bool: 是否保存成功
         """
         try:
-            # --- 1. 输入验证 ---
             if not isinstance(rgb_tensor_gpu, torch.Tensor):
-                logging.error(f"输入无效：期望一个 torch.Tensor，但收到了 {type(rgb_tensor_gpu)}。")
+                logger.error(f"输入无效：期望一个 torch.Tensor，但收到了 {type(rgb_tensor_gpu)}。")
                 return False
 
             if not isinstance(file_path, str) or not file_path:
-                logging.error(f"文件路径无效：路径必须是一个非空字符串，但收到了 '{file_path}'。")
+                logger.error(f"文件路径无效：路径必须是一个非空字符串，但收到了 '{file_path}'。")
                 return False
 
-            # --- 2. 维度检查与调整 ---
             # 如果是4维张量 (batch, H, W, C)，则只取第一张图
             if rgb_tensor_gpu.ndim == 4:
-                logging.warning(f"输入为4维张量，将只保存第一张图像。形状: {rgb_tensor_gpu.shape}")
+                logger.warning(f"输入为4维张量，将只保存第一张图像。形状: {rgb_tensor_gpu.shape}")
                 rgb_tensor_gpu = rgb_tensor_gpu[0]
 
             # 核心检查：必须是3维张量
             if rgb_tensor_gpu.ndim != 3 or rgb_tensor_gpu.shape[2] != 3:
-                logging.error(
+                logger.error(
                     f"张量形状错误：期望 [H, W, 3]，但收到了 {rgb_tensor_gpu.shape}"
                 )
                 return False
 
-            logging.info(f"开始处理图像，准备保存到 {file_path}...")
+            logger.info(f"开始处理图像，准备保存到 {file_path}...")
 
-            # --- 3. 核心保存操作 ---
             # save_image 要求浮点张量在 [0,1] 范围内，或直接是 uint8 张量
-            if rgb_tensor_gpu.dtype == torch.float32 and rgb_tensor_gpu.max() > 1.0:
-                # 将 [0, 255] 的浮点张量归一化到 [0, 1] 范围
-                logging.debug("检测到浮点张量范围为 [0, 255]，将其归一化到 [0, 1]。")
+            if rgb_tensor_gpu.max() > 1.0:
                 rgb_tensor_gpu = rgb_tensor_gpu / 255.0
-            # torchvision 需要 [C, H, W] 格式，因此需要重排维度
-            # permute(2, 0, 1) 将 [H, W, C] 变为 [C, H, W]
+            # torchvision 需要 [C, H, W] 格式，因此需要重排维度, permute(2, 0, 1) 将 [H, W, C] 变为 [C, H, W]
             tensor_chw = rgb_tensor_gpu.permute(2, 0, 1)
 
-            # save_image 会自动处理从 GPU 到 CPU 的移动，
-            # 并将 0-1 范围的浮点数转换为 0-255 的 uint8 图像。
-            # 它也会自动创建目录。
             save_image(tensor_chw, file_path)
 
-            logging.info(f"图像已成功保存到: {file_path}")
+            logger.info(f"图像已成功保存到: {file_path}")
             return True
 
         except Exception as e:
             # 捕获任何可能发生的异常
-            logging.error(f"保存文件到 {file_path} 时发生未知错误: {e}", exc_info=True)
+            logger.error(f"保存文件到 {file_path} 时发生未知错误: {e}", exc_info=True)
             return False
