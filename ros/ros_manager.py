@@ -5,8 +5,8 @@ import rclpy
 rclpy.init(args=None)
 from rclpy.executors import MultiThreadedExecutor
 
+from ros.node import PlanNode, SceneMonitorNode, SwarmNode, PlanExecutionServer, SkillServerNode
 from log.log_manager import LogManager
-from ros.ros_node import PlanNode, SceneMonitorNode, SwarmNode, get_swarm_node
 
 logger = LogManager.get_logger(__name__)
 
@@ -18,14 +18,17 @@ def plan_cb_wrapper(msg):
 
 
 class RosManager:
-    def __init__(self):
+    def __init__(self, action_mode = False):
 
         self.plan_receiver_node = None
         self.scene_monitor_node = None
         self.swarm_node = None
+        self.plan_execution_server = None
+        self.skill_server_node = None
         self.executor = None
         self.stop_event = threading.Event()
         self.thread = None
+        self.action_mode = action_mode
 
         self.build_nodes()
 
@@ -37,17 +40,31 @@ class RosManager:
             history=HistoryPolicy.KEEP_LAST,
             depth=50,
         )
-        self.plan_receiver_node = PlanNode('plan_receiver')
-        self.plan_receiver_node.create_subscription(Plan, '/Plan', plan_cb_wrapper, qos)
+
         self.scene_monitor_node = SceneMonitorNode()
-        self.swarm_node = get_swarm_node()
+
+        if self.action_mode:
+            self.plan_execution_server = PlanExecutionServer()
+            self.skill_server_node = SkillServerNode()
+        else:
+            self.plan_receiver_node = PlanNode()
+            self.plan_receiver_node.create_subscription(Plan, '/Plan', plan_cb_wrapper, qos)
+            self.swarm_node = SwarmNode()
+
         logger.info("ROS nodes built successfully.")
 
     def start(self):
         """在后台线程中启动ROS节点"""
-        if not self.plan_receiver_node:
-            logger.warning("ROS nodes not built. Cannot start.")
-            return
+
+        if self.action_mode:
+            if not self.plan_execution_server or not self.skill_server_node:
+                logger.warning("ROS nodes not built. Cannot start.")
+                return
+        else:
+            if not self.plan_receiver_node:
+                logger.warning("ROS nodes not built. Cannot start.")
+                return
+
         self.thread = threading.Thread(
             target=self._spin_in_background, daemon=True
         )
@@ -56,8 +73,13 @@ class RosManager:
 
     def _spin_in_background(self):
         """后台运行ROS节点的实际工作函数"""
-        self.executor = MultiThreadedExecutor(num_threads=4)
-        nodes = [self.plan_receiver_node, self.scene_monitor_node, self.swarm_node]
+        self.executor = MultiThreadedExecutor(num_threads=5)
+
+        if self.action_mode:
+            nodes = [self.plan_receiver_node, self.scene_monitor_node, self.swarm_node]
+        else:
+            nodes = [self.plan_execution_server, self.skill_server_node, self.scene_monitor_node, self.swarm_node]
+
         for n in nodes:
             if n:
                 self.executor.add_node(n)
