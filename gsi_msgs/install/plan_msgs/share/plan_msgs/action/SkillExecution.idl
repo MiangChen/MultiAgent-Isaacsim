@@ -1,0 +1,27 @@
+// generated from rosidl_adapter/resource/action.idl.em
+// with input from plan_msgs/action/SkillExecution.action
+// generated code does not contain a copyright notice
+
+#include "plan_msgs/msg/RobotSkill.idl"
+
+module plan_msgs {
+  module action {
+    @verbatim (language="comment", text=
+      "Goal: The information needed to execute one specific skill")
+    struct SkillExecution_Goal {
+      plan_msgs::msg::RobotSkill skill_request;
+    };
+    @verbatim (language="comment", text=
+      "Result: The outcome of the skill execution")
+    struct SkillExecution_Result {
+      boolean success;
+
+      string message;
+    };
+    @verbatim (language="comment", text=
+      "Feedback: Ongoing status of the skill")
+    struct SkillExecution_Feedback {
+      string status;
+    };
+  };
+};

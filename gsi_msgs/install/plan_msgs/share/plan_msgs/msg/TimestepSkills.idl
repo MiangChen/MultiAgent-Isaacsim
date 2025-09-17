@@ -1,0 +1,22 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from plan_msgs/msg/TimestepSkills.msg
+// generated code does not contain a copyright notice
+
+#include "plan_msgs/msg/RobotSkill.idl"
+
+module plan_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "TimestepSkills.msg" "\n"
+      "全局的一个时间步对应的多个机器人动作")
+    struct TimestepSkills {
+      @verbatim (language="comment", text=
+        "全局时间步索引")
+      int32 timestep;
+
+      @verbatim (language="comment", text=
+        "各机器人在此时间步上的技能列表")
+      sequence<plan_msgs::msg::RobotSkill> robots;
+    };
+  };
+};

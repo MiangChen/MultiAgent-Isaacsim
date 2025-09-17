@@ -1,0 +1,17 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from plan_msgs/msg/Parameter.msg
+// generated code does not contain a copyright notice
+
+
+module plan_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "Parameter.msg" "\n"
+      "一个简单的键值对，用于扩展 params")
+    struct Parameter {
+      string key;
+
+      string value;
+    };
+  };
+};

@@ -1,0 +1,26 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from scene_msgs/msg/PrimTransform.msg
+// generated code does not contain a copyright notice
+
+#include "geometry_msgs/msg/Transform.idl"
+
+module scene_msgs {
+  module msg {
+    module PrimTransform_Constants {
+      const uint8 ADD = 0;
+      const uint8 DELETE = 1;
+      const uint8 TRANSFORM_CHANGED = 2;
+    };
+    @verbatim (language="comment", text=
+      "变更类型枚举")
+    struct PrimTransform {
+      @verbatim (language="comment", text=
+        "0=新增, 1=删除, 2=Transform 改变")
+      uint8 change_type;
+
+      string prim_path;
+
+      geometry_msgs::msg::Transform transform;
+    };
+  };
+};
