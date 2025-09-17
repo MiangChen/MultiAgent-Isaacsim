@@ -8,6 +8,7 @@ from isaacsim.core.api.scenes import Scene
 from camera.camera_cfg import CameraCfg
 from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from map.map_grid_map import GridMap
+from map.map_semantic_map import MapSemantic
 from robot.robot_base import RobotBase
 from robot.robot_cfg import RobotCfg
 from ros.ros_manager import RosManager
@@ -25,7 +26,7 @@ class SwarmManager:
     """
 
     def __init__(
-            self, map_grid: GridMap = None, ros_manager: RosManager = None, scene_manager: SceneManager = None,
+            self, map_grid: GridMap = None, map_semantic: MapSemantic = None, ros_manager: RosManager = None, scene_manager: SceneManager = None,
     ):
         self.scene: Scene = None
         self.scene_manager = scene_manager
@@ -39,6 +40,7 @@ class SwarmManager:
         }
         self.robot_class_cfg = {}  # 对应的机器人
         self.map_grid = map_grid
+        self.map_semantic = map_semantic
         self.ros_manager = ros_manager
 
     def register_robot_class(
@@ -171,6 +173,7 @@ class SwarmManager:
             )
 
         self.robot_warehouse[robot_class_name].append(robot)
+        self.map_semantic.map_semantic[robot.cfg_body.name] = robot.cfg_body.prim_path
         return robot
 
     def activate_robot(

@@ -31,7 +31,9 @@ class SkillManager:
         }
 
         # 初始化时打印支持的技能表
-        logger.info("SkillManager initialized with skills: %s", list(self._SKILL_TABLE.keys()))
+        logger.info(
+            "SkillManager initialized with skills: %s", list(self._SKILL_TABLE.keys())
+        )
 
     def _parse_robot_id(self, robot_id: str) -> tuple[str, int]:
         """Parse robot ID string to extract robot class and index
@@ -49,7 +51,9 @@ class SkillManager:
             rc, rid = m.group(1), int(m.group(2))
             return rc, rid
         else:
-            logger.warning(f"Failed to parse robot_id='{robot_id}', using default (jetbot,0)")
+            logger.warning(
+                f"Failed to parse robot_id='{robot_id}', using default (jetbot,0)"
+            )
             return "jetbot", 0
 
     def _plan_cb(self, msg: Plan):
@@ -71,13 +75,14 @@ class SkillManager:
                         rc, rid = self._parse_robot_id(rs.robot_id)
                         q = _skill_queues[(rc, rid)]
                         q.extend(rs.skill_list)
-                        logger.info(f"[PlanCB] Queued {len(rs.skill_list)} skills for {rc}-{rid}")
+                        logger.info(
+                            f"[PlanCB] Queued {len(rs.skill_list)} skills for {rc}-{rid}"
+                        )
         except Exception as e:
             logger.error(f"[PlanCB] Error: {e}")
 
     def process_ros_skills(self) -> None:
-        """Process ROS skill queue and execute skills with injected SwarmManager
-        """
+        """Process ROS skill queue and execute skills with injected SwarmManager"""
         # 1. Check if all robots have completed their current skills
         state_skill_complete_all = all(
             getattr(robot, "state_skill_complete", True)
@@ -114,8 +119,9 @@ class SkillManager:
                 logger.error(f"[Scheduler] Start skill '{name}' error: {e}")
 
     # Skill execution functions with dependency injection
-    def _skill_navigate_to(self,
-                           rc: str, rid: int, params: Dict[str, Any]) -> None:
+    def _skill_navigate_to(
+        self, rc: str, rid: int, params: Dict[str, Any] = None
+    ) -> None:
         """Execute navigate-to skill with injected semantic map
 
         Args:
@@ -139,11 +145,11 @@ class SkillManager:
             params: Skill parameters (unused for pick-up)
         """
         logger.info(f"[Skill] {rc}-{rid} executing pick-up")
-        object_prim_path = params.get("object_prim_path")
-        robot_prim_path = params.get("robot_prim_path")
+        object_prim_path = self.semantic_map.map_semantic.get(params.get("object_name"))
+        robot_prim_path = self.semantic_map.map_semantic.get(f"{rc}_{rid}")
         return self.swarm_manager.robot_active[rc][rid].pickup_object_if_close_unified(
-            robot_hand_prim_path=robot_prim_path,
-            object_prim_path=object_prim_path)
+            robot_hand_prim_path=robot_prim_path, object_prim_path=object_prim_path
+        )
 
     def _skill_put_down(self, rc: str, rid: int, params: Dict[str, Any]) -> None:
         """Execute put-down skill
@@ -157,8 +163,9 @@ class SkillManager:
         logger.info(f"[Skill] {rc}-{rid} executing put-down")
         object_prim_path = params.get("object_prim_path")
         robot_prim_path = params.get("robot_prim_path")
-        return self.swarm_manager.robot_active[rc][rid].put_down(robot_hand_prim_path=robot_prim_path,
-                                                                 object_prim_path=object_prim_path)
+        return self.swarm_manager.robot_active[rc][rid].put_down(
+            robot_hand_prim_path=robot_prim_path, object_prim_path=object_prim_path
+        )
 
     def _skill_take_photo(self, rc: str, rid: int, params: Dict[str, Any]) -> None:
         """Execute take-photo skill

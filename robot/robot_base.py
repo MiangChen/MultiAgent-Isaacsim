@@ -27,6 +27,7 @@ from isaacsim.core.utils.viewports import create_viewport_for_camera, set_camera
 
 from gsi2isaacsim.gsi_msgs_helper import Plan, RobotFeedback, SkillInfo, Parameter, VelTwistPose
 
+
 def _get_viewport_manager_from_container():
     """
     Get viewport manager from dependency injection container.
@@ -61,6 +62,7 @@ class RobotBase:
         self.robot_entity: Articulation = None
         # 通用的机器人本体初始化代码
         self.cfg_body.prim_path = cfg_body.prim_path + f'/{cfg_body.type}' + f'/{cfg_body.name_prefix}_{cfg_body.id}'
+        self.cfg_body.name = cfg_body.name_prefix + f'_{cfg_body.id}'
 
         prim = get_prim_at_path(self.cfg_body.prim_path)
         if not prim.IsValid():
@@ -103,10 +105,11 @@ class RobotBase:
         # 初始化机器人关节树
         self.robot_entity = Articulation(
             prim_paths_expr=self.cfg_body.prim_path,
-            name=cfg_body.name_prefix + f'_{cfg_body.id}',
+            name=self.cfg_body.name,
             positions=np.array([cfg_body.position]),
             orientations=np.array([cfg_body.quat]),
         )
+
         # 机器人的历史轨迹
         self.trajectory: Trajectory = None
         # 机器人的控制器
@@ -203,7 +206,7 @@ class RobotBase:
             return True
 
     def _calc_dist(self, pos1: np.ndarray = None, pos2: np.ndarray = None):
-        return ( (pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2 + (pos1[2] - pos2[2]) ** 2 ) ** 0.5
+        return np.sqrt(np.sum(pos1 - pos2) ** 2)
 
     def navigate_to(self, pos_target: np.ndarray = None, orientation_target: np.ndarray = None,
                     reset_flag: bool = False, load_from_file: bool = False) -> None:
@@ -294,8 +297,6 @@ class RobotBase:
         joint_path = f"/World/grasp_joint_{object_prim.name}"
         stage = self.scene_manager._stage
         joint_prim = stage.GetPrimAtPath(joint_path)
-
-
 
         from pxr import UsdPhysics
         if joint_prim.IsValid():
@@ -392,8 +393,9 @@ class RobotBase:
             return {"status": "success"}
         else:
             self._publish_feedback(
-                params = [Parameter(key="status", value="failed"),Parameter(key="reason", value="Object is too far to pick up")],
-                progress = 0
+                params=[Parameter(key="status", value="failed"),
+                        Parameter(key="reason", value="Object is too far to pick up")],
+                progress=0
             )
             return {
                 "status": "skipped",
@@ -403,7 +405,7 @@ class RobotBase:
     def take_photo(self, file_path: str = None):
         if self.camera is not None:
             rgb = self.camera.get_rgb()
-            if rgb !=None and file_path is not None:
+            if rgb != None and file_path is not None:
                 self.camera.save_rgb_to_file(rgb_tensor_gpu=rgb, file_path=file_path)
             return rgb
         else:
@@ -506,7 +508,7 @@ class RobotBase:
         }
 
     def _params_from_pose(self, pos: np.ndarray, quat: np.ndarray) -> list[Parameter]:
-    # TODO:对齐这个param的类型
+        # TODO:对齐这个param的类型
         p = np.asarray(pos, dtype=float)
         q = np.asarray(quat, dtype=float)
         if p.ndim >= 2:
@@ -539,7 +541,8 @@ class RobotBase:
         abnormal_return = [Parameter(key="status", value="abnormal"), *base_return]
 
         if self.previous_pos:
-            if np.sqrt((self.previous_pos[0] - px) ** 2 + (self.previous_pos[1] - py) ** 2 + (self.previous_pos[2] - pz) ** 2) < self.movement_threshold:
+            if np.sqrt((self.previous_pos[0] - px) ** 2 + (self.previous_pos[1] - py) ** 2 + (
+                    self.previous_pos[2] - pz) ** 2) < self.movement_threshold:
                 self.previous_pos = [px, py, pz]
                 return abnormal_return
             else:
@@ -553,22 +556,22 @@ class RobotBase:
     def _publish_feedback(self, params, progress: int = 1, object_id: str = ""):
 
         pos, quat = self.robot_entity.get_world_poses()
-        params = self._params_from_pose(pos, quat),
+        params = self._params_from_pose(pos, quat)
 
         skill = SkillInfo(
-            skill = self.current_task_name,
-            params = params,
-            object_id = object_id,
-            task_id = self.current_task_id,
-            progress = progress, # progress 是当前技能的执行进度，progress是从0到100的一个 int32
+            skill=self.current_task_name,
+            params=params,
+            object_id=object_id,
+            task_id=self.current_task_id,
+            progress=int(progress),  # progress 是当前技能的执行进度，progress是从0到100的一个 int32
         )
 
         msg = RobotFeedback(
-            robot_id = f"{self.cfg_body.name_prefix}_{self.cfg_body.id}",
-            skill_feedback = skill,
+            robot_id=f"{self.cfg_body.name_prefix}_{self.cfg_body.id}",
+            skill_feedback=skill,
         )
 
-        self.node.publish_feedback(self.cfg_body.name_prefix,self.cfg_body.id, msg)
+        self.node.publish_feedback(self.cfg_body.name_prefix, self.cfg_body.id, msg)
 
     def _publish_status_pose(self):
 

@@ -161,8 +161,8 @@ class RobotJetbot(RobotBase):
             if self.flag_action_navigation:
                 self.move_along_path()  # 每一次都计算下速度
                 self.step(self.action)
-                if self.counter % self.pub_period == 0:
-                    self._publish_feedback_pose()
+                # if self.counter % self.pub_period == 0:
+                #     self._publish_feedback_pose()
 
         return
 

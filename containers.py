@@ -56,6 +56,7 @@ class AppContainer(containers.DeclarativeContainer):
     swarm_manager = providers.Singleton(
         SwarmManager,
         map_grid=grid_map,
+        map_semantic=semantic_map,
         ros_manager=ros_manager,
         scene_manager=scene_manager,
     )

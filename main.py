@@ -263,9 +263,9 @@ def main():
     # scene_manager.enable_raycasting_for_prim(prim_path="/World/Scene")
 
     # Create car objects using scene manager
-    created_prim_paths = create_car_objects(scene_manager)
-    print("All prims with 'car' label:", created_prim_paths)
-    print(scene_manager.count_semantics_in_scene().get("result"))
+    # created_prim_paths = create_car_objects(scene_manager)
+    # print("All prims with 'car' label:", created_prim_paths)
+    # print(scene_manager.count_semantics_in_scene().get("result"))
 
     # Reset environment to ensure all objects are properly initialized
     env.reset()
@@ -312,19 +312,21 @@ def main():
     logger.info("Starting main simulation loop...")
 
     robot_prim_path = "/World/robot/jetbot/jetbot/jetbot_0/chassis"
-    object_prim_path = "/World/object"
+    object_name = "Critical-Package-Alpha"
+    object_prim_path = "/World/Critical_Package_Alpha"
     object = {
         "shape_type": "cuboid",
         "prim_path": object_prim_path,
         # "scene_name": "object",
-        "name": "object",
+        "name": object_name,
         "size": [0.1, 0.1, 0.1],
-        # "position": semantic_map.map_semantic['place4'],
         "position": [5, 6.5, 0.1],
         "orientation": [0.707, 0, 0, 0.707],
         "color": [255, 255, 255],
         "mass": 0.1,
     }
+    # 在semantic map中添加这个物体的prim path
+    semantic_map.map_semantic[object_name] = object_prim_path
     scene_manager.create_shape_unified(**object)
 
     flag = 0

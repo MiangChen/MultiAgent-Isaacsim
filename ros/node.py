@@ -147,11 +147,11 @@ class SceneMonitorNode(Node):
         return not m1.AlmostEqual(m2, tol)
 
     def _pose_delta_is_significant(
-            self,
-            prev: Gf.Matrix4d,
-            curr: Gf.Matrix4d,
-            trans_eps: float = 100,  # 2 cm
-            rot_eps_deg: float = 100,  # 2°
+        self,
+        prev: Gf.Matrix4d,
+        curr: Gf.Matrix4d,
+        trans_eps: float = 100,  # 2 cm
+        rot_eps_deg: float = 100,  # 2°
     ) -> bool:
         """稳健比较：只用位移差和四元数差，任何一步失败都当 0 差，不误报。"""
         if prev is None or curr is None:
@@ -207,7 +207,7 @@ class SceneMonitorNode(Node):
         # 数值安全
         if dot > 1.0:
             dot = 1.0
-        half_angle = 2.0 * (dot ** 2 - 0.5) ** 0.5 if dot >= (2 ** -0.5) else None
+        half_angle = 2.0 * (dot**2 - 0.5) ** 0.5 if dot >= (2**-0.5) else None
         # 更稳定：直接用 acos
         import math
 
@@ -367,7 +367,7 @@ class SwarmNode(Node):
         return pub
 
     def register_cmd_subscriber(
-            self, robot_class: str, robot_id: int, callback=None, qos=50
+        self, robot_class: str, robot_id: int, callback=None, qos=50
     ):
         """
         注册一个cmd subscriber
@@ -389,9 +389,7 @@ class SwarmNode(Node):
         #        )
         return sub
 
-    def publish_feedback(
-            self, robot_class: str, robot_id: int, msg: RobotFeedback
-    ):
+    def publish_feedback(self, robot_class: str, robot_id: int, msg: RobotFeedback):
         self.publisher_dict[robot_class][robot_id]["feedback"].publish(msg)
 
     def publish_motion(self, robot_class: str, robot_id: int, msg: VelTwistPose):
@@ -485,9 +483,7 @@ class PlanExecutionServer(Node):
                 # Log any exceptions that occurred
                 for i, res in enumerate(results):
                     if isinstance(res, Exception):
-                        logger.error(
-                            f"Exception during skill dispatch: {res}"
-                        )
+                        logger.error(f"Exception during skill dispatch: {res}")
                         traceback.print_exc()
 
                 error_msg = f"Execution failed in timestep {step.timestep}."
@@ -495,27 +491,23 @@ class PlanExecutionServer(Node):
                 goal_handle.abort()
                 return PlanExecution.Result(success=False, message=error_msg)
 
-            logger.info(
-                f"--- Timestep {step.timestep} Completed Successfully ---"
-            )
+            logger.info(f"--- Timestep {step.timestep} Completed Successfully ---")
 
         goal_handle.succeed()
         logger.info("✅ Plan dispatched and executed successfully.")
         return PlanExecution.Result(success=True, message="Plan executed successfully.")
 
     async def dispatch_skill(
-            self,
-            plan_goal_handle,
-            robot_skill: RobotSkill,
-            current_timestep: int,
-            skill_id: str,
-            feedback_state: dict,
+        self,
+        plan_goal_handle,
+        robot_skill: RobotSkill,
+        current_timestep: int,
+        skill_id: str,
+        feedback_state: dict,
     ):
         skill_name = robot_skill.skill_list[0].skill
         action_name = f"/{skill_name}"
-        logger.info(
-            f"Dispatching skill '{skill_id}' on action '{action_name}'"
-        )
+        logger.info(f"Dispatching skill '{skill_id}' on action '{action_name}'")
 
         try:
             action_client = self._get_or_create_client(action_name)
@@ -566,9 +558,7 @@ class PlanExecutionServer(Node):
                 )
 
         except Exception as e:
-            logger.error(
-                f"Exception for skill '{skill_id}': {type(e).__name__} - {e}"
-            )
+            logger.error(f"Exception for skill '{skill_id}': {type(e).__name__} - {e}")
             feedback_state[skill_id].status = f"Error: {e}"
             self._publish_aggregated_feedback(
                 plan_goal_handle, current_timestep, feedback_state
@@ -579,16 +569,14 @@ class PlanExecutionServer(Node):
     def _get_or_create_client(self, action_name: str) -> ActionClient:
         with self._client_lock:
             if action_name not in self._skill_clients:
-                logger.info(
-                    f"Creating new action client for '{action_name}'..."
-                )
+                logger.info(f"Creating new action client for '{action_name}'...")
                 self._skill_clients[action_name] = ActionClient(
                     self, SkillExecution, action_name
                 )
             return self._skill_clients[action_name]
 
     def _publish_aggregated_feedback(
-            self, plan_goal_handle, current_timestep, feedback_state
+        self, plan_goal_handle, current_timestep, feedback_state
     ):
         agg_feedback = PlanExecution.Feedback()
         agg_feedback.current_timestep = current_timestep
@@ -597,7 +585,7 @@ class PlanExecutionServer(Node):
             plan_goal_handle.publish_feedback(agg_feedback)
 
     async def _wait_for_server(
-            self, action_client: ActionClient, timeout_sec=2.0
+        self, action_client: ActionClient, timeout_sec=2.0
     ) -> bool:
         """Asynchronously wait for an Action Server to be available."""
         # This function is now called from the main asyncio thread, so we can run
@@ -643,9 +631,7 @@ class SkillServerNode(Node):
                 self.execute_callback,
             )
             self.skill_servers.append(server)
-            logger.info(
-                f"✅ Mock Action Server for '/{skill_name}' is ready."
-            )
+            logger.info(f"✅ Mock Action Server for '/{skill_name}' is ready.")
 
     def execute_callback(self, goal_handle):
         """
@@ -653,25 +639,39 @@ class SkillServerNode(Node):
         """
         skill_req = goal_handle.request.skill_request
         skill_name = skill_req.skill_list[0].skill
-        robot_id = skill_req.robot_id
-
+        params_list = skill_req.skill_list[0].params
+        params_dict = {param.key: param.value for param in params_list}
+        robot = skill_req.robot_id
+        robot_name, robot_id = robot.split("-")
+        robot_id = int(robot_id)
         logger.info(
-            f"[{skill_name.upper()}] Robot '{robot_id}' received request. Simulating execution..."
+            f"[{skill_name.upper()}] Robot '{robot}' received request. Simulating execution..."
         )
 
-        # 模拟耗时工作
         feedback_msg = SkillExecution.Feedback()
 
-        for i in range(1, 11):
-            feedback_msg.status = (
-                f"Robot '{robot_id}' executing '{skill_name}', progress {i * 10}%"
+        # 使用skill manager
+        from containers import get_container
+
+        container = get_container()
+
+        skill_manager = container.skill_manager()
+
+        if robot_name.lower() in ["ugv", "jetbot"]:
+            skill_manager._SKILL_TABLE.get(skill_name)(
+                rc="jetbot", rid=robot_id, params=params_dict
             )
-            logger.info(
-                f"Feedback from [{skill_name.upper()}|{robot_id}]: {feedback_msg.status}"
+
+        elif robot_name.lower() in ["uav", "drone", "cf2x"]:
+            skill_manager._SKILL_TABLE.get(skill_name)(
+                rc="cf2x", rid=robot_id, params=params_dict
             )
-            goal_handle.publish_feedback(feedback_msg)
-            import time
-            time.sleep(0.5)  # 模拟0.5秒的延迟
+
+        feedback_msg.status = f"Robot '{robot_id}' executing '{skill_name}"
+        logger.info(
+            f"Feedback from [{skill_name.upper()}|{robot_id}]: {feedback_msg.status}"
+        )
+        goal_handle.publish_feedback(feedback_msg)
 
         goal_handle.succeed()
         logger.info(

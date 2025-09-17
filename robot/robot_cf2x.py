@@ -7,6 +7,7 @@ from camera.camera_cfg import CameraCfg
 from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
+from log.log_manager import LogManager
 from controller.controller_cf2x import ControllerCf2x
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
@@ -18,6 +19,8 @@ from geometry_msgs.msg import Pose, Twist, Vector3
 from gsi2isaacsim.gsi_msgs_helper import Plan, RobotFeedback, SkillInfo, Parameter, VelTwistPose
 
 import threading
+
+logger = LogManager.get_logger(__name__)
 
 
 class RobotCf2x(RobotBase):
@@ -371,7 +374,8 @@ class RobotCf2x(RobotBase):
         positions, orientations = self.robot_entity.get_world_poses()
 
         if self.counter % self.pub_period == 0:
-            self._publish_feedback(params = self._params_from_pose(positions, orientations), progress = self._calc_dist(positions, self.nav_end)*100 / self.nav_dist)
+            self._publish_feedback(params=self._params_from_pose(positions, orientations),
+                                   progress=self._calc_dist(positions, self.nav_end) * 100 / self.nav_dist)
 
         cur_pos = np.array(positions[0], dtype=np.float32)
         pos_xy = cur_pos[:2]
@@ -396,7 +400,7 @@ class RobotCf2x(RobotBase):
             if hasattr(self, 'state_skill_complete'):
                 self.state_skill_complete = True
             print("Cf2X arrived at the target point!")
-            self._publish_feedback(params = self._params_from_pose(positions, orientations), progress = 100)
+            self._publish_feedback(params=self._params_from_pose(positions, orientations), progress=100)
             return True
 
         # 期望速度：指向目标，近处线性减速
@@ -421,10 +425,11 @@ class RobotCf2x(RobotBase):
         self.counter += 1
 
         # 未激活或无目标：什么都不做
-        if getattr(self, 'flag_action_navigation', False) and self.nav_target_xy is not None and hasattr(self, 'flag_world_reset') and self.flag_world_reset:
+        if getattr(self, 'flag_action_navigation', False) and self.nav_target_xy is not None and hasattr(self,
+                                                                                                         'flag_world_reset') and self.flag_world_reset:
             self.move_to()
-            if self.counter % self.pub_period == 0:
-                self._publish_feedback_pose()
+            # if self.counter % self.pub_period == 0:
+            #     self._publish_feedback_pose()
         else:
             if self.keyboard_control_enabled:
                 self.keyboard_control(step_size)
@@ -460,82 +465,49 @@ class RobotCf2x(RobotBase):
 
     def move_along_path(self, path: list = None, flag_reset: bool = False):
         """让机器人沿着路径点运动"""
-        # if flag_reset:
-        #     self.path_index = 0
-        #     self.path = path
-        #
-        # if hasattr(self, 'path') and hasattr(self, 'path_index') and self.path_index < len(self.path):
-        #     reach_flat = self.move_to(self.path[self.path_index])
-        #     if reach_flat:
-        #         self.path_index += 1
-        #     return False
-        # else:
-        #     if hasattr(self, 'flag_action_navigation'):
-        #         self.flag_action_navigation = False
-        #     if hasattr(self, 'state_skill_complete'):
-        #         self.state_skill_complete = True
-        #     return True
         return False
 
-    def navigate_to(self, pos_target: np.array = None, reset_flag: bool = False):
-        """导航到目标位置
-        - 无人机: 平滑直线飞行到目标 XY（忽略障碍），Z 锁定为悬停高度
-        - 地面车: 维持原有 A* 路径 + 差速控制
+    def navigate_to(self, pos_target: np.ndarray = None, reset_flag: bool = False, **kwargs):
         """
-        import numpy as np
-
+        导航到目标位置。
+        - 无人机: 执行特殊的直线飞行逻辑。
+        - 地面车: 调用父类的 A* 路径规划实现。
+        """
         if pos_target is None:
             raise ValueError("no target position")
 
-        # —— 无人机分支：不做 A*，仅直线导航 ——
-        if getattr(self, 'is_drone', False):
+        # 1. --- 处理子类的特殊情况：无人机 ---
+        if hasattr(self, 'is_drone') and self.is_drone:
+            logger.info("Executing drone-specific navigation.")
             # 支持传入 2D 或 3D；若含 Z 则忽略
-            pos_target = np.array(pos_target, dtype=np.float32)
-            self.nav_target_xy = pos_target[:2].copy()
+            self.nav_end = np.array(pos_target, dtype=np.float32)
+            self.nav_target_xy = self.nav_end[:2].copy()
             self.nav_active = True
 
-            # （可选）防止键盘抢占：关闭键盘控制
-            self.keyboard_control_enabled = False
-
-            # 状态字段（与你现有状态机对齐）
-            if hasattr(self, 'flag_action_navigation'):
-                self.flag_action_navigation = True
-            if hasattr(self, 'state_skill'):
-                self.state_skill = 'navigate_to'
-            if hasattr(self, 'state_skill_complete'):
-                self.state_skill_complete = False
-
-            print(f"无人机开始导航到 XY: {self.nav_target_xy}（Z 将保持悬停高度 {self.hovering_height}）")
-            return True
-
-        # —— 地面车分支：保持你原有实现（A* + 差速） ——
-        elif pos_target[2] != 0:
-            raise ValueError("小车的z轴高度得在平面上")
-
-        positions, _ = self.robot_entity.get_world_poses()
-        pos_robot = positions[0]
-        pos_index_target = self.map_grid.compute_index(pos_target)
-        pos_index_robot = self.map_grid.compute_index(pos_robot)
-
-        grid_map = self.map_grid.value_map
-        grid_map[pos_index_robot] = self.map_grid.empty_cell
-
-        planner = AStar(self.map_grid.value_map, obs_value=1.0, free_value=0.0, directions="eight")
-        path = planner.find_path(tuple(pos_index_robot), tuple(pos_index_target))
-
-        real_path = np.zeros_like(path, dtype=np.float32)
-        for i in range(path.shape[0]):
-            real_path[i] = self.map_grid.pos_map[tuple(path[i])]
-            real_path[i][-1] = 0
-
-        self.move_along_path(real_path)
-        if hasattr(self, 'flag_action_navigation'):
+            # 设置通用状态标志
             self.flag_action_navigation = True
-        if hasattr(self, 'state_skill'):
             self.state_skill = 'navigate_to'
-        if hasattr(self, 'state_skill_complete'):
             self.state_skill_complete = False
-        return True
+
+            if hasattr(self, 'keyboard_control_enabled'):
+                self.keyboard_control_enabled = False
+
+            return True  # 子类方法返回一个状态
+
+        # 2. --- 对于所有其他情况（地面车），委托给父类 ---
+        else:
+            logger.info("Delegating to superclass for ground navigation.")
+            # 直接调用父类的同名方法，并将所有相关参数传递过去。
+            # 父类会处理 A* 规划、状态设置等所有事情。
+            super().navigate_to(
+                pos_target=self.nav_end,
+                reset_flag=reset_flag,
+                # 允许传递父类需要的额外参数，如 load_from_file
+                **kwargs
+            )
+
+            # 保持与无人机分支一致的返回值
+            return True
 
     def pick_up(self):
         """拾取物品"""
