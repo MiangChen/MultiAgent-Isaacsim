@@ -15,7 +15,7 @@ import rclpy
 from ros.ros_node import SwarmNode
 
 from geometry_msgs.msg import Pose, Twist, Vector3
-from gsi_msgs.gsi_msgs_helper import Plan, RobotFeedback, SkillInfo, Parameter, VelTwistPose
+from gsi2isaacsim.gsi_msgs_helper import Plan, RobotFeedback, SkillInfo, Parameter, VelTwistPose
 
 import threading
 

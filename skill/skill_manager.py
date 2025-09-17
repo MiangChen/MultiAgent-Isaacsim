@@ -3,7 +3,7 @@ import threading
 from typing import Dict, Any
 
 from log.log_manager import LogManager
-from gsi_msgs.gsi_msgs_helper import Plan
+from gsi2isaacsim.gsi_msgs_helper import Plan
 from map.map_semantic_map import MapSemantic
 
 # Global variables for ROS integration
@@ -24,7 +24,10 @@ class SkillManager:
         self._SKILL_TABLE = {
             "navigate": self._skill_navigate_to,
             "pick-up": self._skill_pick_up,
+            "load_object": self._skill_pick_up,
             "put-down": self._skill_put_down,
+            "unload_object": self._skill_put_down,
+            "take_photo": self._skill_take_photo,
         }
 
         # 初始化时打印支持的技能表

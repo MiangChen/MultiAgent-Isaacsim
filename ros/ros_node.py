@@ -6,7 +6,7 @@ from pxr import Tf, Gf
 # 基础消息接口
 from geometry_msgs.msg import Transform as RosTransform
 
-from gsi_msgs.gsi_msgs_helper import (
+from gsi2isaacsim.gsi_msgs_helper import (
     PrimTransform,
     SceneModifications,
     RobotFeedback,
