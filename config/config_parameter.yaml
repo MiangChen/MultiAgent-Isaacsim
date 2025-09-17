@@ -6,6 +6,8 @@ world:
   name: small_city_available.usd # 要使用的场的名字,和 asset / user_usd_files.json对应
   physics_dt: 0.005  # 1 / 200
 
+action_mode: True
+
 # 栅格地图
 map:
   cell_size: 0.5  # grid map的分辨率

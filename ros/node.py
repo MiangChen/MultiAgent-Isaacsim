@@ -1,18 +1,18 @@
-# GSI Messages Path Setup
 import asyncio
-import omni.usd
-from rclpy.node import Node
-from pxr import Tf, Gf
-from typing import Dict, List
-import traceback  # Import traceback
+from typing import Dict
+import traceback
+import threading
 
-# 基础消息接口
 from geometry_msgs.msg import Transform as RosTransform
 from rclpy.action import ActionServer, ActionClient, GoalResponse
+from rclpy.node import Node
 from rclpy.task import Future as RclpyFuture
 
+import omni.usd
+from pxr import Tf, Gf
+
 from action_msgs.msg import GoalStatus
-from gsi_msgs.gsi_msgs_helper import (
+from gsi2isaacsim.gsi_msgs_helper import (
     PrimTransform,
     SceneModifications,
     RobotFeedback,
@@ -26,9 +26,11 @@ from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
 
+
 class PlanNode(Node):
     def __int__(self):
         super().__init__("PlanNode")
+
 
 class SceneMonitorNode(Node):
     def __init__(self):
@@ -502,12 +504,12 @@ class PlanExecutionServer(Node):
         return PlanExecution.Result(success=True, message="Plan executed successfully.")
 
     async def dispatch_skill(
-        self,
-        plan_goal_handle,
-        robot_skill: RobotSkill,
-        current_timestep: int,
-        skill_id: str,
-        feedback_state: dict,
+            self,
+            plan_goal_handle,
+            robot_skill: RobotSkill,
+            current_timestep: int,
+            skill_id: str,
+            feedback_state: dict,
     ):
         skill_name = robot_skill.skill_list[0].skill
         action_name = f"/{skill_name}"
@@ -547,7 +549,6 @@ class PlanExecutionServer(Node):
             result_wrapper = await self._wrap_ros_future(goal_handle.get_result_async())
 
             if result_wrapper.status != GoalStatus.STATUS_SUCCEEDED:
-
                 raise RuntimeError(
                     f"Skill '{skill_id}' did not succeed. Status: {result_wrapper.status}"
                 )
@@ -587,7 +588,7 @@ class PlanExecutionServer(Node):
             return self._skill_clients[action_name]
 
     def _publish_aggregated_feedback(
-        self, plan_goal_handle, current_timestep, feedback_state
+            self, plan_goal_handle, current_timestep, feedback_state
     ):
         agg_feedback = PlanExecution.Feedback()
         agg_feedback.current_timestep = current_timestep
@@ -596,7 +597,7 @@ class PlanExecutionServer(Node):
             plan_goal_handle.publish_feedback(agg_feedback)
 
     async def _wait_for_server(
-        self, action_client: ActionClient, timeout_sec=2.0
+            self, action_client: ActionClient, timeout_sec=2.0
     ) -> bool:
         """Asynchronously wait for an Action Server to be available."""
         # This function is now called from the main asyncio thread, so we can run
@@ -646,7 +647,6 @@ class SkillServerNode(Node):
                 f"✅ Mock Action Server for '/{skill_name}' is ready."
             )
 
-
     def execute_callback(self, goal_handle):
         """
         模拟技能执行的通用回调函数。
@@ -662,18 +662,15 @@ class SkillServerNode(Node):
         # 模拟耗时工作
         feedback_msg = SkillExecution.Feedback()
 
-
         for i in range(1, 11):
-
             feedback_msg.status = (
-                f"Robot '{robot_id}' executing '{skill_name}', progress {i*10}%"
+                f"Robot '{robot_id}' executing '{skill_name}', progress {i * 10}%"
             )
             logger.info(
                 f"Feedback from [{skill_name.upper()}|{robot_id}]: {feedback_msg.status}"
             )
             goal_handle.publish_feedback(feedback_msg)
             time.sleep(0.5)  # 模拟0.5秒的延迟
-
 
         goal_handle.succeed()
         logger.info(

@@ -1,6 +1,5 @@
-import os
 import sys
-sys.path.insert(0, os.path.join("/home/ubuntu/PycharmProjects/isaacsim-gsi/src/", 'gsi2isaacsim'))
+sys.path.insert(0, "/home/ubuntu/PycharmProjects/isaacsim-gsi/src")
 
 import argparse
 from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
@@ -328,11 +327,6 @@ def main():
     }
     scene_manager.create_shape_unified(**object)
 
-    skill_manager._skill_navigate_to(
-        rc="jetbot",
-        rid=0,
-        params={"goal": "place4"},
-    )
     flag = 0
     # Main simulation loop
     while simulation_app.is_running():
@@ -340,75 +334,6 @@ def main():
         # World step
         env.step(action=None)
 
-        if count % 60 == 0 and count != 0:
-            skill_manager._skill_take_photo(
-                rc="jetbot",
-                rid=0,
-                params={"file_path": "/home/ubuntu/test.jpg"}
-            )
-
-        if flag == 0:
-            result = skill_manager._skill_pick_up(
-                rc="jetbot",
-                rid=0,
-                params={
-                    "object_prim_path": object_prim_path,
-                    "robot_prim_path": robot_prim_path,
-                },
-            )
-            if result != None and result.get("status") == "success":
-                flag = 1
-
-        elif count > 500 and flag == 1:
-            result = skill_manager._skill_put_down(
-                rc="jetbot",
-                rid=0,
-                params={
-                    "object_prim_path": object_prim_path,
-                    "robot_prim_path": robot_prim_path,
-                },
-            )
-            flag = 2
-
-        # if count > 400:
-        # _skill_navigate_to(
-        #     swarm_manager,
-        #     rc="jetbot",
-        #     rid=0,
-        #     params={"goal": "place4"},
-        #     semantic_map=semantic_map,
-        # )
-        # _skill_navigate_to(
-        #     swarm_manager,
-        #     rc="jetbot",
-        #     rid=1,
-        #     params={"goal": "place1"},
-        #     semantic_map=semantic_map,
-        # )
-        # _skill_navigate_to(
-        #     swarm_manager,
-        #     rc="jetbot",
-        #     rid=2,
-        #     params={"goal": "place2"},
-        #     semantic_map=semantic_map,
-        # )
-        # _skill_navigate_to(
-        #     swarm_manager,
-        #     rc="jetbot",
-        #     rid=3,
-        #     params={"goal": "place3"},
-        #     semantic_map=semantic_map,
-        # )
-        # _skill_navigate_to(
-        #     swarm_manager,
-        #     rc="h1",
-        #     rid=0,
-        #     params={"goal": "place3"},
-        #     semantic_map=semantic_map,
-        # )
-        # process_semantic_detection(semantic_camera, semantic_map)
-
-        # Process ROS skills if ROS is enabled
         if config_manager.get("ros"):
             skill_manager.process_ros_skills()
 
