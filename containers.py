@@ -46,7 +46,7 @@ class AppContainer(containers.DeclarativeContainer):
 
     ros_manager = providers.Singleton(
         RosManager,
-        action_mode = config_manager.get("ros_action"),
+        action_mode=config.provided["action_mode"],
     )
 
     scene_manager = providers.Singleton(SceneManager)

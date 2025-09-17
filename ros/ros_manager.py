@@ -1,10 +1,12 @@
+import asyncio
 import threading
-from gsi2isaacsim.gsi_msgs_helper import Plan
-import rclpy
 
-rclpy.init(args=None)
+import rclpy
 from rclpy.executors import MultiThreadedExecutor
 
+rclpy.init(args=None)
+
+from gsi2isaacsim.gsi_msgs_helper import Plan
 from ros.node import PlanNode, SceneMonitorNode, SwarmNode, PlanExecutionServer, SkillServerNode
 from log.log_manager import LogManager
 
@@ -18,7 +20,7 @@ def plan_cb_wrapper(msg):
 
 
 class RosManager:
-    def __init__(self, action_mode = False):
+    def __init__(self, action_mode=False):
 
         self.plan_receiver_node = None
         self.scene_monitor_node = None
@@ -44,8 +46,10 @@ class RosManager:
         self.scene_monitor_node = SceneMonitorNode()
 
         if self.action_mode:
-            self.plan_execution_server = PlanExecutionServer()
+            loop = asyncio.get_event_loop()
+            self.plan_execution_server = PlanExecutionServer(loop=loop)
             self.skill_server_node = SkillServerNode()
+            self.swarm_node = SwarmNode()
         else:
             self.plan_receiver_node = PlanNode()
             self.plan_receiver_node.create_subscription(Plan, '/Plan', plan_cb_wrapper, qos)
@@ -55,7 +59,6 @@ class RosManager:
 
     def start(self):
         """在后台线程中启动ROS节点"""
-
         if self.action_mode:
             if not self.plan_execution_server or not self.skill_server_node:
                 logger.warning("ROS nodes not built. Cannot start.")
@@ -90,14 +93,8 @@ class RosManager:
         finally:
             for n in nodes:
                 if n and self.executor:
-                    try:
-                        self.executor.remove_node(n)
-                    except Exception as e:
-                        logger.error(f"Error removing node: {e}")
-                    try:
-                        n.destroy_node()
-                    except Exception as e:
-                        logger.error(f"Error destroying node: {e}")
+                    self.executor.remove_node(n)
+                    n.destroy_node()
             if rclpy.ok():
                 rclpy.shutdown()
             logger.info("ROS executor shutdown complete.")
