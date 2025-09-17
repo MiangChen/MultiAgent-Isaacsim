@@ -670,6 +670,7 @@ class SkillServerNode(Node):
                 f"Feedback from [{skill_name.upper()}|{robot_id}]: {feedback_msg.status}"
             )
             goal_handle.publish_feedback(feedback_msg)
+            import time
             time.sleep(0.5)  # 模拟0.5秒的延迟
 
         goal_handle.succeed()

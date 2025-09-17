@@ -120,7 +120,7 @@ class SwarmManager:
     ):
         """
         异步创建新机器人并加入仓库。
-        此方法可以智能地处理同步和异步两种机器人创建方式。
+        处理同步和异步两种机器人创建方式
         """
         if robot_class_name not in self.robot_class:
             raise ValueError(f"Unknown robot type: {robot_class_name}")
@@ -139,7 +139,7 @@ class SwarmManager:
                 **cfg_camera_third_person_dict
             )
 
-        # --- 5. 核心修改点: 智能地选择同步或异步创建 ---
+        # --- 5. 选择同步或异步创建 ---
         robot_cls = self.robot_class[robot_class_name]
 
         # 检查机器人class是否有 'create' 方法，并且它是一个异步函数
