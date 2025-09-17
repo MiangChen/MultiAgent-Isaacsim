@@ -4,18 +4,19 @@ from rclpy.action import ActionServer
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 
-# 导入我们刚刚定义的 Action 接口
+from log.log_manager import LogManager
 from gsi_msgs_helper import SkillExecution
 
+logger = LogManager.get_logger(__name__)
 
-class MockSkillServer(Node):
+class SkillServer(Node):
     """
     这个节点模拟了多个技能的执行。
     它会为每个指定的技能名称启动一个专用的Action Server。
     """
 
     def __init__(self):
-        super().__init__("mock_skill_server_node")
+        super().__init__("skill_server_node")
         self.skill_servers = []
 
         # 定义我们想要模拟的技能列表
@@ -30,7 +31,7 @@ class MockSkillServer(Node):
             )
             self.skill_servers.append(server)
             self.get_logger().info(
-                f"✅ Mock Action Server for '/{skill_name}' is ready."
+                f"✅ Action Server for '/{skill_name}' is ready."
             )
 
     def execute_callback(self, goal_handle):

@@ -1,7 +1,4 @@
 import threading
-import os
-import sys
-sys.path.insert(0, "/home/ubuntu/PycharmProjects/isaacsim-gsi/src")
 from gsi2isaacsim.gsi_msgs_helper import Plan
 import rclpy
 
