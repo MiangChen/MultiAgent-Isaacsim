@@ -44,7 +44,11 @@ class AppContainer(containers.DeclarativeContainer):
         invisible_cell=config.provided["map"]["invisible_cell"],
     )
 
-    ros_manager = providers.Singleton(RosManager)
+    ros_manager = providers.Singleton(
+        RosManager,
+        action_mode = config_manager.get("ros_action"),
+    )
+
     scene_manager = providers.Singleton(SceneManager)
     semantic_map = providers.Singleton(MapSemantic)
     viewport_manager = providers.Singleton(ViewportManager)

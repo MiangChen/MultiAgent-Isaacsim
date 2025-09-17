@@ -41,6 +41,14 @@ class ConfigManager:
         )
 
         parser.add_argument(
+            "--ros_action",
+            type=lambda x: str(x).lower() in ["true", "1", "yes"],
+            metavar="{true,false}",
+            default="true",
+            help="Use action server to communicate. Otherwise use topic.",
+        )
+
+        parser.add_argument(
             "--enable",
             type=str,
             action="append",

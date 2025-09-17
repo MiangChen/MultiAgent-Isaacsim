@@ -10,7 +10,7 @@ from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_h1 import RobotCfgH1
 from controller.controller_policy_h1 import H1FlatTerrainPolicy
-from ros.ros_node import SwarmNode
+from ros.node import SwarmNode
 
 import carb
 from isaacsim.core.prims import Articulation
@@ -18,6 +18,7 @@ from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.types import ArticulationActions
 
 import numpy as np
+from gsi_msgs.gsi_msgs_helper import Plan, RobotFeedback, SkillInfo, Parameter, VelTwistPose
 
 
 class RobotH1(RobotBase):
@@ -46,9 +47,23 @@ class RobotH1(RobotBase):
         self.controller_policy: H1FlatTerrainPolicy | None = None
         self.base_command = np.zeros(3)
 
+        self.counter = 0
+        self.pub_period = 50
+        self.previous_pos = None
+        self.movement_threshold = 0.1 # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
+
         self.node = node
 
-        return
+        self.node.register_feedback_publisher(
+            robot_class=self.cfg_body.name_prefix,
+            robot_id=self.cfg_body.id,
+            qos=50
+        )
+        self.node.register_motion_publisher(
+            robot_class=self.cfg_body.name_prefix,
+            robot_id=self.cfg_body.id,
+            qos=50
+        )
 
     # 2. 新增的异步工厂 @classmethod
     @classmethod
@@ -132,6 +147,8 @@ class RobotH1(RobotBase):
         速度有两个分两，自转的分量 + 前进的分量
         """
         pos, quat = self.get_world_poses()  # self.get_world_pose()  ## type np.array
+        if self.counter % self.pub_period == 0:
+            self._publish_feedback(params = self._params_from_pose(pos, quat), progress = self._calc_dist(pos, self.nav_end)*100 / self.nav_dist)
         # 获取2D方向的朝向，逆时针是正
         yaw = self.quaternion_to_yaw(quat)
         # 获取机器人和目标连线的XY平面上的偏移角度
@@ -146,6 +163,7 @@ class RobotH1(RobotBase):
             delta_angle -= 2 * np.pi
         if np.linalg.norm(target_pos[0:2] - pos[0:2]) < 1:
             self.action = [0, 0]
+            self._publish_feedback(params = self._params_from_pose(pos, quat), progress = 100)
             return True  # 已经到达目标点附近10cm, 停止运动
         # print(delta_angle, np.linalg.norm(target_pos[0:2] - pos[0:2]))
         k_rotate = 1 / np.pi
@@ -175,8 +193,13 @@ class RobotH1(RobotBase):
         obs = None
         return obs
 
+
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
+
+        self.counter += 1
+        self._publish_status_pose()
+
         if self.flag_world_reset == True:
             if self.flag_action_navigation == True:
                 self.move_along_path()  # 每一次都计算下速度

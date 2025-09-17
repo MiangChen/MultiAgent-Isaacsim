@@ -8,7 +8,7 @@ from robot.robot_cfg_jetbot import RobotCfgJetbot
 
 from isaacsim.robot.wheeled_robots.robots import WheeledRobot
 from isaacsim.core.api.scenes import Scene
-from ros.ros_node import SwarmNode
+from ros.node import SwarmNode
 
 class RobotJetbot(RobotBase):
     def __init__(self, config: RobotCfgG1, scene: Scene = None, map_grid: GridMap = None, node: SwarmNode = None, scene_manager = None) -> None:
