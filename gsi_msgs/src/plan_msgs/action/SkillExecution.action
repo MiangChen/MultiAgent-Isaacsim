@@ -1,0 +1,9 @@
+# Goal: The information needed to execute one specific skill
+plan_msgs/RobotSkill skill_request
+---
+# Result: The outcome of the skill execution
+bool success
+string message
+---
+# Feedback: Ongoing status of the skill
+string status
