@@ -222,7 +222,6 @@ class RobotBase:
         Returns:
         """
         # 小车/人形机器人的导航只能使用2d的
-        # todo: 未来能够爬坡
         if pos_target == None:
             raise ValueError("no target position")
         elif pos_target[2] != 0:
@@ -520,10 +519,9 @@ class RobotBase:
         if p.size < 3 or q.size < 4:
             raise ValueError(f"Invalid pose shapes: pos={p.shape}, quat={q.shape}")
 
-        # 保证是 float -> str
-        px, py, pz = float(p[0]), float(p[1]), float(p[2])
-        # 这里假定四元数顺序为 [x, y, z, w]；如果你的数据是 wxyz，请对调
-        qx, qy, qz, qw = float(q[0]), float(q[1]), float(q[2]), float(q[3])
+        px, py, pz = (float(v) for v in p)
+        # 这里假定四元数顺序为 [x, y, z, w]
+        qx, qy, qz, qw = (float(v) for v in q)
 
         base_return = [
             Parameter(key="pos_x", value=str(px)),
@@ -592,35 +590,22 @@ class RobotBase:
         msg = VelTwistPose()
 
         # vel 字段：保持与你原逻辑一致，全部置 0
-        msg.vel.x = 0.0
-        msg.vel.y = 0.0
-        msg.vel.z = 0.0
+        msg.vel.x, msg.vel.y, msg.vel.z = [0.0, 0.0, 0.0]
 
         # twist：使用仿真里的实时速度
-        msg.twist.linear.x = float(lin_v0[0])
-        msg.twist.linear.y = float(lin_v0[1])
-        msg.twist.linear.z = float(lin_v0[2])
+        msg.twist.linear.x, msg.twist.linear.y, msg.twist.linear.z = (float(v) for v in lin_v0)
+        msg.twist.angular.x, msg.twist.angular.y, msg.twist.angular.z = (float(v) for v in ang_v0)
+        msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (float(v) for v in pos)
 
-        msg.twist.angular.x = float(ang_v0[0])
-        msg.twist.angular.y = float(ang_v0[1])
-        msg.twist.angular.z = float(ang_v0[2])
-
-        # pose：使用仿真里的实时位置与朝向
-        msg.pose.position.x = float(pos[0])
-        msg.pose.position.y = float(pos[1])
-        msg.pose.position.z = float(pos[2])
 
         # 兼容 ndarray（常见返回）与带属性的四元数对象两种情况
         if hasattr(orn, "x"):
-            qx, qy, qz, qw = orn.x, orn.y, orn.z, orn.w
+            quat_xyzw = orn.x, orn.y, orn.z, orn.w
         else:
             # 约定顺序为 [x, y, z, w]；若你的资源是 wxyz，请按需调整
-            qx, qy, qz, qw = float(orn[0]), float(orn[1]), float(orn[2]), float(orn[3])
+            quat_xyzw = float(orn[0]), float(orn[1]), float(orn[2]), float(orn[3])
 
-        msg.pose.orientation.x = float(qx)
-        msg.pose.orientation.y = float(qy)
-        msg.pose.orientation.z = float(qz)
-        msg.pose.orientation.w = float(qw)
+        msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w = (float(v) for v in quat_xyzw)
 
         self.node.publish_motion(
             robot_class=self.cfg_body.name_prefix,

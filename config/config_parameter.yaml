@@ -1,19 +1,22 @@
 # Isaacsim资产的位置
-asset_path : "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5/"
+asset_path: "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5/"
 
 # 场景的位置
 world:
   name: small_city_available.usd # 要使用的场的名字,和 asset / user_usd_files.json对应
   physics_dt: 0.005  # 1 / 200
+  path: Isaac/Environments/Grid/default_environment.usd  # 从name 和 path中二选一
+
+rendering_hz: 60
 
 action_mode: True
 
 # 栅格地图
 map:
   cell_size: 0.5  # grid map的分辨率
-  start_point: [0, 0, 0]  # 构建gridmap的起点, 要保证这里是没有障碍物的
-  min_bounds: [-34, 0, 0] #
-  max_bounds: [19, 32, 1]
+  start_point: [ 0, 0, 0 ]  # 构建gridmap的起点, 要保证这里是没有障碍物的
+  min_bounds: [ -34, 0, 0 ] #
+  max_bounds: [ 19, 32, 1 ]
   occupied_cell: 1
   empty_cell: 0
   invisible_cell: 2
@@ -24,19 +27,16 @@ map_semantic:
   depot1: [ 5, 3, 0 ]  # 这里的坐标可根据实际情况调整
   depot2: [ 5, 2, 0 ]  # 这里的坐标可根据实际情况调整
   depot3: [ 5, 1, 0 ]  # 这里的坐标可根据实际情况调整
-  place1: [-4.5, 11.4, 0]
-  place2: [5.6, 11.4, 0]
-  place3: [-4.7, 22.5, 0]
-  place4: [5, 6.5, 0]
+  place1: [ -4.5, 11.4, 0 ]
+  place2: [ 5.6, 11.4, 0 ]
+  place3: [ -4.7, 22.5, 0 ]
+  place4: [ 5, 6.5, 0 ]
 
 simulation_app_config:
   renderer: "RaytracedLighting"
-
   headless: False # 默认设置为非无头模式，可以通过命令行参数覆盖
-
   anti_aliasing: 0
 
-experience: "isaacsim.exp.base.zero_delay.kit"
 
 # 定义启动时需要启用的扩展列表
 enabled_extensions:
@@ -47,20 +47,22 @@ enabled_extensions:
   - "isaacsim.asset.gen.omap"
   - "omni.graph.window.action"
 
+experience: "isaacsim.exp.base.zero_delay.kit"
+
 # 渲染配置, 下面的配置可以降低资源消耗
-#settings:
-#  "/rtx/ecoMode/enabled": False
-#  "/rtx/post/dlss/execMode": 0
-#  "/rtx-transient/dlssg/enabled": False
-#  "/rtx-transient/dldenoiser/enabled": False
-#  "/rtx/directLighting/enabled": False
-#  "/rtx/indirectDiffuse/enabled": False
-#  "/rtx/sceneDb/ambientLightIntensity": 3.0
-#  "/rtx/reflections/enabled": False
-#  "/rtx/translucency/enabled": False
-#  "/rtx/raytracing/subsurface/enabled": False
-#  "/rtx/caustics/enabled": False
-#  "/persistent/physics/numThreads": 0
+settings:
+  "/rtx/ecoMode/enabled": False
+  "/rtx/post/dlss/execMode": 0
+  "/rtx-transient/dlssg/enabled": False
+  "/rtx-transient/dldenoiser/enabled": False
+  "/rtx/directLighting/enabled": False
+  "/rtx/indirectDiffuse/enabled": False
+  "/rtx/sceneDb/ambientLightIntensity": 3.0
+  "/rtx/reflections/enabled": False
+  "/rtx/translucency/enabled": False
+  "/rtx/raytracing/subsurface/enabled": False
+  "/rtx/caustics/enabled": False
+  "/persistent/physics/numThreads": 0
 
 # --- 日志配置 ---
 logging:

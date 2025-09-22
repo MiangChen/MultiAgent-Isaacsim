@@ -120,7 +120,7 @@ class SkillManager:
 
     # Skill execution functions with dependency injection
     def _skill_navigate_to(
-        self, rc: str, rid: int, params: Dict[str, Any] = None
+            self, rc: str, rid: int, params: Dict[str, Any] = None
     ) -> None:
         """Execute navigate-to skill with injected semantic map
 

@@ -16,7 +16,7 @@ class ConfigManager:
         self.config: Dict[str, Any] = {}
         self._parser = self._create_argument_parser()
         self.args = None
-
+        # self.args, self.unknown_args = self._parser.parse_known_args()
         self.load()
 
     def _create_argument_parser(self) -> argparse.ArgumentParser:
@@ -54,6 +54,22 @@ class ConfigManager:
             action="append",
             help="Enable a feature. Can be used multiple times.",
         )
+
+        parser.add_argument(
+            "--gui",
+            action="store_true",
+            help="Run simulation in GUI mode. Overrides config file setting."
+        )
+
+        # 使用互斥组来处理 --namespace 和 --namespaces
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument(
+            "--namespace",
+            type=str,
+            default=None,
+            help="Comma-separated list of namespaces for multi-UAV simulation. Overrides config.",
+        )
+
         return parser
 
     def load(self, args: List[str] = None):
@@ -61,7 +77,7 @@ class ConfigManager:
         加载、合并和处理所有配置。
         """
         # 1. 解析命令行参数
-        self.args = self._parser.parse_args(args)
+        self.args, self.unknown_args = self._parser.parse_known_args(args)
 
         # 2. 从 YAML 文件加载基础配置
         config_file = self.args.config
@@ -77,24 +93,28 @@ class ConfigManager:
         cli_args_dict = vars(self.args)
         if cli_args_dict.get("ros") is not None:
             self.config.setdefault("ros", {})["enable"] = cli_args_dict["ros"]
+        if cli_args_dict.get("gui"):
+            self.config.setdefault("simulation", {})["gui"] = True
+        if cli_args_dict.get("namespace") is not None:
+            namespaces_list = [ns.strip() for ns in cli_args_dict["namespace"].split(',') if ns.strip()]
+            self.config["namespace"] = namespaces_list
 
-        # 4. 计算派生路径和值 (取代 variables.py 的功能)
+        # 4. 计算派生路径和值
         self._derive_paths()
 
         return self
 
-    def get(self, key: str, default: Any = None) -> Any:
+    def get(self, key: str) -> Any:
         """
         安全地从最终配置中获取一个值。支持点状访问 (e.g., 'world.name')。
         """
         keys = key.split(".")
         value = self.config
-        try:
-            for k in keys:
-                value = value[k]
-            return value
-        except (KeyError, TypeError):
-            return default
+
+        for k in keys:
+            value = value[k]
+        return value
+
 
     def _derive_paths(self):
         """
