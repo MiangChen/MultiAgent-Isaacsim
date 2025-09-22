@@ -1,0 +1,49 @@
+# GSI Action System Configuration
+
+# ROS2 Action服务器配置
+action_servers:
+  plan_execution:
+    name: "execute_plan"
+    timeout: 300.0  # 5分钟超时
+    max_concurrent_goals: 3
+    
+  skill_execution:
+    name: "execute_skill"
+    timeout: 60.0   # 1分钟超时
+    max_concurrent_goals: 10
+
+# Action客户端配置
+action_clients:
+  plan_client:
+    server_timeout: 5.0  # 等待服务器超时
+    result_timeout: 300.0
+    
+  skill_client:
+    server_timeout: 5.0
+    result_timeout: 60.0
+
+# 反馈配置
+feedback:
+  plan_feedback_rate: 2.0  # Hz
+  skill_feedback_rate: 5.0  # Hz
+  
+# 执行器配置
+executor:
+  num_threads: 6
+  timeout_sec: 0.05
+
+# 日志配置
+logging:
+  level: "INFO"
+  enable_action_logging: true
+  enable_feedback_logging: true
+  
+# 重试配置
+retry:
+  max_retries: 3
+  retry_delay: 1.0  # 秒
+  
+# 性能监控
+monitoring:
+  enable_performance_metrics: true
+  metrics_publish_rate: 1.0  # Hz
