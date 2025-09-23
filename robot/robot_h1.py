@@ -1,5 +1,8 @@
 import asyncio
 
+import numpy as np
+import torch
+
 from isaacsim.core.api.scenes import Scene
 
 from map.map_grid_map import GridMap
@@ -17,7 +20,6 @@ from isaacsim.core.prims import Articulation
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.types import ArticulationActions
 
-import numpy as np
 from gsi2isaacsim.gsi_msgs_helper import Plan, RobotFeedback, SkillInfo, Parameter, VelTwistPose
 
 
@@ -179,6 +181,7 @@ class RobotH1(RobotBase):
         return False  # 还没有到达
 
     def step(self, action):
+        action = torch.tensor(action, dtype=torch.float32)
         if self.control_mode == 'joint_positions':
             action = ArticulationActions(joint_positions=action)
         elif self.control_mode == 'joint_velocities':

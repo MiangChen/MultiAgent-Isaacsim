@@ -53,45 +53,24 @@ g_pending_move_requests = []
 move_lock = threading.Lock()
 g_node = None  # Global ROS2 node instance (first ctx)
 
+from containers import get_container
+
+container = get_container()
+scene_manager = container.scene_manager()
+grid_map = container.grid_map()
+
 
 def generate_omap_fun(req, response):
     """callback for /generate_omap service."""
     g_node.get_logger().info("Generating occupancy map")
+    # # Generate the omap
+    grid_map.generate_grid_map("3d")
 
-    # Enable omap extension
-    extensions.enable_extension("isaacsim.asset.gen.omap")
-    from isaacsim.asset.gen.omap.bindings import _omap as omap
-
-    # Get PhysX interface and stage ID
-    physx = omni.physx.get_physx_interface()
-    stage_id = omni.usd.get_context().get_stage_id()
-
-    generator = omap.Generator(physx, stage_id)
-
-    resolution = 0.2
-    occupied_value = 1
-    unoccupied_value = 0
-    unknown_value = -1
-    generator.update_settings(
-        resolution, occupied_value, unoccupied_value, unknown_value
-    )
-
-    # Set location to map from and the min and max bounds to map to
-    # TODO(Kartik): Make this dynamic based on the world size
-    min_bound = np.array([-10.0, -10.0, 0.0])
-    max_bound = np.array([10.0, 10.0, 10.0])
-    generator.set_transform(
-        (0, 0, 0), min_bound - resolution / 2, max_bound + resolution / 2
-    )
-
-    # Generate the omap
-    generator.generate3d()
-
-    dims = generator.get_dimensions()
+    dims = grid_map.generator.get_dimensions()
     g_node.get_logger().info(f"Buffer dimensions: {dims}")
 
     # Get locations of the occupied cells in the stage
-    points = generator.get_occupied_positions()
+    points = grid_map.generator.get_occupied_positions()
     g_node.get_logger().info(f"Generated occupancy map with {len(points)} points")
 
     # Save occupied cells to npy file
@@ -143,57 +122,57 @@ class DroneSimCtx:
     pending_move_requests: list = field(default_factory=list)
     move_lock: threading.Lock = field(default_factory=threading.Lock)
 
-
-def create_sim_environment(world_usd_path: str = None, rendering_hz: int = 60, simulation_app=None):
-    """Sets up the simulation environment, finds assets, and adds a ground plane."""
-
-    world = World(
-        physics_dt=0,
-        rendering_dt=1.0 / rendering_hz,
-        stage_units_in_meters=1.0,
-        backend="torch",
-    )
-    curr_stage = stage.get_current_stage()
-
-    # TODO(subhransu): Make assets available offline.
-    if world_usd_path == "":
-        # assets_root_path = get_assets_root_path()
-        assets_root_path = "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5"
-
-        if assets_root_path is None:
-            world.scene.add_ground_plane(
-                size=1000, z_position=-0.5, color=np.array([1, 1, 1])
-            )
-        else:
-            world.scene.add_default_ground_plane()
-    else:
-        # Check if args.world is a direct path that exists
-        if os.path.exists(world_usd_path):
-            usd_path = world_usd_path
-        else:
-            # Locate Isaac Sim assets folder
-            # assets_root_path = get_assets_root_path()
-            assets_root_path = "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5"
-
-            print(f"Using {assets_root_path}")
-            if assets_root_path is None:
-                carb.log_error("Could not find Isaac Sim assets folder")
-                simulation_app.close()
-                sys.exit()
-            # Try using path relative to assets_root_path
-            usd_path = os.path.join(assets_root_path, world_usd_path)
-
-        prim_path = "/World"
-        stage.add_reference_to_stage(usd_path, prim_path)
-        # Wait two frames so that stage starts loading
-        simulation_app.update()
-        simulation_app.update()
-        print(f"Loading stage from {usd_path}...")
-        while stage.is_stage_loading():
-            simulation_app.update()
-        print("Loading Complete")
-
-    return world, curr_stage
+#
+# def create_sim_environment(world_usd_path: str = None, rendering_hz: int = 60, simulation_app=None):
+#     """Sets up the simulation environment, finds assets, and adds a ground plane."""
+#
+#     world = World(
+#         physics_dt=0,
+#         rendering_dt=1.0 / rendering_hz,
+#         stage_units_in_meters=1.0,
+#         backend="torch",
+#     )
+#     curr_stage = stage.get_current_stage()
+#
+#     # TODO(subhransu): Make assets available offline.
+#     if world_usd_path == "":
+#         # assets_root_path = get_assets_root_path()
+#         assets_root_path = "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5"
+#
+#         if assets_root_path is None:
+#             world.scene.add_ground_plane(
+#                 size=1000, z_position=-0.5, color=np.array([1, 1, 1])
+#             )
+#         else:
+#             world.scene.add_default_ground_plane()
+#     else:
+#         # Check if args.world is a direct path that exists
+#         if os.path.exists(world_usd_path):
+#             usd_path = world_usd_path
+#         else:
+#             # Locate Isaac Sim assets folder
+#             # assets_root_path = get_assets_root_path()
+#             assets_root_path = "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5"
+#
+#             print(f"Using {assets_root_path}")
+#             if assets_root_path is None:
+#                 carb.log_error("Could not find Isaac Sim assets folder")
+#                 simulation_app.close()
+#                 sys.exit()
+#             # Try using path relative to assets_root_path
+#             usd_path = os.path.join(assets_root_path, world_usd_path)
+#
+#         prim_path = "/World"
+#         stage.add_reference_to_stage(usd_path, prim_path)
+#         # Wait two frames so that stage starts loading
+#         simulation_app.update()
+#         simulation_app.update()
+#         print(f"Loading stage from {usd_path}...")
+#         while stage.is_stage_loading():
+#             simulation_app.update()
+#         print("Loading Complete")
+#
+#     return world, curr_stage
 
 
 def add_drone_body(curr_stage, prim_path: str | None = None, color_scheme: int = 0):
@@ -757,9 +736,9 @@ def setup_ros(namespace: str = "", ctx: DroneSimCtx = None):
 
     global g_node
 
-    # Initialise rclpy exactly once
-    if not rclpy.ok():
-        rclpy.init(signal_handler_options=rclpy.signals.SignalHandlerOptions.NO)
+    # # Initialise rclpy exactly once
+    # if not rclpy.ok():
+    #     rclpy.init(signal_handler_options=rclpy.signals.SignalHandlerOptions.NO)
 
     if namespace and not namespace.startswith("/"):
         namespace = "/" + namespace
@@ -863,41 +842,6 @@ def setup_ros(namespace: str = "", ctx: DroneSimCtx = None):
     return node, pubs, subs, srvs
 
 
-def check_drone_collision(stage, prim_path=None):
-    """Check collision for a drone at the specified prim path.
-    
-    Args:
-        stage: The USD stage containing the drone
-        prim_path: Path to the drone prim. If None, uses legacy g_drone_prim_path
-    
-    Returns:
-        bool: True if collision detected, False otherwise
-    """
-    if prim_path is None:
-        prim_path = g_drone_prim_path
-
-    drone_prim = stage.GetPrimAtPath(prim_path)
-    if not drone_prim.IsValid():
-        print(f"Drone prim {prim_path} is not valid")
-        return False
-
-    origin = drone_prim.GetAttribute("xformOp:translate").Get()
-    if origin is None:
-        print(f"Drone origin {prim_path} is not valid")
-        return False
-
-    radius = 0.5  # TODO(Kartik): Get radius from the drone model
-
-    # physX query to detect hits for a sphere
-    ret = omni.physx.get_physx_scene_query_interface().overlap_sphere_any(
-        radius, carb.Float3(origin[0], origin[1], origin[2])
-    )
-    # print(f"Collision detected for drone {prim_path}: {ret}")
-    if ret:
-        print(f"WARNING: Collision detected for drone {prim_path}")
-    return ret
-
-
 @carb.profiler.profile
 def depth2pointcloud_lut(depth, depth2pc_lut, max_depth=1000):
     depth = np.minimum(depth, max_depth)
@@ -910,31 +854,6 @@ def depth2pointclouds(depths, depth2pc_lut):
     pcd_LFR = depth2pointcloud_lut(depths[0], depth2pc_lut)
     pcd_UBD = depth2pointcloud_lut(depths[1], depth2pc_lut)
     return pcd_LFR, pcd_UBD
-
-
-def quaternion_to_euler(quat):
-    """Convert quaternion to euler angles (roll, pitch, yaw)."""
-    # Input quaternion format: (w, x, y, z)
-    w, x, y, z = quat.real, quat.imaginary[0], quat.imaginary[1], quat.imaginary[2]
-
-    # Roll (x-axis rotation)
-    sinr_cosp = 2 * (w * x + y * z)
-    cosr_cosp = 1 - 2 * (x * x + y * y)
-    roll = math.atan2(sinr_cosp, cosr_cosp)
-
-    # Pitch (y-axis rotation)
-    sinp = 2 * (w * y - z * x)
-    if abs(sinp) >= 1:
-        pitch = math.copysign(math.pi / 2, sinp)  # use 90 degrees if out of range
-    else:
-        pitch = math.asin(sinp)
-
-    # Yaw (z-axis rotation)
-    siny_cosp = 2 * (w * z + x * y)
-    cosy_cosp = 1 - 2 * (y * y + z * z)
-    yaw = math.atan2(siny_cosp, cosy_cosp)
-
-    return roll, pitch, yaw
 
 
 def update_viewer_camera(curr_stage):
@@ -959,7 +878,9 @@ def update_viewer_camera(curr_stage):
 
         # Extract yaw from quaternion for directional following
         try:
-            _, _, yaw = quaternion_to_euler(drone_quat)
+            from utils.quat_to_angle import quaternion_to_euler_scipy
+            quat = (drone_quat.real, drone_quat.imaginary[0], drone_quat.imaginary[1], drone_quat.imaginary[2])
+            _, _, yaw = quaternion_to_euler_scipy(quat)
 
             # Calculate camera position relative to drone orientation
             offset_distance = 5.0  # distance behind the drone
@@ -1134,7 +1055,7 @@ def run_simulation_loop(
         # Publish collision information
         header.frame_id = "world"
         msg = ContactsState(header=header)
-        if check_drone_collision(curr_stage):
+        if scene_manager.check_prim_collision(prim_path=g_drone_prim_path):
             # print("Collision detected")
             msg.states.append(ContactState(collision1_name="drone"))
         ros_pubs["collision"].publish(msg)
@@ -1232,8 +1153,8 @@ def run_simulation_loop_multi(simulation_app, world, curr_stage, drone_ctxs: lis
 
     # Switch viewport to semantic camera
     from omni.kit.viewport.utility import get_viewport_from_window_name
-    from ui.viewport_manager import ViewportManager
-    viewport_manager = ViewportManager()
+    from containers import get_container
+    viewport_manager = container.viewport_manager()
     # isaacsim default viewport
     viewport_manager.register_viewport(
         name="Viewport", viewport_obj=get_viewport_from_window_name("Viewport")
@@ -1309,7 +1230,7 @@ def run_simulation_loop_multi(simulation_app, world, curr_stage, drone_ctxs: lis
             # Collision detection
             header.frame_id = "world"
             msg = ContactsState(header=header)
-            if check_drone_collision(curr_stage, ctx.prim_path):
+            if scene_manager.check_prim_collision(prim_path=ctx.prim_path):
                 msg.states.append(ContactState(collision1_name=f"drone_{ctx.namespace}"))
                 print(f"Collision detected for drone {ctx.namespace}")
             ctx.pubs["collision"].publish(msg)

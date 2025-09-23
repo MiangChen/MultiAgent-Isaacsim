@@ -14,7 +14,7 @@ def initialize_simulation_app_from_yaml(config_path):
     """
 
     # 1. 读取YAML配置文件
-    with open(config_path, 'r') as f:
+    with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
     # 2. 获取SimulationApp的构造函数配置
@@ -24,9 +24,11 @@ def initialize_simulation_app_from_yaml(config_path):
     experience = config.get("experience", "")
     exp_path = os.environ.get("EXP_PATH")
     if not exp_path:
-        raise ValueError("EXP_PATH environment variable is not set. Please set it to your Isaac Sim experience path.")
+        raise ValueError(
+            "EXP_PATH environment variable is not set. Please set it to your Isaac Sim experience path."
+        )
 
-    full_experience_path = f'{exp_path}/{experience}'
+    full_experience_path = f"{exp_path}/{experience}"
 
     # 4. 初始化 SimulationApp
     simulation_app = SimulationApp(sim_app_config, experience=full_experience_path)
@@ -45,8 +47,8 @@ def initialize_simulation_app_from_yaml(config_path):
             print(f"Set setting: {key} = {value}")
             simulation_app.set_setting(key, value)
 
-    # 6. 根据从配置中读取的 headless 状态来决定是否禁用视口
-    if sim_app_config.get("headless", False):
-        omni.kit.viewport.utility.get_active_viewport().updates_enabled = False
+    # # 7. 根据从配置中读取的 headless 状态来决定是否禁用视口
+    # if sim_app_config.get("headless", False):
+    #     omni.kit.viewport.utility.get_active_viewport().updates_enabled = False
 
     return simulation_app

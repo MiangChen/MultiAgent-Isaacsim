@@ -1,5 +1,8 @@
-#!/usr/bin/env python3
+import sys
 
+sys.path.insert(0, "/home/ubuntu/PycharmProjects/isaacsim-gsi/src")
+
+##########################################################################################################################
 import argparse
 from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
 
@@ -22,24 +25,17 @@ def pre_initialize():
 
 
 g_simulation_app = pre_initialize()
-#############################################################3
+##########################################################################################################################
 from config.config_manager import config_manager
 
 # Derive list of namespaces --------------------------------------------------
 if config_manager.get("namespace"):
     namespace_list = config_manager.get("namespace")
-
-print(f"Running LiDAR sim with namespaces: {namespace_list}")
-
-# Import initialization module first
-from isaacsim_init import initialize_simulation_app
-
-# Initialize SimulationApp globally using parsed arguments
-# g_simulation_app = initialize_simulation_app(args)
+    print(f"Running LiDAR sim with namespaces: {namespace_list}")
 
 # Common helpers
 from isaacsim_common import (
-    create_sim_environment,
+    # create_sim_environment,
     add_drone_body,
     setup_ros,
     run_simulation_loop_multi,
@@ -60,6 +56,7 @@ from scene.scene_manager import SceneManager
 from map.map_semantic_map import MapSemantic
 
 
+#############################################################
 def copy_lidar_config(lidar_config):
     """Copy the lidar config from the current directory to the extension directory."""
 
@@ -146,13 +143,13 @@ def create_lidar_step_wrapper(lidar_annotators):
     return lidar_step_wrapper
 
 
-def build_drone_ctx(namespace: str, idx: int):
+def build_drone_ctx(namespace: str, idx: int, stage):
     """Create prim, ROS node and sensor annotators for one UAV."""
 
     prim_path = f"/{namespace}/drone" if namespace else "/drone" if idx == 0 else f"/drone_{idx}"
 
     print(f"Adding drone body to {prim_path} with color scheme {idx}")
-    drone_prim = add_drone_body(curr_stage, prim_path, color_scheme=idx)
+    drone_prim = add_drone_body(stage, prim_path, color_scheme=idx)
     print(f"Drone prim: {drone_prim}")
 
     # Create a partial context for ROS setup
@@ -255,7 +252,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
         print(f"--- Processing: {cube_name} ---")
 
         # Create shape using unpacking
-        creation_result = scene_manager.create_shape(**config)
+        creation_result = scene_manager.create_shape_single(**config)
 
         # Check the result
         if creation_result.get("status") == "success":
@@ -311,14 +308,38 @@ def process_semantic_detection(semantic_camera, map_semantic: MapSemantic) -> No
         print(f"Error getting semantic camera data: {e}")
 
 
-def main():
-    global curr_stage  # Needed in build_drone_ctx
+def main():  # Needed in build_drone_ctx
 
+    from containers import AppContainer, get_container, reset_container
+
+    container = get_container()
+
+    # Wire the container to this module for @inject decorators in skill functions
+    container.wire(modules=[__name__])
+
+    # Get services from container
+    config_manager = container.config_manager()
+
+    log_manager = container.log_manager()
+    ros_manager = container.ros_manager()
+    swarm_manager = container.swarm_manager()
+    scene_manager = container.scene_manager()
+    grid_map = container.grid_map()
+    semantic_map = container.semantic_map()
+    skill_manager = container.skill_manager()
+    viewport_manager = container.viewport_manager()
+    world = container.world()
+    env = container.env()
+    env.simulation_app = g_simulation_app
+    # setup_simulation()
+    ros_manager.start()
     scene_manager = SceneManager()
-    world, curr_stage = create_sim_environment(
-        config_manager.get("world").get("path"), rendering_hz=config_manager.get("rendering_hz"),
-        simulation_app=g_simulation_app,
-    )
+    # world, curr_stage = create_sim_environment(
+    #     config_manager.get("world").get("path"), rendering_hz=config_manager.get("rendering_hz"),
+    #     simulation_app=g_simulation_app,
+    # )
+    WORLD_USD_PATH = config_manager.get("world_usd_path")
+    scene_manager.load_scene(usd_path=WORLD_USD_PATH, prim_path_root="/World/Scene")
 
     created_prim_paths = create_car_objects(scene_manager)
     print("All prims with 'car' label:", created_prim_paths)
@@ -337,11 +358,11 @@ def main():
 
     drone_ctxs: list[DroneSimCtx] = []
     for idx, ns in enumerate(namespace_list):
-        drone_ctxs.append(build_drone_ctx(ns, idx))
+        drone_ctxs.append(build_drone_ctx(ns, idx, stage=scene_manager.stage))
 
     # ---------------- Run simulation -----------------------------------
     run_simulation_loop_multi(
-        g_simulation_app, world, curr_stage, drone_ctxs, semantic_camera, semantic_camera_prim_path, semantic_map
+        g_simulation_app, world, scene_manager.stage, drone_ctxs, semantic_camera, semantic_camera_prim_path, semantic_map
     )
 
     # Cleanup copied lidar config files ---------------------------------
@@ -352,5 +373,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
 
+    main()

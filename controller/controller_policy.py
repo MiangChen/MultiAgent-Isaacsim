@@ -119,10 +119,17 @@ class PolicyController(BaseController):
         max_effort, max_vel, stiffness, damping, self.default_pos, self.default_vel = get_robot_joint_properties(
             self.policy_env_params, robot.dof_names
         )
+        max_effort = torch.tensor(max_effort, dtype=torch.float32)
+        max_vel = torch.tensor(max_vel, dtype=torch.float32)
+        stiffness = torch.tensor(stiffness, dtype=torch.float32)
+        damping = torch.tensor(damping, dtype=torch.float32)
+        self.default_pos = torch.tensor(self.default_pos, dtype=torch.float32)
+        self.default_vel = torch.tensor(self.default_vel, dtype=torch.float32)
+
         # 应用参数到机器人
         if set_gains:
             # robot._articulation_view.set_gains(stiffness, damping) # 设置PD参数
-            robot.set_gains(stiffness, damping) # 设置PD参数
+            robot.set_gains(kps=stiffness, kds=damping) # 设置PD参数
         if set_limits:
             # robot._articulation_view.set_max_efforts(max_effort) # 力矩限制
             robot.set_max_efforts(max_effort) # 力矩限制

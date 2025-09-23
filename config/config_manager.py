@@ -15,8 +15,7 @@ class ConfigManager:
     def __init__(self):
         self.config: Dict[str, Any] = {}
         self._parser = self._create_argument_parser()
-        self.args = None
-        # self.args, self.unknown_args = self._parser.parse_known_args()
+        self.args, self.unknown_args = self._parser.parse_known_args()
         self.load()
 
     def _create_argument_parser(self) -> argparse.ArgumentParser:
@@ -32,36 +31,6 @@ class ConfigManager:
             help="Path to the main YAML configuration file.",
         )
 
-        parser.add_argument(
-            "--ros",
-            type=lambda x: str(x).lower() in ["true", "1", "yes"],
-            metavar="{true,false}",
-            default="true",
-            help="Override ROS2 integration setting from the config file.",
-        )
-
-        parser.add_argument(
-            "--ros_action",
-            type=lambda x: str(x).lower() in ["true", "1", "yes"],
-            metavar="{true,false}",
-            default="true",
-            help="Use action server to communicate. Otherwise use topic.",
-        )
-
-        parser.add_argument(
-            "--enable",
-            type=str,
-            action="append",
-            help="Enable a feature. Can be used multiple times.",
-        )
-
-        parser.add_argument(
-            "--gui",
-            action="store_true",
-            help="Run simulation in GUI mode. Overrides config file setting."
-        )
-
-        # 使用互斥组来处理 --namespace 和 --namespaces
         group = parser.add_mutually_exclusive_group()
         group.add_argument(
             "--namespace",
@@ -76,10 +45,7 @@ class ConfigManager:
         """
         加载、合并和处理所有配置。
         """
-        # 1. 解析命令行参数
-        self.args, self.unknown_args = self._parser.parse_known_args(args)
-
-        # 2. 从 YAML 文件加载基础配置
+        # 1. 从 YAML 文件加载基础配置
         config_file = self.args.config
         if config_file and Path(config_file).exists():
             with open(config_file, "r") as f:
@@ -89,19 +55,14 @@ class ConfigManager:
                 f"指定的配置文件 '{config_file}' 未找到。请检查路径。"
             )
 
-        # 3. 将命令行参数覆盖到配置上
+        # 2. 将命令行参数覆盖到配置上
         cli_args_dict = vars(self.args)
-        if cli_args_dict.get("ros") is not None:
-            self.config.setdefault("ros", {})["enable"] = cli_args_dict["ros"]
-        if cli_args_dict.get("gui"):
-            self.config.setdefault("simulation", {})["gui"] = True
         if cli_args_dict.get("namespace") is not None:
             namespaces_list = [ns.strip() for ns in cli_args_dict["namespace"].split(',') if ns.strip()]
             self.config["namespace"] = namespaces_list
 
-        # 4. 计算派生路径和值
+        # 3. 计算派生路径和值
         self._derive_paths()
-
         return self
 
     def get(self, key: str) -> Any:
@@ -110,11 +71,9 @@ class ConfigManager:
         """
         keys = key.split(".")
         value = self.config
-
         for k in keys:
             value = value[k]
         return value
-
 
     def _derive_paths(self):
         """
@@ -142,7 +101,6 @@ class ConfigManager:
             raise ValueError(
                 f"在 {user_usd_files_json_path} 中找不到名为 '{world_name}' 的场景"
             )
-
         self.config["world_usd_path"] = world_name_dic[world_name]
 
     def get_summary(self) -> str:

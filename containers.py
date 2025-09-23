@@ -30,7 +30,11 @@ class AppContainer(containers.DeclarativeContainer):
     )
 
     world = providers.Singleton(
-        World, physics_dt=config.provided["world"]["physics_dt"]
+        World,
+        physics_dt=config.provided["world"]["physics_dt"],
+        rendering_dt=config.provided["world"]["rendering_dt"],
+        stage_units_in_meters=config.provided["world"]["stage_units_in_meters"],
+        backend="torch",
     )
 
     grid_map = providers.Singleton(

@@ -1,6 +1,23 @@
+import os
+
+ld_path = os.environ.get('LD_LIBRARY_PATH', '')
+os.environ['LD_LIBRARY_PATH'] = (
+    f"/home/ubuntu/anaconda3/envs/env_isaaclab/lib/python3.10/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib"
+    f":/opt/ros/humble/lib"
+    f":/home/ubuntu/PycharmProjects/isaacsim-gsi/src/gsi_msgs/install/scene_msgs/lib"
+    f":/home/ubuntu/PycharmProjects/isaacsim-gsi/src/gsi_msgs/install/plan_msgs/lib"
+    f":{ld_path}"
+)
+py_path = os.environ.get('PYTHONPATH', '')
+os.environ['PYTHONPATH'] = f"/opt/ros/humble/local/lib/python3.10/dist-packages:{py_path}"
+os.environ['ROS_DISTRO'] = "humble"
+os.environ['RMW_IMPLEMENTATION'] = "rmw_fastrtps_cpp"
+
 import sys
+
 sys.path.insert(0, "/home/ubuntu/PycharmProjects/isaacsim-gsi/src")
 
+###################################################################################################################
 import argparse
 from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
 
@@ -52,6 +69,8 @@ logger.info("Isaac Sim WebManager starting...")
 WORLD_USD_PATH = config_manager.get("world_usd_path")
 PROJECT_ROOT = config_manager.get("project_root")
 
+import rclpy
+rclpy.init(args=None)
 
 @inject
 def setup_simulation(
@@ -126,7 +145,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "shape_type": "cuboid",
             "prim_path": "/World/car0",
             "size": scale,
-            "scene_name": "car0",
+            "name": "car0",
             "position": [11.6, 3.5, 0],
             "color": [255, 255, 255],
         },
@@ -134,7 +153,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "shape_type": "cuboid",
             "prim_path": "/World/car1",
             "size": scale,
-            "scene_name": "car1",
+            "name": "car1",
             "position": [0.3, 3.5, 0],
             "color": [255, 255, 255],
         },
@@ -142,22 +161,23 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "shape_type": "cuboid",
             "prim_path": "/World/car2",
             "size": scale,
-            "scene_name": "car2",
+            "name": "car2",
             "position": [-13.2, 3.5, 0],
             "color": [255, 255, 255],
         },
         "car3": {
             "shape_type": "cuboid",
             "prim_path": "/World/car3",
-            "scene_name": "car3",
+            "name": "car3",
             "size": scale,
             "position": [-7.1, 10, 0],
             "color": [255, 255, 255],
+            "make_dynamic": False,
         },
         "car4": {
             "shape_type": "cuboid",
             "prim_path": "/World/car4",
-            "scene_name": "car4",
+            "name": "car4",
             "size": scale,
             "position": [-0.9, 30, 0],
             "orientation": [0.707, 0, 0, 0.707],
@@ -176,7 +196,8 @@ def create_car_objects(scene_manager: SceneManager) -> list:
         print(f"--- Processing: {cube_name} ---")
 
         # Create shape using unpacking
-        creation_result = scene_manager.create_shape(**config)
+        # creation_result = scene_manager.create_shape_single(**config)
+        creation_result = scene_manager.create_shape_unified(**config)
 
         # Check the result
         if creation_result.get("status") == "success":
@@ -279,6 +300,7 @@ def main():
             )
 
     # Create and initialize semantic camera
+    create_car_objects(scene_manager)
     result = scene_manager.add_camera(
         position=[1, 4, 2],
         quat=scene_manager.euler_to_quaternion(roll=90),

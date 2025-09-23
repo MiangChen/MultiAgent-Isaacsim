@@ -37,11 +37,9 @@ class GridMap():
             if max_bounds[-1] <= min_bounds[-1]:
                 max_bounds[-1] = min_bounds[-1] + cell_size / 2
                 print("z轴范围不足, 自动调高cell size")
-        elif self.method == 2:
-            pass  # 方式2: 在重建的时候, 把地面相关的图层临时关闭collision,
 
-        self.min_bounds = min_bounds
-        self.max_bounds = max_bounds
+        self.min_bounds = np.array(min_bounds)
+        self.max_bounds = np.array(max_bounds)
         self.cell_size = cell_size
         self.flag_generate2d = False  # 寄存器,用于判断有没有生成过结果
         self.flag_generate3d = False
@@ -61,21 +59,14 @@ class GridMap():
 
         """
         physx = omni.physx.acquire_physx_interface()
-        if physx is None:
-            print("Failed to acquire PhysX interface.")
-        else:
-            print("PhysX interface acquired successfully.")
         stage_id = omni.usd.get_context().get_stage_id()  # 这里要改进一下, 只对静态的场景进行grid world建模, 对于动态的机器人建立grid map是在别的地方来处理的
-        if stage_id is None:
-            print("Failed to get stage ID.")
-        else:
-            print("Stage ID acquired successfully.")
-
         self.generator = _omap.Generator(physx, stage_id)
         self.reset()
 
-        # Set location to map from and the min and max bounds to map to
-        self.generator.set_transform(self.start_point, self.min_bounds, self.max_bounds)
+        # Set location to map from and the min and max bounds to map
+        self.generator.set_transform(self.start_point,
+                                     self.min_bounds,
+                                     self.max_bounds)
 
     def generate_grid_map(self, dimension: str = '2d'):
         """
@@ -84,35 +75,6 @@ class GridMap():
         :return:
         """
         if dimension == '2d' and self.flag_generate2d == False or dimension == '3d' and self.flag_generate3d == False:
-            # 先把机器人层给deactivate
-            import isaacsim.core.utils.stage as stage_utils
-            stage = stage_utils.get_current_stage()
-            prim_robot = stage.GetPrimAtPath(self.path_robot)
-            print("get property at prim", stage.GetPropertyAtPath(self.path_robot))
-            print("get attribute at prim", stage.GetAttributeAtPath(self.path_robot))
-
-            def disable_collision(prim):
-                # 遍历当前原始体的所有子原始体
-                for child in prim.GetChildren():
-                    # 检查子原始体是否是碰撞体
-                    print("child name_prefix", child.GetName())
-                    print("child type", child.GetTypeName())
-                    if child.GetName() == "Collisions" or child.GetName() == "collisions":
-                        # 设置碰撞体为非可碰撞
-                        try:
-                            child.GetAttribute("collisionEnabled").Set(False)
-                            print("set false")
-                        except:
-                            print("没有collision属性")
-                    # 递归调用以遍历子原始体的子原始体
-                    disable_collision(child)
-
-            # prim_robot.SetActive(False)   # 这个办法不可以, 会导致机器人的prim 无法get world pose以及无法获取DOF position,
-            # print(dir(prim_robot))
-            # 避免地面碰撞的方式如果是2, 那么就把地面也关闭  似乎机器人的问题不会在这里遇到
-            if self.method == 2:
-                prim_ground = stage.GetPrimAtPath(self.path_ground)
-                prim_ground.SetActive(False)
             # 给静态场景建图
             if dimension == '2d':
                 self.generator.generate2d()
@@ -126,12 +88,7 @@ class GridMap():
                 print("generate 3d")
             else:
                 print(f"Invalid dimension: {dimension}")
-            # 重新activate机器人
-            # prim_robot.SetActive(True) ## 用了就会爆炸
-            if self.method == 2:
-                prim_ground.SetActive(True)
 
-        # if self.flag_generate2d == True or self.flag_generate3d == True:
         """
         通过2d/3d矩阵数值来表示每个点是障碍物还是空地
         同时给出一个对应的2d矩阵, 用于表示上面的矩阵的点对应的现实坐标
@@ -202,7 +159,6 @@ class GridMap():
         # 先检测可行性
         if any(continuous_pos[i] < self.min_bounds[i] or continuous_pos[i] > self.max_bounds[i] for i in range(3)):
             print("输入的坐标范围超过了 min bounds和 max bounds, 没有实用意义, 需要重新设置")
-        # 检测是否已经生成了matrix
 
     def reset(self):
         self.generator.update_settings(
@@ -212,8 +168,6 @@ class GridMap():
             self.invisible_cell,  # cannot be seen
         )
         return
-
-    # def map_2d(self):
 
     def get_image(self):
         colored_buffer = self.generator.get_colored_byte_buffer(
@@ -234,7 +188,9 @@ class GridMap():
         return image
 
     def compute_index(self, position: List = None) -> np.ndarray:
-        if position is None or (isinstance(position, np.ndarray) and position.size == 0) or isinstance(position, List) and len(position) == 0 :
+        if position is None or (isinstance(position, np.ndarray) and position.size == 0) or isinstance(position,
+                                                                                                       List) and len(
+            position) == 0:
             logging.warning("compute index的输入position = None")
             return None
         # 获取角点

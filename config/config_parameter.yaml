@@ -6,20 +6,22 @@ world:
   name: small_city_available.usd # 要使用的场的名字,和 asset / user_usd_files.json对应
   physics_dt: 0.005  # 1 / 200
   path: Isaac/Environments/Grid/default_environment.usd  # 从name 和 path中二选一
+  rendering_dt: 0.0167 # 60hz
+  stage_units_in_meters: 1
 
-rendering_hz: 60
-
+ros: True
+ros_action: True
 action_mode: True
 
 # 栅格地图
 map:
-  cell_size: 0.5  # grid map的分辨率
+  cell_size: 0.3
   start_point: [ 0, 0, 0 ]  # 构建gridmap的起点, 要保证这里是没有障碍物的
-  min_bounds: [ -34, 0, 0 ] #
-  max_bounds: [ 19, 32, 1 ]
+  min_bounds: [ -34, -10, 0 ]
+  max_bounds: [ 19, 32, 10 ]
   occupied_cell: 1
   empty_cell: 0
-  invisible_cell: 2
+  invisible_cell: -1 # also unknown cell
 
 # 语义地图
 map_semantic:
@@ -34,7 +36,7 @@ map_semantic:
 
 simulation_app_config:
   renderer: "RaytracedLighting"
-  headless: False # 默认设置为非无头模式，可以通过命令行参数覆盖
+  headless: False # 是否开启渲染界面
   anti_aliasing: 0
 
 

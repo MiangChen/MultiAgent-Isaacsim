@@ -1,13 +1,14 @@
 # Standard library imports
 import traceback
 from pathlib import Path
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, List, Union, Optional
 
 # Third-party imports
 import numpy as np
 
 # Isaac Sim related imports
 import omni
+import carb
 from pxr import Gf, Sdf, UsdGeom, UsdPhysics, PhysxSchema, Usd
 
 from config.config_manager import config_manager
@@ -24,10 +25,9 @@ class SceneManager:
 
     def __init__(self):
         self.prim_info = []
-        self._stage = omni.usd.get_context().get_stage()
+        self.stage = omni.usd.get_context().get_stage()
         # 设置场景保存路径，默认为项目根目录下的scenes文件夹
         self.scene_repository_path = "./scenes"
-        # A dictionary mapping command names to their corresponding methods
         # todo: add a handler for extend simulation method if necessary
         self.handlers = {
             # "modify_object": self.modify_object,
@@ -42,9 +42,9 @@ class SceneManager:
             "add_semantic_camera": self.add_camera,
             ## create ##
             "create_camera": self.create_camera,
-            "create_object": self.create_object,
+            "load_usd": self.load_usd,
             "create_robot": self.create_robot,
-            "create_shape": self.create_shape,
+            "create_shape": self.create_shape_single,
             "create_shape_unified": self.create_shape_unified,
             "browse_scene_repository": self.browse_scene_repository,
             "load_scene": self.load_scene,
@@ -56,6 +56,7 @@ class SceneManager:
             "get_selected_prim": self.get_selected_prim,
             "focus_on_prim": self.focus_on_prim,
             "check_prim_overlap": self.check_prim_overlap,
+            "check_prim_collision": self.check_prim_collision,
             ## transpose ##
             "adjust_pose": self.adjust_pose,
             "set_collision_enabled": self.set_collision_enabled,
@@ -118,11 +119,7 @@ class SceneManager:
             from isaacsim.core.utils.semantics import \
                 add_update_semantics  # isaacsim 4.5; will be deprecated in isaacsim 5.0
 
-            stage = omni.usd.get_context().get_stage()
-            if not stage:
-                return {"status": "error", "message": "No active USD stage."}
-
-            prim = stage.GetPrimAtPath(prim_path)
+            prim = self.stage.GetPrimAtPath(prim_path)
             if not prim.IsValid():
                 return {"status": "error", "message": f"Prim not found at path: {prim_path}"}
 
@@ -234,15 +231,15 @@ class SceneManager:
 
     def get_scene_info(self, max_depth: int = 2) -> Dict[str, Any]:
         try:
-            self._stage = omni.usd.get_context().get_stage()
-            if not self._stage:
+            self.stage = omni.usd.get_context().get_stage()
+            if not self.stage:
                 print("[Scene Info] No USD stage is open.")
                 return {"status": "error", "message": "No USD stage is open."}
 
             # 清空之前的信息
             self.prim_info = []
 
-            for prim in self._stage.Traverse():
+            for prim in self.stage.Traverse():
                 try:
                     # 计算prim的层级深度
                     prim_path = str(prim.GetPath().pathString)
@@ -310,6 +307,35 @@ class SceneManager:
         selected_paths = ctx.get_selection().get_selected_prim_paths()
         return {"status": "success", "result": selected_paths}
 
+    def check_prim_collision(self, prim_path: str = None, radius: float = None) -> bool:
+        """Check collision for a drone at the specified prim path.
+
+        Args:
+            prim_path: Path to the object prim.
+
+        Returns:
+            bool: True if collision detected, False otherwise
+        """
+        radius = 0.5  # TODO(Kartik): Get radius from the drone model
+
+        prim = self.stage.GetPrimAtPath(prim_path)
+        if not prim.IsValid():
+            print(f"Drone prim {prim_path} is not valid")
+            return False
+
+        origin = prim.GetAttribute("xformOp:translate").Get()
+        if origin is None:
+            print(f"Drone origin {prim_path} is not valid")
+            return False
+
+        # physX query to detect hits for a sphere
+        ret = omni.physx.get_physx_scene_query_interface().overlap_sphere_any(
+            radius, carb.Float3(origin[0], origin[1], origin[2])
+        )
+        if ret:
+            print(f"WARNING: Collision detected for drone {prim_path}")
+        return ret
+
     def check_prim_overlap(self, position: list, threshold: float = 0.1) -> Dict[str, Any]:
         """
         检查给定位置附近是否已有 prim，避免重复创建
@@ -320,9 +346,8 @@ class SceneManager:
         """
         # 将列表转为 Vec3f
         pos_vec = Gf.Vec3f(*position)
-        self._stage = omni.usd.get_context().get_stage()
 
-        for prim in self._stage.Traverse():
+        for prim in self.stage.Traverse():
             if not prim.IsValid():
                 continue
 
@@ -340,37 +365,6 @@ class SceneManager:
             except Exception:
                 continue
         return {"status": "success", "message": "No overlapping prims found at the specified position."}
-
-    def check_prim_overlapping(self, position: list, threshold: float = 0.1) -> bool:
-        """
-        检查给定位置附近是否已有 prim，避免重复创建
-
-        :param position: [x, y, z] 世界坐标列表
-        :param threshold: 半径阈值（与舞台单位一致）
-        :return: 如果检测到重叠则返回 True，否则 False
-        """
-        # 将列表转为 Vec3f
-        pos_vec = Gf.Vec3f(*position)
-        self._stage = omni.usd.get_context().get_stage()
-
-        for prim in self._stage.Traverse():
-            if not prim.IsValid():
-                continue
-
-            xformable = UsdGeom.Xformable(prim)
-            if not xformable:
-                continue
-
-            try:
-                for op in xformable.GetOrderedXformOps():
-                    # 只检查平移或整体变换
-                    if op.GetOpType() in (UsdGeom.XformOp.TypeTranslate, UsdGeom.XformOp.TypeTransform):
-                        existing_pos = Gf.Vec3f(op.Get())
-                        if (existing_pos - pos_vec).GetLength() < threshold:
-                            return False
-            except Exception:
-                continue
-        return True
 
     def focus_on_prim(self, prim_path: str) -> Dict[str, Any]:
         from omni.kit.viewport.utility import get_active_viewport, frame_viewport_selection
@@ -500,7 +494,7 @@ class SceneManager:
                 "message": f"Failed to create or focus camera at '{prim_path}': {e}"
             }
 
-    def create_object(self, usd_path: str, position: List[float], orientation: List[float]) -> Dict[str, Any]:
+    def load_usd(self, usd_path: str, position: List[float], orientation: List[float]) -> Dict[str, Any]:
         from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
 
         # 检查重合
@@ -720,7 +714,7 @@ class SceneManager:
             self,
             shape_type: str,
             prim_path: str,
-            name: str,  # 使用 'name' 代替 'scene_name' 以匹配API
+            name: str,
             position: List[float] = [0, 0, 0],
             orientation: List[float] = [1, 0, 0, 0],  # WXYZ 四元数
             size: Union[float, List[float]] = 1.0,
@@ -737,8 +731,6 @@ class SceneManager:
         from omni.isaac.core.world import World
         # 2. [统一] 检查 World 实例，因为高层级API依赖它
         world = World.instance()
-        if world is None:
-            return {"status": "error", "message": "Isaac Sim World is not initialized."}
 
         shape_type = shape_type.lower()
         created_object = None
@@ -798,7 +790,6 @@ class SceneManager:
             return {"status": "error", "message": f"Unsupported shape type: {shape_type}"}
 
         # 4. [统一] 将创建的对象添加到场景中，使其“生效”
-        #    这是一个好习惯：先检查并移除同名旧对象，避免冲突。
         if world.scene.object_exists(name):
             world.scene.remove_object(name)
 
@@ -811,122 +802,205 @@ class SceneManager:
             "object": created_object  # 返回创建的高层级对象，方便后续直接操作
         }
 
-    def create_shape(
+    def create_shape_components(
+            self,
+            # shape_type: str,
+            prim_path: str,
+            position: List[float] = [0, 0, 0],
+            orientation: List[float] = [1, 0, 0, 0],  # WXYZ
+            # size: Union[float, List[float]] = 1.0,
+            # color: List[float] = [0.8, 0.1, 0.1],
+            physics_preset: str = 'dynamic_rigid_body',  # 'visual', 'static_collider', 'dynamic_rigid_body'
+            # mass: Optional[float] = 0.01,
+            name: str = None,
+            components: Optional[Dict[str, Dict]] = None
+    ) -> Dict[str, Any]:
+
+        root_xform = UsdGeom.Xform.Define(self.stage, prim_path)
+        root_xform.AddTranslateOp().Set(Gf.Vec3d(*position))
+        root_xform.AddOrientOp().Set(Gf.Quatf(*orientation))
+
+        for child_name, comp_data in components.items():
+            child_path = f"{prim_path}/{child_name}"
+            self.create_shape_single(
+                prim_path=child_path,
+                shape_type=comp_data.get('shape_type', 'cuboid'),
+                position=comp_data.get('position', [0, 0, 0]),
+                orientation=comp_data.get('orientation', [1, 0, 0, 0]),
+                size=comp_data.get('size', 1.0),
+                color=comp_data.get('color', [0.5, 0.5, 0.5]),
+                physics_preset=physics_preset,  # 复合体的所有部分共享同一个物理预设
+                mass=comp_data.get('mass', 0.1),
+                is_root=False,
+            )
+            from omni.isaac.core.prims import XFormPrim
+            from omni.isaac.core.world import World
+            scene = World.instance().scene
+            prim = XFormPrim(
+                prim_paths_expr=prim_path,
+                name=name,
+            )
+            scene.add(prim)
+        return
+
+    def create_shape_single(
             self,
             shape_type: str,
-            prim_path: str = None,
+            prim_path: str,
             scene_name: str = None,
             position: List[float] = [0, 0, 0],
             orientation: List[float] = [1, 0, 0, 0],  # WXYZ 四元数
             size: Union[float, List[float]] = 1.0,
             color: List[float] = [0.8, 0.1, 0.1],
+            physics_preset: str = 'dynamic_rigid_body',  # 'visual', 'static_collider', 'dynamic_rigid_body'
             mass: float = 0.01,
-            make_dynamic: bool = True
-    ) -> Dict[str, Any]:
-        """
-        在场景中创建一个带有物理属性的几何形状 (Cube, Cuboid, Sphere)。
-
-        这个函数直接操作 USD prims，不依赖 World API。
-
-        Args:
-            shape_type (str): 要创建的形状类型。支持: "cube", "cuboid", "sphere"。
-            prim_path (str, optional): 创建 prim 的路径。如果为 None，将自动生成唯一路径。
-            position (List[float], optional): 物体的世界坐标 [x, y, z]。
-            orientation (List[float], optional): 物体的世界朝向 [w, x, y, z] 四元数。
-            size (Union[float, List[float]], optional): 形状的尺寸。
-                - 对于 "cube" 和 "sphere": 这是一个 float (边长/半径)。
-                - 对于 "cuboid": 这是一个 list [x, y, z]。
-            color (List[float], optional): 物体的显示颜色 [r, g, b]。
-            mass (float, optional): 物体的质量 (kg)。仅当 make_dynamic 为 True 时生效。
-            make_dynamic (bool, optional): 是否为物体添加刚体和碰撞属性。
-
-        Returns:
-            Dict[str, Any]: 包含操作状态和结果的字典。
-        """
-        try:
-            stage = omni.usd.get_context().get_stage()
-            if not stage:
-                return {"status": "error", "message": "No active USD stage."}
-
-            # --- 1. 生成唯一的 Prim Path (如果未提供) ---
-            if not prim_path:
-                base_path = f"/World/{shape_type.capitalize()}"
-                scene_info = self.get_scene_info(max_depth=100)  # 获取场景所有prims
-                existing_paths = [p["path"] for p in scene_info.get("result", [])]
-                suffix = 0
-                prim_path = base_path
-                while prim_path in existing_paths:
-                    suffix += 1
-                    prim_path = f"{base_path}_{suffix}"
-
-            # --- 2. 根据类型创建几何 Prim ---
-            shape_type = shape_type.lower()
+            name: str = None,
+            is_root: bool = True,
+    ):
+        if is_root:
             if shape_type in ["cube", "cuboid"]:
-                prim = UsdGeom.Cube.Define(stage, prim_path)
+                UsdGeom.Cube.Define(self.stage, prim_path)
             elif shape_type == "sphere":
-                prim = UsdGeom.Sphere.Define(stage, prim_path)
+                UsdGeom.Sphere.Define(self.stage, prim_path)
+            elif shape_type == "cylinder":
+                UsdGeom.Cylinder.Define(self.stage, prim_path)
             else:
-                return {"status": "error", "message": f"Unsupported shape type: {shape_type}"}
-
-            # --- 3. 设置几何属性 (尺寸和颜色) ---
-            if shape_type == "cube":
-                if not isinstance(size, (int, float)):
-                    return {"status": "error", "message": "Size for 'cube' must be a single float or int."}
-                prim.GetSizeAttr().Set(float(size))
-            elif shape_type == "cuboid":
-                if not isinstance(size, list) or len(size) != 3:
-                    return {"status": "error", "message": "Size for 'cuboid' must be a list of [x, y, z]."}
-                # 对于长方体，我们通过设置缩放来实现
-                prim.GetSizeAttr().Set(float(1))
+                raise ValueError(f"Unsupported shape type: {shape_type}")
+            # 如果是根 prim，几何定义和 Xform 是同一个 prim
+            prim = self.stage.GetPrimAtPath(prim_path)
+        else:
+            # 如果是子 prim，在其路径下创建新的几何体
+            if shape_type in ["cube", "cuboid"]:
+                prim = UsdGeom.Cube.Define(self.stage, prim_path).GetPrim()
             elif shape_type == "sphere":
-                if not isinstance(size, (int, float)):
-                    return {"status": "error", "message": "Size for 'sphere' (radius) must be a single float or int."}
-                prim.GetRadiusAttr().Set(float(size))
+                prim = UsdGeom.Sphere.Define(self.stage, prim_path).GetPrim()
+            elif shape_type == "cylinder":
+                prim = UsdGeom.Cylinder.Define(self.stage, prim_path).GetPrim()
+            else:
+                raise ValueError(f"Unsupported shape type: {shape_type}")
 
-            # 设置显示颜色
-            prim.GetDisplayColorAttr().Set([Gf.Vec3f(*color)])
+        usd_prim = prim.GetPrim()
+        xform = UsdGeom.Xformable(prim)
 
-            # --- 4. 设置位姿 (位置和朝向) ---
+        # 2. 几何属性
+        if shape_type == "cube":
+            prim.GetSizeAttr().Set(float(size))
+        elif shape_type == "cuboid":
+            prim.GetSizeAttr().Set(float(1))
+            xform.AddScaleOp().Set(Gf.Vec3f(*size))
+        elif shape_type == "sphere":
+            prim.GetRadiusAttr().Set(float(size))
+
+        # 3. 颜色
+        prim.GetDisplayColorAttr().Set([Gf.Vec3f(*color)])
+
+        # 4. 位姿
+        xform.AddTranslateOp().Set(Gf.Vec3f(*position))
+        xform.AddOrientOp().Set(Gf.Quatf(*orientation))
+
+        # 5. 设置 碰撞和刚体 属性
+        if physics_preset == 'static_collider':
+            UsdPhysics.CollisionAPI.Apply(prim)
+
+        elif physics_preset == 'dynamic_rigid_body':
+            UsdPhysics.CollisionAPI.Apply(prim)
+            # 对于复合体，刚体API应该只应用于根 Prim
+            if is_root or not self.stage.GetPrimAtPath(Sdf.Path(prim_path).GetParentPath()).HasAPI(
+                    UsdPhysics.RigidBodyAPI):
+                UsdPhysics.RigidBodyAPI.Apply(prim)
+                if mass is not None:
+                    mass_api = UsdPhysics.MassAPI.Apply(prim)
+                    mass_api.CreateMassAttr().Set(mass)
+        elif physics_preset == 'visual':
+            pass
+
+        # 6. 设置相对位姿
+        if is_root == False:
             xform = UsdGeom.Xformable(prim)
             xform.AddTranslateOp().Set(Gf.Vec3f(*position))
-            xform.AddOrientOp().Set(Gf.Quatf(*orientation))
+            xform.AddOrientOp().Set(Gf.Quatf(orientation[0], Gf.Vec3f(orientation[1:])))
 
-            if shape_type == "cuboid":
-                xform.AddScaleOp().Set(Gf.Vec3f(*size))
-
-            # --- 5. 添加物理属性 (如果需要) ---
-            if make_dynamic:
-                # 应用刚体 API
-                usd_prim = prim.GetPrim()
-                UsdPhysics.RigidBodyAPI.Apply(usd_prim)
-                # 应用碰撞 API (对于基本体，默认碰撞形状就足够了)
-                UsdPhysics.CollisionAPI.Apply(usd_prim)
-                # 应用质量 API 并设置质量
-                mass_api = UsdPhysics.MassAPI.Apply(usd_prim)
-                mass_api.CreateMassAttr().Set(mass)
-
-            # 6.
-            from omni.isaac.core.world import World
-            from omni.isaac.core.prims import RigidPrim
-            scene = World.instance().scene
-            managed_prim = RigidPrim(
-                prim_path=prim_path,
-                name=scene_name  # <--- 使用我们新增的参数
-            )
-
-            # 2. 将这个高级封装器对象添加到 Scene 中。
-            #    现在 World 就知道要管理和更新这个物体了。
-            scene.add(managed_prim)
-            return {
-                "status": "success",
-                "message": f"Successfully created shape '{shape_type}' at {prim_path}",
-                "result": prim_path
-            }
-
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return {"status": "error", "message": str(e)}
+        return {"status": "success", "result": prim_path, }
+        #
+        #     # --- 1. 生成唯一的 Prim Path (如果未提供) ---
+        #     if not prim_path:
+        #         base_path = f"/World/{shape_type.capitalize()}"
+        #         scene_info = self.get_scene_info(max_depth=100)  # 获取场景所有prims
+        #         existing_paths = [p["path"] for p in scene_info.get("result", [])]
+        #         suffix = 0
+        #         prim_path = base_path
+        #         while prim_path in existing_paths:
+        #             suffix += 1
+        #             prim_path = f"{base_path}_{suffix}"
+        #
+        #     # --- 2. 根据类型创建几何 Prim ---
+        #     shape_type = shape_type.lower()
+        #     if shape_type in ["cube", "cuboid"]:
+        #         prim = UsdGeom.Cube.Define(self.stage, prim_path)
+        #     elif shape_type == "sphere":
+        #         prim = UsdGeom.Sphere.Define(self.stage, prim_path)
+        #     else:
+        #         return {"status": "error", "message": f"Unsupported shape type: {shape_type}"}
+        #
+        #     # --- 3. 设置几何属性 (尺寸和颜色) ---
+        #     if shape_type == "cube":
+        #         if not isinstance(size, (int, float)):
+        #             return {"status": "error", "message": "Size for 'cube' must be a single float or int."}
+        #         prim.GetSizeAttr().Set(float(size))
+        #     elif shape_type == "cuboid":
+        #         if not isinstance(size, list) or len(size) != 3:
+        #             return {"status": "error", "message": "Size for 'cuboid' must be a list of [x, y, z]."}
+        #         # 对于长方体，我们通过设置缩放来实现
+        #         prim.GetSizeAttr().Set(float(1))
+        #     elif shape_type == "sphere":
+        #         if not isinstance(size, (int, float)):
+        #             return {"status": "error", "message": "Size for 'sphere' (radius) must be a single float or int."}
+        #         prim.GetRadiusAttr().Set(float(size))
+        #
+        #     # 设置显示颜色
+        #     prim.GetDisplayColorAttr().Set([Gf.Vec3f(*color)])
+        #
+        #     # --- 4. 设置位姿 (位置和朝向) ---
+        #     xform = UsdGeom.Xformable(prim)
+        #     xform.AddTranslateOp().Set(Gf.Vec3f(*position))
+        #     xform.AddOrientOp().Set(Gf.Quatf(*orientation))
+        #
+        #     if shape_type == "cuboid":
+        #         xform.AddScaleOp().Set(Gf.Vec3f(*size))
+        #
+        #     # --- 5. 添加物理属性 (如果需要) ---
+        #     if make_dynamic:
+        #         # 应用刚体 API
+        #         usd_prim = prim.GetPrim()
+        #         UsdPhysics.RigidBodyAPI.Apply(usd_prim)
+        #         # 应用碰撞 API (对于基本体，默认碰撞形状就足够了)
+        #         UsdPhysics.CollisionAPI.Apply(usd_prim)
+        #         # 应用质量 API 并设置质量
+        #         mass_api = UsdPhysics.MassAPI.Apply(usd_prim)
+        #         mass_api.CreateMassAttr().Set(mass)
+        #
+        #     # 6.
+        #     from omni.isaac.core.world import World
+        #     from omni.isaac.core.prims import RigidPrim
+        #     scene = World.instance().scene
+        #     managed_prim = RigidPrim(
+        #         prim_path=prim_path,
+        #         name=scene_name
+        #     )
+        #
+        #     # 2. 将这个高级封装器对象添加到 Scene 中。
+        #     #    现在 World 就知道要管理和更新这个物体了。
+        #     scene.add(managed_prim)
+        #     return {
+        #         "status": "success",
+        #         "message": f"Successfully created shape '{shape_type}' at {prim_path}",
+        #         "result": prim_path
+        #     }
+        #
+        # except Exception as e:
+        #     import traceback
+        #     traceback.print_exc()
+        #     return {"status": "error", "message": str(e)}
 
     def euler_to_quaternion(
             self,
@@ -957,11 +1031,11 @@ class SceneManager:
     def set_prim_scale(self, prim_path: str, scale: list) -> dict:
         try:
             # 获取当前 USD stage
-            self._stage = omni.usd.get_context().get_stage()
-            if not self._stage:
+            self.stage = omni.usd.get_context().get_stage()
+            if not self.stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
 
-            prim = self._stage.GetPrimAtPath(prim_path)
+            prim = self.stage.GetPrimAtPath(prim_path)
             if not prim.IsValid():
                 return {"status": "error", "message": f"Prim {prim_path} not found."}
 
@@ -991,11 +1065,11 @@ class SceneManager:
         from isaacsim.core.utils.stage import get_stage_units
 
         try:
-            self._stage = omni.usd.get_context().get_stage()
-            if not self._stage:
+            self.stage = omni.usd.get_context().get_stage()
+            if not self.stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
 
-            prim = self._stage.GetPrimAtPath(prim_path)
+            prim = self.stage.GetPrimAtPath(prim_path)
             if not prim or not prim.IsValid():
                 return {"status": "error", "message": f"Prim {prim_path} not found."}
 
@@ -1051,12 +1125,12 @@ class SceneManager:
         """Set the active state of a prim."""
         try:
             # 获取当前 USD Stage
-            self._stage = omni.usd.get_context().get_stage()
-            if not self._stage:
+            self.stage = omni.usd.get_context().get_stage()
+            if not self.stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
 
             # 获取指定 prim
-            prim = self._stage.GetPrimAtPath(prim_path)
+            prim = self.stage.GetPrimAtPath(prim_path)
             if not prim.IsValid():
                 return {"status": "error", "message": f"Prim '{prim_path}' not found."}
 
@@ -1072,12 +1146,12 @@ class SceneManager:
     def set_collision_offsets(self, prim_path: str, contact_offset: float, rest_offset: float) -> dict:
         try:
             # 获取并缓存 Stage
-            self._stage = omni.usd.get_context().get_stage()
-            if not self._stage:
+            self.stage = omni.usd.get_context().get_stage()
+            if not self.stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
 
             # 查找 prim
-            prim = self._stage.GetPrimAtPath(prim_path)
+            prim = self.stage.GetPrimAtPath(prim_path)
             if not prim or not prim.IsValid():
                 return {"status": "error", "message": f"Prim '{prim_path}' not found."}
 
@@ -1111,12 +1185,12 @@ class SceneManager:
     def set_physics_properties(self, prim_path: str, mass: float, velocity: list, gravity_enabled: bool) -> dict:
         try:
             # 获取并缓存 Stage
-            self._stage = omni.usd.get_context().get_stage()
-            if not self._stage:
+            self.stage = omni.usd.get_context().get_stage()
+            if not self.stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
 
             # 查找 prim
-            prim = self._stage.GetPrimAtPath(prim_path)
+            prim = self.stage.GetPrimAtPath(prim_path)
             if not prim or not prim.IsValid():
                 return {"status": "error", "message": f"Prim '{prim_path}' not found."}
 
@@ -1157,12 +1231,12 @@ class SceneManager:
         """
         try:
             # 获取并缓存 Stage
-            self._stage = omni.usd.get_context().get_stage()
-            if not self._stage:
+            self.stage = omni.usd.get_context().get_stage()
+            if not self.stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
 
             # 查找 prim
-            prim = self._stage.GetPrimAtPath(prim_path)
+            prim = self.stage.GetPrimAtPath(prim_path)
             if not prim or not prim.IsValid():
                 return {"status": "error", "message": f"Prim '{prim_path}' not found."}
 
@@ -1212,12 +1286,12 @@ class SceneManager:
         """
         try:
             # 获取并缓存 Stage
-            self._stage = omni.usd.get_context().get_stage()
-            if not self._stage:
+            self.stage = omni.usd.get_context().get_stage()
+            if not self.stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
 
             # 查找 material prim
-            prim = self._stage.GetPrimAtPath(material_path)
+            prim = self.stage.GetPrimAtPath(material_path)
             if not prim or not prim.IsValid():
                 return {"status": "error", "message": f"Material '{material_path}' not found."}
 
@@ -1260,13 +1334,13 @@ class SceneManager:
         """
         try:
             # 获取并缓存 Stage
-            self._stage = omni.usd.get_context().get_stage()
-            if not self._stage:
+            self.stage = omni.usd.get_context().get_stage()
+            if not self.stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
 
             from pxr import UsdPhysics, Gf, UsdGeom, UsdShade, PhysxSchema
 
-            stage = self._stage
+            stage = self.stage
             scene_path = "/physicsScene"
             scene_prim = stage.GetPrimAtPath(scene_path)
             if not scene_prim or not scene_prim.IsValid():
@@ -1315,24 +1389,24 @@ class SceneManager:
         try:
             from pxr import UsdPhysics, Gf
 
-            self._stage = omni.usd.get_context().get_stage()
-            if not self._stage:
+            self.stage = omni.usd.get_context().get_stage()
+            if not self.stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
 
             # 校验两个刚体 prim 是否有效
-            if not self._stage.GetPrimAtPath(body0).IsValid():
+            if not self.stage.GetPrimAtPath(body0).IsValid():
                 return {"status": "error", "message": f"Body0 '{body0}' not found."}
-            if not self._stage.GetPrimAtPath(body1).IsValid():
+            if not self.stage.GetPrimAtPath(body1).IsValid():
                 return {"status": "error", "message": f"Body1 '{body1}' not found."}
 
             # 创建 joint prim 并选择类型
             joint_type = joint_type.lower()
             if joint_type == "revolute":
-                joint = UsdPhysics.RevoluteJoint.Define(self._stage, joint_path)
+                joint = UsdPhysics.RevoluteJoint.Define(self.stage, joint_path)
             elif joint_type == "prismatic":
-                joint = UsdPhysics.PrismaticJoint.Define(self._stage, joint_path)
+                joint = UsdPhysics.PrismaticJoint.Define(self.stage, joint_path)
             elif joint_type == "fixed":
-                joint = UsdPhysics.FixedJoint.Define(self._stage, joint_path)
+                joint = UsdPhysics.FixedJoint.Define(self.stage, joint_path)
             else:
                 return {"status": "error", "message": f"Invalid joint type: {joint_type}"}
 
@@ -1376,11 +1450,11 @@ class SceneManager:
         try:
             from pxr import UsdPhysics
 
-            self._stage = omni.usd.get_context().get_stage()
-            if not self._stage:
+            self.stage = omni.usd.get_context().get_stage()
+            if not self.stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
 
-            joint = self._stage.GetPrimAtPath(joint_path)
+            joint = self.stage.GetPrimAtPath(joint_path)
             if not joint.IsValid():
                 return {"status": "error", "message": f"Joint prim '{joint_path}' not found."}
 
@@ -1496,7 +1570,6 @@ class SceneManager:
 
     def load_scene(self, usd_path: str, prim_path_root: str):
         """
-
         Create a scene from config.(But just input usd file yet.)
         Args:
             usd_path (str): path to scene config file(use to be a .usd file)
@@ -1519,7 +1592,7 @@ class SceneManager:
             )
             # for prim in Usd.PrimRange(root_prim):
             #     UsdPhysics.RigidBodyAPI.Apply(prim)
-            self.disable_gravity_for_hierarchy(root_prim_path=prim_path_root)
+            # self.disable_gravity_for_hierarchy(root_prim_path=prim_path_root)
 
         else:
             raise RuntimeError("Env file path needs to end with .usd, .usda or .usdc .")

@@ -4,7 +4,7 @@ import threading
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
 
-rclpy.init(args=None)
+# rclpy.init(args=None)
 
 from gsi2isaacsim.gsi_msgs_helper import Plan
 from ros.node import PlanNode, SceneMonitorNode, SwarmNode, PlanExecutionServer, SkillServerNode

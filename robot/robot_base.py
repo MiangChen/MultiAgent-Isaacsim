@@ -14,6 +14,7 @@ logger = LogManager.get_logger(__name__)
 
 from pxr import Usd, UsdGeom
 import numpy as np
+import torch
 import carb
 
 from isaacsim.core.utils.numpy import rotations
@@ -106,8 +107,8 @@ class RobotBase:
         self.robot_entity = Articulation(
             prim_paths_expr=self.cfg_body.prim_path,
             name=self.cfg_body.name,
-            positions=np.array([cfg_body.position]),
-            orientations=np.array([cfg_body.quat]),
+            positions=torch.tensor([self.cfg_body.position]),
+            orientations=torch.tensor([self.cfg_body.quat]),
         )
 
         # 机器人的历史轨迹
@@ -597,7 +598,6 @@ class RobotBase:
         msg.twist.angular.x, msg.twist.angular.y, msg.twist.angular.z = (float(v) for v in ang_v0)
         msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (float(v) for v in pos)
 
-
         # 兼容 ndarray（常见返回）与带属性的四元数对象两种情况
         if hasattr(orn, "x"):
             quat_xyzw = orn.x, orn.y, orn.z, orn.w
@@ -605,7 +605,8 @@ class RobotBase:
             # 约定顺序为 [x, y, z, w]；若你的资源是 wxyz，请按需调整
             quat_xyzw = float(orn[0]), float(orn[1]), float(orn[2]), float(orn[3])
 
-        msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w = (float(v) for v in quat_xyzw)
+        msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w = (float(v) for v
+                                                                                                          in quat_xyzw)
 
         self.node.publish_motion(
             robot_class=self.cfg_body.name_prefix,
