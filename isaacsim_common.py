@@ -1,28 +1,20 @@
-#!/usr/bin/env python3
-
-import sys
 import os
 import time
 import math
 import numpy as np
 from collections import namedtuple
-from dataclasses import dataclass, field
+
 import threading
 
 import carb
-import omni
-
-from isaacsim.core.api import World
 from isaacsim.core.api.objects import VisualCuboid, VisualCylinder, VisualSphere
 from isaacsim.core.utils import extensions, stage
 from isaacsim.storage.native import get_assets_root_path
-from pxr import Gf, UsdGeom
+import omni
 from omni.isaac.core.utils.viewports import set_camera_view
+from pxr import Gf, UsdGeom
 
-# enable ROS2 bridge extension and then import ros modules
-extensions.enable_extension("isaacsim.ros2.bridge")
 import rclpy
-from rclpy.node import Node
 
 rclpy.init(args=None)
 
@@ -33,7 +25,9 @@ from std_msgs.msg import Header
 from std_srvs.srv import Empty
 from sensor_msgs.msg import PointCloud2, PointField, Image
 
+from containers import get_container
 from map.map_semantic_map import MapSemantic
+from robot.robot_drone import DronePose, DroneSimCtx
 
 # -----------------------------------------------------------------------------
 # Global variables (legacy single-UAV path)
@@ -53,11 +47,10 @@ g_pending_move_requests = []
 move_lock = threading.Lock()
 g_node = None  # Global ROS2 node instance (first ctx)
 
-from containers import get_container
-
 container = get_container()
 scene_manager = container.scene_manager()
 grid_map = container.grid_map()
+world = container.world()
 
 
 def generate_omap_fun(req, response):
@@ -77,102 +70,6 @@ def generate_omap_fun(req, response):
     np.save("omap.npy", points)
 
     return response
-
-
-class DronePose:
-    def __init__(self, pos=Gf.Vec3d(0, 0, 0), quat=Gf.Quatf.GetIdentity()):
-        self.pos = pos
-        self.quat = quat
-
-
-# -----------------------------------------------------------------------------
-# Per-UAV context for multi-drone simulation
-# -----------------------------------------------------------------------------
-
-
-@dataclass
-class DroneSimCtx:
-    """Container holding all state associated with a single UAV instance."""
-
-    namespace: str  # Empty string means root namespace
-    prim_path: str  # USD prim path, e.g. "/robot1/drone" or "/drone"
-
-    # ROS2
-    ros_node: Node
-    pubs: dict = field(default_factory=dict)
-    subs: dict = field(default_factory=dict)
-    srvs: dict = field(default_factory=dict)
-
-    # Simulation prim handle for this drone (returned by add_drone_body)
-    drone_prim: object | None = None
-
-    # Desired pose tracking
-    des_pose: DronePose | None = None
-    is_pose_dirty: bool = False
-
-    # Optional custom per-step callable (LiDAR / perception wrapper)
-    custom_step_fn: callable = None
-
-    # Pre-computed LUT for depth→point-cloud conversion (used by perception)
-    depth2pc_lut: np.ndarray | None = None
-
-    # Locks & queues (spawn/move) — kept separate per UAV to avoid contention
-    pending_spawn_requests: list = field(default_factory=list)
-    spawn_lock: threading.Lock = field(default_factory=threading.Lock)
-    pending_move_requests: list = field(default_factory=list)
-    move_lock: threading.Lock = field(default_factory=threading.Lock)
-
-#
-# def create_sim_environment(world_usd_path: str = None, rendering_hz: int = 60, simulation_app=None):
-#     """Sets up the simulation environment, finds assets, and adds a ground plane."""
-#
-#     world = World(
-#         physics_dt=0,
-#         rendering_dt=1.0 / rendering_hz,
-#         stage_units_in_meters=1.0,
-#         backend="torch",
-#     )
-#     curr_stage = stage.get_current_stage()
-#
-#     # TODO(subhransu): Make assets available offline.
-#     if world_usd_path == "":
-#         # assets_root_path = get_assets_root_path()
-#         assets_root_path = "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5"
-#
-#         if assets_root_path is None:
-#             world.scene.add_ground_plane(
-#                 size=1000, z_position=-0.5, color=np.array([1, 1, 1])
-#             )
-#         else:
-#             world.scene.add_default_ground_plane()
-#     else:
-#         # Check if args.world is a direct path that exists
-#         if os.path.exists(world_usd_path):
-#             usd_path = world_usd_path
-#         else:
-#             # Locate Isaac Sim assets folder
-#             # assets_root_path = get_assets_root_path()
-#             assets_root_path = "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5"
-#
-#             print(f"Using {assets_root_path}")
-#             if assets_root_path is None:
-#                 carb.log_error("Could not find Isaac Sim assets folder")
-#                 simulation_app.close()
-#                 sys.exit()
-#             # Try using path relative to assets_root_path
-#             usd_path = os.path.join(assets_root_path, world_usd_path)
-#
-#         prim_path = "/World"
-#         stage.add_reference_to_stage(usd_path, prim_path)
-#         # Wait two frames so that stage starts loading
-#         simulation_app.update()
-#         simulation_app.update()
-#         print(f"Loading stage from {usd_path}...")
-#         while stage.is_stage_loading():
-#             simulation_app.update()
-#         print("Loading Complete")
-#
-#     return world, curr_stage
 
 
 def add_drone_body(curr_stage, prim_path: str | None = None, color_scheme: int = 0):
@@ -239,58 +136,19 @@ def add_drone_body(curr_stage, prim_path: str | None = None, color_scheme: int =
         color=colors["nose"],
     )
 
-    # Define a base arm component template
-    base_arm = MechComponent(
-        pos=None,
-        scale=[0.2, 0.02, 0.02],
-        wxyz=None,
-        geom_type="cuboid",
-        color=[0.5, 0.5, 0.5],
-    )
-
-    # Create individual arm components
-    # wxyz_z_p65 = [math.cos(65 * np.pi / 180), 0, 0, math.sin(65 * np.pi / 180)]
-    # wxyz_z_m65 = [math.cos(-65 * np.pi / 180), 0, 0, math.sin(-65 * np.pi / 180)]
-    # mech_comps["Arm_FL"] = base_arm._replace(pos=[0.13, 0.1, 0.04], wxyz=wxyz_z_m65)
-    # mech_comps["Arm_FR"] = base_arm._replace(pos=[0.13, -0.1, 0.04], wxyz=wxyz_z_p65)
-    # mech_comps["Arm_BL"] = base_arm._replace(pos=[-0.13, 0.1, -0.04], wxyz=wxyz_z_p65)
-    # mech_comps["Arm_BR"] = base_arm._replace(pos=[-0.13, -0.1, -0.04], wxyz=wxyz_z_m65)
-
-    # Define a base prop component template
-    base_prop = MechComponent(
-        pos=None,
-        scale=[0.14, 0.14, 0.005],
-        wxyz=[1.0, 0.0, 0.0, 0.0],
-        geom_type="cylinder",
-        color=[0.2, 0.2, 0.2],
-    )
-
-    # Create individual prop components
-    # mech_comps["Prop_FL"] = base_prop._replace(pos=[0.18, 0.19, 0.06])
-    # mech_comps["Prop_FR"] = base_prop._replace(pos=[0.18, -0.19, 0.06])
-    # mech_comps["Prop_BL"] = base_prop._replace(pos=[-0.18, 0.19, -0.02])
-    # mech_comps["Prop_BR"] = base_prop._replace(pos=[-0.18, -0.19, -0.02])
-
     # Create and add all drone components on the stage
     for prim_name, comp in mech_comps.items():
-        if comp.geom_type == "cuboid":
-            VisualCuboid(
-                prim_path=prim_path + "/" + prim_name,
-                name=prim_name,
-                position=np.array(comp.pos),
-                orientation=comp.wxyz,
-                scale=np.array(comp.scale),
-                color=np.array(comp.color),
-            )
-        elif comp.geom_type == "cylinder":
-            VisualCylinder(
-                prim_path=prim_path + "/" + prim_name,
-                name=prim_name,
-                position=np.array(comp.pos),
-                orientation=comp.wxyz,
-                scale=np.array(comp.scale),
-                color=np.array(comp.color),
-            )
+        scene_manager.create_shape_unified(
+            shape_type=comp.geom_type,
+            prim_path=prim_path + "/" + prim_name,
+            name=prim_name,
+            position=np.array(comp.pos),
+            orientation=comp.wxyz,
+            size=None,
+            scale=np.array(comp.scale),
+            color=np.array(comp.color),
+            make_dynamic=False,
+        )
     return drone_prim
 
 
@@ -559,22 +417,6 @@ def unpause_physics_fun(req, response):
     return response
 
 
-def move_prim(stage, prim_path, pos, quat):
-    geom_prim = stage.GetPrimAtPath(prim_path)
-    if not geom_prim:
-        print(f"Error: Invalid prim path: {prim_path}")
-        return
-    if not geom_prim.HasAttribute("xformOp:translate"):
-        UsdGeom.Xformable(geom_prim).AddTranslateOp().Set(pos)
-    else:
-        geom_prim.GetAttribute("xformOp:translate").Set(pos)
-
-    if not geom_prim.HasAttribute("xformOp:orient"):
-        UsdGeom.Xformable(geom_prim).AddOrientOp().Set(quat)
-    else:
-        geom_prim.GetAttribute("xformOp:orient").Set(quat)
-
-
 class Rate:
     """
     A substitute for rospy.Rate but always uses wall time.
@@ -677,7 +519,7 @@ def process_spawn_requests(curr_stage, pending_spawn_requests):
 def process_move_requests(curr_stage, pending_move_requests):
     """Process pending move requests and update object positions."""
     for data in pending_move_requests:
-        move_prim(curr_stage, data["prim_path"], data["pos"], data["quat"])
+        scene_manager.adjust_prim(prim_path=data["prim_path"], position=data["pos"], quat=data["quat"], scale=None)
 
 
 @carb.profiler.profile
@@ -987,111 +829,6 @@ def create_image_msg(header, depth):
     return img_msg
 
 
-def run_simulation_loop(
-        simulation_app, world, curr_stage, drone_prim, custom_step_function=None, namespace=""
-):
-    """Common simulation loop that handles spawn/move requests and drone pose updates."""
-    global g_drone_des_pose, g_is_drone_des_pose_changed
-    global g_pending_spawn_requests, spawn_lock
-    global g_pending_move_requests, move_lock
-
-    # Initialize the drone pose object
-    g_drone_des_pose = DronePose(pos=Gf.Vec3d(0, 0, 2), quat=Gf.Quatf.GetIdentity())
-    g_is_drone_des_pose_changed = True
-
-    # Setup ROS publishers, subscribers and services with namespace
-    node, ros_pubs, ros_subs, ros_srvs = setup_ros(namespace)
-    # For backward compatibility maintain g_node reference
-    global g_node
-    g_node = node
-
-    depth2pc_lut = create_depth2pc_lut()
-
-    # Reset the simulation
-    world.reset()
-    for i in range(10):
-        simulation_app.update()
-
-    rendering_dt = world.get_rendering_dt()
-    assert rendering_dt > 0
-    rate = Rate(1.0 / rendering_dt)
-
-    print("Starting simulation loop")
-
-    # Main simulation loop
-    while simulation_app.is_running():
-        rate.sleep()
-
-        # Spin ROS2 node to process callbacks
-        rclpy.spin_once(g_node, timeout_sec=0.01)
-
-        # Get and process pending spawn requests
-        pending_spawn_requests = get_pending_spawn_requests(
-            spawn_lock, g_pending_spawn_requests
-        )
-        process_spawn_requests(curr_stage, pending_spawn_requests)
-
-        # Get and process pending move requests
-        pending_move_requests = get_pending_move_requests(
-            move_lock, g_pending_move_requests
-        )
-        process_move_requests(curr_stage, pending_move_requests)
-
-        # Get and update drone pose
-        is_drone_des_pose_changed, drone_des_pose = get_drone_pose_update(
-            pose_lock, g_is_drone_des_pose_changed, g_drone_des_pose
-        )
-        g_is_drone_des_pose_changed = False
-        update_drone_pose(drone_prim, is_drone_des_pose_changed, drone_des_pose)
-
-        t_now = g_node.get_clock().now()
-
-        # Run 1 simulation step
-        world.step(render=True)
-
-        header = Header()
-        header.stamp = t_now.to_msg()
-
-        # Publish collision information
-        header.frame_id = "world"
-        msg = ContactsState(header=header)
-        if scene_manager.check_prim_collision(prim_path=g_drone_prim_path):
-            # print("Collision detected")
-            msg.states.append(ContactState(collision1_name="drone"))
-        ros_pubs["collision"].publish(msg)
-
-        # Update viewer camera to follow the drone (only if GUI is enabled)
-        try:
-            # Check if we're not in headless mode by seeing if we can access viewport
-            import omni.kit.viewport.utility
-            viewport = omni.kit.viewport.utility.get_active_viewport()
-            if viewport and viewport.updates_enabled:
-                update_viewer_camera(curr_stage)
-        except:
-            # If viewport access fails, we're likely in headless mode, so skip camera update
-            pass
-
-        # Call custom step function if provided
-        if custom_step_function:
-            depths = custom_step_function()
-            if depths is not None:
-                pcd_LFR, pcd_UBD = depth2pointclouds(depths, depth2pc_lut)
-                header = Header()
-                header.stamp = t_now.to_msg()
-                header.frame_id = "lfr"
-                ros_pubs["lfr_img"].publish(create_image_msg(header, depths[0]))
-                ros_pubs["lfr_pc"].publish(create_pc2_msg(header, pcd_LFR))
-                header.frame_id = "ubd"
-                ros_pubs["ubd_img"].publish(create_image_msg(header, depths[1]))
-                ros_pubs["ubd_pc"].publish(create_pc2_msg(header, pcd_UBD))
-
-    # Cleanup
-    g_node.get_logger().info("Shutting down ROS services and node.")
-    rclpy.shutdown()
-    world.stop()
-    simulation_app.close()
-
-
 # =============================================================================
 # Multi-UAV Support (experimental)
 # =============================================================================
@@ -1127,7 +864,7 @@ def process_semantic_detection(semantic_camera, map_semantic: MapSemantic) -> No
         print(f"Error getting semantic camera data: {e}")
 
 
-def run_simulation_loop_multi(simulation_app, world, curr_stage, drone_ctxs: list[DroneSimCtx], semantic_camera,
+def run_simulation_loop_multi(simulation_app, drone_ctxs: list[DroneSimCtx], semantic_camera,
                               semantic_camera_prim_path, semantic_map):
     """Simulation loop that handles *multiple* DroneSimCtx objects.
 
@@ -1153,7 +890,6 @@ def run_simulation_loop_multi(simulation_app, world, curr_stage, drone_ctxs: lis
 
     # Switch viewport to semantic camera
     from omni.kit.viewport.utility import get_viewport_from_window_name
-    from containers import get_container
     viewport_manager = container.viewport_manager()
     # isaacsim default viewport
     viewport_manager.register_viewport(
@@ -1256,6 +992,6 @@ def run_simulation_loop_multi(simulation_app, world, curr_stage, drone_ctxs: lis
             import omni.kit.viewport.utility
             viewport = omni.kit.viewport.utility.get_active_viewport()
             if viewport and viewport.updates_enabled:
-                update_viewer_camera(curr_stage)
+                update_viewer_camera(scene_manager.stage)
         except Exception:
             pass

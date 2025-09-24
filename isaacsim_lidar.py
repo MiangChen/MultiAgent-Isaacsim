@@ -39,7 +39,7 @@ from isaacsim_common import (
     add_drone_body,
     setup_ros,
     run_simulation_loop_multi,
-    DroneSimCtx,
+    # DroneSimCtx,
 )
 
 import omni
@@ -54,6 +54,7 @@ from isaacsim.core.utils.extensions import get_extension_path_from_name
 
 from scene.scene_manager import SceneManager
 from map.map_semantic_map import MapSemantic
+from robot.robot_drone import DroneSimCtx
 
 
 #############################################################
@@ -201,40 +202,44 @@ def create_car_objects(scene_manager: SceneManager) -> list:
         "car0": {
             "shape_type": "cuboid",
             "prim_path": "/World/car0",
-            "size": scale,
-            "scene_name": "car0",
+            "scale": scale,
+            "name": "car0",
             "position": [11.6, 3.5, 0],
             "color": [255, 255, 255],
+            "make_dynamic": False,
         },
         "car1": {
             "shape_type": "cuboid",
             "prim_path": "/World/car1",
-            "size": scale,
-            "scene_name": "car1",
+            "scale": scale,
+            "name": "car1",
             "position": [0.3, 3.5, 0],
             "color": [255, 255, 255],
+            "make_dynamic": False,
         },
         "car2": {
             "shape_type": "cuboid",
             "prim_path": "/World/car2",
-            "size": scale,
-            "scene_name": "car2",
+            "scale": scale,
+            "name": "car2",
             "position": [-13.2, 3.5, 0],
             "color": [255, 255, 255],
+            "make_dynamic": False,
         },
         "car3": {
             "shape_type": "cuboid",
             "prim_path": "/World/car3",
-            "scene_name": "car3",
-            "size": scale,
+            "name": "car3",
+            "scale": scale,
             "position": [-7.1, 10, 0],
             "color": [255, 255, 255],
+            "make_dynamic": False,
         },
         "car4": {
             "shape_type": "cuboid",
             "prim_path": "/World/car4",
-            "scene_name": "car4",
-            "size": scale,
+            "name": "car4",
+            "scale": scale,
             "position": [-0.9, 30, 0],
             "orientation": [0.707, 0, 0, 0.707],
             "color": [255, 255, 255],
@@ -243,38 +248,18 @@ def create_car_objects(scene_manager: SceneManager) -> list:
     }
 
     created_prim_paths = []
-    print(
-        "All semantics in scene:",
-        scene_manager.count_semantics_in_scene().get("result"),
-    )
+    logger.info(f"All semantics in scene:{scene_manager.count_semantics_in_scene().get('result')}")
 
     for cube_name, config in cubes_config.items():
-        print(f"--- Processing: {cube_name} ---")
+        creation_result = scene_manager.create_shape_unified(**config)
 
-        # Create shape using unpacking
-        creation_result = scene_manager.create_shape_single(**config)
-
-        # Check the result
         if creation_result.get("status") == "success":
             prim_path = creation_result.get("result")
-            print(f"  Successfully created prim at: {prim_path}")
             created_prim_paths.append(prim_path)
 
             # Add semantic label
-            semantic_result = scene_manager.add_semantic(
-                prim_path=prim_path, semantic_label="car"
-            )
-
-            if semantic_result.get("status") == "success":
-                print(f"  Successfully applied semantic label 'car' to {prim_path}")
-            else:
-                print(
-                    f"  [ERROR] Failed to apply semantic label: {semantic_result.get('message')}"
-                )
-        else:
-            print(
-                f"  [ERROR] Failed to create shape '{cube_name}': {creation_result.get('message')}"
-            )
+            semantic_result = scene_manager.add_semantic(prim_path=prim_path, semantic_label="car")
+            logger.info(semantic_result)
 
     return created_prim_paths
 
@@ -334,15 +319,12 @@ def main():  # Needed in build_drone_ctx
     # setup_simulation()
     ros_manager.start()
     scene_manager = SceneManager()
-    # world, curr_stage = create_sim_environment(
-    #     config_manager.get("world").get("path"), rendering_hz=config_manager.get("rendering_hz"),
-    #     simulation_app=g_simulation_app,
-    # )
+
     WORLD_USD_PATH = config_manager.get("world_usd_path")
     scene_manager.load_scene(usd_path=WORLD_USD_PATH, prim_path_root="/World/Scene")
 
-    created_prim_paths = create_car_objects(scene_manager)
-    print("All prims with 'car' label:", created_prim_paths)
+    # created_prim_paths = create_car_objects(scene_manager)
+    # print("All prims with 'car' label:", created_prim_paths)
     print(scene_manager.count_semantics_in_scene().get("result"))
 
     # Create and initialize semantic camera
@@ -362,7 +344,8 @@ def main():  # Needed in build_drone_ctx
 
     # ---------------- Run simulation -----------------------------------
     run_simulation_loop_multi(
-        g_simulation_app, world, scene_manager.stage, drone_ctxs, semantic_camera, semantic_camera_prim_path, semantic_map
+        g_simulation_app, drone_ctxs, semantic_camera, semantic_camera_prim_path,
+        semantic_map
     )
 
     # Cleanup copied lidar config files ---------------------------------
@@ -373,5 +356,4 @@ def main():  # Needed in build_drone_ctx
 
 
 if __name__ == "__main__":
-
     main()

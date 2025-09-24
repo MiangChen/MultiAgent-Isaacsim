@@ -1,14 +1,15 @@
-# Standard library imports
 import traceback
 from pathlib import Path
-from typing import Dict, Any, List, Union, Optional
+from typing import Dict, Any, List, Union, Optional, Sequence
 
-# Third-party imports
 import numpy as np
+import torch
 
-# Isaac Sim related imports
-import omni
 import carb
+import omni
+from isaacsim.core.api.objects import cuboid, sphere
+from isaacsim.core.prims import XFormPrim
+from isaacsim.core.api.world import World
 from pxr import Gf, Sdf, UsdGeom, UsdPhysics, PhysxSchema, Usd
 
 from config.config_manager import config_manager
@@ -42,16 +43,19 @@ class SceneManager:
             "add_semantic_camera": self.add_camera,
             ## create ##
             "create_camera": self.create_camera,
-            "load_usd": self.load_usd,
             "create_robot": self.create_robot,
-            "create_shape": self.create_shape_single,
+            "create_shape_components": self.create_shape_components,
+            # "create_shape": self.create_shape_single,
             "create_shape_unified": self.create_shape_unified,
             "browse_scene_repository": self.browse_scene_repository,
+            "load_usd": self.load_usd,
             "load_scene": self.load_scene,
             "save_scene": self.save_scene,
             ## prim ##
             "delete_prim": self.delete_prim,
-            "set_prim_scale": self.set_prim_scale,
+            # "set_prim_scale": self.set_prim_scale,
+            # "move_prim": self.move_prim,
+            "adjust_prim": self.adjust_prim,
             "set_prim_activate_state": self.set_prim_activate_state,
             "get_selected_prim": self.get_selected_prim,
             "focus_on_prim": self.focus_on_prim,
@@ -603,153 +607,50 @@ class SceneManager:
         robot.set_world_poses(positions=np.array([position]) / get_stage_units())
         return {"status": "success", "message": f"{robot_type} robot created at {new_prim_path}"}
 
-    def create_isaac_shape(
-            self,
-            shape_type: str,
-            prim_path: str,
-            scene_name: str,
-            position: List[float] = [0, 0, 0],
-            orientation: List[float] = [1, 0, 0, 0],  # Isaac Sim 使用 WXYZ
-            scale: List[float] = None,  # 使用 scale 代替 size 更通用
-            size: float = None,  # 仅用于Cube/Sphere的快捷方式
-            radius: float = None,  # 仅用于Sphere/Cone的快捷方式
-            height: float = None,  # 仅用于Cone的快捷方式
-            color: List[float] = [0.8, 0.1, 0.1],
-            mass: float = None,  # 让Isaac Sim根据体积和密度自动计算，或手动指定
-            linear_velocity: List[float] = None  # 可以指定初始速度
-    ) -> Dict[str, Any]:
-        """
-        在场景中使用 Isaac Sim 的高级 API 创建一个物理形状 (Cuboid, Sphere, Cone)。
-
-        Args:
-            shape_type (str): 支持: "cuboid", "sphere", "cone"。
-            prim_path (str): 创建 prim 的路径。
-            scene_name (str): 在 Isaac Sim Scene 中用于追踪的唯一名称。
-            position (List[float]): 世界坐标 [x, y, z]。
-            orientation (List[float]): 世界朝向 [w, x, y, z] 四元数。
-            scale (List[float]): 统一的缩放 [x, y, z]。会覆盖size/radius/height。
-            size (float): (仅用于Cube) 立方体的边长。
-            radius (float): (仅用于Sphere/Cone) 球体/圆锥体的半径。
-            height (float): (仅用于Cone) 圆锥体的高度。
-            color (List[float]): 显示颜色 [r, g, b]。
-            mass (float): 物体的质量 (kg)。
-            linear_velocity (List[float]): 初始线速度 [vx, vy, vz]。
-
-        Returns:
-            Dict[str, Any]: 包含操作状态和结果的字典。
-        """
-        try:
-            from omni.isaac.core.objects import DynamicCuboid, DynamicSphere, DynamicCone
-            # 获取 World 和 Scene 的实例
-            world = World.instance()
-            scene = world.scene
-
-            # 检查场景名是否已存在
-            if scene.object_exists(scene_name):
-                return {"status": "error", "message": f"An object with scene_name '{scene_name}' already exists."}
-
-            shape_type = shape_type.lower()
-
-            # 根据类型选择 Isaac Sim 的高级类并创建实例
-            if shape_type == "cuboid":
-                # DynamicCuboid 会自动处理所有物理和碰撞设置
-                shape_object = DynamicCuboid(
-                    prim_path=prim_path,
-                    name=scene_name,
-                    position=np.array(position),
-                    orientation=np.array(orientation),
-                    scale=np.array(scale) if scale else np.array([1.0, 1.0, 1.0]),
-                    size=size,  # size 是 scale 的一个快捷方式
-                    color=np.array(color),
-                    mass=mass,
-                    linear_velocity=np.array(linear_velocity) if linear_velocity else None
-                )
-            elif shape_type == "sphere":
-                shape_object = DynamicSphere(
-                    prim_path=prim_path,
-                    name=scene_name,
-                    position=np.array(position),
-                    orientation=np.array(orientation),
-                    radius=radius,
-                    scale=np.array(scale) if scale else np.array([1.0, 1.0, 1.0]),
-                    color=np.array(color),
-                    mass=mass,
-                    linear_velocity=np.array(linear_velocity) if linear_velocity else None
-                )
-            elif shape_type == "cone":
-                shape_object = DynamicCone(
-                    prim_path=prim_path,
-                    name=scene_name,
-                    position=np.array(position),
-                    orientation=np.array(orientation),
-                    radius=radius,
-                    height=height,
-                    scale=np.array(scale) if scale else np.array([1.0, 1.0, 1.0]),
-                    color=np.array(color),
-                    mass=mass,
-                    linear_velocity=np.array(linear_velocity) if linear_velocity else None
-                )
-            else:
-                return {"status": "error", "message": f"Unsupported shape type: {shape_type}"}
-
-            # 将创建好的高级对象实例添加到场景中
-            # 这一步会自动在USD舞台上创建所有底层的Prims和属性
-            scene.add(shape_object)
-
-            return {
-                "status": "success",
-                "message": f"Successfully created Isaac Sim shape '{shape_type}' at {prim_path} and registered as '{scene_name}'",
-                "result": {
-                    "prim_path": prim_path,
-                    "scene_name": scene_name,
-                    "isaac_object": shape_object  # 返回创建的对象实例，方便直接操作
-                }
-            }
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return {"status": "error", "message": str(e)}
-
     def create_shape_unified(
             self,
             shape_type: str,
             prim_path: str,
-            name: str,
-            position: List[float] = [0, 0, 0],
-            orientation: List[float] = [1, 0, 0, 0],  # WXYZ 四元数
-            size: Union[float, List[float]] = 1.0,
-            color: List[float] = [0.8, 0.1, 0.1],
-            mass: float = None,  # 推荐设为None，让物理引擎根据密度和体积自动计算
+            name: str = None,
+            position: Optional[Sequence[float]] = None,
+            translation: Optional[Sequence[float]] = None,
+            orientation: Optional[Sequence[float]] = None,
+            scale: Optional[Sequence[float]] = None,
+            color: Optional[np.ndarray] = None,
+            size: Optional[float] = None,
+            radius: Optional[float] = None,
+            height: Optional[float] = None,
+            mass: Optional[float] = None,
+            density: Optional[float] = None,
             make_dynamic: bool = True
     ) -> Dict[str, Any]:
         """
-        在场景中创建一个几何形状，此版本统一使用 omni.isaac.core 高层级API。
-
-        这个函数会自动处理Prim的创建、物理属性的添加以及在仿真世界中的注册。
+        在场景中创建一个几何形状，此版本统一使用 isaacsim.core 高层级API。
         """
-        from omni.isaac.core.objects import cuboid, sphere  # 这些是对象工厂模块
-        from omni.isaac.core.world import World
-        # 2. [统一] 检查 World 实例，因为高层级API依赖它
-        world = World.instance()
+
+
 
         shape_type = shape_type.lower()
+        position = np.array(position) if position is not None else None
+        orientation = np.array(orientation) if orientation is not None else None
+        scale = np.array(scale) if scale is not None else None
+        color = np.array(color) if color is not None else None
+        size = float(size) if size is not None else None
+        radius = float(radius) if radius is not None else None
+        height = float(height) if height is not None else None
+
         created_object = None
-
-        # 3. [统一] 根据类型和是否动态，选择并实例化正确的高层级工厂类
-        #    这些工厂类在内部完成了所有底层的 PXR/USD 操作。
         if shape_type in ["cube", "cuboid"]:
-            # 将 user-friendly 的 'size' 转换为 'scale' 参数
-            scale = np.array(size) if isinstance(size, list) else np.array([size, size, size])
-
             if make_dynamic:
                 # DynamicCuboid 会自动应用 RigidBodyAPI, CollisionAPI, MassAPI
                 created_object = cuboid.DynamicCuboid(
                     prim_path=prim_path,
                     name=name,
-                    position=np.array(position),
-                    orientation=np.array(orientation),
+                    position=position,
+                    orientation=orientation,
+                    size=size,
                     scale=scale,
-                    color=np.array(color),
+                    color=color,
                     mass=mass
                 )
             else:
@@ -757,250 +658,108 @@ class SceneManager:
                 created_object = cuboid.FixedCuboid(
                     prim_path=prim_path,
                     name=name,
-                    position=np.array(position),
-                    orientation=np.array(orientation),
+                    position=position,
+                    orientation=orientation,
+                    size=size,
                     scale=scale,
-                    color=np.array(color)
+                    color=color
                 )
 
         elif shape_type == "sphere":
-            if not isinstance(size, (int, float)):
-                return {"status": "error", "message": "Size for 'sphere' (radius) must be a float."}
-
             if make_dynamic:
                 created_object = sphere.DynamicSphere(
                     prim_path=prim_path,
                     name=name,
-                    position=np.array(position),
-                    orientation=np.array(orientation),
-                    radius=size,
-                    color=np.array(color),
+                    position=position,
+                    orientation=orientation,
+                    radius=radius,
+                    color=color,
+                    scale=scale,
                     mass=mass
                 )
             else:
                 created_object = sphere.FixedSphere(
                     prim_path=prim_path,
                     name=name,
-                    position=np.array(position),
-                    orientation=np.array(orientation),
-                    radius=size,
-                    color=np.array(color)
+                    position=position,
+                    orientation=orientation,
+                    radius=radius,
+                    color=color,
+                )
+        elif shape_type == "cylinder":
+            if make_dynamic:
+                created_object = sphere.DynamicSphere(
+                    prim_path=prim_path,
+                    name=name,
+                    position=position,
+                    orientation=orientation,
+                    radius=radius,
+                    height=height,
+                    color=color,
+                    mass=mass
+                )
+            else:
+                created_object = sphere.FixedSphere(
+                    prim_path=prim_path,
+                    name=name,
+                    position=position,
+                    orientation=orientation,
+                    radius=radius,
+                    height=height,
+                    color=color
                 )
         else:
-            return {"status": "error", "message": f"Unsupported shape type: {shape_type}"}
+            raise f"Unsupported shape type: {shape_type}"
 
-        # 4. [统一] 将创建的对象添加到场景中，使其“生效”
-        if world.scene.object_exists(name):
-            world.scene.remove_object(name)
-
-        world.scene.add(created_object)
+        # 将创建的对象添加到场景中，使其“生效”
+        scene = World.instance().scene
+        if name != None and scene.object_exists(name) == False:
+            scene.add(created_object)
 
         return {
             "status": "success",
             "message": f"Successfully created shape '{shape_type}' at {prim_path} using unified API.",
             "prim_path": prim_path,
-            "object": created_object  # 返回创建的高层级对象，方便后续直接操作
+            "object": created_object
         }
 
     def create_shape_components(
             self,
-            # shape_type: str,
             prim_path: str,
+            name: str = None,
             position: List[float] = [0, 0, 0],
             orientation: List[float] = [1, 0, 0, 0],  # WXYZ
             # size: Union[float, List[float]] = 1.0,
             # color: List[float] = [0.8, 0.1, 0.1],
-            physics_preset: str = 'dynamic_rigid_body',  # 'visual', 'static_collider', 'dynamic_rigid_body'
-            # mass: Optional[float] = 0.01,
-            name: str = None,
+            # physics_preset: str = 'dynamic_rigid_body',  # 'visual', 'static_collider', 'dynamic_rigid_body'
             components: Optional[Dict[str, Dict]] = None
     ) -> Dict[str, Any]:
 
-        root_xform = UsdGeom.Xform.Define(self.stage, prim_path)
-        root_xform.AddTranslateOp().Set(Gf.Vec3d(*position))
-        root_xform.AddOrientOp().Set(Gf.Quatf(*orientation))
+        xform = UsdGeom.Xform.Define(self.stage, prim_path)
+        prim = XFormPrim(
+            prim_paths_expr=prim_path,
+            positions=torch.tensor([position], dtype=torch.float32),
+            orientations=torch.tensor([orientation], dtype=torch.float32),
+            name=name,
+        )
 
+        scene = World.instance().scene
+        scene.add(prim)
         for child_name, comp_data in components.items():
             child_path = f"{prim_path}/{child_name}"
-            self.create_shape_single(
+            self.create_shape_unified(
                 prim_path=child_path,
                 shape_type=comp_data.get('shape_type', 'cuboid'),
                 position=comp_data.get('position', [0, 0, 0]),
                 orientation=comp_data.get('orientation', [1, 0, 0, 0]),
                 size=comp_data.get('size', 1.0),
                 color=comp_data.get('color', [0.5, 0.5, 0.5]),
-                physics_preset=physics_preset,  # 复合体的所有部分共享同一个物理预设
+                # physics_preset=physics_preset,  # 复合体的所有部分共享同一个物理预设
                 mass=comp_data.get('mass', 0.1),
-                is_root=False,
+                name=comp_data.get('name', None)
             )
-            from omni.isaac.core.prims import XFormPrim
-            from omni.isaac.core.world import World
-            scene = World.instance().scene
-            prim = XFormPrim(
-                prim_paths_expr=prim_path,
-                name=name,
-            )
-            scene.add(prim)
-        return
 
-    def create_shape_single(
-            self,
-            shape_type: str,
-            prim_path: str,
-            scene_name: str = None,
-            position: List[float] = [0, 0, 0],
-            orientation: List[float] = [1, 0, 0, 0],  # WXYZ 四元数
-            size: Union[float, List[float]] = 1.0,
-            color: List[float] = [0.8, 0.1, 0.1],
-            physics_preset: str = 'dynamic_rigid_body',  # 'visual', 'static_collider', 'dynamic_rigid_body'
-            mass: float = 0.01,
-            name: str = None,
-            is_root: bool = True,
-    ):
-        if is_root:
-            if shape_type in ["cube", "cuboid"]:
-                UsdGeom.Cube.Define(self.stage, prim_path)
-            elif shape_type == "sphere":
-                UsdGeom.Sphere.Define(self.stage, prim_path)
-            elif shape_type == "cylinder":
-                UsdGeom.Cylinder.Define(self.stage, prim_path)
-            else:
-                raise ValueError(f"Unsupported shape type: {shape_type}")
-            # 如果是根 prim，几何定义和 Xform 是同一个 prim
-            prim = self.stage.GetPrimAtPath(prim_path)
-        else:
-            # 如果是子 prim，在其路径下创建新的几何体
-            if shape_type in ["cube", "cuboid"]:
-                prim = UsdGeom.Cube.Define(self.stage, prim_path).GetPrim()
-            elif shape_type == "sphere":
-                prim = UsdGeom.Sphere.Define(self.stage, prim_path).GetPrim()
-            elif shape_type == "cylinder":
-                prim = UsdGeom.Cylinder.Define(self.stage, prim_path).GetPrim()
-            else:
-                raise ValueError(f"Unsupported shape type: {shape_type}")
-
-        usd_prim = prim.GetPrim()
-        xform = UsdGeom.Xformable(prim)
-
-        # 2. 几何属性
-        if shape_type == "cube":
-            prim.GetSizeAttr().Set(float(size))
-        elif shape_type == "cuboid":
-            prim.GetSizeAttr().Set(float(1))
-            xform.AddScaleOp().Set(Gf.Vec3f(*size))
-        elif shape_type == "sphere":
-            prim.GetRadiusAttr().Set(float(size))
-
-        # 3. 颜色
-        prim.GetDisplayColorAttr().Set([Gf.Vec3f(*color)])
-
-        # 4. 位姿
-        xform.AddTranslateOp().Set(Gf.Vec3f(*position))
-        xform.AddOrientOp().Set(Gf.Quatf(*orientation))
-
-        # 5. 设置 碰撞和刚体 属性
-        if physics_preset == 'static_collider':
-            UsdPhysics.CollisionAPI.Apply(prim)
-
-        elif physics_preset == 'dynamic_rigid_body':
-            UsdPhysics.CollisionAPI.Apply(prim)
-            # 对于复合体，刚体API应该只应用于根 Prim
-            if is_root or not self.stage.GetPrimAtPath(Sdf.Path(prim_path).GetParentPath()).HasAPI(
-                    UsdPhysics.RigidBodyAPI):
-                UsdPhysics.RigidBodyAPI.Apply(prim)
-                if mass is not None:
-                    mass_api = UsdPhysics.MassAPI.Apply(prim)
-                    mass_api.CreateMassAttr().Set(mass)
-        elif physics_preset == 'visual':
-            pass
-
-        # 6. 设置相对位姿
-        if is_root == False:
-            xform = UsdGeom.Xformable(prim)
-            xform.AddTranslateOp().Set(Gf.Vec3f(*position))
-            xform.AddOrientOp().Set(Gf.Quatf(orientation[0], Gf.Vec3f(orientation[1:])))
-
-        return {"status": "success", "result": prim_path, }
-        #
-        #     # --- 1. 生成唯一的 Prim Path (如果未提供) ---
-        #     if not prim_path:
-        #         base_path = f"/World/{shape_type.capitalize()}"
-        #         scene_info = self.get_scene_info(max_depth=100)  # 获取场景所有prims
-        #         existing_paths = [p["path"] for p in scene_info.get("result", [])]
-        #         suffix = 0
-        #         prim_path = base_path
-        #         while prim_path in existing_paths:
-        #             suffix += 1
-        #             prim_path = f"{base_path}_{suffix}"
-        #
-        #     # --- 2. 根据类型创建几何 Prim ---
-        #     shape_type = shape_type.lower()
-        #     if shape_type in ["cube", "cuboid"]:
-        #         prim = UsdGeom.Cube.Define(self.stage, prim_path)
-        #     elif shape_type == "sphere":
-        #         prim = UsdGeom.Sphere.Define(self.stage, prim_path)
-        #     else:
-        #         return {"status": "error", "message": f"Unsupported shape type: {shape_type}"}
-        #
-        #     # --- 3. 设置几何属性 (尺寸和颜色) ---
-        #     if shape_type == "cube":
-        #         if not isinstance(size, (int, float)):
-        #             return {"status": "error", "message": "Size for 'cube' must be a single float or int."}
-        #         prim.GetSizeAttr().Set(float(size))
-        #     elif shape_type == "cuboid":
-        #         if not isinstance(size, list) or len(size) != 3:
-        #             return {"status": "error", "message": "Size for 'cuboid' must be a list of [x, y, z]."}
-        #         # 对于长方体，我们通过设置缩放来实现
-        #         prim.GetSizeAttr().Set(float(1))
-        #     elif shape_type == "sphere":
-        #         if not isinstance(size, (int, float)):
-        #             return {"status": "error", "message": "Size for 'sphere' (radius) must be a single float or int."}
-        #         prim.GetRadiusAttr().Set(float(size))
-        #
-        #     # 设置显示颜色
-        #     prim.GetDisplayColorAttr().Set([Gf.Vec3f(*color)])
-        #
-        #     # --- 4. 设置位姿 (位置和朝向) ---
-        #     xform = UsdGeom.Xformable(prim)
-        #     xform.AddTranslateOp().Set(Gf.Vec3f(*position))
-        #     xform.AddOrientOp().Set(Gf.Quatf(*orientation))
-        #
-        #     if shape_type == "cuboid":
-        #         xform.AddScaleOp().Set(Gf.Vec3f(*size))
-        #
-        #     # --- 5. 添加物理属性 (如果需要) ---
-        #     if make_dynamic:
-        #         # 应用刚体 API
-        #         usd_prim = prim.GetPrim()
-        #         UsdPhysics.RigidBodyAPI.Apply(usd_prim)
-        #         # 应用碰撞 API (对于基本体，默认碰撞形状就足够了)
-        #         UsdPhysics.CollisionAPI.Apply(usd_prim)
-        #         # 应用质量 API 并设置质量
-        #         mass_api = UsdPhysics.MassAPI.Apply(usd_prim)
-        #         mass_api.CreateMassAttr().Set(mass)
-        #
-        #     # 6.
-        #     from omni.isaac.core.world import World
-        #     from omni.isaac.core.prims import RigidPrim
-        #     scene = World.instance().scene
-        #     managed_prim = RigidPrim(
-        #         prim_path=prim_path,
-        #         name=scene_name
-        #     )
-        #
-        #     # 2. 将这个高级封装器对象添加到 Scene 中。
-        #     #    现在 World 就知道要管理和更新这个物体了。
-        #     scene.add(managed_prim)
-        #     return {
-        #         "status": "success",
-        #         "message": f"Successfully created shape '{shape_type}' at {prim_path}",
-        #         "result": prim_path
-        #     }
-        #
-        # except Exception as e:
-        #     import traceback
-        #     traceback.print_exc()
-        #     return {"status": "error", "message": str(e)}
+        return {"status": "success", "result": prim_path, "usd_prim": xform.GetPrim()}
 
     def euler_to_quaternion(
             self,
@@ -1028,37 +787,35 @@ class SceneManager:
 
         return [w, x, y, z]
 
-    def set_prim_scale(self, prim_path: str, scale: list) -> dict:
+    def adjust_prim(self, prim_path: str = None, position: list = None, quat: list = None,
+                    scale: list = None) -> dict:
         try:
-            # 获取当前 USD stage
-            self.stage = omni.usd.get_context().get_stage()
-            if not self.stage:
-                return {"status": "error", "message": "No USD stage is currently open."}
-
-            prim = self.stage.GetPrimAtPath(prim_path)
-            if not prim.IsValid():
+            geom_prim = self.stage.GetPrimAtPath(prim_path)
+            if not geom_prim.IsValid():
                 return {"status": "error", "message": f"Prim {prim_path} not found."}
 
-            xform = UsdGeom.Xformable(prim)
+            xform = UsdGeom.Xformable(geom_prim)
 
-            # 查找是否已有 ScaleOp
-            scale_op = None
-            for op in xform.GetOrderedXformOps():
-                if op.GetOpType() == UsdGeom.XformOp.TypeScale:
-                    scale_op = op
-                    break
+            if position:
+                if not geom_prim.HasAttribute("xformOp:translate"):
+                    xform.AddTranslateOp().Set(position)
+                else:
+                    geom_prim.GetAttribute("xformOp:translate").Set(position)
+            if quat:
+                if not geom_prim.HasAttribute("xformOp:orient"):
+                    xform.AddOrientOp().Set(quat)
+                else:
+                    geom_prim.GetAttribute("xformOp:orient").Set(quat)
 
-            # 如果没有，才添加
-            if not scale_op:
-                scale_op = xform.AddScaleOp()
+            if scale:
+                if not geom_prim.HasAttribute("xformOp:scale"):
+                    xform.AddScaleOp().Set(scale)  # Gf.Vec3f(*scale)
+                else:
+                    geom_prim.GetAttribute("xformOp:scale").Set(scale)
 
-            # 设置缩放值
-            scale_op.Set(Gf.Vec3f(*scale))
-
-            return {"status": "success", "message": f"Scale set to {scale} for {prim_path}"}
-
+            return {"status": True}
         except Exception as e:
-            return {"status": "error", "message": f"Failed to set scale: {str(e)}"}
+            return {"status": False, "message": str(e), }
 
     def adjust_pose(self, prim_path: str, position: list, orientation: list) -> dict:
         from isaacsim.core.prims import Articulation

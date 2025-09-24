@@ -17,7 +17,7 @@ from isaacsim.core.api.objects import VisualCuboid, VisualCylinder, VisualSphere
 from isaacsim.core.utils import extensions, stage
 from isaacsim.storage.native import get_assets_root_path
 from pxr import Gf, UsdGeom
-from omni.isaac.core.utils.viewports import set_camera_view
+from isaacsim.core.utils.viewports import set_camera_view
 
 # enable ROS2 bridge extension and then import ros modules
 extensions.enable_extension("isaacsim.ros2.bridge")

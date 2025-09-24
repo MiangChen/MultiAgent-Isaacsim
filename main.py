@@ -70,7 +70,9 @@ WORLD_USD_PATH = config_manager.get("world_usd_path")
 PROJECT_ROOT = config_manager.get("project_root")
 
 import rclpy
+
 rclpy.init(args=None)
+
 
 @inject
 def setup_simulation(
@@ -144,32 +146,35 @@ def create_car_objects(scene_manager: SceneManager) -> list:
         "car0": {
             "shape_type": "cuboid",
             "prim_path": "/World/car0",
-            "size": scale,
+            "scale": scale,
             "name": "car0",
             "position": [11.6, 3.5, 0],
             "color": [255, 255, 255],
+            "make_dynamic": False,
         },
         "car1": {
             "shape_type": "cuboid",
             "prim_path": "/World/car1",
-            "size": scale,
+            "scale": scale,
             "name": "car1",
             "position": [0.3, 3.5, 0],
             "color": [255, 255, 255],
+            "make_dynamic": False,
         },
         "car2": {
             "shape_type": "cuboid",
             "prim_path": "/World/car2",
-            "size": scale,
+            "scale": scale,
             "name": "car2",
             "position": [-13.2, 3.5, 0],
             "color": [255, 255, 255],
+            "make_dynamic": False,
         },
         "car3": {
             "shape_type": "cuboid",
             "prim_path": "/World/car3",
             "name": "car3",
-            "size": scale,
+            "scale": scale,
             "position": [-7.1, 10, 0],
             "color": [255, 255, 255],
             "make_dynamic": False,
@@ -178,7 +183,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "shape_type": "cuboid",
             "prim_path": "/World/car4",
             "name": "car4",
-            "size": scale,
+            "scale": scale,
             "position": [-0.9, 30, 0],
             "orientation": [0.707, 0, 0, 0.707],
             "color": [255, 255, 255],
@@ -187,39 +192,18 @@ def create_car_objects(scene_manager: SceneManager) -> list:
     }
 
     created_prim_paths = []
-    print(
-        "All semantics in scene:",
-        scene_manager.count_semantics_in_scene().get("result"),
-    )
+    logger.info(f"All semantics in scene:{scene_manager.count_semantics_in_scene().get('result')}")
 
     for cube_name, config in cubes_config.items():
-        print(f"--- Processing: {cube_name} ---")
-
-        # Create shape using unpacking
-        # creation_result = scene_manager.create_shape_single(**config)
         creation_result = scene_manager.create_shape_unified(**config)
 
-        # Check the result
         if creation_result.get("status") == "success":
             prim_path = creation_result.get("result")
-            print(f"  Successfully created prim at: {prim_path}")
             created_prim_paths.append(prim_path)
 
             # Add semantic label
-            semantic_result = scene_manager.add_semantic(
-                prim_path=prim_path, semantic_label="car"
-            )
-
-            if semantic_result.get("status") == "success":
-                print(f"  Successfully applied semantic label 'car' to {prim_path}")
-            else:
-                print(
-                    f"  [ERROR] Failed to apply semantic label: {semantic_result.get('message')}"
-                )
-        else:
-            print(
-                f"  [ERROR] Failed to create shape '{cube_name}': {creation_result.get('message')}"
-            )
+            semantic_result = scene_manager.add_semantic(prim_path=prim_path, semantic_label="car")
+            logger.info(semantic_result)
 
     return created_prim_paths
 
@@ -341,7 +325,7 @@ def main():
         "prim_path": object_prim_path,
         # "scene_name": "object",
         "name": object_name,
-        "size": [0.1, 0.1, 0.1],
+        "scale": [0.1, 0.1, 0.1],
         "position": [5, 6.5, 0.1],
         "orientation": [0.707, 0, 0, 0.707],
         "color": [255, 255, 255],
