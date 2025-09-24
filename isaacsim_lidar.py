@@ -4,27 +4,14 @@ sys.path.insert(0, "/home/ubuntu/PycharmProjects/isaacsim-gsi/src")
 
 ##########################################################################################################################
 import argparse
-from physics_engine.isaacsim_simulation_app import initialize_simulation_app_from_yaml
 
+parser = argparse.ArgumentParser(add_help=False)
+parser.add_argument("--config-path", type=str, default="./config/config_parameter.yaml")
+args, unknown = parser.parse_known_args()
 
-def pre_initialize():
-    """
-    执行最小化的启动，只为了创建 SimulationApp 实例。
-    """
+from physics_engine.isaacsim_simulation_app import start_isaacsim_simulation_app
 
-    parser = argparse.ArgumentParser(
-        add_help=False
-    )  # add_help=False 避免与后续的解析器冲突
-    parser.add_argument("--config", type=str, default="./config/config_parameter.yaml")
-
-    args, unknown = parser.parse_known_args()
-
-    simulation_app = initialize_simulation_app_from_yaml(args.config)
-
-    return simulation_app
-
-
-g_simulation_app = pre_initialize()
+g_simulation_app = start_isaacsim_simulation_app(args.config_path)
 ##########################################################################################################################
 from config.config_manager import config_manager
 

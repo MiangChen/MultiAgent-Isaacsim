@@ -1,16 +1,15 @@
 import os
 import yaml
 
+import argparse
+
 from isaacsim import SimulationApp
 import omni
 
 
-def initialize_simulation_app_from_yaml(config_path):
+def start_isaacsim_simulation_app(config_path):
     """
-    Initialize SimulationApp with settings from a YAML file.
-
-    Args:
-        config_path (str): Path to the YAML configuration file.
+    创建 SimulationApp 实例
     """
 
     # 1. 读取YAML配置文件
@@ -27,7 +26,6 @@ def initialize_simulation_app_from_yaml(config_path):
         raise ValueError(
             "EXP_PATH environment variable is not set. Please set it to your Isaac Sim experience path."
         )
-
     full_experience_path = f"{exp_path}/{experience}"
 
     # 4. 初始化 SimulationApp
@@ -52,3 +50,4 @@ def initialize_simulation_app_from_yaml(config_path):
     #     omni.kit.viewport.utility.get_active_viewport().updates_enabled = False
 
     return simulation_app
+

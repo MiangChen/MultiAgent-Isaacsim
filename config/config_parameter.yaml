@@ -1,3 +1,34 @@
+simulation_app_config:
+  renderer: "RaytracedLighting"
+  headless: False # 是否开启渲染界面
+  anti_aliasing: 0
+
+# 定义启动时需要启用的扩展列表
+enabled_extensions:
+  - "isaacsim.ros2.bridge"
+  - "omni.kit.graph.editor.core"
+  - "omni.graph.bundle.action"
+  - "omni.kit.graph.delegate.modern"
+  - "isaacsim.asset.gen.omap"
+  - "omni.graph.window.action"
+
+experience: "isaacsim.exp.base.zero_delay.kit"
+
+# 渲染配置, 下面的配置可以降低资源消耗
+settings:
+  "/rtx/ecoMode/enabled": False
+  "/rtx/post/dlss/execMode": 0
+  "/rtx-transient/dlssg/enabled": False
+  "/rtx-transient/dldenoiser/enabled": False
+  "/rtx/directLighting/enabled": False
+  "/rtx/indirectDiffuse/enabled": False
+  "/rtx/sceneDb/ambientLightIntensity": 3.0
+  "/rtx/reflections/enabled": False
+  "/rtx/translucency/enabled": False
+  "/rtx/raytracing/subsurface/enabled": False
+  "/rtx/caustics/enabled": False
+  "/persistent/physics/numThreads": 0
+
 # Isaacsim资产的位置
 asset_path: "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5/"
 
@@ -34,37 +65,6 @@ map_semantic:
   place3: [ -4.7, 22.5, 0 ]
   place4: [ 5, 6.5, 0 ]
 
-simulation_app_config:
-  renderer: "RaytracedLighting"
-  headless: False # 是否开启渲染界面
-  anti_aliasing: 0
-
-
-# 定义启动时需要启用的扩展列表
-enabled_extensions:
-  - "isaacsim.ros2.bridge"
-  - "omni.kit.graph.editor.core"
-  - "omni.graph.bundle.action"
-  - "omni.kit.graph.delegate.modern"
-  - "isaacsim.asset.gen.omap"
-  - "omni.graph.window.action"
-
-experience: "isaacsim.exp.base.zero_delay.kit"
-
-# 渲染配置, 下面的配置可以降低资源消耗
-settings:
-  "/rtx/ecoMode/enabled": False
-  "/rtx/post/dlss/execMode": 0
-  "/rtx-transient/dlssg/enabled": False
-  "/rtx-transient/dldenoiser/enabled": False
-  "/rtx/directLighting/enabled": False
-  "/rtx/indirectDiffuse/enabled": False
-  "/rtx/sceneDb/ambientLightIntensity": 3.0
-  "/rtx/reflections/enabled": False
-  "/rtx/translucency/enabled": False
-  "/rtx/raytracing/subsurface/enabled": False
-  "/rtx/caustics/enabled": False
-  "/persistent/physics/numThreads": 0
 
 # --- 日志配置 ---
 logging:

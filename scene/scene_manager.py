@@ -139,9 +139,7 @@ class SceneManager:
                 "status": "success",
                 "message": f"Successfully applied semantic '{semantic_label}' to prim <{prim_path}>"
             }
-        except ImportError:
-            return {"status": "error",
-                    "message": "Failed to import 'isaacsim.core.utils.semantics'. Ensure Isaac Sim is running."}
+
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -154,7 +152,6 @@ class SceneManager:
             prim_path:  str, optional: Prim to remove any applied semantic APIs on
 
         Returns:
-
         """
         try:
             from isaacsim.core.utils.semantics import remove_all_semantics
@@ -175,9 +172,6 @@ class SceneManager:
                 "status": "success",
                 "message": f"Successfully removed all semantics from prim <{prim_path}>"
             }
-        except ImportError:
-            return {"status": "error",
-                    "message": "Failed to import 'isaacsim.core.utils.semantics'. Ensure Isaac Sim is running."}
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -185,7 +179,7 @@ class SceneManager:
 
     def count_semantics_in_scene(self, prim_path: str = '/') -> Dict[str, Any]:
         """
-        [已弃用 API] 统计场景中（或指定路径下）所有语义标签的数量。
+        [已弃用 API in isaacsim 5.0] 统计场景中（或指定路径下）所有语义标签的数量。
 
         Args:
             prim_path (str, optional): 检查的根路径。如果为 None，则检查整个场景。
@@ -627,8 +621,6 @@ class SceneManager:
         """
         在场景中创建一个几何形状，此版本统一使用 isaacsim.core 高层级API。
         """
-
-
 
         shape_type = shape_type.lower()
         position = np.array(position) if position is not None else None

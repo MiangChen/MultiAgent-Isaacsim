@@ -18,7 +18,7 @@ CUSTOM_WORKSPACE_SETUP_PATH="$PROJECT_ROOT/src/gsi_msgs/install/setup.bash"
 
 # --- 6. 默认参数 ---
 DEFAULT_ARGS=(
-  "--config" "$PROJECT_ROOT/config/config_parameter.yaml"
+  "--config-path" "$PROJECT_ROOT/config/config_parameter.yaml"
 )
 
 # ==============================================================================
