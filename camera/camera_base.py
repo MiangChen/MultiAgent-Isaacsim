@@ -63,15 +63,6 @@ class CameraBase:
                 else:
                     print(f"Prim not found at path {prim.GetPath()}")
 
-            # 配置相机角度必须是4元数
-            if self.cfg_camera.euler_degree is not None:
-                # 注意角度和弧度模式
-                self.cfg_camera.quat = rotations.euler_angles_to_quats(np.array(self.cfg_camera.euler_degree),
-                                                                       degrees=True)
-            else:
-                self.cfg_camera.euler_degree = rotations.quats_to_euler_angles(np.array(self.cfg_camera.quat),
-                                                                               degrees=True)
-
             self.camera_view = CameraView(
                 prim_paths_expr=self.cfg_camera.prim_path,
                 # frequency=self.cfg_camera.frequency,

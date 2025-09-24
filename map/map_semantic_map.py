@@ -40,15 +40,12 @@ class MapSemantic():
                 - Optional[Dict[str, List[float]]]: The pose dictionary of the object,
                                           in the format {'position': [...], 'orientation': [...]}, or None if not found.
         """
-        try:
-            # Extract necessary data structures from the sensor result
-            info = sensor_result['info']
-            data = sensor_result['data']
-            id_to_labels = info['idToLabels']
-            prim_paths = info['primPaths']
-        except KeyError as e:
-            print(f"Error: The input sensor_result dictionary is missing a required key: {e}")
-            return None, None
+
+        # Extract necessary data structures from the sensor result
+        info = sensor_result['info']
+        data = sensor_result['data']
+        id_to_labels = info['idToLabels']
+        prim_paths = info['primPaths']
 
         # --- Step 1: Find the semanticId corresponding to the target class ---
         target_semantic_id = None

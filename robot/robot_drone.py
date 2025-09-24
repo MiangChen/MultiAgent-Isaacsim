@@ -98,7 +98,7 @@ class RobotDrone(RobotBase):
         self.srvs: dict = field(default_factory=dict)
 
         # Simulation prim handle for this drone (returned by add_drone_body)
-        drone_prim: object | None = None
+        self.drone_prim: object | None = None
 
         # Desired pose tracking
         des_pose: DronePose | None = None
@@ -115,6 +115,9 @@ class RobotDrone(RobotBase):
         spawn_lock: threading.Lock = field(default_factory=threading.Lock)
         pending_move_requests: list = field(default_factory=list)
         move_lock: threading.Lock = field(default_factory=threading.Lock)
+
+        # sensor
+        self.lidar = None
 
         #
         # self.node.register_feedback_publisher(

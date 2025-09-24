@@ -6,6 +6,7 @@ PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # --- 2. Python 可执行文件路径 ---
 PY_EXECUTABLE="/home/ubuntu/anaconda3/envs/env_isaaclab/bin/python"
+#PY_EXECUTABLE="/home/ubuntu/anaconda3/envs/isaacsim310/bin/python"
 
 # --- 3. 要运行的主 Python 脚本 ---
 MAIN_PY_SCRIPT="isaacsim_lidar.py"

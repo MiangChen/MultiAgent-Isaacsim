@@ -14,8 +14,7 @@ class CameraCfg(BaseCfg):
     prim_path: Optional[str] = None
 
     position: Tuple[float, float, float] = (0.0, 0.0, 0.0)  # 相对于机器人中心的偏移距离
-    euler_degree: Optional[Tuple[float, float, float]] = (0, 0, 90)  # 相对于机器人中心朝向偏移
-    quat: Optional[Tuple[float, float, float, float]] = (0.0, 0.0, 0.0, 1.0)  # 使用4元数的方法. euler_degree优先级更高
+    quat: Optional[Tuple[float, float, float, float]] = (0.0, 0.0, 0.0, 1.0)  # 使用4元数的方法
     scale: Optional[Tuple[float, float, float]] = (1.0, 1.0, 1.0)
     frequency: Optional[int] = None  # 相机帧率
     resolution: Optional[Tuple[int, int]] = None  # 相机分辨率

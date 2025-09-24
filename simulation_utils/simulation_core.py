@@ -214,6 +214,7 @@ def run_simulation_loop_multi(simulation_app, drone_ctxs: list[RobotDrone], sema
                 depths = ctx.custom_step_fn()
                 if depths is not None:
                     pc_LFR, pc_UBD = depth2pointclouds(depths, ctx.depth2pc_lut)
+                    # pc_LFR = ctx
                     header = Header()
                     header.stamp = t_now.to_msg()
 
