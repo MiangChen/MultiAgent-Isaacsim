@@ -103,14 +103,6 @@ class RobotBase:
         else:
             cfg_body.euler_degree = rotations.quats_to_euler_angles(np.array(cfg_body.quat), degrees=True)
 
-        # 初始化机器人关节树
-        self.robot_entity = Articulation(
-            prim_paths_expr=self.cfg_body.prim_path,
-            name=self.cfg_body.name,
-            positions=torch.tensor([self.cfg_body.position]),
-            orientations=torch.tensor([self.cfg_body.quat]),
-        )
-
         # 机器人的历史轨迹
         self.trajectory: Trajectory = None
         # 机器人的控制器
@@ -166,6 +158,14 @@ class RobotBase:
         pos_IB, q_IB = self.robot_entity.get_world_poses()
         pos_IB, q_IB = pos_IB[0], q_IB[0]
         return pos_IB, q_IB
+
+    def create_robot_entity(self):
+        """
+        [Abstract Method] Initializes the specific robot entity wrapper.
+        Subclasses MUST override this method to create either an Articulation,
+        a RigidPrim, or another appropriate wrapper and assign it to self.robot_entity.
+        """
+        raise NotImplementedError
 
     def initialize(self) -> None:
         if self.cfg_camera is not None:

@@ -31,11 +31,11 @@ class RobotH1(RobotBase):
     Please use `await RobotH1.create(...)` to instantiate.
     """
 
-    # 1. __init__ 方法现在是完全同步的，不再创建策略控制器
     def __init__(self, cfg_body: RobotCfgH1, cfg_camera: CameraCfg = None,
                  cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None, node: SwarmNode = None, scene_manager = None) -> None:
+                 map_grid: GridMap = None, node: SwarmNode = None, scene_manager=None) -> None:
         super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid)
+        self.create_robot_entity()
         self.control_mode = 'joint_positions'
         self.scene_manager = scene_manager
         # 初始化PID控制器等同步组件
@@ -52,7 +52,7 @@ class RobotH1(RobotBase):
         self.counter = 0
         self.pub_period = 50
         self.previous_pos = None
-        self.movement_threshold = 0.1 # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
+        self.movement_threshold = 0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
 
         self.node = node
 
@@ -67,11 +67,10 @@ class RobotH1(RobotBase):
             qos=50
         )
 
-    # 2. 新增的异步工厂 @classmethod
     @classmethod
     async def create(cls, cfg_body: RobotCfgH1, cfg_camera: CameraCfg = None,
                      cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                     map_grid: GridMap = None, node: SwarmNode = None, scene_manager = None) -> "RobotH1":
+                     map_grid: GridMap = None, node: SwarmNode = None, scene_manager=None) -> "RobotH1":
         """
         Asynchronously creates and fully initializes a RobotH1 instance,
         including its asynchronous policy controller.
@@ -87,59 +86,34 @@ class RobotH1(RobotBase):
             scene_manager=scene_manager,
         )
 
-        # 然后，异步地创建并加载 H1FlatTerrainPolicy 控制器
-        # print(f"Creating policy controller for robot {instance.type}...")
+        # 异步地创建并加载 H1FlatTerrainPolicy 控制器
         instance.controller_policy = await H1FlatTerrainPolicy.create(
             prim_path=instance.cfg_body.prim_path
-            # 如果 H1FlatTerrainPolicy.create 需要更多参数，请在这里传递
         )
-
-        # 最后，返回一个完全准备好的实例
         return instance
-    #
-    # # 3. initialize 方法保持不变
-    # # 2. 新增的异步工厂 @classmethod
-    # @classmethod
-    # async def create(cls, cfg_body: RobotCfgH1, cfg_camera: CameraCfg = None,
-    #                  cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-    #                  map_grid: GridMap = None, node: SwarmNode = None) -> "RobotH1":
-    #     """
-    #     Asynchronously creates and fully initializes a RobotH1 instance,
-    #     including its asynchronous policy controller.
-    #     """
-    #     # 首先，同步调用 __init__ 创建一个“半成品”实例
-    #     instance = cls(
-    #         cfg_body=cfg_body,
-    #         cfg_camera=cfg_camera,
-    #         cfg_camera_third_person=cfg_camera_third_person,
-    #         scene=scene,
-    #         map_grid=map_grid,
-    #         node=node
-    #     )
-    #
-    #     # 然后，异步地创建并加载 H1FlatTerrainPolicy 控制器
-    #     # print(f"Creating policy controller for robot {instance.type}...")
-    #     instance.controller_policy = await H1FlatTerrainPolicy.create(
-    #         prim_path=instance.cfg_body.prim_path
-    #         # 如果 H1FlatTerrainPolicy.create 需要更多参数，请在这里传递
-    #     )
-    #
-    #     # 最后，返回一个完全准备好的实例
-    #     return instance
 
-    # 3. initialize 方法保持不变
     def initialize(self):
         """
         Initializes the robot's connection to the simulation world entities.
         This should be called after the world is ready (e.g., after a reset).
         """
         super().initialize()
-        # 到这里时，self.controller_policy 已经被 create 方法成功创建了
         if self.controller_policy:
             self.controller_policy.initialize(self.robot_entity)
         else:
             # 这是一个安全检查，正常情况下不应该发生
             print(f"[Warning] RobotH1 '{self.name}' has no controller_policy to initialize.")
+
+    def create_robot_entity(self):
+        """
+        初始化机器人关节树
+        """
+        self.robot_entity = Articulation(
+            prim_paths_expr=self.cfg_body.prim_path,
+            name=self.cfg_body.name,
+            positions=torch.tensor([self.cfg_body.position]),
+            orientations=torch.tensor([self.cfg_body.quat]),
+        )
 
     def move_to(self, target_pos):
         import numpy as np
@@ -150,7 +124,8 @@ class RobotH1(RobotBase):
         """
         pos, quat = self.get_world_poses()  # self.get_world_pose()  ## type np.array
         if self.counter % self.pub_period == 0:
-            self._publish_feedback(params = self._params_from_pose(pos, quat), progress = self._calc_dist(pos, self.nav_end)*100 / self.nav_dist)
+            self._publish_feedback(params=self._params_from_pose(pos, quat),
+                                   progress=self._calc_dist(pos, self.nav_end) * 100 / self.nav_dist)
         # 获取2D方向的朝向，逆时针是正
         yaw = self.quaternion_to_yaw(quat)
         # 获取机器人和目标连线的XY平面上的偏移角度
@@ -165,7 +140,7 @@ class RobotH1(RobotBase):
             delta_angle -= 2 * np.pi
         if np.linalg.norm(target_pos[0:2] - pos[0:2]) < 1:
             self.action = [0, 0]
-            self._publish_feedback(params = self._params_from_pose(pos, quat), progress = 100)
+            self._publish_feedback(params=self._params_from_pose(pos, quat), progress=100)
             return True  # 已经到达目标点附近10cm, 停止运动
         # print(delta_angle, np.linalg.norm(target_pos[0:2] - pos[0:2]))
         k_rotate = 1 / np.pi
@@ -195,7 +170,6 @@ class RobotH1(RobotBase):
         # obs暂时未实现
         obs = None
         return obs
-
 
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)

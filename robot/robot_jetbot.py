@@ -1,4 +1,4 @@
-import numpy as np
+import torch
 
 from controller.controller_pid import ControllerPID
 from controller.controller_pid_jetbot import ControllerJetbot
@@ -26,7 +26,7 @@ class RobotJetbot(RobotBase):
                  map_grid: GridMap = None, node: SwarmNode = None, scene_manager=None) -> None:
         super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid, node=node,
                          scene_manager=scene_manager)
-
+        self.create_robot_entity()
         self.controller = ControllerJetbot()
         self.control_mode = 'joint_velocities'
         # # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
@@ -46,9 +46,9 @@ class RobotJetbot(RobotBase):
             qos=50
         )
         self.node.register_motion_publisher(
-            robot_class = self.cfg_body.name_prefix,
-            robot_id = self.cfg_body.id,
-            qos = 50
+            robot_class=self.cfg_body.name_prefix,
+            robot_id=self.cfg_body.id,
+            qos=50
         )
 
         # self.init_ros2()
@@ -56,6 +56,17 @@ class RobotJetbot(RobotBase):
     def initialize(self) -> None:
         super().initialize()
         return
+
+    def create_robot_entity(self):
+        """
+        初始化机器人关节树
+        """
+        self.robot_entity = Articulation(
+            prim_paths_expr=self.cfg_body.prim_path,
+            name=self.cfg_body.name,
+            positions=torch.tensor([self.cfg_body.position]),
+            orientations=torch.tensor([self.cfg_body.quat]),
+        )
 
     def init_ros2(self):
         import omni.graph.core as og
@@ -105,7 +116,8 @@ class RobotJetbot(RobotBase):
         pos, quat = self.get_world_poses()  # self.get_world_pose()  ## type np.array
 
         if self.counter % self.pub_period == 0:
-            self._publish_feedback(params = self._params_from_pose(pos, quat), progress = self._calc_dist(pos, self.nav_end)*100 / self.nav_dist)
+            self._publish_feedback(params=self._params_from_pose(pos, quat),
+                                   progress=self._calc_dist(pos, self.nav_end) * 100 / self.nav_dist)
 
         # 获取2D方向的朝向，逆时针是正
         yaw = self.quaternion_to_yaw(quat)
@@ -121,7 +133,7 @@ class RobotJetbot(RobotBase):
             delta_angle -= 2 * np.pi
         if np.linalg.norm(target_pos[0:2] - pos[0:2]) < 0.1:
             self.action = [0, 0]
-            self._publish_feedback(params = self._params_from_pose(pos, quat), progress = 100)
+            self._publish_feedback(params=self._params_from_pose(pos, quat), progress=100)
             return True  # 已经到达目标点附近10cm, 停止运动
 
         k_rotate = 1 / np.pi

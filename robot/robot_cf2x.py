@@ -1,7 +1,10 @@
 import numpy as np
+import torch
+
 import omni
 import omni.appwindow
 from isaacsim.core.api.scenes import Scene
+from isaacsim.core.prims import Articulation
 
 from camera.camera_cfg import CameraCfg
 from camera.camera_third_person_cfg import CameraThirdPersonCfg
@@ -41,6 +44,7 @@ class RobotCf2x(RobotBase):
                  map_grid: GridMap = None, node: SwarmNode = None, scene_manager=None) -> None:
         super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid, node=node,
                          scene_manager=scene_manager)
+        self.create_robot_entity()
 
         self.is_drone = True  # 标记为无人机
         self.controller = ControllerCf2x()
@@ -106,6 +110,17 @@ class RobotCf2x(RobotBase):
 
         # 初始化键盘事件监听
         self._setup_keyboard_events()
+
+    def create_robot_entity(self):
+        """
+        初始化机器人关节树
+        """
+        self.robot_entity = Articulation(
+            prim_paths_expr=self.cfg_body.prim_path,
+            name=self.cfg_body.name,
+            positions=torch.tensor([self.cfg_body.position]),
+            orientations=torch.tensor([self.cfg_body.quat]),
+        )
 
     def _setup_keyboard_events(self):
         """设置键盘事件监听"""

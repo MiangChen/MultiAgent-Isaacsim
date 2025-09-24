@@ -137,7 +137,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "name": "car0",
             "position": [11.6, 3.5, 0],
             "color": [255, 255, 255],
-            "make_dynamic": False,
+            "entity_type": "visual"
         },
         "car1": {
             "shape_type": "cuboid",
@@ -146,7 +146,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "name": "car1",
             "position": [0.3, 3.5, 0],
             "color": [255, 255, 255],
-            "make_dynamic": False,
+            "entity_type": "visual"
         },
         "car2": {
             "shape_type": "cuboid",
@@ -155,7 +155,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "name": "car2",
             "position": [-13.2, 3.5, 0],
             "color": [255, 255, 255],
-            "make_dynamic": False,
+            "entity_type": "visual"
         },
         "car3": {
             "shape_type": "cuboid",
@@ -164,7 +164,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "scale": scale,
             "position": [-7.1, 10, 0],
             "color": [255, 255, 255],
-            "make_dynamic": False,
+            "entity_type": "visual"
         },
         "car4": {
             "shape_type": "cuboid",
@@ -174,7 +174,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "position": [-0.9, 30, 0],
             "orientation": [0.707, 0, 0, 0.707],
             "color": [255, 255, 255],
-            "make_dynamic": False,
+            "entity_type": "visual"
         },
     }
 
@@ -317,6 +317,7 @@ def main():
         "orientation": [0.707, 0, 0, 0.707],
         "color": [255, 255, 255],
         "mass": 0.1,
+        "entity_type": "rigid"
     }
     # 在semantic map中添加这个物体的prim path
     semantic_map.map_semantic[object_name] = object_prim_path

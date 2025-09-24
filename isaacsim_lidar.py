@@ -13,35 +13,29 @@ from physics_engine.isaacsim_simulation_app import start_isaacsim_simulation_app
 
 g_simulation_app = start_isaacsim_simulation_app(args.config_path)
 ##########################################################################################################################
+import os
+import shutil
+
+import omni
+import carb
+import numpy as np
+from pxr import Gf
+from isaacsim.core.utils.extensions import get_extension_path_from_name
+import rclpy
+
+rclpy.init()
+
+from scene.scene_manager import SceneManager
+from map.map_semantic_map import MapSemantic
+from robot.robot_drone import RobotDrone
+from simulation_utils.ros_bridge import setup_ros
+from simulation_utils.simulation_core import run_simulation_loop_multi
 from config.config_manager import config_manager
 
 # Derive list of namespaces --------------------------------------------------
 if config_manager.get("namespace"):
     namespace_list = config_manager.get("namespace")
     print(f"Running LiDAR sim with namespaces: {namespace_list}")
-
-# Common helpers
-from isaacsim_common import (
-    # create_sim_environment,
-    add_drone_body,
-    setup_ros,
-    run_simulation_loop_multi,
-    # DroneSimCtx,
-)
-
-import omni
-import carb
-import numpy as np
-
-from pxr import Gf
-
-import os
-import shutil
-from isaacsim.core.utils.extensions import get_extension_path_from_name
-
-from scene.scene_manager import SceneManager
-from map.map_semantic_map import MapSemantic
-from robot.robot_drone import DroneSimCtx
 
 
 #############################################################
@@ -131,21 +125,18 @@ def create_lidar_step_wrapper(lidar_annotators):
     return lidar_step_wrapper
 
 
-def build_drone_ctx(namespace: str, idx: int, stage):
+def build_drone_ctx(namespace: str, idx: int, scene_manager):
     """Create prim, ROS node and sensor annotators for one UAV."""
 
     prim_path = f"/{namespace}/drone" if namespace else "/drone" if idx == 0 else f"/drone_{idx}"
 
     print(f"Adding drone body to {prim_path} with color scheme {idx}")
-    drone_prim = add_drone_body(stage, prim_path, color_scheme=idx)
-    print(f"Drone prim: {drone_prim}")
 
-    # Create a partial context for ROS setup
-    partial_ctx = DroneSimCtx(
+    partial_ctx = RobotDrone(
         namespace=namespace,
         prim_path=prim_path,
-        ros_node=None,  # Will be set below
-        drone_prim=drone_prim,
+        scene_manager=scene_manager,
+        color_scheme_id=idx,
     )
 
     # ROS ---------------------------------------------------------------
@@ -193,7 +184,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "name": "car0",
             "position": [11.6, 3.5, 0],
             "color": [255, 255, 255],
-            "make_dynamic": False,
+            "entity_type": "visual"
         },
         "car1": {
             "shape_type": "cuboid",
@@ -202,7 +193,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "name": "car1",
             "position": [0.3, 3.5, 0],
             "color": [255, 255, 255],
-            "make_dynamic": False,
+            "entity_type": "visual"
         },
         "car2": {
             "shape_type": "cuboid",
@@ -211,7 +202,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "name": "car2",
             "position": [-13.2, 3.5, 0],
             "color": [255, 255, 255],
-            "make_dynamic": False,
+            "entity_type": "visual"
         },
         "car3": {
             "shape_type": "cuboid",
@@ -220,7 +211,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "scale": scale,
             "position": [-7.1, 10, 0],
             "color": [255, 255, 255],
-            "make_dynamic": False,
+            "entity_type": "visual"
         },
         "car4": {
             "shape_type": "cuboid",
@@ -230,7 +221,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "position": [-0.9, 30, 0],
             "orientation": [0.707, 0, 0, 0.707],
             "color": [255, 255, 255],
-            "make_dynamic": False,
+            "entity_type": "visual"
         },
     }
 
@@ -249,35 +240,6 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             logger.info(semantic_result)
 
     return created_prim_paths
-
-
-def process_semantic_detection(semantic_camera, map_semantic: MapSemantic) -> None:
-    """
-    Process semantic detection and car pose extraction using injected dependencies.
-
-    Args:
-        semantic_camera: Semantic camera instance
-        map_semantic: Injected semantic map instance
-    """
-    try:
-        current_frame = semantic_camera.get_current_frame()
-        if current_frame and "bounding_box_2d_loose" in current_frame:
-            result = current_frame["bounding_box_2d_loose"]
-            print("get bounding box 2d loose", result)
-            if result:
-                car_prim, car_pose = map_semantic.get_prim_and_pose_by_semantic(
-                    result, "car"
-                )
-                if car_prim is not None and car_pose is not None:
-                    print("get car prim and pose\n", car_prim, "\n", car_pose)
-                else:
-                    print("No car detected in current frame")
-            else:
-                print("No bounding box data available")
-        else:
-            print("No frame data or bounding box key available")
-    except Exception as e:
-        print(f"Error getting semantic camera data: {e}")
 
 
 def main():  # Needed in build_drone_ctx
@@ -325,9 +287,9 @@ def main():  # Needed in build_drone_ctx
     semantic_camera = result.get("result").get("camera_instance")
     semantic_camera_prim_path = result.get("result").get("prim_path")
 
-    drone_ctxs: list[DroneSimCtx] = []
+    drone_ctxs: list[RobotDrone] = []
     for idx, ns in enumerate(namespace_list):
-        drone_ctxs.append(build_drone_ctx(ns, idx, stage=scene_manager.stage))
+        drone_ctxs.append(build_drone_ctx(ns, idx, scene_manager=scene_manager))
 
     # ---------------- Run simulation -----------------------------------
     run_simulation_loop_multi(

@@ -22,7 +22,7 @@ CUSTOM_WORKSPACE_SETUP_PATH=(
 
 # --- 6. 默认参数 ---
 DEFAULT_ARGS=(
-  "--config-path" "$PROJECT_ROOT/config/config_parameter.yaml"
+  "--config_path" "$PROJECT_ROOT/config/config_parameter.yaml"
   "--namespace" "uav1,uav2,uav3"
 )
 

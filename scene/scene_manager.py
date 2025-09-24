@@ -616,7 +616,7 @@ class SceneManager:
             height: Optional[float] = None,
             mass: Optional[float] = None,
             density: Optional[float] = None,
-            make_dynamic: bool = True
+            entity_type: Optional[str] = "visual",  # rigid\fixed\visual
     ) -> Dict[str, Any]:
         """
         在场景中创建一个几何形状，此版本统一使用 isaacsim.core 高层级API。
@@ -633,7 +633,7 @@ class SceneManager:
 
         created_object = None
         if shape_type in ["cube", "cuboid"]:
-            if make_dynamic:
+            if entity_type == "rigid":
                 # DynamicCuboid 会自动应用 RigidBodyAPI, CollisionAPI, MassAPI
                 created_object = cuboid.DynamicCuboid(
                     prim_path=prim_path,
@@ -645,7 +645,7 @@ class SceneManager:
                     color=color,
                     mass=mass
                 )
-            else:
+            elif entity_type == "fixed":
                 # FixedCuboid 会自动应用 CollisionAPI，但不会应用 RigidBodyAPI
                 created_object = cuboid.FixedCuboid(
                     prim_path=prim_path,
@@ -656,9 +656,18 @@ class SceneManager:
                     scale=scale,
                     color=color
                 )
-
+            else:
+                created_object = cuboid.VisualCuboid(
+                    prim_path=prim_path,
+                    name=name,
+                    position=position,
+                    orientation=orientation,
+                    size=size,
+                    scale=scale,
+                    color=color
+                )
         elif shape_type == "sphere":
-            if make_dynamic:
+            if entity_type == "rigid":
                 created_object = sphere.DynamicSphere(
                     prim_path=prim_path,
                     name=name,
@@ -669,7 +678,7 @@ class SceneManager:
                     scale=scale,
                     mass=mass
                 )
-            else:
+            elif entity_type == "fixed":
                 created_object = sphere.FixedSphere(
                     prim_path=prim_path,
                     name=name,
@@ -678,8 +687,17 @@ class SceneManager:
                     radius=radius,
                     color=color,
                 )
+            else:
+                created_object = sphere.VisualSphere(
+                    prim_path=prim_path,
+                    name=name,
+                    position=position,
+                    orientation=orientation,
+                    radius=radius,
+                    color=color,
+                )
         elif shape_type == "cylinder":
-            if make_dynamic:
+            if entity_type == "rigid":
                 created_object = sphere.DynamicSphere(
                     prim_path=prim_path,
                     name=name,
@@ -690,7 +708,7 @@ class SceneManager:
                     color=color,
                     mass=mass
                 )
-            else:
+            elif entity_type == "fixed":
                 created_object = sphere.FixedSphere(
                     prim_path=prim_path,
                     name=name,
@@ -700,6 +718,17 @@ class SceneManager:
                     height=height,
                     color=color
                 )
+            else:
+                created_object = sphere.VisualSphere(
+                    prim_path=prim_path,
+                    name=name,
+                    position=position,
+                    orientation=orientation,
+                    radius=radius,
+                    height=height,
+                    color=color
+                )
+
         else:
             raise f"Unsupported shape type: {shape_type}"
 
@@ -748,7 +777,8 @@ class SceneManager:
                 color=comp_data.get('color', [0.5, 0.5, 0.5]),
                 # physics_preset=physics_preset,  # 复合体的所有部分共享同一个物理预设
                 mass=comp_data.get('mass', 0.1),
-                name=comp_data.get('name', None)
+                name=comp_data.get('name', None),
+                entity_type=comp_data.get('entity_type', 'visual'),
             )
 
         return {"status": "success", "result": prim_path, "usd_prim": xform.GetPrim()}
