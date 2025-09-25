@@ -261,7 +261,7 @@ def main():
 
     # Reset environment to ensure all objects are properly initialized
     env.reset()
-
+    grid_map.generate_grid_map('2d')
     # Add physics callbacks for active robots
     for robot_class in swarm_manager.robot_class:
         for i, robot in enumerate(swarm_manager.robot_active[robot_class]):
@@ -356,14 +356,14 @@ def main():
             skill_manager.process_ros_skills()
 
         count += 1
-        data = lidar.get_current_frame()
-        for key in data.keys():
-            print(key)
-            try:
-                print(data[key].shape)
-            except Exception as e:
-                print(data[key])
-        print("***********************")
+        # data = lidar.get_current_frame()
+        # for key in data.keys():
+        #     print(key)
+        #     try:
+        #         print(data[key].shape)
+        #     except Exception as e:
+        #         print(data[key])
+        # print("***********************")
 
     ros_manager.stop()
 

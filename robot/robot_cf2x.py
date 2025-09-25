@@ -194,14 +194,14 @@ class RobotCf2x(RobotBase):
             current_pos = positions[0]
 
             # 设置新的悬停位置
-            self.position = np.array([current_pos[0], current_pos[1], self.takeoff_height], dtype=np.float32)
+            self.position = torch.as_tensor([current_pos[0], current_pos[1], self.takeoff_height], dtype=torch.float32)
             self.hovering_height = self.takeoff_height
 
             # 直接设置位置（瞬移到悬停高度）
             orientation = orientations[0]
-            self.robot_entity.set_world_poses([self.position], [orientation])
+            self.robot_entity.set_world_poses(self.position, orientation)
             # 设置速度为0
-            zero_velocities = np.zeros((1, 6), dtype=np.float32)
+            zero_velocities = torch.zeros((1, 6), dtype=torch.float32)
             self.robot_entity.set_velocities(velocities=zero_velocities)
 
             # 更新状态
@@ -211,7 +211,7 @@ class RobotCf2x(RobotBase):
             # 取消重力
             M = 1
             K = self.robot_entity.num_bodies
-            values_array = np.full((M, K), fill_value=True, dtype=bool)
+            values_array = torch.full((M, K), fill_value=1, dtype=torch.uint8)
             self.robot_entity.set_body_disable_gravity(values=values_array)
 
             print(f"无人机起飞到高度: {self.takeoff_height}m，进入悬停状态")
@@ -323,10 +323,10 @@ class RobotCf2x(RobotBase):
             target[2] = self.hovering_height
 
             # 瞬移
-            self.position = target
+            self.position = self.to_torch(target)
             _, orientations = self.robot_entity.get_world_poses()
             orientation = orientations[0]
-            self.robot_entity.set_world_poses([self.position], [orientation])
+            self.robot_entity.set_world_poses(self.position, orientation)
 
             print(f"瞬移到路径点 {index + 1}/{len(self.waypoints)}: {target}")
             return True
@@ -403,18 +403,15 @@ class RobotCf2x(RobotBase):
         stop_r = float(self.nav_stop_radius)
 
         if dist <= stop_r:
-            # 停车：把刚体速度清零（由引擎保持当前位置），必要时可做一次微小贴合
-            self.robot_entity.set_linear_velocity(np.zeros(3, dtype=np.float32))
-            self.robot_entity.set_angular_velocity(np.zeros(3, dtype=np.float32))
-
-            # 状态与对外发布保持一致
-            self.velocity = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+            # 停车：把刚体速度清零
+            self.velocity = torch.zeros((1, 3), dtype=torch.float32)
             self.nav_target_xy = None
-            if hasattr(self, 'flag_action_navigation'):
-                self.flag_action_navigation = False
-            if hasattr(self, 'state_skill_complete'):
-                self.state_skill_complete = True
-            print("Cf2X arrived at the target point!")
+
+            self.robot_entity.set_linear_velocities(self.velocity)
+            self.robot_entity.set_angular_velocities(self.velocity)
+
+            self.flag_action_navigation = False
+            self.state_skill_complete = True
             self._publish_feedback(params=self._params_from_pose(positions, orientations), progress=100)
             return True
 
@@ -423,9 +420,9 @@ class RobotCf2x(RobotBase):
         slow_r = float(self.nav_slow_radius)
         dir_xy = delta / (dist + 1e-6)
         spd = vmax * (dist / slow_r) if dist < slow_r else vmax
-        v_world = np.array([dir_xy[0] * spd, dir_xy[1] * spd, 0.0], dtype=np.float32)
+        v_world = torch.tensor([dir_xy[0] * spd, dir_xy[1] * spd, 0.0], dtype=torch.float32)
 
-        # === 把速度交给“根刚体”（交给引擎积分） ===
+        # === 把速度交给“根刚体” ===
         self.robot_entity.set_linear_velocities(v_world)
 
         # 可选：如果希望机体绕 z 朝速度方向缓慢对齐，也可以给一个角速度：

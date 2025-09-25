@@ -74,11 +74,11 @@ class SkillServer(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    mock_skill_server_node = MockSkillServer()
+    skill_server_node = SkillServer()
 
     # 多线程执行器是必须的，这样可以同时处理对不同技能的请求
     executor = MultiThreadedExecutor(num_threads=4)
-    executor.add_node(mock_skill_server_node)
+    executor.add_node(skill_server_node)
 
     try:
         executor.spin()
@@ -86,7 +86,7 @@ def main(args=None):
         pass
     finally:
         executor.shutdown()
-        mock_skill_server_node.destroy_node()
+        skill_server_node.destroy_node()
         rclpy.shutdown()
 
 

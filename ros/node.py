@@ -437,7 +437,6 @@ class PlanExecutionServer(Node):
         """
         Schedules the async implementation on the main event loop and waits for the result.
         """
-        logger.info("Received goal request, scheduling on asyncio loop...")
 
         # Schedule the coroutine on the main event loop
         future = asyncio.run_coroutine_threadsafe(
@@ -617,7 +616,7 @@ class SkillServerNode(Node):
     """
 
     def __init__(self):
-        super().__init__("mock_skill_server_node")
+        super().__init__("skill_server_node")
         self.skill_servers = []
 
         # 定义我们想要模拟的技能列表
@@ -637,51 +636,57 @@ class SkillServerNode(Node):
         """
         模拟技能执行的通用回调函数。
         """
-        skill_req = goal_handle.request.skill_request
-        skill_name = skill_req.skill_list[0].skill
-        params_list = skill_req.skill_list[0].params
-        params_dict = {param.key: param.value for param in params_list}
-        robot = skill_req.robot_id
-        robot_name, robot_id = robot.split("-")
-        robot_id = int(robot_id)
-        logger.info(
-            f"[{skill_name.upper()}] Robot '{robot}' received request. Simulating execution..."
-        )
-
-        feedback_msg = SkillExecution.Feedback()
-
-        # 使用skill manager
-        from containers import get_container
-
-        container = get_container()
-
-        skill_manager = container.skill_manager()
-
-        if robot_name.lower() in ["ugv", "jetbot"]:
-            skill_manager._SKILL_TABLE.get(skill_name)(
-                rc="jetbot", rid=robot_id, params=params_dict
+        try:
+            skill_req = goal_handle.request.skill_request
+            skill_name = skill_req.skill_list[0].skill
+            params_list = skill_req.skill_list[0].params
+            params_dict = {param.key: param.value for param in params_list}
+            robot = skill_req.robot_id
+            robot_name, robot_id = robot.split("-")
+            robot_id = int(robot_id)
+            logger.info(
+                f"[{skill_name.upper()}] Robot '{robot}' received request. Simulating execution..."
             )
 
-        elif robot_name.lower() in ["uav", "drone", "cf2x"]:
-            skill_manager._SKILL_TABLE.get(skill_name)(
-                rc="cf2x", rid=robot_id, params=params_dict
+            feedback_msg = SkillExecution.Feedback()
+
+            # 使用skill manager
+            from containers import get_container
+
+            container = get_container()
+
+            skill_manager = container.skill_manager()
+
+            if robot_name.lower() in ["ugv", "jetbot"]:
+                skill_manager._SKILL_TABLE.get(skill_name)(
+                    rc="jetbot", rid=robot_id, params=params_dict
+                )
+
+            elif robot_name.lower() in ["uav", "drone", "cf2x"]:
+                skill_manager._SKILL_TABLE.get(skill_name)(
+                    rc="cf2x", rid=robot_id, params=params_dict
+                )
+
+            feedback_msg.status = f"Robot '{robot_id}' executing '{skill_name}"
+            logger.info(
+                f"Feedback from [{skill_name.upper()}|{robot_id}]: {feedback_msg.status}"
             )
+            goal_handle.publish_feedback(feedback_msg)
 
-        feedback_msg.status = f"Robot '{robot_id}' executing '{skill_name}"
-        logger.info(
-            f"Feedback from [{skill_name.upper()}|{robot_id}]: {feedback_msg.status}"
-        )
-        goal_handle.publish_feedback(feedback_msg)
+            goal_handle.succeed()
+            logger.info(
+                f"[{skill_name.upper()}] Robot '{robot_id}' finished successfully ✅"
+            )
+            result = SkillExecution.Result()
+            result.success = True
+            result.message = f"'{skill_name}' completed successfully by '{robot_id}'."
 
-        goal_handle.succeed()
-        logger.info(
-            f"[{skill_name.upper()}] Robot '{robot_id}' finished successfully ✅"
-        )
-        result = SkillExecution.Result()
-        result.success = True
-        result.message = f"'{skill_name}' completed successfully by '{robot_id}'."
-
-        logger.info(
-            f"✅ [{skill_name.upper()}] Execution finished for robot '{robot_id}'."
-        )
-        return result
+            logger.info(
+                f"✅ [{skill_name.upper()}] Execution finished for robot '{robot_id}'."
+            )
+            return result
+        except Exception as e:
+            logger.error(f"!!!!!! EXCEPTION IN SKILL EXECUTION CALLBACK !!!!!!")
+            logger.error(f"Skill: {skill_req.skill_list[0].skill}, Robot: {skill_req.robot_id}")
+            logger.error(f"Error Type: {type(e).__name__}")
+            logger.error(f"Error Message: {e}")

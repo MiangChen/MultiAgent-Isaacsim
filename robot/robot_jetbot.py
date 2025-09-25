@@ -113,7 +113,8 @@ class RobotJetbot(RobotBase):
         缺点：不适合3D，无法避障，地面要是平的
         速度有两个分两，自转的分量 + 前进的分量
         """
-        pos, quat = self.get_world_poses()  # self.get_world_pose()  ## type np.array
+        pos, quat = self.get_world_poses()  # type np.array
+        target_pos = self.to_torch(target_pos, device=pos.device)
 
         if self.counter % self.pub_period == 0:
             self._publish_feedback(params=self._params_from_pose(pos, quat),
@@ -131,7 +132,7 @@ class RobotJetbot(RobotBase):
             delta_angle += 2 * np.pi
         elif delta_angle > np.pi:
             delta_angle -= 2 * np.pi
-        if np.linalg.norm(target_pos[0:2] - pos[0:2]) < 0.1:
+        if torch.linalg.norm(target_pos[0:2] - pos[0:2]) < 0.1:
             self.action = [0, 0]
             self._publish_feedback(params=self._params_from_pose(pos, quat), progress=100)
             return True  # 已经到达目标点附近10cm, 停止运动
@@ -179,6 +180,7 @@ class RobotJetbot(RobotBase):
         return
 
     def step(self, action):
+        action = self.to_torch(action)
         if self.control_mode == 'joint_position':
             action = ArticulationActions(joint_positions=action)
         elif self.control_mode == 'joint_velocities':

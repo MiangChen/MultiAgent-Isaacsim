@@ -156,7 +156,7 @@ class RobotH1(RobotBase):
         return False  # 还没有到达
 
     def step(self, action):
-        action = torch.tensor(action, dtype=torch.float32)
+        action = self.to_torch(action)
         if self.control_mode == 'joint_positions':
             action = ArticulationActions(joint_positions=action)
         elif self.control_mode == 'joint_velocities':

@@ -154,9 +154,27 @@ class RobotBase:
         """
         raise NotImplementedError()
 
-    def get_world_poses(self) -> Tuple[np.ndarray, np.ndarray]:
+    def to_torch(self,
+                 data,
+                 dtype: torch.dtype = torch.float32,
+                 device: str = None,
+                 requires_grad: bool = False
+                 ) -> torch.Tensor:
+        if device is None:
+            if hasattr(data, "device"):
+                device = data.device
+            else:
+                device = "cpu"
+
+        if isinstance(data, torch.Tensor):
+            return data.to(device=device, dtype=dtype)
+        return torch.as_tensor(data, dtype=dtype, device=device).requires_grad_(requires_grad)
+
+    def get_world_poses(self) -> Tuple[torch.Tensor, torch.Tensor]:
         pos_IB, q_IB = self.robot_entity.get_world_poses()
         pos_IB, q_IB = pos_IB[0], q_IB[0]
+        pos_IB = self.to_torch(pos_IB, device=pos_IB.device)  # 示例：移动到 GPU
+        q_IB = self.to_torch(q_IB, device=q_IB.device)  # 示例：移动到 GPU
         return pos_IB, q_IB
 
     def create_robot_entity(self):
@@ -206,8 +224,10 @@ class RobotBase:
             self.state_skill_complete = True
             return True
 
-    def _calc_dist(self, pos1: np.ndarray = None, pos2: np.ndarray = None):
-        return np.sqrt(np.sum(pos1 - pos2) ** 2)
+    def _calc_dist(self, pos1: torch.Tensor = None, pos2: torch.Tensor = None):
+        pos1 = self.to_torch(pos1)
+        pos2 = self.to_torch(pos2)
+        return torch.linalg.norm(pos1 - pos2)
 
     def navigate_to(self, pos_target: np.ndarray = None, orientation_target: np.ndarray = None,
                     reset_flag: bool = False, load_from_file: bool = False) -> None:
@@ -229,12 +249,12 @@ class RobotBase:
             raise ValueError("The z-axis height of the robot must be on the plane")
         pos_robot = self.get_world_poses()[0]
 
-        self.nav_begin = pos_robot
-        self.nav_end = pos_target
+        self.nav_begin = np.array(pos_robot)
+        self.nav_end = np.array(pos_target)
         self.nav_dist = self._calc_dist(self.nav_begin, self.nav_end)
 
-        pos_index_target = self.map_grid.compute_index(pos_target)
-        pos_index_robot = self.map_grid.compute_index(pos_robot)
+        pos_index_target = self.map_grid.compute_index(self.nav_end)
+        pos_index_robot = self.map_grid.compute_index(self.nav_begin)
         pos_index_robot[-1] = 0  # todo : 这也是因为机器人限制导致的
 
         # 用于把机器人对应位置的设置为空的, 不然会找不到路线
@@ -480,7 +500,7 @@ class RobotBase:
         """更新第三人称相机的位置和朝向"""
         if self.cfg_camera_third_person and self.cfg_camera_third_person.enabled and self.camera_prim_path:
             # 1. 获取机器人的当前位置
-            robot_position, _ = self.get_world_poses()
+            robot_position, _ = self.get_world_poses()  # torch.tensor
 
             # 2. 计算相机的位置 (eye) 和目标位置 (target)
             camera_eye_position = robot_position + self.relative_camera_pos + self.transform_camera_pos
