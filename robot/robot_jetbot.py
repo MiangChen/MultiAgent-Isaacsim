@@ -64,8 +64,8 @@ class RobotJetbot(RobotBase):
         self.robot_entity = Articulation(
             prim_paths_expr=self.cfg_body.prim_path,
             name=self.cfg_body.name,
-            positions=torch.tensor([self.cfg_body.position]),
-            orientations=torch.tensor([self.cfg_body.quat]),
+            positions=self.to_torch(self.cfg_body.position),
+            orientations=self.to_torch(self.cfg_body.quat),
         )
 
     def init_ros2(self):

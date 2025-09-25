@@ -118,8 +118,8 @@ class RobotCf2x(RobotBase):
         self.robot_entity = Articulation(
             prim_paths_expr=self.cfg_body.prim_path,
             name=self.cfg_body.name,
-            positions=torch.tensor([self.cfg_body.position]),
-            orientations=torch.tensor([self.cfg_body.quat]),
+            positions=self.to_torch(self.cfg_body.position),
+            orientations=self.to_torch(self.cfg_body.quat),
         )
 
     def _setup_keyboard_events(self):
@@ -301,9 +301,10 @@ class RobotCf2x(RobotBase):
             self.position[2] = self.hovering_height
 
             # 应用新位置到无人机实体
+            self.position = self.to_torch(self.position)
             _, orientations = self.robot_entity.get_world_poses()
             orientation = orientations[0]
-            self.robot_entity.set_world_poses([self.position], [orientation])
+            self.robot_entity.set_world_poses(self.position, orientation)
 
     def set_waypoints(self, waypoints):
         """设置路径点列表进行瞬移"""
@@ -404,11 +405,12 @@ class RobotCf2x(RobotBase):
 
         if dist <= stop_r:
             # 停车：把刚体速度清零
-            self.velocity = torch.zeros((1, 3), dtype=torch.float32)
+            zero_velocity = torch.zeros((1, 3), dtype=torch.float32)
+            self.velocity = torch.zeros((3,), dtype=torch.float32)
             self.nav_target_xy = None
 
-            self.robot_entity.set_linear_velocities(self.velocity)
-            self.robot_entity.set_angular_velocities(self.velocity)
+            self.robot_entity.set_linear_velocities(zero_velocity)
+            self.robot_entity.set_angular_velocities(zero_velocity)
 
             self.flag_action_navigation = False
             self.state_skill_complete = True
