@@ -166,8 +166,8 @@ class RobotBase:
     def get_world_poses(self) -> Tuple[torch.Tensor, torch.Tensor]:
         pos_IB, q_IB = self.robot_entity.get_world_poses()
         pos_IB, q_IB = pos_IB[0], q_IB[0]
-        pos_IB = self.to_torch(pos_IB, device=pos_IB.device)  # 示例：移动到 GPU
-        q_IB = self.to_torch(q_IB, device=q_IB.device)  # 示例：移动到 GPU
+        pos_IB = self.to_torch(pos_IB, device=pos_IB.device)
+        q_IB = self.to_torch(q_IB, device=q_IB.device)
         return pos_IB, q_IB
 
     def create_robot_entity(self):
@@ -620,7 +620,6 @@ class RobotBase:
 
         msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w = (float(v) for v
                                                                                                           in quat_xyzw)
-
         self.node.publish_motion(
             robot_class=self.cfg_body.name_prefix,
             robot_id=self.cfg_body.id,

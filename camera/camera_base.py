@@ -73,11 +73,10 @@ class CameraBase:
             )
 
             self.set_local_pose(
-                translation=self.to_torch(self.cfg_camera.position).reshape(1,3),
-                orientation=self.to_torch(self.cfg_camera.quat).reshape(1,4),
+                positions=self.to_torch(self.cfg_camera.position).reshape(1,3),
+                orientations=self.to_torch(self.cfg_camera.quat).reshape(1,4),
                 camera_axes='usd'
             )
-
         return
 
     def to_torch(self,
@@ -109,10 +108,10 @@ class CameraBase:
         # self.camera.add_bounding_box_2d_loose_to_frame() # camera view不用
         return self.camera_view.initialized
 
-    def set_local_pose(self, translation: Tuple[float, float, float],
-                       orientation: Tuple[float, float, float, float],
+    def set_local_pose(self, positions: Tuple[float, float, float],
+                       orientations: Tuple[float, float, float, float],
                        camera_axes: str = 'usd') -> None:
-        self.camera_view.set_local_poses(positions=translation, orientations=orientation, camera_axes=camera_axes)
+        self.camera_view.set_local_poses(positions=positions, orientations=orientations, camera_axes=camera_axes)
         return None
 
     def get_current_frame(self):

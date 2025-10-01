@@ -1,5 +1,4 @@
 import inspect
-from pydantic import ValidationError
 from typing import Dict, List, Type
 import yaml
 
@@ -33,10 +32,12 @@ class SwarmManager:
         self.scene_manager = scene_manager
         self.robot_warehouse: Dict[str, List[RobotBase]] = {}
         self.flag_active: Dict[str, List[int]] = {}
-        self.robot_active: Dict[str, List[RobotBase]] = {}
+        self.robot_active: Dict[str, List[RobotBase]] = {
+            # 'jetbot': Jetbot cls instance,
+        }
         self.robot_class = {  # 可扩展的机器人类注册
             # 'jetbot': Jetbot,
-            # 'g1': G1,  # 可以后续添加
+            # 'g1': G1,
             # 'go2': Go2
         }
         self.robot_class_cfg = {}  # 对应的机器人
@@ -73,7 +74,7 @@ class SwarmManager:
                 **cfg_camera_third_person_dict
             )
 
-        # --- 5. 选择同步或异步创建 ---
+        # 选择同步或异步创建
         robot_cls = self.robot_class[robot_class_name]
 
         # 检查机器人class是否有 'create' 方法，并且它是一个异步函数
@@ -211,23 +212,6 @@ class SwarmManager:
                         del self.active_robots[robot_type]
                     return True
         return False
-
-    def move_robot_along_path(self, name: str, path, reset_flag=True):
-        """控制指定机器人沿路径移动"""
-        robot = self._find_robot(name)
-        if robot:
-            robot.move_along_path(path, reset_flag)
-            if hasattr(robot, "traj"):
-                robot.traj.add_trajectory(robot.get_world_pose()[0])
-            return True
-        return False
-
-    def get_robot_position(self, name: str):
-        """获取机器人当前位置"""
-        robot = self._find_robot(name)
-        if robot:
-            return robot.get_world_pose()[0][:2]
-        return None
 
     def _find_robot(self, name: str):
         """在所有机器人中查找"""

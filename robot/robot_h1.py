@@ -13,7 +13,7 @@ from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_h1 import RobotCfgH1
 from controller.controller_policy_h1 import H1FlatTerrainPolicy
-from ros.node import SwarmNode
+from ros.swarm_node import SwarmNode
 
 import carb
 from isaacsim.core.prims import Articulation

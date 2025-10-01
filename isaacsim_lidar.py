@@ -187,7 +187,7 @@ def main():  # Needed in build_drone_ctx
     scene_manager = container.scene_manager()
     grid_map = container.grid_map()
     semantic_map = container.semantic_map()
-    skill_manager = container.skill_manager()
+    # skill_manager = container.skill_manager()
     viewport_manager = container.viewport_manager()
     world = container.world()
     env = container.env()

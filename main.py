@@ -242,7 +242,7 @@ def main():
     scene_manager = container.scene_manager()
     grid_map = container.grid_map()
     semantic_map = container.semantic_map()
-    skill_manager = container.skill_manager()
+    # skill_manager = container.skill_manager()
     viewport_manager = container.viewport_manager()
     world = container.world()
     env = container.env()
@@ -352,8 +352,9 @@ def main():
         # World step
         env.step(action=None)
 
-        if config_manager.get("ros"):
-            skill_manager.process_ros_skills()
+        # if config_manager.get("ros"):
+            # skill_manager.process_ros_skills()
+        swarm_manager.robot_active['jetbot'][0]._publish_status_pose()
 
         count += 1
         # data = lidar.get_current_frame()

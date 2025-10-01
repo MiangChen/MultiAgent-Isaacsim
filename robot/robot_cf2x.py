@@ -15,8 +15,8 @@ from controller.controller_cf2x import ControllerCf2x
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_drone_cf2x import RobotCfgCf2x
-import rclpy
-from ros.node import SwarmNode
+
+from ros.swarm_node import SwarmNode
 
 from geometry_msgs.msg import Pose, Twist, Vector3
 from gsi2isaacsim.gsi_msgs_helper import Plan, RobotFeedback, SkillInfo, Parameter, VelTwistPose
