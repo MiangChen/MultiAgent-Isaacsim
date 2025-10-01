@@ -67,15 +67,34 @@ class CameraBase:
                 prim_paths_expr=self.cfg_camera.prim_path,
                 # frequency=self.cfg_camera.frequency,
                 # resolution=self.cfg_camera.resolution,
-                translations=[self.cfg_camera.position],
-                orientations=[self.cfg_camera.quat],
-                output_annotators=['rgb']
+                translations=self.to_torch(self.cfg_camera.position).reshape(1,3),
+                orientations=self.to_torch(self.cfg_camera.quat).reshape(1,4),
+                output_annotators=['rgb'],
             )
-            print(self.cfg_camera.quat)
-            self.set_local_pose(translation=self.cfg_camera.position, orientation=self.cfg_camera.quat,
-                                camera_axes='usd')
+
+            self.set_local_pose(
+                translation=self.to_torch(self.cfg_camera.position).reshape(1,3),
+                orientation=self.to_torch(self.cfg_camera.quat).reshape(1,4),
+                camera_axes='usd'
+            )
 
         return
+
+    def to_torch(self,
+                 data,
+                 dtype: torch.dtype = torch.float32,
+                 device: str = None,
+                 requires_grad: bool = False
+                 ) -> torch.Tensor:
+        if device is None:
+            if hasattr(data, "device"):
+                device = data.device
+            else:
+                device = "cpu"
+
+        if isinstance(data, torch.Tensor):
+            return data.to(device=device, dtype=dtype)
+        return torch.as_tensor(data, dtype=dtype, device=device).requires_grad_(requires_grad)
 
     def initialize(self) -> bool:
         """
@@ -93,7 +112,7 @@ class CameraBase:
     def set_local_pose(self, translation: Tuple[float, float, float],
                        orientation: Tuple[float, float, float, float],
                        camera_axes: str = 'usd') -> None:
-        self.camera_view.set_local_pose(translation=translation, orientation=orientation, camera_axes=camera_axes)
+        self.camera_view.set_local_poses(positions=translation, orientations=orientation, camera_axes=camera_axes)
         return None
 
     def get_current_frame(self):

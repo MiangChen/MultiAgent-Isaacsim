@@ -50,6 +50,7 @@ class RosManager:
         self.plan_execution_server = PlanExecutionServer(loop=loop)
         self.skill_server_node = SkillServerNode()
         self.swarm_node = SwarmNode()
+
         # else:
         #     self.plan_receiver_node = PlanNode()
         #     self.plan_receiver_node.create_subscription(Plan, '/Plan', plan_cb_wrapper, qos)

@@ -325,26 +325,26 @@ def main():
 
     flag = 0
     # LiDAR -------------------------------------------------------------
-    from lidar.lidar_base import LidarCfg, LidarBase
-    prim_path = "/World/Critical_Package_Alpha2"
-    lidar_config = "autel_perception_120x352"
-    lidar_cfg = LidarCfg()
-    lidar_cfg.position = [5, 5, 1]
-    lidar_cfg.prim_path = prim_path + "/Lidar/lfr"
-    lidar_cfg.config_file_name = lidar_config
-    lidar = LidarBase(
-        cfg_lidar=lidar_cfg,
-    )
-    # lidar.copy_lidar_config(lidar_config=lidar_config)
-    lidar.create_lidar(prim_path=lidar_cfg.prim_path)
-    # lidar.lidar_sensor.add_linear_depth_data_to_frame()
-    lidar.lidar_sensor.add_point_cloud_data_to_frame()
-    lidar.lidar_sensor.add_range_data_to_frame()
-    lidar.lidar_sensor.add_intensities_data_to_frame()
-    lidar.lidar_sensor.add_azimuth_range_to_frame()
-    # lidar.lidar_sensor.add_horizontal_resolution_to_frame()
-    lidar.lidar_sensor.enable_visualization()
-    lidar.initialize()
+    # from lidar.lidar_base import LidarCfg, LidarBase
+    # prim_path = "/World/Critical_Package_Alpha2"
+    # lidar_config = "autel_perception_120x352"
+    # lidar_cfg = LidarCfg()
+    # lidar_cfg.position = [5, 5, 1]
+    # lidar_cfg.prim_path = prim_path + "/Lidar/lfr"
+    # lidar_cfg.config_file_name = lidar_config
+    # lidar = LidarBase(
+    #     cfg_lidar=lidar_cfg,
+    # )
+    # # lidar.copy_lidar_config(lidar_config=lidar_config)
+    # lidar.create_lidar(prim_path=lidar_cfg.prim_path)
+    # # lidar.lidar_sensor.add_linear_depth_data_to_frame()
+    # lidar.lidar_sensor.add_point_cloud_data_to_frame()
+    # lidar.lidar_sensor.add_range_data_to_frame()
+    # lidar.lidar_sensor.add_intensities_data_to_frame()
+    # lidar.lidar_sensor.add_azimuth_range_to_frame()
+    # # lidar.lidar_sensor.add_horizontal_resolution_to_frame()
+    # lidar.lidar_sensor.enable_visualization()
+    # lidar.initialize()
 
     # Main simulation loop
     while simulation_app.is_running():

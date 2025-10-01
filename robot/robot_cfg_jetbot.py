@@ -11,4 +11,5 @@ class RobotCfgJetbot(RobotCfg):
 
     id: int = 0
     usd_path: Optional[str] = ASSET_PATH + "/Isaac/Robots/Jetbot/jetbot.usd"
-    camera_path: Optional[str] = '/World/robot/jetbot/jetbot/jetbot_0/chassis/rgb_camera/jetbot_camera'
+    camera_path: Optional[str] = None
+    camera_path_suffix: Optional[str] = '/chassis/rgb_camera/jetbot_camera'

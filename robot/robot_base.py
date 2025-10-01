@@ -96,13 +96,6 @@ class RobotBase:
             else:
                 logger.info(f"Prim not found at path {prim.GetPath()}")
 
-        # 角度和4元数转化
-        if cfg_body.euler_degree is not None:
-            # 注意角度和弧度模式
-            cfg_body.quat = rotations.euler_angles_to_quats(np.array(cfg_body.euler_degree), degrees=True)
-        else:
-            cfg_body.euler_degree = rotations.quats_to_euler_angles(np.array(cfg_body.quat), degrees=True)
-
         # 机器人的历史轨迹
         self.trajectory: Trajectory = None
         # 机器人的控制器

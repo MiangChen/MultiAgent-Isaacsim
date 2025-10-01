@@ -111,8 +111,8 @@ class RobotH1(RobotBase):
         self.robot_entity = Articulation(
             prim_paths_expr=self.cfg_body.prim_path,
             name=self.cfg_body.name,
-            positions=self.to_torch(self.cfg_body.position),
-            orientations=self.to_torch(self.cfg_body.quat),
+            positions=self.to_torch(self.cfg_body.position).reshape(1, 3),
+            orientations=self.to_torch(self.cfg_body.quat).reshape(1, 4),
         )
 
     def move_to(self, target_pos):

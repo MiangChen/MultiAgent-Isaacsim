@@ -21,8 +21,7 @@ jetbot:
       alias: Allen
     camera:
       position: [ 0, 0, 0.5 ]  # 相对于机器人中心的偏移距离
-      euler_degree: [ 0, 0, 90 ]  # 相对于机器人中心朝向偏移
-      quat: null # 使用4元数的方法. euler_degree优先级更高, 如果不用, 也必须写一个null
+      quat: [0, 0, 0, 1]  # 相对于机器人中心朝向偏移
       frequency: 30 # 相机帧率
       resolution: [300, 400] # 相机分辨率
       focal_length: 30 # 相机的焦段 mm
