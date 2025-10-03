@@ -1,5 +1,17 @@
 from typing import List, Tuple
 
+from rclpy.action import ActionServer
+from gsi2isaacsim.gsi_msgs_helper import (
+    PrimTransform,
+    SceneModifications,
+    RobotFeedback,
+    VelTwistPose,
+    RobotSkill,
+    PlanExecution,
+    SkillExecution,
+    SkillFeedback,
+)
+
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from camera.camera_base import CameraBase
@@ -9,6 +21,7 @@ from robot.robot_cfg import RobotCfg
 from robot.robot_trajectory import Trajectory
 from scene.scene_manager import SceneManager
 from log.log_manager import LogManager
+
 
 logger = LogManager.get_logger(__name__)
 
@@ -27,6 +40,7 @@ from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.viewports import create_viewport_for_camera, set_camera_view, set_intrinsics_matrix
 
 from gsi2isaacsim.gsi_msgs_helper import Plan, RobotFeedback, SkillInfo, Parameter, VelTwistPose
+from ros.robot_node import RobotNode
 
 
 def _get_viewport_manager_from_container():
@@ -57,13 +71,14 @@ class RobotBase:
         self.cfg_camera = cfg_camera
         self.scene = scene
         self.scene_manager = scene_manager
-        self.node = node
+        # self.node = node
         self.viewport_manager = _get_viewport_manager_from_container()  # 通过依赖注入获取viewport_manager
         # 代表机器人的实体
         self.robot_entity: Articulation = None
         # 通用的机器人本体初始化代码
         self.cfg_body.prim_path = cfg_body.prim_path + f'/{cfg_body.type}' + f'/{cfg_body.name_prefix}_{cfg_body.id}'
         self.cfg_body.name = cfg_body.name_prefix + f'_{cfg_body.id}'
+        self.name = self.cfg_body.name
 
         prim = get_prim_at_path(self.cfg_body.prim_path)
         if not prim.IsValid():
@@ -124,13 +139,20 @@ class RobotBase:
             self.camera.create_camera(camera_path=self.cfg_body.camera_path)
 
         # 第三视角相机
-        # --- 新增：存储相机配置并初始化相机属性 ---
         self.cfg_camera_third_person = cfg_camera_third_person
         self.camera_prim_path = None
         self.viewport_name = None  # 存储viewport名称
         self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
         self.transform_camera_pos = np.array([0, 0, 0])
 
+        self.node = RobotNode(robot_name=self.name)
+        # action server 用于接收来自规划层的指令
+        self.skill_action_server = ActionServer(
+            node=self.node,
+            action_type=SkillExecution,
+            action_name=f"/skill/{self.name}",
+            execute_callback=self.execute_skill_callback,
+        )
         self.current_task_id = "0"
         self.current_task_name = "n"
 
@@ -139,6 +161,45 @@ class RobotBase:
         self.nav_end = None
         self.nav_dist = 1.0
 
+########################## Action Server ############################
+    def execute_skill_callback(self, goal_handle):
+        if self.state_skill_complete is False:
+            self.node.get_logger().error(f"Robot is busy with skill '{self.state_skill}'. Rejecting new goal.")
+            goal_handle.abort()
+            return SkillExecution.Result(success=False, message="Robot is busy.")
+
+        skill_name = goal_handle.request.skill_request.skill_list[0].skill
+        self.state_skill_complete = False
+        feedback_msg = SkillExecution.Feedback()
+
+        # 模拟一个需要10个步骤的任务
+        for i in range(10):
+            # 检查是否收到了取消请求
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                self.state_skill_complete = True  # 重置状态
+                logger.info(f"Skill '{skill_name}' was canceled.")
+                return SkillExecution.Result(success=False, message="Skill execution was canceled by client.")
+
+            # 执行一小步工作
+            import time
+            time.sleep(0.5)  # 模拟工作
+        # 发送反馈
+        feedback_msg.status = f"Executing step {i+1} of 10 for skill '{skill_name}'."
+        goal_handle.publish_feedback(feedback_msg)
+        logger.info(f"Feedback: {feedback_msg.status}")
+
+         # --- 3. 完成与结果 ---
+        self.state_skill_complete = True
+        goal_handle.succeed() # 任务成功
+
+        # 返回最终结果
+        result = SkillExecution.Result()
+        result.success = True
+        result.message = f"Skill '{skill_name}' executed successfully."
+        return result
+
+    ########################## obs ############################
     def get_obs(self) -> dict:
         """Get observation of robot, including controllers, cameras, and world pose.
 
@@ -488,7 +549,6 @@ class RobotBase:
         self.relative_camera_pos = np.array(self.cfg_camera_third_person.relative_position)
         self.transform_camera_pos = np.array(self.cfg_camera_third_person.transform_position)
 
-    # --- 新增：独立的相机更新方法，保持代码整洁 ---
     def _update_camera_view(self):
         """更新第三人称相机的位置和朝向"""
         if self.cfg_camera_third_person and self.cfg_camera_third_person.enabled and self.camera_prim_path:
@@ -583,7 +643,7 @@ class RobotBase:
             skill_feedback=skill,
         )
 
-        self.node.publish_feedback(self.cfg_body.name_prefix, self.cfg_body.id, msg)
+        # self.node.publish_feedback(self.cfg_body.name_prefix, self.cfg_body.id, msg)
 
     def _publish_status_pose(self):
 
@@ -620,11 +680,11 @@ class RobotBase:
 
         msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w = (float(v) for v
                                                                                                           in quat_xyzw)
-        self.node.publish_motion(
-            robot_class=self.cfg_body.name_prefix,
-            robot_id=self.cfg_body.id,
-            msg=msg
-        )
+        # self.node.publish_motion(
+        #     robot_class=self.cfg_body.name_prefix,
+        #     robot_id=self.cfg_body.id,
+        #     msg=msg
+        # )
 
 
 if __name__ == "__main__":

@@ -38,18 +38,18 @@ class RobotJetbot(RobotBase):
         self.previous_pos = None
         self.movement_threshold = 0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
 
-        self.node = node
-
-        self.node.register_feedback_publisher(
-            robot_class=self.cfg_body.name_prefix,
-            robot_id=self.cfg_body.id,
-            qos=50
-        )
-        self.node.register_motion_publisher(
-            robot_class=self.cfg_body.name_prefix,
-            robot_id=self.cfg_body.id,
-            qos=50
-        )
+        # self.node = node
+        #
+        # self.node.register_feedback_publisher(
+        #     robot_class=self.cfg_body.name_prefix,
+        #     robot_id=self.cfg_body.id,
+        #     qos=50
+        # )
+        # self.node.register_motion_publisher(
+        #     robot_class=self.cfg_body.name_prefix,
+        #     robot_id=self.cfg_body.id,
+        #     qos=50
+        # )
 
         # self.init_ros2()
 
@@ -167,7 +167,7 @@ class RobotJetbot(RobotBase):
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
 
-        self._publish_status_pose()
+        # self._publish_status_pose()
         self.counter += 1
 
         if self.flag_world_reset:

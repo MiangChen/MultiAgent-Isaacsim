@@ -32,7 +32,7 @@ class RobotJetbot(RobotBase):
         self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
         self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
 
-        self.node = node
+        # self.node = node
 
         self.traj = Trajectory(
             robot_prim_path=config.prim_path + f'/{config.name_prefix}_{config.id}',

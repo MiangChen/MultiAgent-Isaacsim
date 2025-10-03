@@ -87,24 +87,22 @@ class RobotCf2x(RobotBase):
         self.nav_slow_radius = 3.0  # 减速起始半径（m）
         self.nav_stop_radius = 0.30  # 到点判定半径（m）
 
-        self.node = node
-
-        self.node.register_feedback_publisher(
-            robot_class=self.cfg_body.name_prefix,
-            robot_id=self.cfg_body.id,
-            qos=50
-        )
-        self.node.register_motion_publisher(
-            robot_class=self.cfg_body.name_prefix,
-            robot_id=self.cfg_body.id,
-            qos=50
-        )
-        self.node.register_cmd_subscriber(
-            robot_class=self.cfg_body.name_prefix,
-            robot_id=self.cfg_body.id,
-            callback=self.cmd_vel_callback,
-            qos=50
-        )
+        # self.node.register_feedback_publisher(
+        #     robot_class=self.cfg_body.name_prefix,
+        #     robot_id=self.cfg_body.id,
+        #     qos=50
+        # )
+        # self.node.register_motion_publisher(
+        #     robot_class=self.cfg_body.name_prefix,
+        #     robot_id=self.cfg_body.id,
+        #     qos=50
+        # )
+        # self.node.register_cmd_subscriber(
+        #     robot_class=self.cfg_body.name_prefix,
+        #     robot_id=self.cfg_body.id,
+        #     callback=self.cmd_vel_callback,
+        #     qos=50
+        # )
 
         self.ros2_initialized = True
 
@@ -435,7 +433,7 @@ class RobotCf2x(RobotBase):
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
 
-        self._publish_status_pose()
+        # self._publish_status_pose()
         self.counter += 1
 
         # 未激活或无目标：什么都不做

@@ -165,7 +165,7 @@ class RobotDrone(RobotBase):
 
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
-        self._publish_status_pose()  # 例如，每一步都发布状态
+        # self._publish_status_pose()  # 例如，每一步都发布状态
 
         # 如果有Lidar等传感器，在这里调用
         if self.custom_step_fn:

@@ -41,7 +41,7 @@ class SwarmNode(Node):
         # 存到子字典里
         self.publisher_dict[robot_class][robot_id]["feedback"] = pub
 
-        #        self.get_logger().info(
+        #        logger.info(
         #            f"Registered feedback publisher for {robot_class}[{robot_id}] on topic {topic}"
         #        )
         return pub

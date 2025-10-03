@@ -269,6 +269,7 @@ def main():
             env.world.add_physics_callback(
                 callback_name, callback_fn=robot.on_physics_step
             )
+            ros_manager.executor.add_node(robot.node)
 
     # Create and initialize semantic camera
     create_car_objects(scene_manager)
@@ -354,7 +355,7 @@ def main():
 
         # if config_manager.get("ros"):
             # skill_manager.process_ros_skills()
-        swarm_manager.robot_active['jetbot'][0]._publish_status_pose()
+        # swarm_manager.robot_active['jetbot'][0]._publish_status_pose()
 
         count += 1
         # data = lidar.get_current_frame()
