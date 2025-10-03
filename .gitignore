@@ -1,3 +1,7 @@
+# config
+config/llm_cfg.yaml
+config/config_parameter.yaml
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -73,7 +77,7 @@ dmypy.json
 # JetBrains IDEs
 .idea/
 
-config/llm_cfg.yaml
+
 # MacOS
 .DS_Store
 
