@@ -14,7 +14,7 @@ class RosManager:
 
     def __init__(self, loop=None):
 
-        self.scene_monitor_node = None
+        self.node_scene_monitor = None
         self.action_server_plan_execution = None
         self.action_server_skill_client = None
 
@@ -27,7 +27,7 @@ class RosManager:
 
     def build_nodes(self) -> None:
         """构建所有ROS节点"""
-        self.scene_monitor_node = NodeSceneMonitor()
+        self.node_scene_monitor = NodeSceneMonitor()
 
         self.action_server_plan_execution = NodeActionServerPlanExecution(loop=self.loop)
         self.action_server_skill_client = (
@@ -51,7 +51,7 @@ class RosManager:
         nodes = [
             self.action_server_plan_execution,
             self.action_server_skill_client,
-            self.scene_monitor_node,
+            self.node_scene_monitor,
         ]
 
         try:
