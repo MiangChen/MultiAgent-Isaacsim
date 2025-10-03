@@ -89,7 +89,9 @@ class SkillActionClientNode(Node):
         action_client = self.get_action_client(robot_name)
 
         self.loop = asyncio.get_running_loop()
-        if not await self.loop.run_in_executor(None, lambda: action_client.wait_for_server(timeout_sec=3.0)):
+        if not await self.loop.run_in_executor(
+            None, lambda: action_client.wait_for_server(timeout_sec=3.0)
+        ):
             logger.error(
                 f"Action server for '{robot_name}' not available after waiting."
             )

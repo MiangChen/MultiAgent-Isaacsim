@@ -3,11 +3,10 @@ import threading
 
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
 from gsi2isaacsim.gsi_msgs_helper import Plan
-from ros.plan_execution_action_server_node import (
-    PlanExecutionServer,
-)  # , SkillServerNode
+from ros.plan_execution_action_server_node import PlanExecutionServer
 from ros.scene_monitor_node import SceneMonitorNode
 from ros.swarm_node import SwarmNode
 from log.log_manager import LogManager
@@ -15,24 +14,16 @@ from log.log_manager import LogManager
 logger = LogManager.get_logger(__name__)
 
 
-# def plan_cb_wrapper(msg):
-#     from containers import get_container
-#     skill_manager = get_container().skill_manager()
-#     skill_manager._plan_cb(msg)
-
-
 class RosManager:
     def __init__(self, action_mode=True, swarm_manager=None):
 
-        # self.plan_receiver_node = None
+        self.action_mode = action_mode
         self.scene_monitor_node = None
         self.swarm_node = None
         self.plan_execution_action_server = None
-        # self.skill_server_node = None
-        self.skill_action_client = None
+        self.skill_client_action_server = None
         self.stop_event = threading.Event()
         self.thread = None
-        self.action_mode = action_mode
         self.swarm_manager = swarm_manager
 
         self.executor = MultiThreadedExecutor()
@@ -40,39 +31,27 @@ class RosManager:
 
     def build_nodes(self):
         """构建所有ROS节点"""
-        from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
-
-        qos = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
-            history=HistoryPolicy.KEEP_LAST,
-            depth=50,
-        )
-
-        self.scene_monitor_node = SceneMonitorNode()
-
-        # if self.action_mode:
         loop = asyncio.get_event_loop()
+        # qos = QoSProfile(
+        #     reliability=ReliabilityPolicy.RELIABLE,
+        #     history=HistoryPolicy.KEEP_LAST,
+        #     depth=50,
+        # )
+        self.scene_monitor_node = SceneMonitorNode()
+        self.swarm_node = SwarmNode()
+
         self.plan_execution_action_server = PlanExecutionServer(
             loop=loop, swarm_manager=self.swarm_manager
         )
-        self.skill_action_client = (
+        self.skill_client_action_server = (
             self.plan_execution_action_server.skill_client_action_server
         )
-        # self.skill_server_node = SkillServerNode()
-        # self.skill_server_node = None
-        self.swarm_node = SwarmNode()
-
-        # else:
-        #     self.plan_receiver_node = PlanNode()
-        #     self.plan_receiver_node.create_subscription(Plan, '/Plan', plan_cb_wrapper, qos)
-        #     self.swarm_node = SwarmNode()
 
         logger.info("ROS nodes built successfully.")
 
     def start(self):
         """在后台线程中启动ROS节点"""
-        # if self.action_mode:
-        if not self.plan_execution_action_server:  # or not self.skill_server_node:
+        if not self.plan_execution_action_server:
             logger.warning("ROS nodes not built. Cannot start.")
             return
 
@@ -82,19 +61,12 @@ class RosManager:
 
     def _spin_in_background(self):
         """后台运行ROS节点的实际工作函数"""
-
         nodes = [
             self.plan_execution_action_server,
-            # self.skill_server_node,
-            self.skill_action_client,
-            # self.plan_receiver_node,
+            self.skill_client_action_server,
             self.scene_monitor_node,
             self.swarm_node,
         ]
-        # if self.action_mode:
-        #     nodes = [self.plan_receiver_node, self.scene_monitor_node, self.swarm_node]
-        # else:
-        #     nodes = [self.plan_execution_action_server, self.skill_server_node, self.scene_monitor_node, self.swarm_node]
 
         try:
             for n in nodes:

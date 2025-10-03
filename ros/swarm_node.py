@@ -64,7 +64,7 @@ class SwarmNode(Node):
         return pub
 
     def register_cmd_subscriber(
-        self, robot_class: str, robot_id: int, callback=None, qos=50
+            self, robot_class: str, robot_id: int, callback=None, qos=50
     ):
         """
         注册一个cmd subscriber
@@ -81,9 +81,6 @@ class SwarmNode(Node):
 
         self.subscriber_dict[robot_class][robot_id]["cmd"] = sub
 
-        #        self.get_logger().info(
-        #            f"Registered cmd subscriber for {robot_class}[{robot_id}] on topic {topic}"
-        #        )
         return sub
 
     def publish_feedback(self, robot_class: str, robot_id: int, msg: RobotFeedback):

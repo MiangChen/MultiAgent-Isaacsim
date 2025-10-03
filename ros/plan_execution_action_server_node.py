@@ -1,18 +1,9 @@
 import asyncio
-from typing import Dict
-import traceback
 import threading
 
-from geometry_msgs.msg import Transform as RosTransform
-from rclpy.action import ActionServer, ActionClient, GoalResponse
+from rclpy.action import ActionServer
 from rclpy.node import Node
-from rclpy.task import Future as RclpyFuture
-from asyncio import Future as AsyncioFuture
 
-import omni.usd
-from pxr import Tf, Gf
-
-from action_msgs.msg import GoalStatus
 from gsi2isaacsim.gsi_msgs_helper import (
     PrimTransform,
     SceneModifications,
@@ -44,19 +35,16 @@ class PlanExecutionServer(Node):
             execute_callback=self.execute_callback_wrapper,
         )
 
-        self.skill_client_action_server = SkillActionClientNode(
-            node_name="skill_client_action_server"
-        )
+        self.skill_client_action_server = SkillActionClientNode(node_name="skill_client_action_server")
         self._client_lock = threading.Lock()
         logger.info("✅ Parallel Plan Dispatch Server is ready.")
 
-    # This function is called by the ROS executor in a worker thread.
     def execute_callback_wrapper(self, goal_handle):
         """
+        This function is called by the ROS executor in a worker thread.
         Schedules the async implementation on the main event loop and waits for the result.
         """
 
-        # Schedule the coroutine on the main event loop
         future = asyncio.run_coroutine_threadsafe(
             self.async_execute_callback(goal_handle), self.loop
         )
@@ -118,11 +106,11 @@ class PlanExecutionServer(Node):
         logger.info("✅ Plan dispatched and executed successfully.")
         return PlanExecution.Result(success=True, message="Plan executed successfully.")
 
-    def _publish_aggregated_feedback(
-        self, goal_handle, current_timestep, feedback_state
-    ):
-        agg_feedback = PlanExecution.Feedback()
-        agg_feedback.current_timestep = current_timestep
-        agg_feedback.skill_statuses = list(feedback_state.values())
-        if goal_handle.is_active:
-            goal_handle.publish_feedback(agg_feedback)
+    # def _publish_aggregated_feedback(
+    #         self, goal_handle, current_timestep, feedback_state
+    # ):
+    #     agg_feedback = PlanExecution.Feedback()
+    #     agg_feedback.current_timestep = current_timestep
+    #     agg_feedback.skill_statuses = list(feedback_state.values())
+    #     if goal_handle.is_active:
+    #         goal_handle.publish_feedback(agg_feedback)

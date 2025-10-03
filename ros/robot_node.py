@@ -1,4 +1,3 @@
-import rclpy
 from rclpy.node import Node
 
 from log.log_manager import LogManager
