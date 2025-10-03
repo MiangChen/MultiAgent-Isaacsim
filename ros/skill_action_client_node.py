@@ -30,18 +30,20 @@ class SkillActionClientNode(Node):
     一个通用的技能Action客户端，可以与任何一个RobotBase的skill_server通信。
     """
 
-    def __init__(self, node_name="skill_client_node"):
+    def __init__(self, node_name="skill_client_node", loop=None):
         super().__init__(node_name)
         self._action_clients = {}
         self._client_lock = threading.Lock()
-        self.loop = None
+        self.loop = loop
+
+        if not self.loop:
+            raise RuntimeError("Asyncio loop not available.")
 
     def get_action_client(self, robot_name: str) -> ActionClient:
         """
         获取或创建一个到特定机器人的ActionClient。
         Action名称格式为 /skill/{robot_name}
         """
-
         with self._client_lock:
             action_name = f"/skill/{robot_name}"
             if action_name not in self._action_clients:
@@ -56,9 +58,6 @@ class SkillActionClientNode(Node):
         将一个 rclpy.task.Future 转换为一个 asyncio.Future。
         这是连接 rclpy 线程和 asyncio 事件循环的关键。
         """
-        if not self.loop:
-            raise RuntimeError("Asyncio loop not available.")
-
         # 1. 创建一个 asyncio 的 Future，这是我们将要 await 的对象
         aio_future = self.loop.create_future()
 
@@ -78,30 +77,24 @@ class SkillActionClientNode(Node):
         # 6. 返回 asyncio 的 Future
         return aio_future
 
-    async def send_skill_goal(self, robot_name: str, skill_name: str, params: dict):
+    async def send_skill_goal(self, robot_name: str, skill_name: str, params: dict, feedback_handler=None):
         """
         异步发送一个技能目标，并等待最终结果。
+        feedback_handler: 一个可选的回调函数, 用于处理实时的feedback.可以接受(robot_name, feedback_msg)两个参数
         """
-        logger.info(
-            f"Preparing to send skill '{skill_name}' to robot '{robot_name}'..."
-        )
+        logger.info(f"Preparing to send skill '{skill_name}' to robot '{robot_name}'")
 
         action_client = self.get_action_client(robot_name)
 
-        self.loop = asyncio.get_running_loop()
-        if not await self.loop.run_in_executor(
-            None, lambda: action_client.wait_for_server(timeout_sec=3.0)
-        ):
-            logger.error(
-                f"Action server for '{robot_name}' not available after waiting."
-            )
+        if not await self.loop.run_in_executor(None, lambda: action_client.wait_for_server(timeout_sec=3.0)):
+            logger.error(f"Action server for '{robot_name}' not available after waiting.")
             return {"success": False, "message": "Server not available."}
+
         # ====================================================================
         #            精准构建 Goal 消息 (完全匹配你的接口)
         # ====================================================================
 
         # 步骤 1: 创建顶层的 Goal 对象
-        # SkillExecution.action 的 Goal 部分只有一个字段: `plan_msgs/RobotSkill skill_request`
         goal_msg = SkillExecution.Goal()
 
         # 步骤 2: 创建 `skill_request` 字段所需的对象，即 `RobotSkill` 消息
@@ -110,12 +103,10 @@ class SkillActionClientNode(Node):
         robot_skill_msg.robot_id = robot_name
 
         # 步骤 3: 创建并填充 `skill_list` 中的 `SkillInfo` 对象
-
         skill_info_msg = SkillInfo()
         skill_info_msg.skill = skill_name
 
         # 步骤 4: 填充 `params` 列表，其中每个元素都是 `Parameter` 对象
-
         param_list = []
         for key, value in params.items():
             param_msg = Parameter()
@@ -143,8 +134,12 @@ class SkillActionClientNode(Node):
             # 根据 SkillExecution.action 定义，feedback 只有一个字段: `string status`
             logger.info(f"Received feedback from '{robot_name}': {feedback.status}")
 
+            if feedback_handler:
+                feedback_handler(robot_name, feedback)
+
         send_goal_rclpy_future = action_client.send_goal_async(
-            goal=goal_msg, feedback_callback=feedback_callback
+            goal=goal_msg,
+            feedback_callback=feedback_callback
         )
 
         try:

@@ -184,7 +184,7 @@ class RobotBase:
 
             # 执行一小步工作
             import time
-            time.sleep(0.5)  # 模拟工作
+            time.sleep(2)  # 模拟工作
             # 发送反馈
             feedback_msg.status = f"Executing step {i + 1} of 10 for skill '{skill_name}'."
             goal_handle.publish_feedback(feedback_msg)
@@ -193,7 +193,6 @@ class RobotBase:
         # --- 3. 完成与结果 ---
         self.state_skill_complete = True
         goal_handle.succeed()
-
         result = SkillExecution.Result()
         result.success = True
         result.message = f"Skill '{skill_name}' executed successfully."

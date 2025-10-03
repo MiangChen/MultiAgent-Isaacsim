@@ -1,4 +1,3 @@
-import asyncio
 import threading
 
 import rclpy
@@ -15,13 +14,15 @@ logger = LogManager.get_logger(__name__)
 
 
 class RosManager:
-    def __init__(self, action_mode=True, swarm_manager=None):
+    def __init__(self, action_mode=True, swarm_manager=None, loop=None):
 
         self.action_mode = action_mode
         self.scene_monitor_node = None
         self.swarm_node = None
         self.plan_execution_action_server = None
         self.skill_client_action_server = None
+
+        self.loop = loop
         self.stop_event = threading.Event()
         self.thread = None
         self.swarm_manager = swarm_manager
@@ -29,9 +30,8 @@ class RosManager:
         self.executor = MultiThreadedExecutor()
         self.build_nodes()
 
-    def build_nodes(self):
+    def build_nodes(self) -> None:
         """构建所有ROS节点"""
-        loop = asyncio.get_event_loop()
         # qos = QoSProfile(
         #     reliability=ReliabilityPolicy.RELIABLE,
         #     history=HistoryPolicy.KEEP_LAST,
@@ -41,7 +41,8 @@ class RosManager:
         self.swarm_node = SwarmNode()
 
         self.plan_execution_action_server = PlanExecutionServer(
-            loop=loop, swarm_manager=self.swarm_manager
+            loop=self.loop,
+            swarm_manager=self.swarm_manager
         )
         self.skill_client_action_server = (
             self.plan_execution_action_server.skill_client_action_server

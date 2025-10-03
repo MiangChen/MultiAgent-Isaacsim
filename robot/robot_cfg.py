@@ -5,7 +5,6 @@ from camera.camera_cfg import CameraCfg
 from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from config.config_manager import config_manager
 
-
 ASSET_PATH = config_manager.get("asset_path")
 
 
@@ -30,4 +29,4 @@ class RobotCfg(BaseCfg):
     # controllers: Optional[List[ControllerCfg]] = None
     # cameras: Optional[List[SensorCfg]] = None
 
-    camera: Optional[Dict[CameraCfg]] = []
+    camera: Optional[Dict[str, CameraCfg]] = {}

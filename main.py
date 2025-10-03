@@ -66,6 +66,7 @@ def setup_simulation(
         swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
         env: Env = Provide[AppContainer.env],
         world: World = Provide[AppContainer.world],
+        loop: asyncio.AbstractEventLoop = Provide[AppContainer.loop]
 ) -> None:
     """
     Setup simulation environment with injected dependencies.
@@ -96,8 +97,6 @@ def setup_simulation(
         )
 
     # Schedule the initialization in Isaac Sim's event loop
-
-    loop = asyncio.get_event_loop()
     # Create a task but don't wait for it to complete immediately
     init_task = loop.create_task(init_env_and_swarm())
 
@@ -235,8 +234,8 @@ def main():
 
     # Get services from container
     config_manager = container.config_manager()
-
     log_manager = container.log_manager()
+    loop = container.loop()
     ros_manager = container.ros_manager()
     swarm_manager = container.swarm_manager()
     scene_manager = container.scene_manager()

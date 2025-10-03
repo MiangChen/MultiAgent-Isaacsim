@@ -1,3 +1,4 @@
+import asyncio
 import sys
 from dependency_injector import containers, providers
 
@@ -11,7 +12,6 @@ from robot.swarm_manager import SwarmManager
 from ros.ros_manager import RosManager
 from scene.scene_manager import SceneManager
 from ui.viewport_manager import ViewportManager
-# from skill.skill_manager import SkillManager
 
 
 class AppContainer(containers.DeclarativeContainer):
@@ -28,6 +28,7 @@ class AppContainer(containers.DeclarativeContainer):
         log_level=config.provided["logging"]["level"],
         log_file=config.provided["logging"]["file"],
     )
+    loop = providers.Singleton(asyncio.get_event_loop)
 
     world = providers.Singleton(
         World,
