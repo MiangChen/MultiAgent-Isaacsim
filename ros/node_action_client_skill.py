@@ -1,13 +1,10 @@
-import rclpy
-import asyncio
-from rclpy.node import Node
-from rclpy.action import ActionClient
-from rclpy.executors import MultiThreadedExecutor
-from rclpy.task import Future as RclpyFuture
 from asyncio import Future as AsyncioFuture
 import threading
 
-from action_msgs.msg import GoalStatus
+from rclpy.node import Node
+from rclpy.action import ActionClient
+from rclpy.task import Future as RclpyFuture
+
 from gsi2isaacsim.gsi_msgs_helper import (
     PrimTransform,
     SceneModifications,
@@ -88,7 +85,7 @@ class NodeActionClientSkill(Node):
 
         action_client = self.get_action_client(robot_name)
         if not await self.loop.run_in_executor(
-            None, lambda: action_client.wait_for_server(timeout_sec=3.0)
+                None, lambda: action_client.wait_for_server(timeout_sec=3.0)
         ):
             logger.error(
                 f"Action server for '{robot_name}' not available after waiting."
