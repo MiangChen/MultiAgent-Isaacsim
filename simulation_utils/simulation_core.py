@@ -180,6 +180,7 @@ def run_simulation_loop_multi(simulation_app, drone_ctxs: list[RobotDrone], sema
         for ctx in drone_ctxs:
             # Update pose if dirty
             if ctx.is_pose_dirty and ctx.des_pose is not None:
+                print(ctx, ctx.drone_prim)
                 ctx.drone_prim.GetAttribute("xformOp:translate").Set(ctx.des_pose.pos)
                 ctx.drone_prim.GetAttribute("xformOp:orient").Set(ctx.des_pose.quat)
                 ctx.is_pose_dirty = False
