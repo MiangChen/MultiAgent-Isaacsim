@@ -20,7 +20,13 @@ from isaacsim.core.prims import Articulation
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.types import ArticulationActions
 
-from gsi2isaacsim.gsi_msgs_helper import Plan, RobotFeedback, SkillInfo, Parameter, VelTwistPose
+from gsi2isaacsim.gsi_msgs_helper import (
+    Plan,
+    RobotFeedback,
+    SkillInfo,
+    Parameter,
+    VelTwistPose,
+)
 
 
 class RobotH1(RobotBase):
@@ -31,12 +37,18 @@ class RobotH1(RobotBase):
     Please use `await RobotH1.create(...)` to instantiate.
     """
 
-    def __init__(self, cfg_body: RobotCfgH1, cfg_camera: CameraCfg = None,
-                 cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None, node: SwarmNode = None, scene_manager=None) -> None:
+    def __init__(
+        self,
+        cfg_body: RobotCfgH1,
+        cfg_camera: CameraCfg = None,
+        cfg_camera_third_person: CameraThirdPersonCfg = None,
+        scene: Scene = None,
+        map_grid: GridMap = None,
+        scene_manager=None,
+    ) -> None:
         super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid)
         self.create_robot_entity()
-        self.control_mode = 'joint_positions'
+        self.control_mode = "joint_positions"
         self.scene_manager = scene_manager
         # 初始化PID控制器等同步组件
         self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
@@ -52,10 +64,10 @@ class RobotH1(RobotBase):
         self.counter = 0
         self.pub_period = 50
         self.previous_pos = None
-        self.movement_threshold = 0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
+        self.movement_threshold = (
+            0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
+        )
 
-        #
-        #
         # self.node.register_feedback_publisher(
         #     robot_class=self.cfg_body.name_prefix,
         #     robot_id=self.cfg_body.id,
@@ -68,9 +80,15 @@ class RobotH1(RobotBase):
         # )
 
     @classmethod
-    async def create(cls, cfg_body: RobotCfgH1, cfg_camera: CameraCfg = None,
-                     cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                     map_grid: GridMap = None, node: SwarmNode = None, scene_manager=None) -> "RobotH1":
+    async def create(
+        cls,
+        cfg_body: RobotCfgH1,
+        cfg_camera: CameraCfg = None,
+        cfg_camera_third_person: CameraThirdPersonCfg = None,
+        scene: Scene = None,
+        map_grid: GridMap = None,
+        scene_manager=None,
+    ) -> "RobotH1":
         """
         Asynchronously creates and fully initializes a RobotH1 instance,
         including its asynchronous policy controller.
@@ -82,7 +100,6 @@ class RobotH1(RobotBase):
             cfg_camera_third_person=cfg_camera_third_person,
             scene=scene,
             map_grid=map_grid,
-            node=node,
             scene_manager=scene_manager,
         )
 
@@ -102,7 +119,9 @@ class RobotH1(RobotBase):
             self.controller_policy.initialize(self.robot_entity)
         else:
             # 这是一个安全检查，正常情况下不应该发生
-            print(f"[Warning] RobotH1 '{self.name}' has no controller_policy to initialize.")
+            print(
+                f"[Warning] RobotH1 '{self.name}' has no controller_policy to initialize."
+            )
 
     def create_robot_entity(self):
         """
@@ -117,6 +136,7 @@ class RobotH1(RobotBase):
 
     def move_to(self, target_pos):
         import numpy as np
+
         """
         让2轮差速小车在一个2D平面上运动到目标点
         缺点：不适合3D，无法避障，地面要是平的
@@ -124,23 +144,31 @@ class RobotH1(RobotBase):
         """
         pos, quat = self.get_world_poses()  # self.get_world_pose()  ## type np.array
         if self.counter % self.pub_period == 0:
-            self._publish_feedback(params=self._params_from_pose(pos, quat),
-                                   progress=self._calc_dist(pos, self.nav_end) * 100 / self.nav_dist)
+            self._publish_feedback(
+                params=self._params_from_pose(pos, quat),
+                progress=self._calc_dist(pos, self.nav_end) * 100 / self.nav_dist,
+            )
         # 获取2D方向的朝向，逆时针是正
         yaw = self.quaternion_to_yaw(quat)
         # 获取机器人和目标连线的XY平面上的偏移角度
-        robot_to_target_angle = np.arctan2(target_pos[1] - pos[1], target_pos[0] - pos[0])
+        robot_to_target_angle = np.arctan2(
+            target_pos[1] - pos[1], target_pos[0] - pos[0]
+        )
         # 差速, 和偏移角度成正比，通过pi归一化
         delta_angle = robot_to_target_angle - yaw
         if abs(delta_angle) < 0.017:  # 角度控制死区
             delta_angle = 0
-        elif delta_angle < -np.pi:  # 当差距abs超过pi后, 就代表从这个方向转弯不好, 要从另一个方向转弯
+        elif (
+            delta_angle < -np.pi
+        ):  # 当差距abs超过pi后, 就代表从这个方向转弯不好, 要从另一个方向转弯
             delta_angle += 2 * np.pi
         elif delta_angle > np.pi:
             delta_angle -= 2 * np.pi
         if np.linalg.norm(target_pos[0:2] - pos[0:2]) < 1:
             self.action = [0, 0]
-            self._publish_feedback(params=self._params_from_pose(pos, quat), progress=100)
+            self._publish_feedback(
+                params=self._params_from_pose(pos, quat), progress=100
+            )
             return True  # 已经到达目标点附近10cm, 停止运动
         # print(delta_angle, np.linalg.norm(target_pos[0:2] - pos[0:2]))
         k_rotate = 1 / np.pi
@@ -157,11 +185,11 @@ class RobotH1(RobotBase):
 
     def step(self, action):
         action = self.to_torch(action)
-        if self.control_mode == 'joint_positions':
+        if self.control_mode == "joint_positions":
             action = ArticulationActions(joint_positions=action)
-        elif self.control_mode == 'joint_velocities':
+        elif self.control_mode == "joint_velocities":
             action = ArticulationActions(joint_velocities=action)
-        elif self.control_mode == 'joint_efforts':
+        elif self.control_mode == "joint_efforts":
             action = ArticulationActions(joint_efforts=action)
         else:
             raise NotImplementedError
@@ -180,12 +208,16 @@ class RobotH1(RobotBase):
         if self.flag_world_reset == True:
             if self.flag_action_navigation == True:
                 self.move_along_path()  # 每一次都计算下速度
-                self.action = self.controller_policy.forward(step_size, self.base_command, self.robot_entity)
+                self.action = self.controller_policy.forward(
+                    step_size, self.base_command, self.robot_entity
+                )
             else:
-                self.action = self.controller_policy.forward(step_size, [0, 0, 0], self.robot_entity)
+                self.action = self.controller_policy.forward(
+                    step_size, [0, 0, 0], self.robot_entity
+                )
             self.step(self.action)
         return
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     h1 = RobotH1()

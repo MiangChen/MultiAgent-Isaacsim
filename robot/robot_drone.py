@@ -39,15 +39,15 @@ DRONE_GEOMETRY_TEMPLATE = {
         "position": [0.0, 0.0, 0.0],
         "scale": [0.12, 0.06, 0.06],
         "orientation": [1.0, 0.0, 0.0, 0.0],
-        "color_type": "main"  # 指定使用哪种颜色
+        "color_type": "main",  # 指定使用哪种颜色
     },
     "Nose": {
         "shape_type": "cuboid",
         "position": [0.08, 0.0, 0.0],
         "scale": [0.03, 0.02, 0.02],
         "orientation": [1.0, 0.0, 0.0, 0.0],
-        "color_type": "nose"  # 指定使用哪种颜色
-    }
+        "color_type": "nose",  # 指定使用哪种颜色
+    },
 }
 
 
@@ -63,17 +63,16 @@ class RobotDrone(RobotBase):
     """
 
     def __init__(
-            self,
-            cfg_body: RobotCfg = None,
-            cfg_camera: CameraCfg = None,
-            cfg_camera_third_person: CameraThirdPersonCfg = None,
-            scene: Scene = None,
-            map_grid: GridMap = None,
-            node: SwarmNode = None,
-            scene_manager: SceneManager = None,
-            namespace: str = None,
-            prim_path: str = None,
-            color_scheme_id: int = 0  # 新增参数，用于选择颜色
+        self,
+        cfg_body: RobotCfg = None,
+        cfg_camera: CameraCfg = None,
+        cfg_camera_third_person: CameraThirdPersonCfg = None,
+        scene: Scene = None,
+        map_grid: GridMap = None,
+        scene_manager: SceneManager = None,
+        namespace: str = None,
+        prim_path: str = None,
+        color_scheme_id: int = 0,  # 新增参数，用于选择颜色
     ):
         # super().__init__(
         #     cfg_body=cfg_body,
@@ -158,7 +157,7 @@ class RobotDrone(RobotBase):
                 "name": name,
                 "prim_path": f"{prim_path}/{name}",
                 "entity_type": "visual",
-                **component_data
+                **component_data,
             }
             self.scene_manager.create_shape_unified(**kwargs)
         return drone_prim

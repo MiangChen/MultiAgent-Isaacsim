@@ -8,8 +8,16 @@ class Trajectory:
     Manages and displays the historical trajectory of a specified robot prim.
     """
 
-    def __init__(self, robot_prim_path: str, max_points: int = 500, id: int = 0,
-                 color: tuple = (0.0, 1.0, 0.0), thickness: float = 2.0, scene: Scene = None, radius: float = 0.05):
+    def __init__(
+        self,
+        robot_prim_path: str,
+        max_points: int = 500,
+        id: int = 0,
+        color: tuple = (0.0, 1.0, 0.0),
+        thickness: float = 2.0,
+        scene: Scene = None,
+        radius: float = 0.05,
+    ):
         """
         Initializes the trajectory tracker.
         为什么这里使用了list,而不是一个queue记录历史轨迹?
@@ -27,6 +35,7 @@ class Trajectory:
         self.id = id
         # 先提前把历史轨迹的点都加载好, 但是颜色都不可见
         from isaacsim.core.api.objects import VisualSphere
+
         self.visual_sphere = []
         # max_points = 1
         for i in range(max_points):
@@ -64,6 +73,8 @@ class Trajectory:
     def render(self):
         self.visual_sphere[self.index].set_world_pose(self.trajectory[self.index])  #
         self.visual_sphere[self.index].set_visibility(True)  # 可见
+
+
 # def
 #
 # def _update_trajectory(self, step: float):

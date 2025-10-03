@@ -25,8 +25,11 @@ class SwarmManager:
     """
 
     def __init__(
-            self, map_grid: GridMap = None, map_semantic: MapSemantic = None, ros_manager: RosManager = None,
-            scene_manager: SceneManager = None,
+        self,
+        map_grid: GridMap = None,
+        map_semantic: MapSemantic = None,
+        ros_manager: RosManager = None,
+        scene_manager: SceneManager = None,
     ):
         self.scene: Scene = None
         self.scene_manager = scene_manager
@@ -46,12 +49,12 @@ class SwarmManager:
         self.ros_manager = ros_manager
 
     async def create_robot(
-            self,
-            robot_class_name: str = None,
-            robot_class_cfg: Type[RobotCfg] = None,
-            cfg_body_dict: Dict = None,
-            cfg_camera_dict: Dict = None,
-            cfg_camera_third_person_dict: Dict = None,
+        self,
+        robot_class_name: str = None,
+        robot_class_cfg: Type[RobotCfg] = None,
+        cfg_body_dict: Dict = None,
+        cfg_camera_dict: Dict = None,
+        cfg_camera_third_person_dict: Dict = None,
     ):
         """
         异步创建新机器人并加入仓库。
@@ -79,7 +82,7 @@ class SwarmManager:
 
         # 检查机器人class是否有 'create' 方法，并且它是一个异步函数
         if hasattr(robot_cls, "create") and inspect.iscoroutinefunction(
-                robot_cls.create
+            robot_cls.create
         ):
             # 如果是，使用 await 调用异步工厂 create 方法
             print(f"'{robot_class_name}' has an async factory. Using await .create()")
@@ -89,7 +92,6 @@ class SwarmManager:
                 cfg_camera_third_person=cfg_camera_third_person,
                 scene=self.scene,
                 map_grid=self.map_grid,
-                node=self.ros_manager.swarm_node,
                 scene_manager=self.scene_manager,
             )
         else:
@@ -101,7 +103,6 @@ class SwarmManager:
                 cfg_camera_third_person=cfg_camera_third_person,
                 scene=self.scene,
                 map_grid=self.map_grid,
-                node=self.ros_manager.swarm_node,
                 scene_manager=self.scene_manager,
             )
 
@@ -110,10 +111,10 @@ class SwarmManager:
         return robot
 
     def register_robot_class(
-            self,
-            robot_class_name: str,
-            robot_class: Type[RobotBase],
-            robot_class_cfg: Type[RobotCfg],
+        self,
+        robot_class_name: str,
+        robot_class: Type[RobotBase],
+        robot_class_cfg: Type[RobotCfg],
     ) -> None:
         """注册新的机器人类型"""
         self.robot_warehouse[robot_class_name] = []
@@ -123,10 +124,10 @@ class SwarmManager:
         self.robot_class_cfg[robot_class_name] = robot_class_cfg
 
     async def initialize_async(
-            self,
-            scene: Scene,
-            robot_swarm_cfg_path: str = None,
-            robot_active_flag_path: str = None,
+        self,
+        scene: Scene,
+        robot_swarm_cfg_path: str = None,
+        robot_active_flag_path: str = None,
     ) -> None:
         """
         Complete async initialization of the swarm manager.
@@ -148,7 +149,7 @@ class SwarmManager:
             self.activate_robot(robot_active_flag_path)
 
     async def load_robot_swarm_cfg(
-            self, robot_swarm_cfg_file: str = None, dict: Dict = None
+        self, robot_swarm_cfg_file: str = None, dict: Dict = None
     ) -> None:
         """异步加载并创建配置文件中定义的所有机器人。"""
 
@@ -179,7 +180,7 @@ class SwarmManager:
                 )
 
     def activate_robot(
-            self, flag_file_path: str = None, flag_dict: Dict = None
+        self, flag_file_path: str = None, flag_dict: Dict = None
     ) -> None:
         # 两种寄存器配置模式, 一个是从文件读取, 适合初始化时后加载大量机器人, 另一个是通过dict来配置, 时候后续少量的处理;
         if flag_file_path is not None:

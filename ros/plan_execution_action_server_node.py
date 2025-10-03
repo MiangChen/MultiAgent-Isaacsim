@@ -92,8 +92,8 @@ class PlanExecutionServer(Node):
             logger.info(
                 f"Dispatching {len(tasks)} concurrent skills for timestep {step.timestep}..."
             )
-            results = await asyncio.gather(*tasks)
 
+            results = await asyncio.gather(*tasks)
             if not all(res.get("success", False) for res in results):
                 error_msg = f"Execution failed in timestep {step.timestep}."
                 logger.error(error_msg)

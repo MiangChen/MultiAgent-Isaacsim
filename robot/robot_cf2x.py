@@ -19,7 +19,13 @@ from robot.robot_cfg_drone_cf2x import RobotCfgCf2x
 from ros.swarm_node import SwarmNode
 
 from geometry_msgs.msg import Pose, Twist, Vector3
-from gsi2isaacsim.gsi_msgs_helper import Plan, RobotFeedback, SkillInfo, Parameter, VelTwistPose
+from gsi2isaacsim.gsi_msgs_helper import (
+    Plan,
+    RobotFeedback,
+    SkillInfo,
+    Parameter,
+    VelTwistPose,
+)
 
 import threading
 
@@ -39,11 +45,23 @@ class RobotCf2x(RobotBase):
     - D键: 向右移动 (-Y方向)
     """
 
-    def __init__(self, cfg_body: RobotCfgCf2x, cfg_camera: CameraCfg = None,
-                 cfg_camera_third_person: CameraThirdPersonCfg = None, scene: Scene = None,
-                 map_grid: GridMap = None, node: SwarmNode = None, scene_manager=None) -> None:
-        super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene, map_grid, node=node,
-                         scene_manager=scene_manager)
+    def __init__(
+        self,
+        cfg_body: RobotCfgCf2x,
+        cfg_camera: CameraCfg = None,
+        cfg_camera_third_person: CameraThirdPersonCfg = None,
+        scene: Scene = None,
+        map_grid: GridMap = None,
+        scene_manager=None,
+    ) -> None:
+        super().__init__(
+            cfg_body,
+            cfg_camera,
+            cfg_camera_third_person,
+            scene,
+            map_grid,
+            scene_manager=scene_manager,
+        )
         self.create_robot_entity()
 
         self.is_drone = True  # 标记为无人机
@@ -51,15 +69,17 @@ class RobotCf2x(RobotBase):
         self.map_grid = map_grid
 
         # 无人机基本属性
-        self.position = np.array(getattr(cfg_body, 'position', [0.0, 0.0, 0.0]), dtype=np.float32)
+        self.position = np.array(
+            getattr(cfg_body, "position", [0.0, 0.0, 0.0]), dtype=np.float32
+        )
         self.target_position = self.position.copy()
         self.velocity = np.zeros(3, dtype=np.float32)  # 当前速度 [vx, vy, vz]
-        self.default_speed = getattr(cfg_body, 'default_speed', 1.0)  # 默认移动速度
-        self.takeoff_height = getattr(cfg_body, 'takeoff_height', 1.0)  # 起飞悬停高度
-        self.land_height = getattr(cfg_body, 'land_height', 0.0)  # 降落高度
+        self.default_speed = getattr(cfg_body, "default_speed", 1.0)  # 默认移动速度
+        self.takeoff_height = getattr(cfg_body, "takeoff_height", 1.0)  # 起飞悬停高度
+        self.land_height = getattr(cfg_body, "land_height", 0.0)  # 降落高度
 
         # 飞行状态
-        self.flight_state = 'landed'  # 'landed', 'hovering'
+        self.flight_state = "landed"  # 'landed', 'hovering'
         self.hovering_height = self.takeoff_height  # 悬停高度
 
         # 路径瞬移相关
@@ -79,7 +99,9 @@ class RobotCf2x(RobotBase):
         self.counter = 0
         self.pub_period = 50
         self.previous_pos = None
-        self.movement_threshold = 0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
+        self.movement_threshold = (
+            0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
+        )
 
         # —— 平滑导航配置（无人机专用）——
         self.nav_target_xy = None  # 目标点的 XY
@@ -123,6 +145,7 @@ class RobotCf2x(RobotBase):
     def _setup_keyboard_events(self):
         """设置键盘事件监听"""
         import carb
+
         try:
             appwindow = omni.appwindow.get_default_app_window()
             input_iface = carb.input.acquire_input_interface()
@@ -186,13 +209,16 @@ class RobotCf2x(RobotBase):
 
     def takeoff(self):
         """起飞到预设高度并悬停"""
-        if self.flight_state == 'landed':
+        if self.flight_state == "landed":
             # 获取当前位置，只改变高度
             positions, orientations = self.robot_entity.get_world_poses()
             current_pos = positions[0]
 
             # 设置新的悬停位置
-            self.position = torch.as_tensor([current_pos[0], current_pos[1], self.takeoff_height], dtype=torch.float32)
+            self.position = torch.as_tensor(
+                [current_pos[0], current_pos[1], self.takeoff_height],
+                dtype=torch.float32,
+            )
             self.hovering_height = self.takeoff_height
 
             # 直接设置位置（瞬移到悬停高度）
@@ -203,7 +229,7 @@ class RobotCf2x(RobotBase):
             self.robot_entity.set_velocities(velocities=zero_velocities)
 
             # 更新状态
-            self.flight_state = 'hovering'
+            self.flight_state = "hovering"
             self.velocity = np.zeros(3, dtype=np.float32)  # 悬停时速度为0
 
             # 取消重力
@@ -229,11 +255,14 @@ class RobotCf2x(RobotBase):
         # 1. 获取 Isaac Sim 的物理场景接口
         import omni.physx
         import carb
+
         physx_interface = omni.physx.get_physx_scene_query_interface()
 
         # 2. 定义光线投射的起点和方向
         #    起点应该在机器人当前位置的正上方，以避免光线从机器人内部开始
-        ray_origin = carb.Float3(current_position[0], current_position[1], current_position[2] + 1.0)
+        ray_origin = carb.Float3(
+            current_position[0], current_position[1], current_position[2] + 1.0
+        )
         #    方向是垂直向下
         ray_direction = carb.Float3(0, 0, -1)
 
@@ -256,7 +285,7 @@ class RobotCf2x(RobotBase):
 
     def land(self):
         """降落到地面"""
-        if self.flight_state == 'hovering':
+        if self.flight_state == "hovering":
             # 获取当前位置，只改变高度
             positions, orientations = self.robot_entity.get_world_poses()
             current_pos = positions[0]
@@ -265,7 +294,10 @@ class RobotCf2x(RobotBase):
             ground_z = self.get_ground_height_with_raycast(current_pos)
 
             # 设置降落位置
-            self.position = np.array([current_pos[0], current_pos[1], current_pos[2] - ground_z], dtype=np.float32)
+            self.position = np.array(
+                [current_pos[0], current_pos[1], current_pos[2] - ground_z],
+                dtype=np.float32,
+            )
 
             # 直接设置位置（瞬移到地面）
             orientation = orientations[0]
@@ -280,7 +312,7 @@ class RobotCf2x(RobotBase):
             self._movement_command = np.zeros(3, dtype=np.float32)  # 清除移动命令
 
             # 更新状态
-            self.flight_state = 'landed'
+            self.flight_state = "landed"
 
             print(f"无人机降落到高度: {self.current_pos[2] - ground_z}m")
         else:
@@ -288,7 +320,7 @@ class RobotCf2x(RobotBase):
 
     def update_position_with_velocity(self, dt):
         """基于速度和时间步长更新位置 (ds = v * dt)"""
-        if self.flight_state == 'hovering':
+        if self.flight_state == "hovering":
             # 计算位移: ds = v * dt
             displacement = self.velocity * dt
 
@@ -311,7 +343,7 @@ class RobotCf2x(RobotBase):
         print(f"设置了 {len(waypoints)} 个路径点")
 
         # 如果无人机在地面，先起飞
-        if self.flight_state == 'landed':
+        if self.flight_state == "landed":
             self.takeoff()
 
     def teleport_to_waypoint(self, index):
@@ -347,7 +379,7 @@ class RobotCf2x(RobotBase):
         target_pos = np.array(position, dtype=np.float32)
 
         # 如果在地面状态，先起飞
-        if self.flight_state == 'landed':
+        if self.flight_state == "landed":
             self.takeoff()
 
         # 确保在悬停高度
@@ -361,11 +393,11 @@ class RobotCf2x(RobotBase):
 
     def keyboard_control(self, dt):
         """键盘控制处理"""
-        if self.flight_state == 'hovering' and self.keyboard_control_enabled:
+        if self.flight_state == "hovering" and self.keyboard_control_enabled:
             # 设置速度为键盘命令
             self.velocity = self._movement_command.copy()
             # 注意：位置更新在 on_physics_step 中统一处理
-        elif self.flight_state == 'landed':
+        elif self.flight_state == "landed":
             # 地面状态下确保速度为0
             self.velocity = np.zeros(3, dtype=np.float32)
 
@@ -381,15 +413,17 @@ class RobotCf2x(RobotBase):
         import numpy as np
 
         # 落地就先起飞到悬停高度（一次性瞬移到 hover 高度即可）
-        if self.flight_state == 'landed':
+        if self.flight_state == "landed":
             self.takeoff()
 
         # === 读取当前位姿（用仿真里的真实位姿，不再用 self.position 作为“真值”） ===
         positions, orientations = self.robot_entity.get_world_poses()
 
         if self.counter % self.pub_period == 0:
-            self._publish_feedback(params=self._params_from_pose(positions, orientations),
-                                   progress=self._calc_dist(positions, self.nav_end) * 100 / self.nav_dist)
+            self._publish_feedback(
+                params=self._params_from_pose(positions, orientations),
+                progress=self._calc_dist(positions, self.nav_end) * 100 / self.nav_dist,
+            )
 
         cur_pos = np.array(positions[0], dtype=np.float32)
         pos_xy = cur_pos[:2]
@@ -412,7 +446,9 @@ class RobotCf2x(RobotBase):
 
             self.flag_action_navigation = False
             self.state_skill_complete = True
-            self._publish_feedback(params=self._params_from_pose(positions, orientations), progress=100)
+            self._publish_feedback(
+                params=self._params_from_pose(positions, orientations), progress=100
+            )
             return True
 
         # 期望速度：指向目标，近处线性减速
@@ -420,7 +456,9 @@ class RobotCf2x(RobotBase):
         slow_r = float(self.nav_slow_radius)
         dir_xy = delta / (dist + 1e-6)
         spd = vmax * (dist / slow_r) if dist < slow_r else vmax
-        v_world = torch.tensor([dir_xy[0] * spd, dir_xy[1] * spd, 0.0], dtype=torch.float32)
+        v_world = torch.tensor(
+            [dir_xy[0] * spd, dir_xy[1] * spd, 0.0], dtype=torch.float32
+        )
 
         # === 把速度交给“根刚体” ===
         self.robot_entity.set_linear_velocities(v_world)
@@ -437,8 +475,12 @@ class RobotCf2x(RobotBase):
         self.counter += 1
 
         # 未激活或无目标：什么都不做
-        if getattr(self, 'flag_action_navigation', False) and self.nav_target_xy is not None and hasattr(self,
-                                                                                                         'flag_world_reset') and self.flag_world_reset:
+        if (
+            getattr(self, "flag_action_navigation", False)
+            and self.nav_target_xy is not None
+            and hasattr(self, "flag_world_reset")
+            and self.flag_world_reset
+        ):
             self.move_to()
             # if self.counter % self.pub_period == 0:
             #     self._publish_feedback_pose()
@@ -446,9 +488,9 @@ class RobotCf2x(RobotBase):
             if self.keyboard_control_enabled:
                 self.keyboard_control(step_size)
             else:
-                if hasattr(self, 'waypoints') and self.waypoints:
+                if hasattr(self, "waypoints") and self.waypoints:
                     self.execute_waypoint_sequence()
-            if self.flight_state == 'hovering':
+            if self.flight_state == "hovering":
                 self.update_position_with_velocity(step_size)
 
     def enable_keyboard_control(self, enable=True):
@@ -467,6 +509,7 @@ class RobotCf2x(RobotBase):
         if self._keyboard_sub is not None:
             try:
                 import carb
+
                 input_iface = carb.input.acquire_input_interface()
                 input_iface.unsubscribe_to_keyboard_events(self._keyboard_sub)
                 self._keyboard_sub = None
@@ -479,7 +522,9 @@ class RobotCf2x(RobotBase):
         """让机器人沿着路径点运动"""
         return False
 
-    def navigate_to(self, pos_target: np.ndarray = None, reset_flag: bool = False, **kwargs):
+    def navigate_to(
+        self, pos_target: np.ndarray = None, reset_flag: bool = False, **kwargs
+    ):
         """
         导航到目标位置。
         - 无人机: 执行特殊的直线飞行逻辑。
@@ -489,7 +534,7 @@ class RobotCf2x(RobotBase):
             raise ValueError("no target position")
 
         # 1. --- 处理子类的特殊情况：无人机 ---
-        if hasattr(self, 'is_drone') and self.is_drone:
+        if hasattr(self, "is_drone") and self.is_drone:
             logger.info("Executing drone-specific navigation.")
             # 支持传入 2D 或 3D；若含 Z 则忽略
             self.nav_end = np.array(pos_target, dtype=np.float32)
@@ -498,10 +543,10 @@ class RobotCf2x(RobotBase):
 
             # 设置通用状态标志
             self.flag_action_navigation = True
-            self.state_skill = 'navigate_to'
+            self.state_skill = "navigate_to"
             self.state_skill_complete = False
 
-            if hasattr(self, 'keyboard_control_enabled'):
+            if hasattr(self, "keyboard_control_enabled"):
                 self.keyboard_control_enabled = False
 
             return True  # 子类方法返回一个状态
@@ -515,7 +560,7 @@ class RobotCf2x(RobotBase):
                 pos_target=self.nav_end,
                 reset_flag=reset_flag,
                 # 允许传递父类需要的额外参数，如 load_from_file
-                **kwargs
+                **kwargs,
             )
 
             # 保持与无人机分支一致的返回值
@@ -525,7 +570,12 @@ class RobotCf2x(RobotBase):
         """拾取物品"""
         pass
 
-    def explore_zone(self, zone_corners: list = None, scane_direction: str = "horizontal", reset_flag: bool = False):
+    def explore_zone(
+        self,
+        zone_corners: list = None,
+        scane_direction: str = "horizontal",
+        reset_flag: bool = False,
+    ):
         """探索指定区域"""
         min_x = min(corner[0] for corner in zone_corners)
         max_x = max(corner[0] for corner in zone_corners)
@@ -535,6 +585,7 @@ class RobotCf2x(RobotBase):
         scan_direction = scane_direction
 
         import math
+
         effective_width = 2 * self.view_radius * math.sin(self.viewgraph_angle / 2)
         scan_line_spacing = effective_width * 0.8
 

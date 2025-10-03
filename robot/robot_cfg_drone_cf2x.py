@@ -5,9 +5,9 @@ from robot.robot_cfg import RobotCfg, ASSET_PATH
 
 class RobotCfgCf2x(RobotCfg):
     # meta info
-    name_prefix: Optional[str] = 'cf2x'
-    type: Optional[str] = 'cf2x'
-    prim_path: Optional[str] = '/World/robot/cf2x'
+    name_prefix: Optional[str] = "cf2x"
+    type: Optional[str] = "cf2x"
+    prim_path: Optional[str] = "/World/robot/cf2x"
 
     id: int = 0
     usd_path: Optional[str] = ASSET_PATH + "/Isaac/Robots/Crazyflie/cf2x.usd"

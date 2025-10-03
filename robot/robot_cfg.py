@@ -16,15 +16,20 @@ class BaseCfg(BaseModel):
 class RobotCfg(BaseCfg):
     # meta info
     name_prefix: str = None
-    name: str = ''
-    type: str = 'robot'
-    prim_path: str = '/World/robot'
+    name: str = ""
+    type: str = "robot"
+    prim_path: str = "/World/robot"
     path_prim_robot: Optional[str] = "/World/robot"
     usd_path: str = None
 
     # common config
     position: Optional[Tuple[float, float, float]] = (0.0, 0.0, 0.0)
-    quat: Optional[Tuple[float, float, float, float]] = (0.0, 0.0, 0.0, 1.0)  # 使用4元数
+    quat: Optional[Tuple[float, float, float, float]] = (
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+    )  # 使用4元数
     scale: Optional[Tuple[float, float, float]] = (1.0, 1.0, 1.0)
     # controllers: Optional[List[ControllerCfg]] = None
     # cameras: Optional[List[SensorCfg]] = None

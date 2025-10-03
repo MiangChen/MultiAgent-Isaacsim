@@ -136,7 +136,6 @@ class SkillActionClientNode(Node):
             result_wrapper = await self._wrap_rclpy_future(get_result_rclpy_future)
             status = result_wrapper.status
             result = result_wrapper.result
-            # 根据 SkillExecution.action 定义，result 有 `bool success` 和 `string message`
             logger.info(f"Got result from '{robot_name}' with status: {status}")
             return {
                 "success": result.success,
