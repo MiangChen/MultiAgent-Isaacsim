@@ -32,7 +32,7 @@ simulation_app = start_isaacsim_simulation_app(args.config_path)
 import asyncio
 
 # Third-party imports
-from dependency_injector.wiring import inject, Provide  # Dependency injection imports
+from dependency_injector.wiring import inject, Provide, providers  # Dependency injection imports
 
 from isaacsim.core.api import World
 
@@ -226,9 +226,12 @@ def process_semantic_detection(semantic_camera, map_semantic: MapSemantic) -> No
 def main():
     print("\n\n\n\ninto the main\n\n\n\n")
     # Setup dependency injection container
+
     reset_container()
     container = get_container()
-
+    # container.loop.override(
+    #     providers.Object(loop)
+    # )
     # Wire the container to this module for @inject decorators in skill functions
     container.wire(modules=[__name__])
 
@@ -348,12 +351,11 @@ def main():
 
     # Main simulation loop
     while simulation_app.is_running():
-
         # World step
         env.step(action=None)
 
         # if config_manager.get("ros"):
-            # skill_manager.process_ros_skills()
+        # skill_manager.process_ros_skills()
         # swarm_manager.robot_active['jetbot'][0]._publish_status_pose()
 
         count += 1
@@ -369,6 +371,7 @@ def main():
     ros_manager.stop()
 
     container.unwire()
+    loop.close()
 
     logger.info("--- Simulation finished. Manually closing application. ---")
     if simulation_app:

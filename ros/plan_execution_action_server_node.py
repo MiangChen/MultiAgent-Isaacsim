@@ -34,7 +34,7 @@ class PlanExecutionServer(Node):
             action_name="/isaac_sim/plan_execution",
             execute_callback=self.execute_callback_wrapper,
         )
-        self.skill_client_action_server = SkillActionClientNode(node_name="skill_client_action_server", loop=loop)
+        self.skill_client_action_server = SkillActionClientNode(node_name="skill_client_action_server", loop=self.loop)
         logger.info("✅ Parallel Plan Dispatch Server is ready.")
 
     def execute_callback_wrapper(self, goal_handle):

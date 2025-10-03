@@ -36,8 +36,8 @@ class SkillActionClientNode(Node):
         self._client_lock = threading.Lock()
         self.loop = loop
 
-        if not self.loop:
-            raise RuntimeError("Asyncio loop not available.")
+        # if not self.loop:
+        #     raise RuntimeError("Asyncio loop not available.")
 
     def get_action_client(self, robot_name: str) -> ActionClient:
         """
