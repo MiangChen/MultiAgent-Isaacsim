@@ -16,9 +16,6 @@ class Env(gym.Env):
                  grid_map: GridMap = None,
                  ) -> None:
         # --- 存储参数和基本属性赋值 ---
-        self._render = None
-        self._robot_name = None
-        self._current_task_name = None
         self._runner = simulation_app
 
         # --- 创建核心的、同步的对象 ---
