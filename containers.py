@@ -28,9 +28,9 @@ class AppContainer(containers.DeclarativeContainer):
         log_level=config.provided["logging"]["level"],
         log_file=config.provided["logging"]["file"],
     )
-    # loop = providers.Provider()
-    # loop = asyncio.get_event_loop()
+
     loop = providers.Singleton(asyncio.get_event_loop)
+
     world = providers.Singleton(
         World,
         physics_dt=config.provided["world"]["physics_dt"],
@@ -51,9 +51,7 @@ class AppContainer(containers.DeclarativeContainer):
     )
 
     ros_manager = providers.Singleton(
-        RosManager,
-        action_mode=config.provided["action_mode"],
-        loop=loop
+        RosManager, action_mode=config.provided["action_mode"], loop=loop
     )
 
     scene_manager = providers.Singleton(SceneManager)

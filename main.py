@@ -1,17 +1,19 @@
 import os
 
-ld_path = os.environ.get('LD_LIBRARY_PATH', '')
-os.environ['LD_LIBRARY_PATH'] = (
+ld_path = os.environ.get("LD_LIBRARY_PATH", "")
+os.environ["LD_LIBRARY_PATH"] = (
     f"/home/ubuntu/anaconda3/envs/env_isaaclab/lib/python3.10/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib"
     f":/opt/ros/humble/lib"
     f":/home/ubuntu/PycharmProjects/isaacsim-gsi/src/gsi_msgs/install/scene_msgs/lib"
     f":/home/ubuntu/PycharmProjects/isaacsim-gsi/src/gsi_msgs/install/plan_msgs/lib"
     f":{ld_path}"
 )
-py_path = os.environ.get('PYTHONPATH', '')
-os.environ['PYTHONPATH'] = f"/opt/ros/humble/local/lib/python3.10/dist-packages:{py_path}"
-os.environ['ROS_DISTRO'] = "humble"
-os.environ['RMW_IMPLEMENTATION'] = "rmw_fastrtps_cpp"
+py_path = os.environ.get("PYTHONPATH", "")
+os.environ["PYTHONPATH"] = (
+    f"/opt/ros/humble/local/lib/python3.10/dist-packages:{py_path}"
+)
+os.environ["ROS_DISTRO"] = "humble"
+os.environ["RMW_IMPLEMENTATION"] = "rmw_fastrtps_cpp"
 
 import sys
 
@@ -32,7 +34,11 @@ simulation_app = start_isaacsim_simulation_app(args.config_path)
 import asyncio
 
 # Third-party imports
-from dependency_injector.wiring import inject, Provide, providers  # Dependency injection imports
+from dependency_injector.wiring import (
+    inject,
+    Provide,
+    providers,
+)  # Dependency injection imports
 
 from isaacsim.core.api import World
 
@@ -63,10 +69,10 @@ rclpy.init(args=None)
 
 @inject
 def setup_simulation(
-        swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
-        env: Env = Provide[AppContainer.env],
-        world: World = Provide[AppContainer.world],
-        loop: asyncio.AbstractEventLoop = Provide[AppContainer.loop]
+    swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
+    env: Env = Provide[AppContainer.env],
+    world: World = Provide[AppContainer.world],
+    loop: asyncio.AbstractEventLoop = Provide[AppContainer.loop],
 ) -> None:
     """
     Setup simulation environment with injected dependencies.
@@ -136,7 +142,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "name": "car0",
             "position": [11.6, 3.5, 0],
             "color": [255, 255, 255],
-            "entity_type": "visual"
+            "entity_type": "visual",
         },
         "car1": {
             "shape_type": "cuboid",
@@ -145,7 +151,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "name": "car1",
             "position": [0.3, 3.5, 0],
             "color": [255, 255, 255],
-            "entity_type": "visual"
+            "entity_type": "visual",
         },
         "car2": {
             "shape_type": "cuboid",
@@ -154,7 +160,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "name": "car2",
             "position": [-13.2, 3.5, 0],
             "color": [255, 255, 255],
-            "entity_type": "visual"
+            "entity_type": "visual",
         },
         "car3": {
             "shape_type": "cuboid",
@@ -163,7 +169,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "scale": scale,
             "position": [-7.1, 10, 0],
             "color": [255, 255, 255],
-            "entity_type": "visual"
+            "entity_type": "visual",
         },
         "car4": {
             "shape_type": "cuboid",
@@ -173,12 +179,14 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "position": [-0.9, 30, 0],
             "orientation": [0.707, 0, 0, 0.707],
             "color": [255, 255, 255],
-            "entity_type": "visual"
+            "entity_type": "visual",
         },
     }
 
     created_prim_paths = []
-    logger.info(f"All semantics in scene:{scene_manager.count_semantics_in_scene().get('result')}")
+    logger.info(
+        f"All semantics in scene:{scene_manager.count_semantics_in_scene().get('result')}"
+    )
 
     for cube_name, config in cubes_config.items():
         creation_result = scene_manager.create_shape_unified(**config)
@@ -188,7 +196,9 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             created_prim_paths.append(prim_path)
 
             # Add semantic label
-            semantic_result = scene_manager.add_semantic(prim_path=prim_path, semantic_label="car")
+            semantic_result = scene_manager.add_semantic(
+                prim_path=prim_path, semantic_label="car"
+            )
             logger.info(semantic_result)
 
     return created_prim_paths
@@ -226,12 +236,9 @@ def process_semantic_detection(semantic_camera, map_semantic: MapSemantic) -> No
 def main():
     print("\n\n\n\ninto the main\n\n\n\n")
     # Setup dependency injection container
-
     reset_container()
     container = get_container()
-    # container.loop.override(
-    #     providers.Object(loop)
-    # )
+
     # Wire the container to this module for @inject decorators in skill functions
     container.wire(modules=[__name__])
 
@@ -263,7 +270,7 @@ def main():
 
     # Reset environment to ensure all objects are properly initialized
     env.reset()
-    grid_map.generate_grid_map('2d')
+    grid_map.generate_grid_map("2d")
     # Add physics callbacks for active robots
     for robot_class in swarm_manager.robot_class:
         for i, robot in enumerate(swarm_manager.robot_active[robot_class]):
@@ -320,7 +327,7 @@ def main():
         "orientation": [0.707, 0, 0, 0.707],
         "color": [255, 255, 255],
         "mass": 0.1,
-        "entity_type": "rigid"
+        "entity_type": "rigid",
     }
     # 在semantic map中添加这个物体的prim path
     semantic_map.map_semantic[object_name] = object_prim_path

@@ -18,7 +18,12 @@ import torch
 from isaacsim.core.api.controllers.base_controller import BaseController
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 
-from controller.controller_cfg_loader import get_articulation_props, get_physics_properties, get_robot_joint_properties, parse_env_config
+from controller.controller_cfg_loader import (
+    get_articulation_props,
+    get_physics_properties,
+    get_robot_joint_properties,
+    parse_env_config,
+)
 
 
 class PolicyController(BaseController):
@@ -57,11 +62,12 @@ class PolicyController(BaseController):
         #         carb.log_error("unable to add robot usd, usd_path not provided")
         #
         # # 移动到机器人本体中声明
-		# # 初始化机器人关节树
-        # if root_path == None:
-        #     self.robot = SingleArticulation(prim_path=prim_path, name=name, position=position, orientation=orientation)
-        # else:
-        #     self.robot = SingleArticulation(prim_path=root_path, name=name, position=position, orientation=orientation)
+
+    # # 初始化机器人关节树
+    # if root_path == None:
+    #     self.robot = SingleArticulation(prim_path=prim_path, name=name, position=position, orientation=orientation)
+    # else:
+    #     self.robot = SingleArticulation(prim_path=root_path, name=name, position=position, orientation=orientation)
 
     async def load_policy(self, policy_file_path, policy_env_path) -> None:
         """
@@ -74,14 +80,18 @@ class PolicyController(BaseController):
         # 读取策略
         result, _, file_content = await omni.client.read_file_async(policy_file_path)
         if result != omni.client.Result.OK:
-            carb.log_error(f"Failed to read policy file from {policy_file_path}. Result: {result}")
+            carb.log_error(
+                f"Failed to read policy file from {policy_file_path}. Result: {result}"
+            )
             return
         file = io.BytesIO(memoryview(file_content).tobytes())
         self.policy = torch.jit.load(file)
         # 读取环境配置
         self.policy_env_params = parse_env_config(policy_env_path)
         # 获取物理参数
-        self._decimation, self._dt, self.render_interval = get_physics_properties(self.policy_env_params)
+        self._decimation, self._dt, self.render_interval = get_physics_properties(
+            self.policy_env_params
+        )
 
     def initialize(
         self,
@@ -116,8 +126,8 @@ class PolicyController(BaseController):
         robot.switch_control_mode(control_mode)  # 'position'
 
         # 从配置文件加载关节属性
-        max_effort, max_vel, stiffness, damping, self.default_pos, self.default_vel = get_robot_joint_properties(
-            self.policy_env_params, robot.dof_names
+        max_effort, max_vel, stiffness, damping, self.default_pos, self.default_vel = (
+            get_robot_joint_properties(self.policy_env_params, robot.dof_names)
         )
         max_effort = torch.tensor(max_effort, dtype=torch.float32)
         max_vel = torch.tensor(max_vel, dtype=torch.float32)
@@ -129,33 +139,45 @@ class PolicyController(BaseController):
         # 应用参数到机器人
         if set_gains:
             # robot._articulation_view.set_gains(stiffness, damping) # 设置PD参数
-            robot.set_gains(kps=stiffness, kds=damping) # 设置PD参数
+            robot.set_gains(kps=stiffness, kds=damping)  # 设置PD参数
         if set_limits:
             # robot._articulation_view.set_max_efforts(max_effort) # 力矩限制
-            robot.set_max_efforts(max_effort) # 力矩限制
+            robot.set_max_efforts(max_effort)  # 力矩限制
             # robot._articulation_view.set_max_joint_velocities(max_vel) # 力矩限制
-            robot.set_max_joint_velocities(max_vel) # 力矩限制
+            robot.set_max_joint_velocities(max_vel)  # 力矩限制
         if set_articulation_props:
-            self._set_articulation_props(robot) # 设置高级物理属性
+            self._set_articulation_props(robot)  # 设置高级物理属性
 
-    def _set_articulation_props(self,robot) -> None:
+    def _set_articulation_props(self, robot) -> None:
         """
         高级关节属性设置.
         """
         # 从配置文件读取高级属性
         articulation_prop = get_articulation_props(self.policy_env_params)
-		# 物理求解器参数
-        solver_position_iteration_count = articulation_prop.get("solver_position_iteration_count") # 位置迭代次数
-        solver_velocity_iteration_count = articulation_prop.get("solver_velocity_iteration_count") # 速度迭代次数
-        stabilization_threshold = articulation_prop.get("stabilization_threshold") # 稳定阈值
-        enabled_self_collisions = articulation_prop.get("enabled_self_collisions") # 自碰撞开关
-        sleep_threshold = articulation_prop.get("sleep_threshold") # 休眠阈值
-		# 应用参数到机器人
+        # 物理求解器参数
+        solver_position_iteration_count = articulation_prop.get(
+            "solver_position_iteration_count"
+        )  # 位置迭代次数
+        solver_velocity_iteration_count = articulation_prop.get(
+            "solver_velocity_iteration_count"
+        )  # 速度迭代次数
+        stabilization_threshold = articulation_prop.get(
+            "stabilization_threshold"
+        )  # 稳定阈值
+        enabled_self_collisions = articulation_prop.get(
+            "enabled_self_collisions"
+        )  # 自碰撞开关
+        sleep_threshold = articulation_prop.get("sleep_threshold")  # 休眠阈值
+        # 应用参数到机器人
         if solver_position_iteration_count not in [None, float("inf")]:
             # robot.set_solver_position_iteration_count(solver_position_iteration_count)
-            robot.set_solver_position_iteration_counts([solver_position_iteration_count])
+            robot.set_solver_position_iteration_counts(
+                [solver_position_iteration_count]
+            )
         if solver_velocity_iteration_count not in [None, float("inf")]:
-            robot.set_solver_velocity_iteration_counts([solver_velocity_iteration_count])
+            robot.set_solver_velocity_iteration_counts(
+                [solver_velocity_iteration_count]
+            )
         if stabilization_threshold not in [None, float("inf")]:
             robot.set_stabilization_thresholds([stabilization_threshold])
         if isinstance(enabled_self_collisions, bool):
@@ -165,17 +187,17 @@ class PolicyController(BaseController):
 
     def _compute_action(self, obs: np.ndarray) -> np.ndarray:
         """
-       策略推理方法.
+        策略推理方法.
 
-        Args:
-            obs (np.ndarray): 观测值.
+         Args:
+             obs (np.ndarray): 观测值.
 
-        Returns:
-            np.ndarray: 动作.
+         Returns:
+             np.ndarray: 动作.
         """
         with torch.no_grad():
-            obs = torch.from_numpy(obs).view(1, -1).float() # 转换为PyTorch张量
-            action = self.policy(obs).detach().view(-1).numpy() # 策略推理
+            obs = torch.from_numpy(obs).view(1, -1).float()  # 转换为PyTorch张量
+            action = self.policy(obs).detach().view(-1).numpy()  # 策略推理
         return action
 
     def _compute_observation(self) -> NotImplementedError:

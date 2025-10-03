@@ -34,7 +34,9 @@ class PlanExecutionServer(Node):
             action_name="/isaac_sim/plan_execution",
             execute_callback=self.execute_callback_wrapper,
         )
-        self.skill_client_action_server = SkillActionClientNode(node_name="skill_client_action_server", loop=self.loop)
+        self.skill_client_action_server = SkillActionClientNode(
+            node_name="skill_client_action_server", loop=self.loop
+        )
         logger.info("✅ Parallel Plan Dispatch Server is ready.")
 
     def execute_callback_wrapper(self, goal_handle):
@@ -73,7 +75,7 @@ class PlanExecutionServer(Node):
                     robot_name=robot_name,
                     skill_name=skill_name,
                     params=params,
-                    feedback_handler=self._handle_skill_feedback
+                    feedback_handler=self._handle_skill_feedback,
                 )
                 tasks.append(task)
 
@@ -94,7 +96,9 @@ class PlanExecutionServer(Node):
                 for i, res in enumerate(results):
                     if not res.get("success", False):
                         failed_robot = step.robots[i].robot_id
-                        logger.error(f"Robot '{failed_robot}' failed with message: {res.get('message')}")
+                        logger.error(
+                            f"Robot '{failed_robot}' failed with message: {res.get('message')}"
+                        )
 
                 goal_handle.abort()
                 return PlanExecution.Result(success=False, message=error_msg)
@@ -113,6 +117,9 @@ class PlanExecutionServer(Node):
     #     if goal_handle.is_active:
     #         goal_handle.publish_feedback(agg_feedback)
 
-    def _handle_skill_feedback(self, robot_name: str, feedback: SkillExecution.Feedback):
-        logger.info(f"[PLANNER Server FEEDBACK] Robot '{robot_name}': {feedback.status}")
-
+    def _handle_skill_feedback(
+        self, robot_name: str, feedback: SkillExecution.Feedback
+    ):
+        logger.info(
+            f"[PLANNER Server FEEDBACK] Robot '{robot_name}': {feedback.status}"
+        )

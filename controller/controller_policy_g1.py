@@ -17,6 +17,7 @@ import omni.kit.commands
 from isaacsim.core.utils.nucleus import get_assets_root_path
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
 from isaacsim.core.utils.types import ArticulationAction
+
 # from isaacsim.robot.policy.examples.controllers import PolicyController
 # from isaacsim.storage.native import get_assets_root_path  #  暂不清除和nuclues的区别
 
@@ -25,13 +26,13 @@ class G1FlatTerrainPolicy(PolicyController):
     """The G1 Humanoid running Flat Terrain Policy Locomotion Policy"""
 
     def __init__(
-            self,
-            prim_path: str,
-            root_path: Optional[str] = None,
-            name: str = "g1",
-            usd_path: Optional[str] = None,
-            position: Optional[np.ndarray] = None,
-            orientation: Optional[np.ndarray] = None,
+        self,
+        prim_path: str,
+        root_path: Optional[str] = None,
+        name: str = "g1",
+        usd_path: Optional[str] = None,
+        position: Optional[np.ndarray] = None,
+        orientation: Optional[np.ndarray] = None,
     ) -> None:
         """
         Initialize G1 robot and import flat terrain policy.
@@ -58,7 +59,6 @@ class G1FlatTerrainPolicy(PolicyController):
         self._policy_counter = 0
         # from controller.controller_policy import PolicyController
         # self.policy_runner = PolicyController()
-
 
     def _compute_observation(self, command):
         """
@@ -113,7 +113,9 @@ class G1FlatTerrainPolicy(PolicyController):
             self.action = self._compute_action(obs)
             self._previous_action = self.action.copy()
 
-        action = ArticulationAction(joint_positions=self.default_pos + (self.action * self._action_scale))
+        action = ArticulationAction(
+            joint_positions=self.default_pos + (self.action * self._action_scale)
+        )
         self.robot.apply_action(action)
 
         self._policy_counter += 1
@@ -123,6 +125,7 @@ class G1FlatTerrainPolicy(PolicyController):
         Overloads the default initialize function to use default articulation root properties in the USD
         """
         return super().initialize(set_articulation_props=False)
+
 
 if __name__ == "__main__":
     pass

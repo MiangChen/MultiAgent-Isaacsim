@@ -35,8 +35,12 @@ def parse_env_config(env_config_path: str = "env.yaml") -> dict:
             # The node is expected to be a sequence node
             return tuple(loader.construct_sequence(node))
 
-    SafeLoaderIgnoreUnknown.add_constructor("tag:yaml.org,2002:python/tuple", SafeLoaderIgnoreUnknown.tuple_constructor)
-    SafeLoaderIgnoreUnknown.add_constructor(None, SafeLoaderIgnoreUnknown.ignore_unknown)
+    SafeLoaderIgnoreUnknown.add_constructor(
+        "tag:yaml.org,2002:python/tuple", SafeLoaderIgnoreUnknown.tuple_constructor
+    )
+    SafeLoaderIgnoreUnknown.add_constructor(
+        None, SafeLoaderIgnoreUnknown.ignore_unknown
+    )
 
     file_content = omni.client.read_file(env_config_path)[2]
     file = io.BytesIO(memoryview(file_content).tobytes())
@@ -46,7 +50,9 @@ def parse_env_config(env_config_path: str = "env.yaml") -> dict:
 
 def get_robot_joint_properties(
     data: dict, joint_names: List[str]
-) -> Tuple[List[float], List[float], List[float], List[float], List[float], List[float]]:
+) -> Tuple[
+    List[float], List[float], List[float], List[float], List[float], List[float]
+]:
     """
     Gets the robot joint properties from the environment configuration data.
 
@@ -84,7 +90,9 @@ def get_robot_joint_properties(
         elif isinstance(effort_limit, dict):
             effort_limits.update(effort_limit)
         else:
-            carb.log_error(f"Failed to parse effort limit, expected float, int, or dict, got: {type(effort_limit)}")
+            carb.log_error(
+                f"Failed to parse effort limit, expected float, int, or dict, got: {type(effort_limit)}"
+            )
 
         if isinstance(velocity_limit, (float, int)) or velocity_limit is None:
             if velocity_limit is None or velocity_limit == float("inf"):
@@ -94,7 +102,9 @@ def get_robot_joint_properties(
         elif isinstance(velocity_limit, dict):
             velocity_limits.update(velocity_limit)
         else:
-            carb.log_error(f"Failed to parse velocity limit, expected float, int, or dict, got: {type(velocity_limit)}")
+            carb.log_error(
+                f"Failed to parse velocity limit, expected float, int, or dict, got: {type(velocity_limit)}"
+            )
 
         if isinstance(joint_stiffness, (float, int)) or joint_stiffness is None:
             if joint_stiffness is None:
@@ -104,7 +114,9 @@ def get_robot_joint_properties(
         elif isinstance(joint_stiffness, dict):
             stiffness.update(joint_stiffness)
         else:
-            carb.log_error(f"Failed to parse stiffness, expected float, int, or dict, got: {type(joint_stiffness)}")
+            carb.log_error(
+                f"Failed to parse stiffness, expected float, int, or dict, got: {type(joint_stiffness)}"
+            )
 
         if isinstance(joint_damping, (float, int)) or joint_damping is None:
             if joint_damping is None:
@@ -114,7 +126,9 @@ def get_robot_joint_properties(
         elif isinstance(joint_damping, dict):
             damping.update(joint_damping)
         else:
-            carb.log_error(f"Failed to parse damping, expected float, int, or dict, got: {type(joint_damping)}")
+            carb.log_error(
+                f"Failed to parse damping, expected float, int, or dict, got: {type(joint_damping)}"
+            )
 
     # parse default joint position
     init_joint_pos = data.get("scene").get("robot").get("init_state").get("joint_pos")
@@ -225,7 +239,11 @@ def get_physics_properties(data: dict) -> dict:
     Returns:
         tuple: A tuple containing the decimation, dt, and render interval.
     """
-    return data.get("decimation"), data.get("sim").get("dt"), data.get("sim").get("render_interval")
+    return (
+        data.get("decimation"),
+        data.get("sim").get("dt"),
+        data.get("sim").get("render_interval"),
+    )
 
 
 def get_observations(data: dict) -> dict:

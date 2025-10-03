@@ -1,4 +1,3 @@
-
 class ControllerPID:
     """
     一个简单的 PID 控制器。
@@ -70,8 +69,9 @@ class ControllerPID:
 
         return output
 
+
 # 示例用法
-if __name__ == '__main__':
+if __name__ == "__main__":
     # 创建 PID 控制器
     pid = ControllerPID(Kp=1.0, Ki=0.1, Kd=0.01, target=10.0)
 
@@ -90,4 +90,6 @@ if __name__ == '__main__':
         current_value += control_signal * dt
 
         # 打印信息
-        print(f"Iteration {i+1}: Current Value = {current_value:.2f}, Control Signal = {control_signal:.2f}")
+        print(
+            f"Iteration {i+1}: Current Value = {current_value:.2f}, Control Signal = {control_signal:.2f}"
+        )

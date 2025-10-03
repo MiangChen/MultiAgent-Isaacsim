@@ -3,7 +3,7 @@ import pickle
 
 class Unpickler(pickle.Unpickler):
     def find_class(self, module, name):
-        if name == 'Normalizer' and module == 'rsl_rl.utils.utils':
+        if name == "Normalizer" and module == "rsl_rl.utils.utils":
             from controller.normalizer import Normalizer
 
             return Normalizer

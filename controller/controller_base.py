@@ -12,8 +12,7 @@ class BaseCfg(BaseModel):
         return self.model_copy(update=kwargs, deep=True)
 
 
-
-class ControllerCfg(BaseCfg, extra='allow'):
+class ControllerCfg(BaseCfg, extra="allow"):
     """
     A specialized model representing controllers within a system, inheriting from BaseModel with an extended configuration to allow additional keys.
 
@@ -35,28 +34,31 @@ class ControllerCfg(BaseCfg, extra='allow'):
 
     name: str
     type: str
-    sub_controllers: Optional[List['ControllerCfg']] = None
+    sub_controllers: Optional[List["ControllerCfg"]] = None
 
 
 class DifferentialDriveControllerCfg(ControllerCfg):
 
-    type: Optional[str] = 'DifferentialDriveController'
+    type: Optional[str] = "DifferentialDriveController"
     wheel_radius: float
     wheel_base: float
 
+
 class MoveAlongPathPointsControllerCfg(ControllerCfg):
-    name: Optional[str] = 'move_along_path'
-    type: Optional[str] = 'MoveAlongPathPointsController'
+    name: Optional[str] = "move_along_path"
+    type: Optional[str] = "MoveAlongPathPointsController"
     forward_speed: Optional[float] = None
     rotation_speed: Optional[float] = None
     threshold: Optional[float] = None
+
 
 class MoveToPointBySpeedControllerCfg(ControllerCfg):
 
-    type: Optional[str] = 'MoveToPointBySpeedController'
+    type: Optional[str] = "MoveToPointBySpeedController"
     forward_speed: Optional[float] = None
     rotation_speed: Optional[float] = None
     threshold: Optional[float] = None
+
 
 #
 # move_by_speed_cfg = DifferentialDriveControllerCfg(name='move_by_speed', wheel_base=0.1125, wheel_radius=0.03)

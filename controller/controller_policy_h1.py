@@ -20,13 +20,13 @@ class H1FlatTerrainPolicy(PolicyController):
 
     # 1. __init__ 方法现在是完全同步和轻量级的
     def __init__(
-            self,
-            prim_path: str,
-            root_path: Optional[str] = None,
-            name: str = "h1",
-            usd_path: Optional[str] = None,
-            position: Optional[np.ndarray] = None,
-            orientation: Optional[np.ndarray] = None,
+        self,
+        prim_path: str,
+        root_path: Optional[str] = None,
+        name: str = "h1",
+        usd_path: Optional[str] = None,
+        position: Optional[np.ndarray] = None,
+        orientation: Optional[np.ndarray] = None,
     ) -> None:
         """
         Initializes the H1 robot's basic properties.
@@ -61,13 +61,13 @@ class H1FlatTerrainPolicy(PolicyController):
     # 3. 创建异步工厂 @classmethod 作为新的实例化入口
     @classmethod
     async def create(
-            cls,
-            prim_path: str,
-            root_path: Optional[str] = None,
-            name: str = "h1",
-            usd_path: Optional[str] = None,
-            position: Optional[np.ndarray] = None,
-            orientation: Optional[np.ndarray] = None,
+        cls,
+        prim_path: str,
+        root_path: Optional[str] = None,
+        name: str = "h1",
+        usd_path: Optional[str] = None,
+        position: Optional[np.ndarray] = None,
+        orientation: Optional[np.ndarray] = None,
     ) -> "H1FlatTerrainPolicy":
         """
         Asynchronously creates and fully initializes an H1FlatTerrainPolicy instance,
@@ -141,7 +141,9 @@ class H1FlatTerrainPolicy(PolicyController):
             obs = self._compute_observation(command, robot)
             self.action = self._compute_action(obs)
             self._previous_action = self.action.copy()
-        position = np.tile(np.array(self.default_pos + (self.action * self._action_scale)), (1, 1))
+        position = np.tile(
+            np.array(self.default_pos + (self.action * self._action_scale)), (1, 1)
+        )
         self._policy_counter += 1
         return position
 

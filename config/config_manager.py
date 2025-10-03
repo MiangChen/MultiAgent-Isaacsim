@@ -58,7 +58,9 @@ class ConfigManager:
         # 2. 将命令行参数覆盖到配置上
         cli_args_dict = vars(self.args)
         if cli_args_dict.get("namespace") is not None:
-            namespaces_list = [ns.strip() for ns in cli_args_dict["namespace"].split(',') if ns.strip()]
+            namespaces_list = [
+                ns.strip() for ns in cli_args_dict["namespace"].split(",") if ns.strip()
+            ]
             self.config["namespace"] = namespaces_list
 
         # 3. 计算派生路径和值
