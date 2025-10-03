@@ -64,7 +64,7 @@ class SwarmNode(Node):
         return pub
 
     def register_cmd_subscriber(
-            self, robot_class: str, robot_id: int, callback=None, qos=50
+        self, robot_class: str, robot_id: int, callback=None, qos=50
     ):
         """
         注册一个cmd subscriber

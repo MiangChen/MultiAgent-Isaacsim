@@ -41,8 +41,7 @@ class RosManager:
         self.swarm_node = SwarmNode()
 
         self.plan_execution_action_server = PlanExecutionServer(
-            loop=self.loop,
-            swarm_manager=self.swarm_manager
+            loop=self.loop, swarm_manager=self.swarm_manager
         )
         self.skill_client_action_server = (
             self.plan_execution_action_server.skill_client_action_server

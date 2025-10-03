@@ -77,7 +77,9 @@ class SkillActionClientNode(Node):
         # 6. 返回 asyncio 的 Future
         return aio_future
 
-    async def send_skill_goal(self, robot_name: str, skill_name: str, params: dict, feedback_handler=None):
+    async def send_skill_goal(
+        self, robot_name: str, skill_name: str, params: dict, feedback_handler=None
+    ):
         """
         异步发送一个技能目标，并等待最终结果。
         feedback_handler: 一个可选的回调函数, 用于处理实时的feedback.可以接受(robot_name, feedback_msg)两个参数
@@ -86,8 +88,12 @@ class SkillActionClientNode(Node):
 
         action_client = self.get_action_client(robot_name)
 
-        if not await self.loop.run_in_executor(None, lambda: action_client.wait_for_server(timeout_sec=3.0)):
-            logger.error(f"Action server for '{robot_name}' not available after waiting.")
+        if not await self.loop.run_in_executor(
+            None, lambda: action_client.wait_for_server(timeout_sec=3.0)
+        ):
+            logger.error(
+                f"Action server for '{robot_name}' not available after waiting."
+            )
             return {"success": False, "message": "Server not available."}
 
         # ====================================================================
@@ -138,8 +144,7 @@ class SkillActionClientNode(Node):
                 feedback_handler(robot_name, feedback)
 
         send_goal_rclpy_future = action_client.send_goal_async(
-            goal=goal_msg,
-            feedback_callback=feedback_callback
+            goal=goal_msg, feedback_callback=feedback_callback
         )
 
         try:
