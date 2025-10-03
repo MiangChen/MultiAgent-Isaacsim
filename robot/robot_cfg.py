@@ -30,4 +30,4 @@ class RobotCfg(BaseCfg):
     # controllers: Optional[List[ControllerCfg]] = None
     # cameras: Optional[List[SensorCfg]] = None
 
-    cameras: Optional[Dict[CameraCfg]] = []
+    camera: Optional[Dict[CameraCfg]] = []
