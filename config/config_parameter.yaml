@@ -1,6 +1,6 @@
 simulation_app_config:
   renderer: "RaytracedLighting"
-  headless: False # 是否关闭渲染界面
+  headless: True # 是否关闭渲染界面
   anti_aliasing: 0
 
 # 定义启动时需要启用的扩展列表
@@ -40,9 +40,6 @@ world:
   rendering_dt: 0.0167 # 60hz
   stage_units_in_meters: 1
 
-ros: True
-ros_action: True
-action_mode: True
 
 # 栅格地图
 map:
@@ -71,26 +68,8 @@ logging:
   level: "INFO" # 可选: DEBUG, INFO, WARNING, ERROR, CRITICAL
   file: "logs/app.log" # 相对于项目根目录，或使用绝对路径
 
-# --- 进程管理 ---
-process:
-  pid_file: null # 例如: "/var/run/isaac_sim.pid" 或 null
-  status_file: null # 例如: "status.json" 或 null
-  shutdown_timeout: 10.0 # 优雅关机超时 (秒)
-
-  metrics:
-    enable: true
-    port: 9100
-
-  health_check:
-    enable: true
-    interval: 30.0 # 检查间隔 (秒)
-
-  auto_restart:
-    enable: false
-    max_attempts: 3
-
-# --- 性能配置 ---
-performance:
-  # 可选: 'low_impact', 'high_performance', 'balanced'
-  # 你可以在代码中根据这个值来设定一组参数
-  mode: 'balanced'
+# ROS相关
+ros:
+  node_enable:
+    node_scene_monitor: False
+    node_action_server_plan_execution: True

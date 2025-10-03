@@ -12,33 +12,33 @@ logger = LogManager.get_logger(__name__)
 
 class RosManager:
 
-    def __init__(self, loop=None):
+    def __init__(self, loop=None, config: dict = None):
+        self.config = config if config is not None else {}
 
-        self.node_scene_monitor = None
-        self.action_server_plan_execution = None
-        self.action_server_skill_client = None
+        self.node = []
 
+        self.executor = MultiThreadedExecutor()
         self.loop = loop
         self.stop_event = threading.Event()
         self.thread = None
 
-        self.executor = MultiThreadedExecutor()
         self.build_nodes()
 
     def build_nodes(self) -> None:
-        """构建所有ROS节点"""
-        self.node_scene_monitor = NodeSceneMonitor()
-
-        self.action_server_plan_execution = NodeActionServerPlanExecution(loop=self.loop)
-        self.action_server_skill_client = (
-            self.action_server_plan_execution.action_server_skill_client
-        )
+        """构建ROS节点"""
+        config_node_enable = self.config.get("node_enable", {})
+        if config_node_enable.get("node_scene_monitor", False):
+            self.node.append(NodeSceneMonitor())
+        if config_node_enable.get("node_action_server_plan_execution", False):
+            node = NodeActionServerPlanExecution(loop=self.loop)
+            self.node.append(node)
+            self.node.append(node.action_server_skill_client)
 
         logger.info("ROS nodes built successfully.")
 
     def start(self):
         """在后台线程中启动ROS节点"""
-        if not self.action_server_plan_execution:
+        if not self.node:
             logger.warning("ROS nodes not built. Cannot start.")
             return
 
@@ -48,20 +48,15 @@ class RosManager:
 
     def _spin_in_background(self):
         """后台运行ROS节点的实际工作函数"""
-        nodes = [
-            self.action_server_plan_execution,
-            self.action_server_skill_client,
-            self.node_scene_monitor,
-        ]
 
         try:
-            for n in nodes:
+            for n in self.node:
                 if n:
                     self.executor.add_node(n)
             while not self.stop_event.is_set():
                 self.executor.spin_once(timeout_sec=0.05)
         finally:
-            for n in nodes:
+            for n in self.node:
                 if n and self.executor:
                     self.executor.remove_node(n)
                     n.destroy_node()

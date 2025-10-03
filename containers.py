@@ -51,7 +51,7 @@ class AppContainer(containers.DeclarativeContainer):
     )
 
     ros_manager = providers.Singleton(
-        RosManager, loop=loop
+        RosManager, loop=loop, config=config.provided["ros"]
     )
 
     scene_manager = providers.Singleton(SceneManager)
@@ -66,11 +66,6 @@ class AppContainer(containers.DeclarativeContainer):
         scene_manager=scene_manager,
     )
 
-    # skill_manager = providers.Singleton(
-    #     SkillManager,
-    #     semantic_map=semantic_map,
-    #     swarm_manager=swarm_manager,
-    # )
 
     env = providers.Factory(
         Env,
