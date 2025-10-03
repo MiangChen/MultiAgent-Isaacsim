@@ -1,5 +1,7 @@
 import asyncio
+import functools
 import threading
+import uuid
 
 from rclpy.action import ActionServer
 from rclpy.node import Node
@@ -37,6 +39,10 @@ class PlanExecutionServer(Node):
         self.skill_client_action_server = SkillActionClientNode(
             node_name="skill_client_action_server", loop=self.loop
         )
+
+        self._feedback_state = {}
+        self._feedback_lock = threading.Lock()
+
         logger.info("✅ Parallel Plan Dispatch Server is ready.")
 
     def execute_callback_wrapper(self, goal_handle):
@@ -57,37 +63,31 @@ class PlanExecutionServer(Node):
 
         for step in plan.steps:
             logger.info(f"--- Starting Timestep {step.timestep} ---")
-            tasks = []
-            for robot_skill in step.robots:
-                robot_name = robot_skill.robot_id
+            with self._feedback_lock:
+                self._feedback_state.clear()
 
-                if not robot_skill.skill_list:
-                    logger.warn(
-                        f"Robot '{robot_name}' has an empty skill list in timestep {step.timestep}. Skipping."
-                    )
+            tasks = []
+            for robot_skill_msg in step.robots:
+                if not robot_skill_msg.skill_list:
                     continue
 
-                skill_info = robot_skill.skill_list[0]
-                skill_name = skill_info.skill
-                params = {p.key: p.value for p in skill_info.params}
+                feedback_handler = functools.partial(
+                    self._handle_skill_feedback,
+                    plan_goal_handle=goal_handle,
+                    current_timestep=step.timestep,
+                )
 
                 task = self.skill_client_action_server.send_skill_goal(
-                    robot_name=robot_name,
-                    skill_name=skill_name,
-                    params=params,
-                    feedback_handler=self._handle_skill_feedback,
+                    robot_skill_msg=robot_skill_msg,
+                    feedback_handler=feedback_handler,
                 )
                 tasks.append(task)
 
             if not tasks:
-                logger.info(
-                    f"Timestep {step.timestep} has no tasks. Moving to next step."
-                )
+                logger.info(f"Timestep {step.timestep} has no tasks. Moving to next step.")
                 continue
 
-            logger.info(
-                f"Dispatching {len(tasks)} concurrent skills for timestep {step.timestep}..."
-            )
+            logger.info(f"Dispatching {len(tasks)} concurrent skills for timestep {step.timestep}...")
             results = await asyncio.gather(*tasks)
 
             if not all(res.get("success", False) for res in results):
@@ -96,9 +96,7 @@ class PlanExecutionServer(Node):
                 for i, res in enumerate(results):
                     if not res.get("success", False):
                         failed_robot = step.robots[i].robot_id
-                        logger.error(
-                            f"Robot '{failed_robot}' failed with message: {res.get('message')}"
-                        )
+                        logger.error(f"Robot '{failed_robot}' failed with message: {res.get('message')}")
 
                 goal_handle.abort()
                 return PlanExecution.Result(success=False, message=error_msg)
@@ -108,18 +106,43 @@ class PlanExecutionServer(Node):
         logger.info("✅ Plan dispatched and executed successfully.")
         return PlanExecution.Result(success=True, message="Plan executed successfully.")
 
-    # def _publish_aggregated_feedback(
-    #         self, goal_handle, current_timestep, feedback_state
-    # ):
-    #     agg_feedback = PlanExecution.Feedback()
-    #     agg_feedback.current_timestep = current_timestep
-    #     agg_feedback.skill_statuses = list(feedback_state.values())
-    #     if goal_handle.is_active:
-    #         goal_handle.publish_feedback(agg_feedback)
-
     def _handle_skill_feedback(
-        self, robot_name: str, feedback: SkillExecution.Feedback
+            self,
+            robot_skill_msg: RobotSkill,
+            skill_execution_feedback: SkillExecution.Feedback,
+            plan_goal_handle,
+            current_timestep: int,
     ):
-        logger.info(
-            f"[PLANNER Server FEEDBACK] Robot '{robot_name}': {feedback.status}"
-        )
+        """
+        处理单个技能的反馈，并聚合发布 PlanExecution 的反馈。
+        完全按照 plan_msgs/SkillFeedback 格式进行构建。
+        """
+        robot_name = robot_skill_msg.robot_id
+        skill_info = robot_skill_msg.skill_list[0]
+
+        # --- 1. 转换格式为 plan_msgs/SkillFeedback ---
+
+        with self._feedback_lock:
+            # 获取或创建一个新的 SkillFeedback 对象
+            current_skill_feedback = self._feedback_state.get(robot_name)
+            if not current_skill_feedback:
+                current_skill_feedback = SkillFeedback()
+                current_skill_feedback.robot_id = robot_name
+                current_skill_feedback.skill_name = skill_info.skill
+                # 生成一个唯一的ID，用于跟踪这次技能执行实例
+                current_skill_feedback.skill_id = str(uuid.uuid4())
+                self._feedback_state[robot_name] = current_skill_feedback
+
+            # 更新状态
+            current_skill_feedback.status = skill_execution_feedback.status
+
+            # --- 2. 聚合并发送 PlanExecution 反馈 ---
+            agg_feedback = PlanExecution.Feedback()
+            agg_feedback.current_timestep = current_timestep
+            agg_feedback.skill_statuses = list(self._feedback_state.values())
+
+            if goal_handle.is_active:
+                logger.info(
+                    f"Publishing aggregated feedback for timestep {current_timestep} with {len(agg_feedback.skill_statuses)} statuses."
+                )
+                goal_handle.publish_feedback(agg_feedback)

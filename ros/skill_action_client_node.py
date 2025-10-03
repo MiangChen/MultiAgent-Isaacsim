@@ -36,9 +36,6 @@ class SkillActionClientNode(Node):
         self._client_lock = threading.Lock()
         self.loop = loop
 
-        # if not self.loop:
-        #     raise RuntimeError("Asyncio loop not available.")
-
     def get_action_client(self, robot_name: str) -> ActionClient:
         """
         获取或创建一个到特定机器人的ActionClient。
@@ -77,71 +74,40 @@ class SkillActionClientNode(Node):
         # 6. 返回 asyncio 的 Future
         return aio_future
 
-    async def send_skill_goal(
-        self, robot_name: str, skill_name: str, params: dict, feedback_handler=None
-    ):
+    async def send_skill_goal(self, robot_skill_msg: RobotSkill, feedback_handler=None):
         """
         异步发送一个技能目标，并等待最终结果。
         feedback_handler: 一个可选的回调函数, 用于处理实时的feedback.可以接受(robot_name, feedback_msg)两个参数
         """
-        logger.info(f"Preparing to send skill '{skill_name}' to robot '{robot_name}'")
+        robot_name = robot_skill_msg.robot_id
+        skill_name = (
+            robot_skill_msg.skill_list[0].skill if robot_skill_msg.skill_list else "unknown"
+        )
 
         action_client = self.get_action_client(robot_name)
-
         if not await self.loop.run_in_executor(
-            None, lambda: action_client.wait_for_server(timeout_sec=3.0)
+                None, lambda: action_client.wait_for_server(timeout_sec=3.0)
         ):
-            logger.error(
-                f"Action server for '{robot_name}' not available after waiting."
-            )
+            logger.error(f"Action server for '{robot_name}' not available after waiting.")
             return {"success": False, "message": "Server not available."}
 
-        # ====================================================================
-        #            精准构建 Goal 消息 (完全匹配你的接口)
-        # ====================================================================
+        logger.info(f"Preparing to send skill '{skill_name}' to robot '{robot_name}'")
 
-        # 步骤 1: 创建顶层的 Goal 对象
+        # 创建顶层的 Goal 对象
         goal_msg = SkillExecution.Goal()
-
-        # 步骤 2: 创建 `skill_request` 字段所需的对象，即 `RobotSkill` 消息
-        # RobotSkill.msg 定义为: `string robot_id`, `SkillInfo[] skill_list`
-        robot_skill_msg = RobotSkill()
-        robot_skill_msg.robot_id = robot_name
-
-        # 步骤 3: 创建并填充 `skill_list` 中的 `SkillInfo` 对象
-        skill_info_msg = SkillInfo()
-        skill_info_msg.skill = skill_name
-
-        # 步骤 4: 填充 `params` 列表，其中每个元素都是 `Parameter` 对象
-        param_list = []
-        for key, value in params.items():
-            param_msg = Parameter()
-            param_msg.key = str(key)
-            param_msg.value = str(value)
-            param_list.append(param_msg)
-
-        # 将参数列表赋值给 SkillInfo 对象
-        skill_info_msg.params = param_list
-
-        # 步骤 5: 将填充好的 SkillInfo 对象添加到 RobotSkill 的 `skill_list` 数组中
-        robot_skill_msg.skill_list.append(skill_info_msg)
-
-        # 步骤 6: 最后，将完整的 `robot_skill_msg` 赋值给 Goal 的 `skill_request` 字段
         goal_msg.skill_request = robot_skill_msg
-
-        # ====================================================================
-        #                        消息构建完成
-        # ====================================================================
 
         logger.info(f"Sending goal to '{robot_name}': {goal_msg}")
 
         def feedback_callback(feedback_msg):
             feedback = feedback_msg.feedback
-            # 根据 SkillExecution.action 定义，feedback 只有一个字段: `string status`
             logger.info(f"Received feedback from '{robot_name}': {feedback.status}")
 
             if feedback_handler:
-                feedback_handler(robot_name, feedback)
+                try:
+                    feedback_handler(robot_skill_msg, feedback)
+                except Exception as e:
+                    logger.error(f"Error in custom feedback handler for '{robot_name}': {e}")
 
         send_goal_rclpy_future = action_client.send_goal_async(
             goal=goal_msg, feedback_callback=feedback_callback

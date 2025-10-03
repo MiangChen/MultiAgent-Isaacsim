@@ -181,16 +181,14 @@ class RobotBase:
                 self.state_skill_complete = True  # 重置状态
                 logger.info(f"Skill '{skill_name}' was canceled.")
                 return SkillExecution.Result(success=False, message="Skill execution was canceled by client.")
-
-            # 执行一小步工作
+            # 模拟工作
             import time
-            time.sleep(2)  # 模拟工作
+            time.sleep(2)
             # 发送反馈
             feedback_msg.status = f"Executing step {i + 1} of 10 for skill '{skill_name}'."
             goal_handle.publish_feedback(feedback_msg)
             logger.info(f"Feedback: {feedback_msg.status}")
 
-        # --- 3. 完成与结果 ---
         self.state_skill_complete = True
         goal_handle.succeed()
         result = SkillExecution.Result()
