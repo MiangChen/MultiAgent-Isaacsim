@@ -19,9 +19,9 @@ from log.log_manager import LogManager
 logger = LogManager.get_logger(__name__)
 
 
-class SceneMonitorNode(Node):
+class NodeSceneMonitor(Node):
     def __init__(self):
-        super().__init__("SceneMonitor")
+        super().__init__("node_scene_monitor")
         self.modification_publisher = self.create_publisher(
             SceneModifications, "/SceneMonitor", 10
         )

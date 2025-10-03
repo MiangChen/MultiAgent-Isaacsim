@@ -49,7 +49,7 @@ from gsi2isaacsim.gsi_msgs_helper import (
     Parameter,
     VelTwistPose,
 )
-from ros.robot_node import RobotNode
+from ros.node_robot import NodeRobot
 
 
 def _get_viewport_manager_from_container():
@@ -176,7 +176,7 @@ class RobotBase:
         self.transform_camera_pos = np.array([0, 0, 0])
 
         # 机器人的ros node
-        self.node = RobotNode(robot_name=self.name)
+        self.node = NodeRobot(robot_name=self.name)
         self.skill_action_server = ActionServer(
             node=self.node,
             action_type=SkillExecution,

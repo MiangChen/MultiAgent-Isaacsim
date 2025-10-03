@@ -25,12 +25,12 @@ from log.log_manager import LogManager
 logger = LogManager.get_logger(__name__)
 
 
-class SkillActionClientNode(Node):
+class NodeActionClientSkill(Node):
     """
     一个通用的技能Action客户端，可以与任何一个RobotBase的skill_server通信。
     """
 
-    def __init__(self, node_name="skill_client_node", loop=None):
+    def __init__(self, node_name="node_action_client_skill", loop=None):
         super().__init__(node_name)
         self._action_clients = {}
         self._client_lock = threading.Lock()

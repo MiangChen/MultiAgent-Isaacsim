@@ -5,8 +5,8 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
 from gsi2isaacsim.gsi_msgs_helper import Plan
-from ros.plan_execution_action_server_node import PlanExecutionServer
-from ros.scene_monitor_node import SceneMonitorNode
+from ros.node_action_server_plan_execution import NodeActionServerPlanExecution
+from ros.node_scene_monitor import NodeSceneMonitor
 from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
@@ -29,9 +29,9 @@ class RosManager:
 
     def build_nodes(self) -> None:
         """构建所有ROS节点"""
-        self.scene_monitor_node = SceneMonitorNode()
+        self.scene_monitor_node = NodeSceneMonitor()
 
-        self.plan_execution_action_server = PlanExecutionServer(loop=self.loop)
+        self.plan_execution_action_server = NodeActionServerPlanExecution(loop=self.loop)
         self.skill_client_action_server = (
             self.plan_execution_action_server.skill_client_action_server
         )

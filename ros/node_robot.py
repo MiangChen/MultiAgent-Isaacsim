@@ -5,7 +5,7 @@ from log.log_manager import LogManager
 logger = LogManager.get_logger(__name__)
 
 
-class RobotNode(Node):
+class NodeRobot(Node):
     """
     为单个机器人实体管理所有ROS2通信的节点。
     """

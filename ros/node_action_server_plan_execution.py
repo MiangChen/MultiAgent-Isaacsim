@@ -16,19 +16,19 @@ from gsi2isaacsim.gsi_msgs_helper import (
     SkillExecution,
     SkillFeedback,
 )
-from ros.skill_action_client_node import SkillActionClientNode
+from ros.node_action_client_skill import NodeActionClientSkill
 from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
 
 
-class PlanExecutionServer(Node):
+class NodeActionServerPlanExecution(Node):
     """
     并行的任务调度动作服务器（调度器/Orchestrator）。
     """
 
     def __init__(self, loop):
-        super().__init__(node_name="plan_execution_action_server")
+        super().__init__(node_name="node_action_server_plan_execution")
         self.loop = loop
         self.plan_execution_action_server = ActionServer(
             self,
@@ -36,7 +36,7 @@ class PlanExecutionServer(Node):
             action_name="/isaac_sim/plan_execution",
             execute_callback=self.execute_callback_wrapper,
         )
-        self.skill_client_action_server = SkillActionClientNode(
+        self.skill_client_action_server = NodeActionClientSkill(
             node_name="skill_client_action_server", loop=self.loop
         )
 
