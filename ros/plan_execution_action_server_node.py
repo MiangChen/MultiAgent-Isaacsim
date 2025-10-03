@@ -27,9 +27,9 @@ class PlanExecutionServer(Node):
     并行的任务调度动作服务器（调度器/Orchestrator）。
     """
 
-    def __init__(self, loop, swarm_manager):
+    def __init__(self, loop):
         super().__init__(node_name="plan_execution_action_server")
-        self.loop = loop  # Store the main event loop
+        self.loop = loop
         self.plan_execution_action_server = ActionServer(
             self,
             PlanExecution,

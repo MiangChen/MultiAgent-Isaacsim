@@ -16,7 +16,6 @@ from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_drone_cf2x import RobotCfgCf2x
 
-from ros.swarm_node import SwarmNode
 
 from geometry_msgs.msg import Pose, Twist, Vector3
 from gsi2isaacsim.gsi_msgs_helper import (
