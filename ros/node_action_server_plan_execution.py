@@ -30,14 +30,14 @@ class NodeActionServerPlanExecution(Node):
     def __init__(self, loop):
         super().__init__(node_name="node_action_server_plan_execution")
         self.loop = loop
-        self.plan_execution_action_server = ActionServer(
+        self.action_server_plan_execution = ActionServer(
             self,
             PlanExecution,
             action_name="/isaac_sim/plan_execution",
             execute_callback=self.execute_callback_wrapper,
         )
-        self.skill_client_action_server = NodeActionClientSkill(
-            node_name="skill_client_action_server", loop=self.loop
+        self.action_server_skill_client = NodeActionClientSkill(
+            node_name="action_server_skill_client", loop=self.loop
         )
 
         self._feedback_state = {}
@@ -77,7 +77,7 @@ class NodeActionServerPlanExecution(Node):
                     current_timestep=step.timestep,
                 )
 
-                task = self.skill_client_action_server.send_skill_goal(
+                task = self.action_server_skill_client.send_skill_goal(
                     robot_skill_msg=robot_skill_msg,
                     feedback_handler=feedback_handler,
                 )

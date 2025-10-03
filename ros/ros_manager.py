@@ -2,9 +2,7 @@ import threading
 
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
-from gsi2isaacsim.gsi_msgs_helper import Plan
 from ros.node_action_server_plan_execution import NodeActionServerPlanExecution
 from ros.node_scene_monitor import NodeSceneMonitor
 from log.log_manager import LogManager
@@ -17,8 +15,8 @@ class RosManager:
     def __init__(self, loop=None):
 
         self.scene_monitor_node = None
-        self.plan_execution_action_server = None
-        self.skill_client_action_server = None
+        self.action_server_plan_execution = None
+        self.action_server_skill_client = None
 
         self.loop = loop
         self.stop_event = threading.Event()
@@ -31,16 +29,16 @@ class RosManager:
         """构建所有ROS节点"""
         self.scene_monitor_node = NodeSceneMonitor()
 
-        self.plan_execution_action_server = NodeActionServerPlanExecution(loop=self.loop)
-        self.skill_client_action_server = (
-            self.plan_execution_action_server.skill_client_action_server
+        self.action_server_plan_execution = NodeActionServerPlanExecution(loop=self.loop)
+        self.action_server_skill_client = (
+            self.action_server_plan_execution.action_server_skill_client
         )
 
         logger.info("ROS nodes built successfully.")
 
     def start(self):
         """在后台线程中启动ROS节点"""
-        if not self.plan_execution_action_server:
+        if not self.action_server_plan_execution:
             logger.warning("ROS nodes not built. Cannot start.")
             return
 
@@ -51,8 +49,8 @@ class RosManager:
     def _spin_in_background(self):
         """后台运行ROS节点的实际工作函数"""
         nodes = [
-            self.plan_execution_action_server,
-            self.skill_client_action_server,
+            self.action_server_plan_execution,
+            self.action_server_skill_client,
             self.scene_monitor_node,
         ]
 
