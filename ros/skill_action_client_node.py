@@ -81,14 +81,18 @@ class SkillActionClientNode(Node):
         """
         robot_name = robot_skill_msg.robot_id
         skill_name = (
-            robot_skill_msg.skill_list[0].skill if robot_skill_msg.skill_list else "unknown"
+            robot_skill_msg.skill_list[0].skill
+            if robot_skill_msg.skill_list
+            else "unknown"
         )
 
         action_client = self.get_action_client(robot_name)
         if not await self.loop.run_in_executor(
-                None, lambda: action_client.wait_for_server(timeout_sec=3.0)
+            None, lambda: action_client.wait_for_server(timeout_sec=3.0)
         ):
-            logger.error(f"Action server for '{robot_name}' not available after waiting.")
+            logger.error(
+                f"Action server for '{robot_name}' not available after waiting."
+            )
             return {"success": False, "message": "Server not available."}
 
         logger.info(f"Preparing to send skill '{skill_name}' to robot '{robot_name}'")
@@ -107,7 +111,9 @@ class SkillActionClientNode(Node):
                 try:
                     feedback_handler(robot_skill_msg, feedback)
                 except Exception as e:
-                    logger.error(f"Error in custom feedback handler for '{robot_name}': {e}")
+                    logger.error(
+                        f"Error in custom feedback handler for '{robot_name}': {e}"
+                    )
 
         send_goal_rclpy_future = action_client.send_goal_async(
             goal=goal_msg, feedback_callback=feedback_callback
