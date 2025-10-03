@@ -22,7 +22,6 @@ from robot.robot_trajectory import Trajectory
 from scene.scene_manager import SceneManager
 from log.log_manager import LogManager
 
-
 logger = LogManager.get_logger(__name__)
 
 from pxr import Usd, UsdGeom
@@ -128,8 +127,8 @@ class RobotBase:
         # 用于PDDL, 记录当前用的 skill, 之所以用skill, 是为了和action区分, action一般是底层的关节动作
         self.state_skill: str = ''
         self.state_skill_complete: bool = True  # 默认状态, 没有skill要做, 所以是True
-        # 布置机器人的相机, 目前机器人一个相机
-        # 机器人的感知范围
+
+        # 布置机器人的相机传感器, 可以有多个相机
         self.cameras: dict = {}
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
@@ -138,21 +137,23 @@ class RobotBase:
             self.camera = CameraBase(cfg_body, cfg_camera)
             self.camera.create_camera(camera_path=self.cfg_body.camera_path)
 
-        # 第三视角相机
+        # 第三视角相机 一个机器人只有一个
         self.cfg_camera_third_person = cfg_camera_third_person
         self.camera_prim_path = None
         self.viewport_name = None  # 存储viewport名称
         self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
         self.transform_camera_pos = np.array([0, 0, 0])
 
+        # 机器人的ros node
         self.node = RobotNode(robot_name=self.name)
-        # action server 用于接收来自规划层的指令
         self.skill_action_server = ActionServer(
             node=self.node,
             action_type=SkillExecution,
             action_name=f"/skill/{self.name}",
             execute_callback=self.execute_skill_callback,
         )
+
+        # 机器人的任务状态
         self.current_task_id = "0"
         self.current_task_name = "n"
 
@@ -161,10 +162,10 @@ class RobotBase:
         self.nav_end = None
         self.nav_dist = 1.0
 
-########################## Action Server ############################
+    ########################## Skill Action Server ############################
     def execute_skill_callback(self, goal_handle):
         if self.state_skill_complete is False:
-            self.node.get_logger().error(f"Robot is busy with skill '{self.state_skill}'. Rejecting new goal.")
+            logger.error(f"Robot is busy with skill '{self.state_skill}'. Rejecting new goal.")
             goal_handle.abort()
             return SkillExecution.Result(success=False, message="Robot is busy.")
 
@@ -184,16 +185,15 @@ class RobotBase:
             # 执行一小步工作
             import time
             time.sleep(0.5)  # 模拟工作
-        # 发送反馈
-        feedback_msg.status = f"Executing step {i+1} of 10 for skill '{skill_name}'."
-        goal_handle.publish_feedback(feedback_msg)
-        logger.info(f"Feedback: {feedback_msg.status}")
+            # 发送反馈
+            feedback_msg.status = f"Executing step {i + 1} of 10 for skill '{skill_name}'."
+            goal_handle.publish_feedback(feedback_msg)
+            logger.info(f"Feedback: {feedback_msg.status}")
 
-         # --- 3. 完成与结果 ---
+        # --- 3. 完成与结果 ---
         self.state_skill_complete = True
-        goal_handle.succeed() # 任务成功
+        goal_handle.succeed()
 
-        # 返回最终结果
         result = SkillExecution.Result()
         result.success = True
         result.message = f"Skill '{skill_name}' executed successfully."
@@ -201,19 +201,18 @@ class RobotBase:
 
     ########################## obs ############################
     def get_obs(self) -> dict:
-        """Get observation of robot, including controllers, cameras, and world pose.
-
-        Raises:
-            NotImplementedError: _description_
+        """
+        Get observation of robot, including controllers, cameras, and world pose.
         """
         raise NotImplementedError()
 
-    def to_torch(self,
-                 data,
-                 dtype: torch.dtype = torch.float32,
-                 device: str = None,
-                 requires_grad: bool = False
-                 ) -> torch.Tensor:
+    @staticmethod
+    def to_torch(
+            data,
+            dtype: torch.dtype = torch.float32,
+            device: str = None,
+            requires_grad: bool = False
+    ) -> torch.Tensor:
         if device is None:
             if hasattr(data, "device"):
                 device = data.device
@@ -249,7 +248,6 @@ class RobotBase:
 
     def move_to(self, target_position: np.ndarray, target_orientation: np.ndarray) -> bool:
         """
-
         Args:
             target_position: 目标位置 , shape (3,)
             target_orientation: 目标朝向, shape (4,)

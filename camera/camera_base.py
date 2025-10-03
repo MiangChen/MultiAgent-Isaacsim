@@ -67,24 +67,25 @@ class CameraBase:
                 prim_paths_expr=self.cfg_camera.prim_path,
                 # frequency=self.cfg_camera.frequency,
                 # resolution=self.cfg_camera.resolution,
-                translations=self.to_torch(self.cfg_camera.position).reshape(1,3),
-                orientations=self.to_torch(self.cfg_camera.quat).reshape(1,4),
+                translations=self.to_torch(self.cfg_camera.position).reshape(1, 3),
+                orientations=self.to_torch(self.cfg_camera.quat).reshape(1, 4),
                 output_annotators=['rgb'],
             )
 
             self.set_local_pose(
-                positions=self.to_torch(self.cfg_camera.position).reshape(1,3),
-                orientations=self.to_torch(self.cfg_camera.quat).reshape(1,4),
+                positions=self.to_torch(self.cfg_camera.position).reshape(1, 3),
+                orientations=self.to_torch(self.cfg_camera.quat).reshape(1, 4),
                 camera_axes='usd'
             )
         return
 
-    def to_torch(self,
-                 data,
-                 dtype: torch.dtype = torch.float32,
-                 device: str = None,
-                 requires_grad: bool = False
-                 ) -> torch.Tensor:
+    @staticmethod
+    def to_torch(
+            data,
+            dtype: torch.dtype = torch.float32,
+            device: str = None,
+            requires_grad: bool = False
+    ) -> torch.Tensor:
         if device is None:
             if hasattr(data, "device"):
                 device = data.device
@@ -97,7 +98,6 @@ class CameraBase:
 
     def initialize(self) -> bool:
         """
-
         Returns:
             True if the view object was initialized (after the first call of .initialize()). False otherwise.
         """
