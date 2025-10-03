@@ -1,7 +1,10 @@
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 from pydantic import BaseModel
 
+from camera.camera_cfg import CameraCfg
+from camera.camera_third_person_cfg import CameraThirdPersonCfg
 from config.config_manager import config_manager
+
 
 ASSET_PATH = config_manager.get("asset_path")
 
@@ -26,4 +29,5 @@ class RobotCfg(BaseCfg):
     scale: Optional[Tuple[float, float, float]] = (1.0, 1.0, 1.0)
     # controllers: Optional[List[ControllerCfg]] = None
     # cameras: Optional[List[SensorCfg]] = None
-    # : Optional[str] = None
+
+    cameras: Optional[Dict[CameraCfg]] = []
