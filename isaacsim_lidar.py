@@ -186,7 +186,7 @@ def main():  # Needed in build_drone_ctx
     viewport_manager = container.viewport_manager()
     world = container.world()
     env = container.env()
-    env.simulation_app = g_simulation_app
+    env.simulation_app = simulation_app
     # setup_simulation()
     ros_manager.start()
     scene_manager = SceneManager()
@@ -215,7 +215,7 @@ def main():  # Needed in build_drone_ctx
 
     # ---------------- Run simulation -----------------------------------
     run_simulation_loop_multi(
-        g_simulation_app, drone_ctxs, semantic_camera, semantic_camera_prim_path,
+        simulation_app, drone_ctxs, semantic_camera, semantic_camera_prim_path,
         semantic_map
     )
 
