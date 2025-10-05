@@ -3,15 +3,10 @@ import sys
 sys.path.insert(0, "/home/ubuntu/PycharmProjects/isaacsim-gsi/src")
 
 ##########################################################################################################################
-import argparse
-
-parser = argparse.ArgumentParser(add_help=False)
-parser.add_argument("--config-path", type=str, default="./config/config_parameter.yaml")
-args, unknown = parser.parse_known_args()
-
 from physics_engine.isaacsim_simulation_app import start_isaacsim_simulation_app
 
-g_simulation_app = start_isaacsim_simulation_app(args.config_path)
+simulation_app = start_isaacsim_simulation_app()
+
 ##########################################################################################################################
 
 #

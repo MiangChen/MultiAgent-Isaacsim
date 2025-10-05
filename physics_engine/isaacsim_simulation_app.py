@@ -7,13 +7,16 @@ from isaacsim import SimulationApp
 import omni
 
 
-def start_isaacsim_simulation_app(config_path):
+def start_isaacsim_simulation_app():
     """
     创建 SimulationApp 实例
     """
 
     # 1. 读取YAML配置文件
-    with open(config_path, "r") as f:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(current_dir, '../config/config_parameter.yaml')
+    normalized_config_path = os.path.normpath(config_path)
+    with open(normalized_config_path, "r") as f:
         config = yaml.safe_load(f)
 
     # 2. 获取SimulationApp的构造函数配置

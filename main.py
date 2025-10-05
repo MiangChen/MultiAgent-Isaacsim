@@ -20,25 +20,18 @@ import sys
 sys.path.insert(0, "/home/ubuntu/PycharmProjects/isaacsim-gsi/src")
 
 ###################################################################################################################
-import argparse
-
-parser = argparse.ArgumentParser(add_help=False)
-parser.add_argument("--config-path", type=str, default="./config/config_parameter.yaml")
-args, unknown = parser.parse_known_args()
 
 from physics_engine.isaacsim_simulation_app import start_isaacsim_simulation_app
 
-simulation_app = start_isaacsim_simulation_app(args.config_path)
+simulation_app = start_isaacsim_simulation_app()
 
 ###################################################################################################################
 import asyncio
 
-# Third-party imports
-from dependency_injector.wiring import (
-    inject,
-    Provide,
-    providers,
-)  # Dependency injection imports
+from dependency_injector.wiring import inject, Provide
+import rclpy
+
+rclpy.init(args=None)
 
 from isaacsim.core.api import World
 
@@ -61,10 +54,6 @@ logger.info("Isaac Sim WebManager starting...")
 
 WORLD_USD_PATH = config_manager.get("world_usd_path")
 PROJECT_ROOT = config_manager.get("project_root")
-
-import rclpy
-
-rclpy.init(args=None)
 
 
 @inject
@@ -89,9 +78,6 @@ def setup_simulation(
     swarm_manager.register_robot_class(
         robot_class_name="cf2x", robot_class=RobotCf2x, robot_class_cfg=RobotCfgCf2x
     )
-
-    # Initialize environment and swarm manager
-    # Since Isaac Sim runs its own event loop, we need to schedule async tasks properly
 
     # Create initialization tasks
     async def init_env_and_swarm():

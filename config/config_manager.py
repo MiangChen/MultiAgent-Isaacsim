@@ -1,4 +1,5 @@
 import argparse
+import os
 from pathlib import Path
 import pprint
 from typing import Any, List, Dict
@@ -13,9 +14,14 @@ class ConfigManager:
     """
 
     def __init__(self):
-        self.config: Dict[str, Any] = {}
+        # 通过args传递的参数
         self._parser = self._create_argument_parser()
         self.args, self.unknown_args = self._parser.parse_known_args()
+        # 通过文件读取的参数
+        self.config: Dict[str, Any] = {}
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(current_dir, "../config/config_parameter.yaml")
+        self.config_path = os.path.normpath(config_path)
         self.load()
 
     def _create_argument_parser(self) -> argparse.ArgumentParser:
@@ -23,13 +29,6 @@ class ConfigManager:
         创建并配置参数解析器，取代 argument_parser.py 的功能。
         """
         parser = argparse.ArgumentParser(description="Isaac Sim Multi-Agent Simulation")
-
-        parser.add_argument(
-            "--config",
-            type=str,
-            default="./config/config_parameter.yaml",
-            help="Path to the main YAML configuration file.",
-        )
 
         group = parser.add_mutually_exclusive_group()
         group.add_argument(
@@ -45,17 +44,10 @@ class ConfigManager:
         """
         加载、合并和处理所有配置。
         """
-        # 1. 从 YAML 文件加载基础配置
-        config_file = self.args.config
-        if config_file and Path(config_file).exists():
-            with open(config_file, "r") as f:
-                self.config = yaml.safe_load(f)
-        else:
-            raise FileNotFoundError(
-                f"指定的配置文件 '{config_file}' 未找到。请检查路径。"
-            )
+        with open(self.config_path, "r") as f:
+            self.config = yaml.safe_load(f)
 
-        # 2. 将命令行参数覆盖到配置上
+        # 将命令行参数覆盖到配置上
         cli_args_dict = vars(self.args)
         if cli_args_dict.get("namespace") is not None:
             namespaces_list = [
@@ -63,7 +55,7 @@ class ConfigManager:
             ]
             self.config["namespace"] = namespaces_list
 
-        # 3. 计算派生路径和值
+        # 计算派生路径和值
         self._derive_paths()
         return self
 
