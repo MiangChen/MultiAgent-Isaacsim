@@ -88,17 +88,17 @@ class RobotBase:
         )  # 通过依赖注入获取viewport_manager
 
         # 通用的机器人本体初始化代码
-        self.cfg_body.prim_path = (
-            cfg_body.prim_path
+        self.cfg_body.prim_path_swarm = (
+            cfg_body.prim_path_swarm
             + f"/{cfg_body.type}"
             + f"/{cfg_body.type}_{cfg_body.id}"
         )
         self.cfg_body.name = cfg_body.type + f"_{cfg_body.id}"
         self.name = self.cfg_body.name
 
-        prim = get_prim_at_path(self.cfg_body.prim_path)
+        prim = get_prim_at_path(self.cfg_body.prim_path_swarm)
         if not prim.IsValid():
-            prim = define_prim(self.cfg_body.prim_path, "Xform")
+            prim = define_prim(self.cfg_body.prim_path_swarm, "Xform")
             if cfg_body.usd_path:
                 prim.GetReferences().AddReference(
                     cfg_body.usd_path

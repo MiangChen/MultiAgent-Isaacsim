@@ -104,7 +104,7 @@ class RobotH1(RobotBase):
 
         # 异步地创建并加载 H1FlatTerrainPolicy 控制器
         instance.controller_policy = await H1FlatTerrainPolicy.create(
-            prim_path=instance.cfg_body.prim_path
+            prim_path=instance.cfg_body.prim_path_swarm
         )
         return instance
 
@@ -127,7 +127,7 @@ class RobotH1(RobotBase):
         初始化机器人关节树
         """
         self.robot_entity = Articulation(
-            prim_paths_expr=self.cfg_body.prim_path,
+            prim_paths_expr=self.cfg_body.prim_path_swarm,
             name=self.cfg_body.name,
             positions=to_torch(self.cfg_body.position).reshape(1, 3),
             orientations=to_torch(self.cfg_body.quat).reshape(1, 4),

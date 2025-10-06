@@ -111,7 +111,7 @@ class LidarBase:
         """
         if prim_path is None:
             # 如果没有提供特定路径，则在机器人 Prim 下创建一个默认路径
-            self.cfg_lidar.prim_path = f"{self.cfg_body.prim_path}/lidar/{self.cfg_lidar.type}"
+            self.cfg_lidar.prim_path = f"{self.cfg_body.prim_path_swarm}/lidar/{self.cfg_lidar.type}"
         else:
             self.cfg_lidar.prim_path = prim_path
 

@@ -21,17 +21,17 @@ class EntityH1(RobotEntity):
         """
         初始化机器人关节树
         """
-        self.cfg_articulation.prim_path = (
-            self.cfg_articulation.prim_path
+        self.cfg_articulation.prim_path_swarm = (
+            self.cfg_articulation.prim_path_swarm
             + f"/{self.cfg_articulation.type}"
             + f"/{self.cfg_articulation.type}_{self.cfg_articulation.id}"
         )
         self.cfg_articulation.name = self.cfg_articulation.type + f"_{self.cfg_articulation.id}"
         self.name = self.cfg_articulation.name
 
-        prim = get_prim_at_path(self.cfg_articulation.prim_path)
+        prim = get_prim_at_path(self.cfg_articulation.prim_path_swarm)
         if not prim.IsValid():
-            prim = define_prim(self.cfg_articulation.prim_path, "Xform")
+            prim = define_prim(self.cfg_articulation.prim_path_swarm, "Xform")
             if self.cfg_articulation.usd_path:
                 prim.GetReferences().AddReference(
                     self.cfg_articulation.usd_path
@@ -66,7 +66,7 @@ class EntityH1(RobotEntity):
                 logger.info(f"Prim not found at path {prim.GetPath()}")
 
         self.robot_articulation = Articulation(
-            prim_paths_expr=self.cfg_articulation.prim_path,
+            prim_paths_expr=self.cfg_articulation.prim_path_swarm,
             name=self.cfg_articulation.name,
             positions=to_torch(self.cfg_articulation.position).reshape(1, 3),
             orientations=to_torch(self.cfg_articulation.quat).reshape(1, 4),

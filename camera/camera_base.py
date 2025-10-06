@@ -25,7 +25,7 @@ class CameraBase:
 
     def create_camera(self, camera_path: str = None):
         if camera_path is None:
-            self.cfg_camera.prim_path_absolute = self.cfg_body.prim_path + '/camera/Camera'
+            self.cfg_camera.prim_path_absolute = self.cfg_body.prim_path_swarm + '/camera/Camera'
         else:
             self.cfg_camera.prim_path_absolute = camera_path
         prim = get_prim_at_path(self.cfg_camera.prim_path_absolute)

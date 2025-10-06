@@ -1,14 +1,10 @@
-from typing import Optional
-
 from .robot_cfg import RobotCfg, ASSET_PATH
 
 
 class RobotCfgJetbot(RobotCfg):
     # meta info
-    type: Optional[str] = "jetbot"
-    prim_path: Optional[str] = "/World/robot/jetbot"
-
+    type: str = "jetbot"
     id: int = 0
-    usd_path: Optional[str] = ASSET_PATH + "/Isaac/Robots/Jetbot/jetbot.usd"
-    camera_path: Optional[str] = None
-    camera_path_suffix: Optional[str] = "/chassis/rgb_camera/jetbot_camera"
+    prim_path_swarm: str = "/World/robot/jetbot"
+    prim_path_robot: str = "/World/robot/jetbot"
+    usd_path: str = ASSET_PATH + "/Isaac/Robots/Jetbot/jetbot.usd"

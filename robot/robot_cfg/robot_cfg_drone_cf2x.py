@@ -1,15 +1,13 @@
-from typing import Optional
-
 from .robot_cfg import RobotCfg, ASSET_PATH
 
 
 class RobotCfgCf2x(RobotCfg):
     # meta info
-    type: Optional[str] = "cf2x"
-    prim_path: Optional[str] = "/World/robot/cf2x"
-
+    type: str = "cf2x"
     id: int = 0
-    usd_path: Optional[str] = ASSET_PATH + "/Isaac/Robots/Crazyflie/cf2x.usd"
+    prim_path_swarm: str = "/World/robot/cf2x"
+    prim_path_robot: str = "/World/robot/cf2x"
+    usd_path: str = ASSET_PATH + "/Isaac/Robots/Crazyflie/cf2x.usd"
 
     default_speed: float = 1  # m/s
     takeoff_height: float = 1.0  # 起飞悬停高度，单位米
