@@ -124,7 +124,16 @@ class RobotH1(RobotBase):
                 f"[Warning] RobotH1 '{self.name}' has no controller_policy to initialize."
             )
 
-
+    def create_robot_entity(self):
+        """
+        初始化机器人关节树
+        """
+        self.robot_entity = Articulation(
+            prim_paths_expr=self.cfg_body.prim_path,
+            name=self.cfg_body.name,
+            positions=self.to_torch(self.cfg_body.position).reshape(1, 3),
+            orientations=self.to_torch(self.cfg_body.quat).reshape(1, 4),
+        )
 
     def move_to(self, target_pos):
         import numpy as np

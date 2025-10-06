@@ -52,15 +52,12 @@ class RobotEntity():
         scene: Scene = None,):
         # 代表机器人的实体
         self.cfg_body = cfg_body
-        self.robot_entity: Articulation = None
+        self.robot_articulation: Articulation = None
 
-    def create_robot_entity(self):
+    def create_robot_articulation(self):
         """
-        初始化机器人关节树
+        [Abstract Method] Initializes the specific robot entity wrapper.
+        Subclasses MUST override this method to create either an Articulation,
+        a RigidPrim, or another appropriate wrapper and assign it to self.robot_entity.
         """
-        self.robot_entity = Articulation(
-            prim_paths_expr=self.cfg_body.prim_path,
-            name=self.cfg_body.name,
-            positions=to_torch(self.cfg_body.position).reshape(1, 3),
-            orientations=to_torch(self.cfg_body.quat).reshape(1, 4),
-        )
+        raise NotImplementedError
