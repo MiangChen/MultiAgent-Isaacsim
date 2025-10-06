@@ -25,7 +25,7 @@ from camera.camera_base import CameraBase
 from camera.camera_cfg import CameraCfg
 from camera.camera_third_cfg import CameraThirdCfg
 from robot.robot_cfg import RobotCfg
-from robot.robot_entity import RobotBody
+from robot.robot_body import RobotBody
 from robot.robot_trajectory import Trajectory
 from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager

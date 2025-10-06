@@ -19,15 +19,15 @@ jetbot:
       position: [ 5, 4, 0.035 ]
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Allen
-    camera:
-      position: [ 0, 0, 0.5 ]  # 相对于机器人中心的偏移距离
-      quat: [0, 0, 0, 1]  # 相对于机器人中心朝向偏移
-      frequency: 30 # 相机帧率
-      resolution: [300, 400] # 相机分辨率
-      focal_length: 30 # 相机的焦段 mm
-      lens_aperture: 0 # 相机的光圈 0 表示没有景深 全部清晰
-      focus_distance: 0 # 相机的对焦距离
-    camera_third_person: False
+#    camera:
+#      position: [ 0, 0, 0.5 ]  # 相对于机器人中心的偏移距离
+#      quat: [0, 0, 0, 1]  # 相对于机器人中心朝向偏移
+#      frequency: 30 # 相机帧率
+#      resolution: [300, 400] # 相机分辨率
+#      focal_length: 30 # 相机的焦段 mm
+#      lens_aperture: 0 # 相机的光圈 0 表示没有景深 全部清晰
+#      focus_distance: 0 # 相机的对焦距离
+#    camera_third_person: False
 
   - id: 1
     body:
@@ -43,13 +43,13 @@ jetbot:
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Candy
     camera: {}
-    camera_third_person:
-      enabled: true
-      relative_position: [ 0, -2, -0.5 ]  # 相机相对于机器人的位置 (后方2米, 上方3米)
-      transform_position: [0, 0, 1]  # 用于相机的相对位移
-      viewport_position: [ 800, 0 ]        # Viewport在Isaac Sim窗口中的起始位置 (x, y)
-      viewport_size: [ 360, 360 ]          # Viewport的尺寸 (宽, 高)
-      focal_length: 20
+#    camera_third_person:
+#      enabled: true
+#      relative_position: [ 0, -2, -0.5 ]  # 相机相对于机器人的位置 (后方2米, 上方3米)
+#      transform_position: [0, 0, 1]  # 用于相机的相对位移
+#      viewport_position: [ 800, 0 ]        # Viewport在Isaac Sim窗口中的起始位置 (x, y)
+#      viewport_size: [ 360, 360 ]          # Viewport的尺寸 (宽, 高)
+#      focal_length: 20
 
   - id: 3
     body:
@@ -66,13 +66,13 @@ h1:
       quat: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Hellen
     camera: {}
-    camera_third_person:
-      enabled: False
-      relative_position: [ 0, -3, 0 ]  # 相机相对于机器人的位置 (后方2米, 上方3米)
-      transform_position: [0, 0, 0.5]  # 用于相机的相对位移
-      viewport_position: [ 800, 0 ]        # Viewport在Isaac Sim窗口中的起始位置 (x, y)
-      viewport_size: [ 360, 360 ]          # Viewport的尺寸 (宽, 高)
-      focal_length: 20
+#    camera_third_person:
+#      enabled: False
+#      relative_position: [ 0, -3, 0 ]  # 相机相对于机器人的位置 (后方2米, 上方3米)
+#      transform_position: [0, 0, 0.5]  # 用于相机的相对位移
+#      viewport_position: [ 800, 0 ]        # Viewport在Isaac Sim窗口中的起始位置 (x, y)
+#      viewport_size: [ 360, 360 ]          # Viewport的尺寸 (宽, 高)
+#      focal_length: 20
 
 
 #    camera:

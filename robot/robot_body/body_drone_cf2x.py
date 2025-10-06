@@ -9,7 +9,7 @@ from robot.robot_cfg import RobotCfg
 from utils import to_torch
 from log.log_manager import LogManager
 
-logger = LogManager.get_logger()
+logger = LogManager.get_logger(__name__)
 
 
 class BodyDroneCf2x(RobotBody):

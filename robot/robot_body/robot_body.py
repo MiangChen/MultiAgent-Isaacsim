@@ -45,7 +45,7 @@ from gsi2isaacsim.gsi_msgs_helper import (
     VelTwistPose,
 )
 
-logger = LogManager.get_logger()
+logger = LogManager.get_logger(__name__)
 
 
 class RobotBody:
