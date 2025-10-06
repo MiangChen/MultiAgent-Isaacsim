@@ -4,17 +4,14 @@ from pydantic import BaseModel
 from camera.camera_cfg import CameraCfg
 from camera.camera_third_cfg import CameraThirdCfg
 from config.config_manager import config_manager
+from config.cfg_base import CfgBase
 from lidar.lidar_cfg import LidarCfg
 
 ASSET_PATH = config_manager.get("asset_path")
 
 
-class BaseCfg(BaseModel):
-    def update(self, **kwargs):
-        return self.model_copy(update=kwargs, deep=True)
 
-
-class RobotCfg(BaseCfg):
+class RobotCfg(CfgBase):
     # meta info
     type: str = "robot"
     name: str = "robot"
