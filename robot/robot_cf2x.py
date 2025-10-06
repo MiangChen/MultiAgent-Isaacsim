@@ -15,6 +15,7 @@ from controller.controller_cf2x import ControllerCf2x
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_drone_cf2x import RobotCfgCf2x
+from utils import to_torch
 
 
 from geometry_msgs.msg import Pose, Twist, Vector3
@@ -137,8 +138,8 @@ class RobotCf2x(RobotBase):
         self.robot_entity = Articulation(
             prim_paths_expr=self.cfg_body.prim_path,
             name=self.cfg_body.name,
-            positions=self.to_torch(self.cfg_body.position).reshape(1, 3),
-            orientations=self.to_torch(self.cfg_body.quat).reshape(1, 4),
+            positions=to_torch(self.cfg_body.position).reshape(1, 3),
+            orientations=to_torch(self.cfg_body.quat).reshape(1, 4),
         )
 
     def _setup_keyboard_events(self):
@@ -330,7 +331,7 @@ class RobotCf2x(RobotBase):
             self.position[2] = self.hovering_height
 
             # 应用新位置到无人机实体
-            self.position = self.to_torch(self.position)
+            self.position = to_torch(self.position)
             _, orientations = self.robot_entity.get_world_poses()
             orientation = orientations[0]
             self.robot_entity.set_world_poses(self.position, orientation)
@@ -353,7 +354,7 @@ class RobotCf2x(RobotBase):
             target[2] = self.hovering_height
 
             # 瞬移
-            self.position = self.to_torch(target)
+            self.position = to_torch(target)
             _, orientations = self.robot_entity.get_world_poses()
             orientation = orientations[0]
             self.robot_entity.set_world_poses(self.position, orientation)

@@ -1,29 +1,6 @@
 from typing import List, Tuple
 
 from rclpy.action import ActionServer
-from gsi2isaacsim.gsi_msgs_helper import (
-    PrimTransform,
-    SceneModifications,
-    RobotFeedback,
-    VelTwistPose,
-    RobotSkill,
-    PlanExecution,
-    SkillExecution,
-    SkillFeedback,
-)
-
-from map.map_grid_map import GridMap
-from path_planning.path_planning_astar import AStar
-from camera.camera_base import CameraBase
-from camera.camera_cfg import CameraCfg
-from camera.camera_third_cfg import CameraThirdCfg
-from robot.robot_cfg import RobotCfg
-from robot.robot_trajectory import Trajectory
-from scene.scene_manager import SceneManager
-from log.log_manager import LogManager
-
-logger = LogManager.get_logger(__name__)
-
 from pxr import Usd, UsdGeom
 import numpy as np
 import torch
@@ -41,15 +18,33 @@ from isaacsim.core.utils.viewports import (
     set_intrinsics_matrix,
 )
 
+from map.map_grid_map import GridMap
+from path_planning.path_planning_astar import AStar
+from camera.camera_base import CameraBase
+from camera.camera_cfg import CameraCfg
+from camera.camera_third_cfg import CameraThirdCfg
+from robot.robot_cfg import RobotCfg
+from robot.robot_trajectory import Trajectory
+from ros.node_robot import NodeRobot
+from scene.scene_manager import SceneManager
+from log.log_manager import LogManager
+from utils import to_torch
 from gsi2isaacsim.gsi_msgs_helper import (
-    Plan,
+    PrimTransform,
+    SceneModifications,
     RobotFeedback,
+    VelTwistPose,
+    RobotSkill,
+    PlanExecution,
+    SkillExecution,
+    SkillFeedback,
+    Plan,
     SkillInfo,
     Parameter,
     VelTwistPose,
 )
-from ros.node_robot import NodeRobot
 
+logger = LogManager.get_logger(__name__)
 
 def _get_viewport_manager_from_container():
     """
@@ -261,8 +256,8 @@ class RobotBase:
     def get_world_poses(self) -> Tuple[torch.Tensor, torch.Tensor]:
         pos_IB, q_IB = self.robot_entity.get_world_poses()
         pos_IB, q_IB = pos_IB[0], q_IB[0]
-        pos_IB = self.to_torch(pos_IB, device=pos_IB.device)
-        q_IB = self.to_torch(q_IB, device=q_IB.device)
+        pos_IB = to_torch(pos_IB, device=pos_IB.device)
+        q_IB = to_torch(q_IB, device=q_IB.device)
         return pos_IB, q_IB
 
     def create_robot_entity(self):
@@ -314,8 +309,8 @@ class RobotBase:
             return True
 
     def _calc_dist(self, pos1: torch.Tensor = None, pos2: torch.Tensor = None):
-        pos1 = self.to_torch(pos1)
-        pos2 = self.to_torch(pos2)
+        pos1 = to_torch(pos1)
+        pos2 = to_torch(pos2)
         return torch.linalg.norm(pos1 - pos2)
 
     def navigate_to(

@@ -12,6 +12,7 @@ from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from camera.camera_cfg import CameraCfg
 from robot.robot_cfg import RobotCfg
 from log.log_manager import LogManager
+from utils import to_torch
 
 logger = LogManager.get_logger(__name__)
 
@@ -67,34 +68,18 @@ class CameraBase:
                 prim_paths_expr=self.cfg_camera.prim_path_absolute,
                 # frequency=self.cfg_camera.frequency,
                 # resolution=self.cfg_camera.resolution,
-                translations=self.to_torch(self.cfg_camera.position).reshape(1, 3),
-                orientations=self.to_torch(self.cfg_camera.quat).reshape(1, 4),
+                translations=to_torch(self.cfg_camera.position).reshape(1, 3),
+                orientations=to_torch(self.cfg_camera.quat).reshape(1, 4),
                 output_annotators=['rgb'],
             )
 
             self.set_local_pose(
-                positions=self.to_torch(self.cfg_camera.position).reshape(1, 3),
-                orientations=self.to_torch(self.cfg_camera.quat).reshape(1, 4),
+                positions=to_torch(self.cfg_camera.position).reshape(1, 3),
+                orientations=to_torch(self.cfg_camera.quat).reshape(1, 4),
                 camera_axes='usd'
             )
         return
 
-    @staticmethod
-    def to_torch(
-            data,
-            dtype: torch.dtype = torch.float32,
-            device: str = None,
-            requires_grad: bool = False
-    ) -> torch.Tensor:
-        if device is None:
-            if hasattr(data, "device"):
-                device = data.device
-            else:
-                device = "cpu"
-
-        if isinstance(data, torch.Tensor):
-            return data.to(device=device, dtype=dtype)
-        return torch.as_tensor(data, dtype=dtype, device=device).requires_grad_(requires_grad)
 
     def initialize(self) -> bool:
         """

@@ -9,6 +9,8 @@ from path_planning.path_planning_astar import AStar
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg_jetbot import RobotCfgJetbot
+from utils import to_torch
+
 
 import carb
 from isaacsim.core.api.scenes import Scene
@@ -83,8 +85,8 @@ class RobotJetbot(RobotBase):
         self.robot_entity = Articulation(
             prim_paths_expr=self.cfg_body.prim_path,
             name=self.cfg_body.name,
-            positions=self.to_torch(self.cfg_body.position).reshape(1, 3),
-            orientations=self.to_torch(self.cfg_body.quat).reshape(1, 4),
+            positions=to_torch(self.cfg_body.position).reshape(1, 3),
+            orientations=to_torch(self.cfg_body.quat).reshape(1, 4),
         )
 
     def init_ros2(self):
@@ -169,7 +171,7 @@ class RobotJetbot(RobotBase):
         速度有两个分两，自转的分量 + 前进的分量
         """
         pos, quat = self.get_world_poses()  # type np.array
-        target_pos = self.to_torch(target_pos, device=pos.device)
+        target_pos = to_torch(target_pos, device=pos.device)
 
         if self.counter % self.pub_period == 0:
             self._publish_feedback(
@@ -243,7 +245,7 @@ class RobotJetbot(RobotBase):
         return
 
     def step(self, action):
-        action = self.to_torch(action)
+        action = to_torch(action)
         if self.control_mode == "joint_position":
             action = ArticulationActions(joint_positions=action)
         elif self.control_mode == "joint_velocities":
