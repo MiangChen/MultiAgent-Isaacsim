@@ -15,7 +15,6 @@ class BaseCfg(BaseModel):
 
 class RobotCfg(BaseCfg):
     # meta info
-    name_prefix: str = None
     name: str = ""
     type: str = "robot"
     prim_path: str = "/World/robot"

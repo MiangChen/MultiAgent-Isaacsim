@@ -62,12 +62,12 @@ class RobotJetbot(RobotBase):
         # self.node = node
         #
         # self.node.register_feedback_publisher(
-        #     robot_class=self.cfg_body.name_prefix,
+        #     robot_class=self.cfg_body.type,
         #     robot_id=self.cfg_body.id,
         #     qos=50
         # )
         # self.node.register_motion_publisher(
-        #     robot_class=self.cfg_body.name_prefix,
+        #     robot_class=self.cfg_body.type,
         #     robot_id=self.cfg_body.id,
         #     qos=50
         # )
@@ -94,7 +94,7 @@ class RobotJetbot(RobotBase):
 
         og.Controller.edit(
             {
-                "graph_path": f"/ActionGraph/{self.cfg_body.name_prefix}_{self.cfg_body.id}",
+                "graph_path": f"/ActionGraph/{self.cfg_body.type}_{self.cfg_body.id}",
                 "evaluator_name": "execution",
             },
             {
@@ -148,7 +148,7 @@ class RobotJetbot(RobotBase):
                     # ("ArticulationController.inputs:usePath", True),      # if you are using an older version of Isaac Sim, you may need to uncomment this line
                     (
                         "PublishJointState.inputs:topicName",
-                        f"joint_states_{self.cfg_body.name_prefix}_{self.cfg_body.id}",
+                        f"joint_states_{self.cfg_body.type}_{self.cfg_body.id}",
                     ),
                     (
                         "ArticulationController.inputs:robotPath",

@@ -16,7 +16,7 @@ class ControllerCfg(BaseCfg, extra="allow"):
     """
     A specialized model representing controllers within a system, inheriting from BaseModel with an extended configuration to allow additional keys.
 
-    This class serves as a data structure to encapsulate controller-related information crucial for configuring and managing control systems, particularly in robotic applications. It provides a structured way to define controllers, including their name_prefix, type, sub-controllers (if any), and a reference frame.
+    This class serves as a data structure to encapsulate controller-related information crucial for configuring and managing control systems, particularly in robotic applications. It provides a structured way to define controllers, including their type, type, sub-controllers (if any), and a reference frame.
 
     Attributes:
         name (str): The unique identifier for the controller.
@@ -27,7 +27,7 @@ class ControllerCfg(BaseCfg, extra="allow"):
         Instantiate a `ControllerModel` to define a controller configuration. Optionally, nest other `ControllerModel` instances within the `sub_controllers` attribute to model complex controller hierarchies.
 
     Example Type Hints Usage:
-        - `name_prefix`: Always a string.
+        - `type`: Always a string.
         - `type`: String defining controller type.
         - `sub_controllers`: A list of `ControllerModel` instances or None.
     """
@@ -83,7 +83,7 @@ class MoveToPointBySpeedControllerCfg(ControllerCfg):
 #
 # class CoolController(BaseController):
 #     def __init__(self):
-#         super().__init__(name_prefix="my_cool_controller")
+#         super().__init__(type="my_cool_controller")
 #         # An open loop controller that uses a unicycle model
 #         self._wheel_radius = 0.03
 #         self._wheel_base = 0.1125

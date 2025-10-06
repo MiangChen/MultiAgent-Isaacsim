@@ -5,7 +5,6 @@ from .robot_cfg import RobotCfg, ASSET_PATH
 
 class RobotCfgJetbot(RobotCfg):
     # meta info
-    name_prefix: Optional[str] = "jetbot"
     type: Optional[str] = "jetbot"
     prim_path: Optional[str] = "/World/robot/jetbot"
 

@@ -111,7 +111,7 @@ class LidarBase:
         """
         if prim_path is None:
             # 如果没有提供特定路径，则在机器人 Prim 下创建一个默认路径
-            self.cfg_lidar.prim_path = f"{self.cfg_body.prim_path}/lidar/{self.cfg_lidar.name_prefix}"
+            self.cfg_lidar.prim_path = f"{self.cfg_body.prim_path}/lidar/{self.cfg_lidar.type}"
         else:
             self.cfg_lidar.prim_path = prim_path
 
@@ -119,7 +119,7 @@ class LidarBase:
 
         self.lidar_sensor = LidarRtx(
             prim_path=self.cfg_lidar.prim_path,
-            name=self.cfg_lidar.name_prefix,
+            name=self.cfg_lidar.type,
             translation=self.cfg_lidar.position,
             orientation=self.cfg_lidar.quat,
             config_file_name=self.cfg_lidar.config_file_name,

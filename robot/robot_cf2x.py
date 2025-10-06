@@ -100,17 +100,17 @@ class RobotCf2x(RobotBase):
         self.nav_stop_radius = 0.30  # 到点判定半径（m）
 
         # self.node.register_feedback_publisher(
-        #     robot_class=self.cfg_body.name_prefix,
+        #     robot_class=self.cfg_body.type,
         #     robot_id=self.cfg_body.id,
         #     qos=50
         # )
         # self.node.register_motion_publisher(
-        #     robot_class=self.cfg_body.name_prefix,
+        #     robot_class=self.cfg_body.type,
         #     robot_id=self.cfg_body.id,
         #     qos=50
         # )
         # self.node.register_cmd_subscriber(
-        #     robot_class=self.cfg_body.name_prefix,
+        #     robot_class=self.cfg_body.type,
         #     robot_id=self.cfg_body.id,
         #     callback=self.cmd_vel_callback,
         #     qos=50

@@ -158,7 +158,7 @@ class RobotBase:
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
         if cfg_camera is not None:
-            logger.info(f"create camera for {self.cfg_body.name_prefix}")
+            logger.info(f"create camera for {self.cfg_body.type}")
             self.camera = CameraBase(cfg_body, cfg_camera)
             self.camera.create_camera(camera_path=self.cfg_body.camera_path)
 
@@ -745,11 +745,11 @@ class RobotBase:
         )
 
         msg = RobotFeedback(
-            robot_id=f"{self.cfg_body.name_prefix}_{self.cfg_body.id}",
+            robot_id=f"{self.cfg_body.type}_{self.cfg_body.id}",
             skill_feedback=skill,
         )
 
-        # self.node.publish_feedback(self.cfg_body.name_prefix, self.cfg_body.id, msg)
+        # self.node.publish_feedback(self.cfg_body.type, self.cfg_body.id, msg)
 
     def _publish_status_pose(self):
 
@@ -797,7 +797,7 @@ class RobotBase:
             msg.pose.orientation.w,
         ) = (float(v) for v in quat_xyzw)
         # self.node.publish_motion(
-        #     robot_class=self.cfg_body.name_prefix,
+        #     robot_class=self.cfg_body.type,
         #     robot_id=self.cfg_body.id,
         #     msg=msg
         # )

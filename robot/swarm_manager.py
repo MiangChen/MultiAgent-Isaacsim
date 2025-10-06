@@ -201,7 +201,7 @@ class SwarmManager:
         """停用机器人并返回仓库"""
         for robot_type in list(self.active_robots.keys()):
             for i, robot in enumerate(self.active_robots[robot_type]):
-                if robot.name_prefix == name:
+                if robot.type == name:
                     robot.is_active = False
                     self.robot_warehouse.append(robot)
                     self.active_robots[robot_type].pop(i)
@@ -216,7 +216,7 @@ class SwarmManager:
         """在所有机器人中查找"""
         for robots in self.active_robots.values():
             for robot in robots:
-                if robot.name_prefix == name:
+                if robot.type == name:
                     return robot
         for robot in self.robot_warehouse:
             if robot.name == name:

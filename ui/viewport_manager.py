@@ -278,8 +278,8 @@ class ViewportManager:
             elif hasattr(robot, 'id'):
                 viewport_name = f"Viewport_Robot_{robot.id}"
                 viewport_obj = self._get_viewport_by_name(viewport_name)
-            elif hasattr(robot, 'name_prefix') and hasattr(robot, 'id'):
-                viewport_name = f"Viewport_{robot.name_prefix}_{robot.id}"
+            elif hasattr(robot, 'type') and hasattr(robot, 'id'):
+                viewport_name = f"Viewport_{robot.type}_{robot.id}"
                 viewport_obj = self._get_viewport_by_name(viewport_name)
 
         except (AttributeError, Exception):

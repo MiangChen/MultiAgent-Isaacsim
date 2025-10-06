@@ -9,7 +9,6 @@ class LidarCfg(BaseCfg):
     """
     配置类，用于定义一个 RTX Lidar 传感器的属性。
     """
-    name_prefix: Optional[str] = Field(default='lidar', description="Lidar的名称前缀")
     type: Optional[str] = Field(default='lidar', description="传感器类型")
     prim_path: Optional[str] = Field(default=None, description="Lidar 在 USD 舞台中的路径")
 
