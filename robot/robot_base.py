@@ -46,6 +46,7 @@ from gsi2isaacsim.gsi_msgs_helper import (
 
 logger = LogManager.get_logger(__name__)
 
+
 def _get_viewport_manager_from_container():
     """
     Get viewport manager from dependency injection container.
@@ -90,9 +91,9 @@ class RobotBase:
         self.cfg_body.prim_path = (
             cfg_body.prim_path
             + f"/{cfg_body.type}"
-            + f"/{cfg_body.name_prefix}_{cfg_body.id}"
+            + f"/{cfg_body.type}_{cfg_body.id}"
         )
-        self.cfg_body.name = cfg_body.name_prefix + f"_{cfg_body.id}"
+        self.cfg_body.name = cfg_body.type + f"_{cfg_body.id}"
         self.name = self.cfg_body.name
 
         prim = get_prim_at_path(self.cfg_body.prim_path)

@@ -15,8 +15,6 @@ from controller.controller_pid import ControllerPID
 from robot.robot_cfg import RobotCfg
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
-from robot.robot_cfg_h1 import RobotCfgH1
-from controller.controller_policy_h1 import H1FlatTerrainPolicy
 from scene.scene_manager import SceneManager
 
 DRONE_COLOR_SCHEMES = {
@@ -62,16 +60,16 @@ class RobotDrone(RobotBase):
     """
 
     def __init__(
-            self,
-            cfg_body: RobotCfg = None,
-            cfg_camera: CameraCfg = None,
-            cfg_camera_third_person: CameraThirdCfg = None,
-            scene: Scene = None,
-            map_grid: GridMap = None,
-            scene_manager: SceneManager = None,
-            namespace: str = None,
-            prim_path: str = None,
-            color_scheme_id: int = 0,  # 新增参数，用于选择颜色
+        self,
+        cfg_body: RobotCfg = None,
+        cfg_camera: CameraCfg = None,
+        cfg_camera_third_person: CameraThirdCfg = None,
+        scene: Scene = None,
+        map_grid: GridMap = None,
+        scene_manager: SceneManager = None,
+        namespace: str = None,
+        prim_path: str = None,
+        color_scheme_id: int = 0,  # 新增参数，用于选择颜色
     ):
         # super().__init__(
         #     cfg_body=cfg_body,

@@ -14,18 +14,8 @@ from log.log_manager import LogManager
 from controller.controller_cf2x import ControllerCf2x
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
-from robot.robot_cfg_drone_cf2x import RobotCfgCf2x
+from robot.robot_cfg.robot_cfg_drone_cf2x import RobotCfgCf2x
 from utils import to_torch
-
-
-from geometry_msgs.msg import Pose, Twist, Vector3
-from gsi2isaacsim.gsi_msgs_helper import (
-    Plan,
-    RobotFeedback,
-    SkillInfo,
-    Parameter,
-    VelTwistPose,
-)
 
 import threading
 

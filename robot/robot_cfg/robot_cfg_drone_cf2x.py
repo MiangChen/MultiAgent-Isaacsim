@@ -1,6 +1,6 @@
 from typing import Optional
 
-from robot.robot_cfg import RobotCfg, ASSET_PATH
+from .robot_cfg import RobotCfg, ASSET_PATH
 
 
 class RobotCfgCf2x(RobotCfg):

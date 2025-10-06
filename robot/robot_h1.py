@@ -11,12 +11,10 @@ from camera.camera_third_cfg import CameraThirdCfg
 from controller.controller_pid import ControllerPID
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
-from robot.robot_cfg_h1 import RobotCfgH1
+from robot.robot_cfg import RobotCfgH1
 from controller.controller_policy_h1 import H1FlatTerrainPolicy
 from utils import to_torch
 
-
-import carb
 from isaacsim.core.prims import Articulation
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.types import ArticulationActions
@@ -131,8 +129,8 @@ class RobotH1(RobotBase):
         self.robot_entity = Articulation(
             prim_paths_expr=self.cfg_body.prim_path,
             name=self.cfg_body.name,
-            positions=self.to_torch(self.cfg_body.position).reshape(1, 3),
-            orientations=self.to_torch(self.cfg_body.quat).reshape(1, 4),
+            positions=to_torch(self.cfg_body.position).reshape(1, 3),
+            orientations=to_torch(self.cfg_body.quat).reshape(1, 4),
         )
 
     def move_to(self, target_pos):

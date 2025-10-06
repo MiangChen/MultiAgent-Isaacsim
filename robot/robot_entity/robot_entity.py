@@ -45,14 +45,18 @@ from gsi2isaacsim.gsi_msgs_helper import (
     VelTwistPose,
 )
 
-class RobotEntity():
+logger = LogManager.get_logger()
+
+
+class RobotEntity:
     def __init__(
         self,
-        cfg_body: RobotCfg = None,
-        scene: Scene = None,):
-        # 代表机器人的实体
-        self.cfg_body = cfg_body
+        cfg_articulation: RobotCfg = None,
+        scene: Scene = None,
+    ):
+        self.cfg_articulation = cfg_articulation
         self.robot_articulation: Articulation = None
+        self.scene = scene
 
     def create_robot_articulation(self):
         """

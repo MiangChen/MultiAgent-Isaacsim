@@ -73,9 +73,7 @@ class SwarmManager:
 
         cfg_camera_third_person = None
         if cfg_camera_third_person_dict:
-            cfg_camera_third_person = CameraThirdCfg(
-                **cfg_camera_third_person_dict
-            )
+            cfg_camera_third_person = CameraThirdCfg(**cfg_camera_third_person_dict)
 
         # 选择同步或异步创建
         robot_cls = self.robot_class[robot_class_name]

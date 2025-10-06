@@ -8,7 +8,7 @@ from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
-from robot.robot_cfg_jetbot import RobotCfgJetbot
+from robot.robot_cfg import RobotCfgJetbot
 from utils import to_torch
 
 

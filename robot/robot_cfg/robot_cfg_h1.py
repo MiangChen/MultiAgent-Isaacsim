@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict
 
-from robot.robot_cfg import RobotCfg, ASSET_PATH
+from .robot_cfg import RobotCfg, ASSET_PATH
 
 
 class RobotCfgH1(RobotCfg):
