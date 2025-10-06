@@ -1,10 +1,11 @@
-from typing import List, Tuple
+from typing import List, Tuple, TypeVar, Generic
 
 from rclpy.action import ActionServer
 from pxr import Usd, UsdGeom
 import numpy as np
 import torch
 import carb
+
 
 from isaacsim.core.utils.numpy import rotations
 from isaacsim.core.api.scenes import Scene
@@ -24,6 +25,7 @@ from camera.camera_base import CameraBase
 from camera.camera_cfg import CameraCfg
 from camera.camera_third_cfg import CameraThirdCfg
 from robot.robot_cfg import RobotCfg
+from robot.robot_entity import RobotBody
 from robot.robot_trajectory import Trajectory
 from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
@@ -66,9 +68,10 @@ def _get_viewport_manager_from_container():
         raise Exception("ViewportManager not found in container") from e
 
 
-class RobotBase:
-    """Base class of robot."""
+RobotBody = TypeVar("RobotBody", bound=RobotBody)
 
+
+class RobotBase(Generic[RobotBody]):
     def __init__(
         self,
         cfg_body: RobotCfg = None,

@@ -10,7 +10,6 @@ from lidar.lidar_cfg import LidarCfg
 ASSET_PATH = config_manager.get("asset_path")
 
 
-
 class RobotCfg(CfgBase):
     # meta info
     type: str = "robot"

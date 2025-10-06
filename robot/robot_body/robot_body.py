@@ -48,17 +48,17 @@ from gsi2isaacsim.gsi_msgs_helper import (
 logger = LogManager.get_logger()
 
 
-class RobotEntity:
+class RobotBody:
     def __init__(
         self,
-        cfg_articulation: RobotCfg = None,
+        cfg_body: RobotCfg = None,
         scene: Scene = None,
     ):
-        self.cfg_articulation = cfg_articulation
-        self.robot_articulation: Articulation = None
+        self.cfg_body = cfg_body
+        self.robot_body: Articulation = None
         self.scene = scene
 
-    def create_robot_articulation(self):
+    def create_robot_body(self):
         """
         [Abstract Method] Initializes the specific robot entity wrapper.
         Subclasses MUST override this method to create either an Articulation,

@@ -105,7 +105,9 @@ class SwarmManager:
             )
 
         self.robot_warehouse[robot_class_name].append(robot)
-        self.map_semantic.map_semantic[robot.cfg_body.name] = robot.cfg_body.prim_path_swarm
+        self.map_semantic.map_semantic[robot.cfg_body.name] = (
+            robot.cfg_body.prim_path_swarm
+        )
         return robot
 
     def register_robot_class(
