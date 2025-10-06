@@ -40,7 +40,7 @@ class ConfigManager:
 
         return parser
 
-    def load(self, args: List[str] = None):
+    def load(self):
         """
         加载、合并和处理所有配置。
         """

@@ -31,7 +31,6 @@ import asyncio
 from dependency_injector.wiring import inject, Provide
 import rclpy
 
-rclpy.init(args=None)
 
 from isaacsim.core.api import World
 
@@ -48,9 +47,9 @@ from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
 
-# Log startup information with argument summary
+
+rclpy.init(args=None)
 logger = LogManager.get_logger(__name__)
-logger.info("Isaac Sim WebManager starting...")
 
 WORLD_USD_PATH = config_manager.get("world_usd_path")
 PROJECT_ROOT = config_manager.get("project_root")
