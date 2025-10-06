@@ -1,21 +1,27 @@
 from typing import Optional, Tuple
-from pydantic import BaseModel
 
 
-class BaseCfg(BaseModel):
-    def update(self, **kwargs):
-        return self.model_copy(update=kwargs, deep=True)
+from config.cfg_base import CfgBase
 
 
-class CameraCfg(BaseCfg):
+class CameraCfg(CfgBase):
 
-    type: Optional[str] = 'camera'
+    type: Optional[str] = "camera"
     prim_path_relative: Optional[str] = None
     prim_path_absolute: Optional[str] = None
     path_prim_joint_target_relative: Optional[str] = None
 
-    position: Tuple[float, float, float] = (0.0, 0.0, 0.0)  # 相对于joint target的偏移距离
-    quat: Optional[Tuple[float, float, float, float]] = (0.0, 0.0, 0.0, 1.0)  # 使用4元数的方法
+    position: Tuple[float, float, float] = (
+        0.0,
+        0.0,
+        0.0,
+    )  # 相对于joint target的偏移距离
+    quat: Optional[Tuple[float, float, float, float]] = (
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+    )  # 使用4元数的方法
     scale: Optional[Tuple[float, float, float]] = (1.0, 1.0, 1.0)
     frequency: Optional[int] = None  # 相机帧率
     resolution: Optional[Tuple[int, int]] = None  # 相机分辨率

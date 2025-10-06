@@ -25,7 +25,9 @@ class CameraBase:
 
     def create_camera(self, camera_path: str = None):
         if camera_path is None:
-            self.cfg_camera.prim_path_absolute = self.cfg_body.prim_path_swarm + '/camera/Camera'
+            self.cfg_camera.prim_path_absolute = (
+                self.cfg_body.prim_path_swarm + "/camera/Camera"
+            )
         else:
             self.cfg_camera.prim_path_absolute = camera_path
         prim = get_prim_at_path(self.cfg_camera.prim_path_absolute)
@@ -33,7 +35,7 @@ class CameraBase:
         if prim.IsValid():
             self.camera_view = CameraView(
                 prim_paths_expr=self.cfg_camera.prim_path_absolute,
-                output_annotators=['rgb']
+                output_annotators=["rgb"],
             )
 
         else:
@@ -43,7 +45,7 @@ class CameraBase:
                 # 获取值（默认时间或指定时间）
                 timecode = Usd.TimeCode.Default()
 
-                translate_attr = prim.GetAttribute('xformOp:translate')
+                translate_attr = prim.GetAttribute("xformOp:translate")
                 if not translate_attr:
                     print("Prim 未定义 xformOp:translate 属性")
                 else:  # 静态用默认时间，动态用 Usd.TimeCode(frame)
@@ -51,16 +53,20 @@ class CameraBase:
                     # print(f"平移值: {tra/slate_value}")  # 例如 (1.0, 2.0, 3.0)
                     self.cfg_camera.position = list(translate_value)
 
-                quat_attr = prim.GetAttribute('xformOp:orient')
+                quat_attr = prim.GetAttribute("xformOp:orient")
                 if not quat_attr:
                     print("Prim 未定义 xformOp:orient 属性")
                 else:
                     quat_value = quat_attr.Get(timecode)
-                    self.cfg_camera.quat = [quat_value.real] + list(quat_value.imaginary)
+                    self.cfg_camera.quat = [quat_value.real] + list(
+                        quat_value.imaginary
+                    )
                     self.cfg_camera.euler_degree = None
             else:
                 if prim:
-                    print(f"Prim at {prim.GetPath()} is not Xformable or does not exist.")
+                    print(
+                        f"Prim at {prim.GetPath()} is not Xformable or does not exist."
+                    )
                 else:
                     print(f"Prim not found at path {prim.GetPath()}")
 
@@ -70,16 +76,15 @@ class CameraBase:
                 # resolution=self.cfg_camera.resolution,
                 translations=to_torch(self.cfg_camera.position).reshape(1, 3),
                 orientations=to_torch(self.cfg_camera.quat).reshape(1, 4),
-                output_annotators=['rgb'],
+                output_annotators=["rgb"],
             )
 
             self.set_local_pose(
                 positions=to_torch(self.cfg_camera.position).reshape(1, 3),
                 orientations=to_torch(self.cfg_camera.quat).reshape(1, 4),
-                camera_axes='usd'
+                camera_axes="usd",
             )
         return
-
 
     def initialize(self) -> bool:
         """
@@ -93,10 +98,15 @@ class CameraBase:
         # self.camera.add_bounding_box_2d_loose_to_frame() # camera view不用
         return self.camera_view.initialized
 
-    def set_local_pose(self, positions: Tuple[float, float, float],
-                       orientations: Tuple[float, float, float, float],
-                       camera_axes: str = 'usd') -> None:
-        self.camera_view.set_local_poses(positions=positions, orientations=orientations, camera_axes=camera_axes)
+    def set_local_pose(
+        self,
+        positions: Tuple[float, float, float],
+        orientations: Tuple[float, float, float, float],
+        camera_axes: str = "usd",
+    ) -> None:
+        self.camera_view.set_local_poses(
+            positions=positions, orientations=orientations, camera_axes=camera_axes
+        )
         return None
 
     def get_current_frame(self):
@@ -117,13 +127,15 @@ class CameraBase:
         """
         return self.camera_view.get_rgb()
 
-    def get_local_pose(self, camera_axes: str = 'usd'):
+    def get_local_pose(self, camera_axes: str = "usd"):
         return self.camera_view.get_local_pose(camera_axes=camera_axes)
 
-    def get_world_pose(self, camera_axes: str = 'usd') -> Tuple[np.ndarray, np.ndarray]:
+    def get_world_pose(self, camera_axes: str = "usd") -> Tuple[np.ndarray, np.ndarray]:
         return self.camera_view.get_world_pose(camera_axes=camera_axes)
 
-    def save_rgb_to_file(self, rgb_tensor_gpu: torch.Tensor, file_path: str = None) -> bool:
+    def save_rgb_to_file(
+        self, rgb_tensor_gpu: torch.Tensor, file_path: str = None
+    ) -> bool:
         """
         使用 torchvision.utils.save_image 简化版本
 
@@ -136,16 +148,22 @@ class CameraBase:
         """
         try:
             if not isinstance(rgb_tensor_gpu, torch.Tensor):
-                logger.error(f"输入无效：期望一个 torch.Tensor，但收到了 {type(rgb_tensor_gpu)}。")
+                logger.error(
+                    f"输入无效：期望一个 torch.Tensor，但收到了 {type(rgb_tensor_gpu)}。"
+                )
                 return False
 
             if not isinstance(file_path, str) or not file_path:
-                logger.error(f"文件路径无效：路径必须是一个非空字符串，但收到了 '{file_path}'。")
+                logger.error(
+                    f"文件路径无效：路径必须是一个非空字符串，但收到了 '{file_path}'。"
+                )
                 return False
 
             # 如果是4维张量 (batch, H, W, C)，则只取第一张图
             if rgb_tensor_gpu.ndim == 4:
-                logger.warning(f"输入为4维张量，将只保存第一张图像。形状: {rgb_tensor_gpu.shape}")
+                logger.warning(
+                    f"输入为4维张量，将只保存第一张图像。形状: {rgb_tensor_gpu.shape}"
+                )
                 rgb_tensor_gpu = rgb_tensor_gpu[0]
 
             # 核心检查：必须是3维张量

@@ -1,11 +1,10 @@
 from typing import Optional, Tuple
-from pydantic import BaseModel, Field
+from pydantic import  Field
 
-# 导入 CameraCfg 中使用的 BaseCfg，以保持一致性
-from camera.camera_cfg import BaseCfg
+from config.cfg_base import CfgBase
 
 
-class LidarCfg(BaseCfg):
+class LidarCfg(CfgBase):
     """
     配置类，用于定义一个 RTX Lidar 传感器的属性。
     """
