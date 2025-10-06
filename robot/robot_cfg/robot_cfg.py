@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from camera.camera_cfg import CameraCfg
 from camera.camera_third_cfg import CameraThirdCfg
 from config.config_manager import config_manager
+from lidar.lidar_cfg import LidarCfg
 
 ASSET_PATH = config_manager.get("asset_path")
 
@@ -31,6 +32,7 @@ class RobotCfg(BaseCfg):
     )  # 使用4元数
     scale: Optional[Tuple[float, float, float]] = (1.0, 1.0, 1.0)
     # controllers: Optional[List[ControllerCfg]] = None
-    # cameras: Optional[List[SensorCfg]] = None
 
-    camera: Optional[Dict[str, CameraCfg]] = {}
+    cfg_dict_camera: Optional[Dict[str, CameraCfg]] = {}
+    cfg_dict_lidar: Optional[Dict[str, LidarCfg]] = {}
+    cfg_dict_camera_third: Optional[Dict[str, CameraThirdCfg]] = {}
