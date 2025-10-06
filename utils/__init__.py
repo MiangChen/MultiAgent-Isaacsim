@@ -1,1 +1,1 @@
-from to_torch import to_torch
+from .to_torch import to_torch
