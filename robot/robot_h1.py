@@ -7,7 +7,7 @@ from isaacsim.core.api.scenes import Scene
 
 from map.map_grid_map import GridMap
 from camera.camera_cfg import CameraCfg
-from camera.camera_third_person_cfg import CameraThirdPersonCfg
+from camera.camera_third_cfg import CameraThirdCfg
 from controller.controller_pid import ControllerPID
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
@@ -41,7 +41,7 @@ class RobotH1(RobotBase):
         self,
         cfg_body: RobotCfgH1,
         cfg_camera: CameraCfg = None,
-        cfg_camera_third_person: CameraThirdPersonCfg = None,
+        cfg_camera_third_person: CameraThirdCfg = None,
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager=None,
@@ -84,7 +84,7 @@ class RobotH1(RobotBase):
         cls,
         cfg_body: RobotCfgH1,
         cfg_camera: CameraCfg = None,
-        cfg_camera_third_person: CameraThirdPersonCfg = None,
+        cfg_camera_third_person: CameraThirdCfg = None,
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager=None,

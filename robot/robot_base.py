@@ -16,7 +16,7 @@ from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from camera.camera_base import CameraBase
 from camera.camera_cfg import CameraCfg
-from camera.camera_third_person_cfg import CameraThirdPersonCfg
+from camera.camera_third_cfg import CameraThirdCfg
 from robot.robot_cfg import RobotCfg
 from robot.robot_trajectory import Trajectory
 from scene.scene_manager import SceneManager
@@ -32,7 +32,6 @@ import carb
 from isaacsim.core.utils.numpy import rotations
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import RigidPrim
-from isaacsim.core.prims import Articulation
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
 import isaacsim.core.utils.prims as prims_utils
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
@@ -78,7 +77,7 @@ class RobotBase:
         self,
         cfg_body: RobotCfg = None,
         cfg_camera: CameraCfg = None,
-        cfg_camera_third_person: CameraThirdPersonCfg = None,
+        cfg_camera_third_person: CameraThirdCfg = None,
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager: SceneManager = None,
@@ -91,8 +90,7 @@ class RobotBase:
         self.viewport_manager = (
             _get_viewport_manager_from_container()
         )  # 通过依赖注入获取viewport_manager
-        # 代表机器人的实体
-        self.robot_entity: Articulation = None
+
         # 通用的机器人本体初始化代码
         self.cfg_body.prim_path = (
             cfg_body.prim_path

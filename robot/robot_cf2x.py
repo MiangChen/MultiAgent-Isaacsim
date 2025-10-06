@@ -7,7 +7,7 @@ from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import Articulation
 
 from camera.camera_cfg import CameraCfg
-from camera.camera_third_person_cfg import CameraThirdPersonCfg
+from camera.camera_third_cfg import CameraThirdCfg
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from log.log_manager import LogManager
@@ -48,7 +48,7 @@ class RobotCf2x(RobotBase):
         self,
         cfg_body: RobotCfgCf2x,
         cfg_camera: CameraCfg = None,
-        cfg_camera_third_person: CameraThirdPersonCfg = None,
+        cfg_camera_third_person: CameraThirdCfg = None,
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager=None,

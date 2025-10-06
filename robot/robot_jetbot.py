@@ -3,7 +3,7 @@ import torch
 from controller.controller_pid import ControllerPID
 from controller.controller_pid_jetbot import ControllerJetbot
 from camera.camera_cfg import CameraCfg
-from camera.camera_third_person_cfg import CameraThirdPersonCfg
+from camera.camera_third_cfg import CameraThirdCfg
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from robot.robot_base import RobotBase
@@ -30,7 +30,7 @@ class RobotJetbot(RobotBase):
         self,
         cfg_body: RobotCfgJetbot,
         cfg_camera: CameraCfg = None,
-        cfg_camera_third_person: CameraThirdPersonCfg = None,
+        cfg_camera_third_person: CameraThirdCfg = None,
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager=None,

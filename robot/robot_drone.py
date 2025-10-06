@@ -10,7 +10,7 @@ from rclpy.node import Node
 
 from map.map_grid_map import GridMap
 from camera.camera_cfg import CameraCfg
-from camera.camera_third_person_cfg import CameraThirdPersonCfg
+from camera.camera_third_cfg import CameraThirdCfg
 from controller.controller_pid import ControllerPID
 from robot.robot_cfg import RobotCfg
 from robot.robot_base import RobotBase
@@ -65,7 +65,7 @@ class RobotDrone(RobotBase):
             self,
             cfg_body: RobotCfg = None,
             cfg_camera: CameraCfg = None,
-            cfg_camera_third_person: CameraThirdPersonCfg = None,
+            cfg_camera_third_person: CameraThirdCfg = None,
             scene: Scene = None,
             map_grid: GridMap = None,
             scene_manager: SceneManager = None,

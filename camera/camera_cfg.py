@@ -9,11 +9,12 @@ class BaseCfg(BaseModel):
 
 class CameraCfg(BaseCfg):
 
-    name_prefix: Optional[str] = 'camera'
     type: Optional[str] = 'camera'
-    prim_path: Optional[str] = None
+    prim_path_relative: Optional[str] = None
+    prim_path_absolute: Optional[str] = None
+    path_prim_joint_target_relative: Optional[str] = None
 
-    position: Tuple[float, float, float] = (0.0, 0.0, 0.0)  # 相对于机器人中心的偏移距离
+    position: Tuple[float, float, float] = (0.0, 0.0, 0.0)  # 相对于joint target的偏移距离
     quat: Optional[Tuple[float, float, float, float]] = (0.0, 0.0, 0.0, 1.0)  # 使用4元数的方法
     scale: Optional[Tuple[float, float, float]] = (1.0, 1.0, 1.0)
     frequency: Optional[int] = None  # 相机帧率

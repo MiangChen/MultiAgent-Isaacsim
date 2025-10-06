@@ -24,19 +24,19 @@ class CameraBase:
 
     def create_camera(self, camera_path: str = None):
         if camera_path is None:
-            self.cfg_camera.prim_path = self.cfg_body.prim_path + '/camera/Camera'
+            self.cfg_camera.prim_path_absolute = self.cfg_body.prim_path + '/camera/Camera'
         else:
-            self.cfg_camera.prim_path = camera_path
-        prim = get_prim_at_path(self.cfg_camera.prim_path)
+            self.cfg_camera.prim_path_absolute = camera_path
+        prim = get_prim_at_path(self.cfg_camera.prim_path_absolute)
 
         if prim.IsValid():
             self.camera_view = CameraView(
-                prim_paths_expr=self.cfg_camera.prim_path,
+                prim_paths_expr=self.cfg_camera.prim_path_absolute,
                 output_annotators=['rgb']
             )
 
         else:
-            prim = define_prim(self.cfg_camera.prim_path, "Xform")
+            prim = define_prim(self.cfg_camera.prim_path_absolute, "Xform")
             if prim.IsA(UsdGeom.Xformable):
 
                 # 获取值（默认时间或指定时间）
@@ -64,7 +64,7 @@ class CameraBase:
                     print(f"Prim not found at path {prim.GetPath()}")
 
             self.camera_view = CameraView(
-                prim_paths_expr=self.cfg_camera.prim_path,
+                prim_paths_expr=self.cfg_camera.prim_path_absolute,
                 # frequency=self.cfg_camera.frequency,
                 # resolution=self.cfg_camera.resolution,
                 translations=self.to_torch(self.cfg_camera.position).reshape(1, 3),

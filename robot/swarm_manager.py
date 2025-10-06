@@ -5,7 +5,7 @@ import yaml
 from isaacsim.core.api.scenes import Scene
 
 from camera.camera_cfg import CameraCfg
-from camera.camera_third_person_cfg import CameraThirdPersonCfg
+from camera.camera_third_cfg import CameraThirdCfg
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
 from robot.robot_base import RobotBase
@@ -73,7 +73,7 @@ class SwarmManager:
 
         cfg_camera_third_person = None
         if cfg_camera_third_person_dict:
-            cfg_camera_third_person = CameraThirdPersonCfg(
+            cfg_camera_third_person = CameraThirdCfg(
                 **cfg_camera_third_person_dict
             )
 

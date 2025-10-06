@@ -2,7 +2,7 @@ from typing import Dict, Optional, Tuple
 from pydantic import BaseModel
 
 from camera.camera_cfg import CameraCfg
-from camera.camera_third_person_cfg import CameraThirdPersonCfg
+from camera.camera_third_cfg import CameraThirdCfg
 from config.config_manager import config_manager
 
 ASSET_PATH = config_manager.get("asset_path")

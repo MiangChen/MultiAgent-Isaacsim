@@ -415,7 +415,7 @@ def unpause_physics_fun(req, response):
 def process_move_requests(curr_stage, pending_move_requests):
     """Process pending move requests and update object positions."""
     for data in pending_move_requests:
-        scene_manager.adjust_prim(prim_path=data["prim_path"], position=data["pos"], quat=data["quat"], scale=None)
+        scene_manager.adjust_prim(prim_path=data["prim_path_absolute"], position=data["pos"], quat=data["quat"], scale=None)
 
 
 @carb.profiler.profile
