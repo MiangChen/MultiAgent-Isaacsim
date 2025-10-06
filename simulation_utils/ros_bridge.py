@@ -21,7 +21,7 @@ from sensor_msgs.msg import PointCloud2, PointField, Image
 
 from containers import get_container
 from map.map_semantic_map import MapSemantic
-from robot.robot_drone import DronePose, RobotDrone
+from robot.robot_drone_autel import DronePose, RobotDrone
 
 # -----------------------------------------------------------------------------
 # Global variables (legacy single-UAV path)

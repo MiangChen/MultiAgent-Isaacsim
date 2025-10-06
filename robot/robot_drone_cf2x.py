@@ -16,13 +16,14 @@ from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg.robot_cfg_drone_cf2x import RobotCfgCf2x
 from utils import to_torch
+from robot.robot_body.body_drone_cf2x import BodyDroneCf2x
 
 import threading
 
 logger = LogManager.get_logger(__name__)
 
 
-class RobotCf2x(RobotBase):
+class RobotCf2x(RobotBase[BodyDroneCf2x]):
     """
     CF2x无人机控制类
 

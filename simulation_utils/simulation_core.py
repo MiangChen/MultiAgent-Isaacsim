@@ -19,7 +19,7 @@ from std_msgs.msg import Header
 from std_srvs.srv import Empty
 from sensor_msgs.msg import PointCloud2, PointField, Image
 
-from robot.robot_drone import DronePose, RobotDrone
+from robot.robot_drone_autel import DronePose, RobotDrone
 from containers import get_container
 from simulation_utils.perception import create_depth2pc_lut, depth2pointclouds, process_semantic_detection
 from simulation_utils.message_convert import create_pc2_msg, create_image_msg

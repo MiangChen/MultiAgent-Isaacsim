@@ -7,6 +7,9 @@ from pxr import Usd, UsdGeom
 from robot.robot_body import RobotBody
 from robot.robot_cfg import RobotCfg
 from utils import to_torch
+from log.log_manager import LogManager
+
+logger = LogManager.get_logger()
 
 
 class BodyH1(RobotBody):

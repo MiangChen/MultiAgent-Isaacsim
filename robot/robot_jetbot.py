@@ -9,6 +9,7 @@ from path_planning.path_planning_astar import AStar
 from robot.robot_base import RobotBase
 from robot.robot_trajectory import Trajectory
 from robot.robot_cfg import RobotCfgJetbot
+from robot.robot_body.body_jetbot import BodyJetbot
 from utils import to_torch
 
 
@@ -27,7 +28,8 @@ from gsi2isaacsim.gsi_msgs_helper import (
 )
 
 
-class RobotJetbot(RobotBase):
+
+class RobotJetbot(RobotBase[BodyJetbot]):
     def __init__(
         self,
         cfg_body: RobotCfgJetbot,

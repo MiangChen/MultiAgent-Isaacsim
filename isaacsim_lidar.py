@@ -22,7 +22,7 @@ from scene.scene_manager import SceneManager
 from lidar.lidar_base import LidarBase
 from lidar.lidar_cfg import LidarCfg
 from map.map_semantic_map import MapSemantic
-from robot.robot_drone import RobotDrone
+from robot.robot_drone_autel import RobotDrone
 from simulation_utils.ros_bridge import setup_ros
 from simulation_utils.simulation_core import run_simulation_loop_multi
 from config.config_manager import config_manager

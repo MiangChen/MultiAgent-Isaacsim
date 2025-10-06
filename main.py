@@ -41,7 +41,7 @@ from environment.env import Env
 from log.log_manager import LogManager
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
-from robot.robot_cf2x import RobotCf2x, RobotCfgCf2x
+from robot.robot_drone_cf2x import RobotCf2x, RobotCfgCf2x
 from robot.robot_h1 import RobotH1, RobotCfgH1
 from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
 from robot.swarm_manager import SwarmManager
