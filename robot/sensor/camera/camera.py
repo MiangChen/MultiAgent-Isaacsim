@@ -17,7 +17,7 @@ from utils import to_torch
 logger = LogManager.get_logger(__name__)
 
 
-class BaseCamera:
+class Camera:
 
     def __init__(self, cfg_body: CfgRobot, cfg_camera: CfgCamera):
         self.cfg_camera = cfg_camera

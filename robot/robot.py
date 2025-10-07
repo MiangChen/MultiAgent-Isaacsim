@@ -18,11 +18,9 @@ from isaacsim.core.utils.viewports import (
 
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
-from camera.base_camera import BaseCamera
-from robot.sensor.camera.cfg_camera import CfgCamera
-from robot.camera.cfg_camera_third import CfgCameraThird
+from robot.sensor.camera import CfgCamera, CfgCameraThird, Camera
 from robot.cfg import CfgRobot
-from robot.robot_body import BodyRobot
+from robot.body import BodyRobot
 from robot.robot_trajectory import Trajectory
 from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
@@ -152,7 +150,7 @@ class Robot(Generic[RobotBody]):
         self.view_radius: float = 2  # 感知半径 米
         if cfg_camera is not None:
             logger.info(f"create camera for {self.cfg_body.type}")
-            self.camera = BaseCamera(cfg_body, cfg_camera)
+            self.camera = Camera(cfg_body, cfg_camera)
             self.camera.create_camera(camera_path=self.cfg_body.camera_path)
 
         # 第三视角相机 一个机器人只有一个
