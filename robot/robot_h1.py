@@ -9,7 +9,7 @@ from map.map_grid_map import GridMap
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from controller.controller_pid import ControllerPID
 from robot.robot import Robot
-from robot.body.body_h1 import BodyRobotH1
+from robot.body.body_h1 import BodyH1
 from robot.robot_trajectory import Trajectory
 from robot.cfg import CfgH1
 from controller.controller_policy_h1 import H1FlatTerrainPolicy
@@ -28,7 +28,7 @@ from gsi2isaacsim.gsi_msgs_helper import (
 )
 
 
-class RobotH1(Robot[BodyRobotH1]):
+class RobotH1(Robot[BodyH1]):
     """
     H1 Robot Class.
     This class uses an asynchronous factory pattern for initialization

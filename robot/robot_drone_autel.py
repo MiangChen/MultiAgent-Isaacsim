@@ -15,7 +15,7 @@ from robot.cfg import CfgRobot
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from scene.scene_manager import SceneManager
-from robot.body.body_drone_autel import BodyRobotDroneAutel
+from robot.body.body_drone_autel import BodyDroneAutel
 
 DRONE_COLOR_SCHEMES = {
     "Gray": {"main": [0.6, 0.6, 0.6], "nose": [0.3, 0.3, 0.3]},
@@ -54,7 +54,7 @@ class DronePose:
         self.quat = quat
 
 
-class RobotDrone(Robot[BodyRobotDroneAutel]):
+class RobotDrone(Robot[BodyDroneAutel]):
     """
     一个完整的无人机机器人实例，包含了模型创建、ROS接口和传感器逻辑。
     """

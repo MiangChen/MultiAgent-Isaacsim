@@ -12,7 +12,7 @@ from log.log_manager import LogManager
 logger = LogManager.get_logger(__name__)
 
 
-class BodyRobotDroneCf2X(BodyRobot):
+class BodyDroneCf2X(BodyRobot):
     def __init__(
         self,
         cfg_body: CfgRobot = None,
