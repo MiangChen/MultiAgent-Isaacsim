@@ -83,19 +83,14 @@ class SwarmManager:
         ):
             # 如果是，使用 await 调用异步工厂 create 方法
             print(f"'{robot_class_name}' has an async factory. Using await .create()")
-            robot = await robot_cls.create(
-                cfg_body=cfg_body,
-                cfg_camera=cfg_camera,
-                cfg_camera_third_person=cfg_camera_third_person,
-                map_grid=self.map_grid,
-                scene=self.scene,
-                scene_manager=self.scene_manager,
-            )
+            robot = await robot_cls.create(cfg_robot=cfg_body, cfg_camera=cfg_camera,
+                                           cfg_camera_third_person=cfg_camera_third_person, map_grid=self.map_grid,
+                                           scene=self.scene, scene_manager=self.scene_manager)
         else:
             # 如果不是，使用传统的同步 __init__ 方法
             print(f"'{robot_class_name}' has a standard constructor. Using .__init__()")
             robot = robot_cls(
-                cfg_body=cfg_body,
+                cfg_robot=cfg_body,
                 cfg_camera=cfg_camera,
                 cfg_camera_third_person=cfg_camera_third_person,
                 scene=self.scene,

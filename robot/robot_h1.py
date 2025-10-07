@@ -84,7 +84,7 @@ class RobotH1(Robot):
     @classmethod
     async def create(
         cls,
-        cfg_body: CfgH1,
+        cfg_robot: CfgH1,
         cfg_camera: CfgCamera = None,
         cfg_camera_third_person: CfgCameraThird = None,
         map_grid: GridMap = None,
@@ -96,7 +96,7 @@ class RobotH1(Robot):
         including its asynchronous policy controller.
         """
         instance = cls(
-            cfg_robot=cfg_body,
+            cfg_robot=cfg_robot,
             cfg_camera=cfg_camera,
             cfg_camera_third_person=cfg_camera_third_person,
             map_grid=map_grid,

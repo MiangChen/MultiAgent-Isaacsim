@@ -59,12 +59,8 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
     lidar_step_wrapper = create_lidar_step_wrapper(lidar_annotators)
     print(f"Adding drone body to {prim_path} with color scheme {idx}")
 
-    partial_ctx = RobotDroneAutel(
-        namespace=namespace,
-        prim_path=prim_path,
-        scene_manager=scene_manager,
-        color_scheme_id=idx,
-    )
+    partial_ctx = RobotDroneAutel(scene_manager=scene_manager, namespace=namespace, prim_path=prim_path,
+                                  color_scheme_id=idx)
 
     # ROS ---------------------------------------------------------------
     node, pubs, subs, srvs = setup_ros(namespace, ctx=partial_ctx)

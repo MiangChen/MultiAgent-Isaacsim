@@ -61,7 +61,7 @@ class RobotDroneAutel(Robot):
 
     def __init__(
         self,
-        cfg_body: CfgRobot = None,
+        cfg_robot: CfgRobot = None,
         cfg_camera: CfgCamera = None,
         cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
