@@ -19,8 +19,6 @@ import rclpy
 rclpy.init()
 
 from scene.scene_manager import SceneManager
-from lidar.lidar_base import LidarBase
-from lidar.lidar_cfg import LidarCfg
 from map.map_semantic_map import MapSemantic
 from robot.robot_drone_autel import RobotDrone
 from simulation_utils.ros_bridge import setup_ros
@@ -44,18 +42,18 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
     prim_path = f"/{namespace}/drone" if namespace else "/drone" if idx == 0 else f"/drone_{idx}"
 
     # LiDAR -------------------------------------------------------------
-    # lidar_cfg = LidarCfg()
+    # lidar_cfg = CfgLidar()
     # lidar_cfg.prim_path = prim_path + "/Lidar/lfr"
     #
     # lidar_cfg.config_file_name = "autel_perception_120x352"
-    # lidar = LidarBase(cfg_lidar=lidar_cfg)
+    # lidar = BaseLidar(cfg_lidar=lidar_cfg)
     # lidar.create_lidar(prim_path=lidar_cfg.prim_path)
     # lidar.lidar_sensor.add_point_cloud_data_to_frame()
     # lidar.initialize()
 
 
 
-    from lidar.lidar_base import add_drone_lidar, create_lidar_step_wrapper
+    from robot.sensor.lidar.base_lidar import add_drone_lidar, create_lidar_step_wrapper
     lidar_config = "autel_perception_120x352"
     lidar_annotators = add_drone_lidar(prim_path, lidar_config)
     lidar_step_wrapper = create_lidar_step_wrapper(lidar_annotators)
@@ -166,7 +164,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
 
 def main():  # Needed in build_drone_ctx
 
-    from containers import AppContainer, get_container, reset_container
+    from containers import get_container
 
     container = get_container()
 

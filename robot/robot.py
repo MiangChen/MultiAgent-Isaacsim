@@ -1,4 +1,4 @@
-from typing import List, Tuple, TypeVar, Generic
+from typing import Tuple, TypeVar, Generic
 
 from rclpy.action import ActionServer
 from pxr import Usd, UsdGeom
@@ -6,8 +6,6 @@ import numpy as np
 import torch
 import carb
 
-
-from isaacsim.core.utils.numpy import rotations
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import RigidPrim
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
@@ -16,31 +14,23 @@ from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.viewports import (
     create_viewport_for_camera,
     set_camera_view,
-    set_intrinsics_matrix,
 )
 
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
-from camera.camera_base import CameraBase
-from camera.camera_cfg import CameraCfg
-from camera.camera_third_cfg import CameraThirdCfg
-from robot.robot_cfg import RobotCfg
-from robot.robot_body import RobotBody
+from camera.base_camera import BaseCamera
+from robot.sensor.camera.cfg_camera import CfgCamera
+from robot.camera.cfg_camera_third import CfgCameraThird
+from robot.cfg import CfgRobot
+from robot.robot_body import BodyRobot
 from robot.robot_trajectory import Trajectory
 from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
 from log.log_manager import LogManager
 from utils import to_torch
 from gsi2isaacsim.gsi_msgs_helper import (
-    PrimTransform,
-    SceneModifications,
     RobotFeedback,
-    VelTwistPose,
-    RobotSkill,
-    PlanExecution,
     SkillExecution,
-    SkillFeedback,
-    Plan,
     SkillInfo,
     Parameter,
     VelTwistPose,
@@ -68,15 +58,15 @@ def _get_viewport_manager_from_container():
         raise Exception("ViewportManager not found in container") from e
 
 
-RobotBody = TypeVar("RobotBody", bound=RobotBody)
+RobotBody = TypeVar("BodyRobot", bound=BodyRobot)
 
 
-class RobotBase(Generic[RobotBody]):
+class Robot(Generic[RobotBody]):
     def __init__(
         self,
-        cfg_body: RobotCfg = None,
-        cfg_camera: CameraCfg = None,
-        cfg_camera_third_person: CameraThirdCfg = None,
+        cfg_body: CfgRobot = None,
+        cfg_camera: CfgCamera = None,
+        cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager: SceneManager = None,
@@ -162,7 +152,7 @@ class RobotBase(Generic[RobotBody]):
         self.view_radius: float = 2  # 感知半径 米
         if cfg_camera is not None:
             logger.info(f"create camera for {self.cfg_body.type}")
-            self.camera = CameraBase(cfg_body, cfg_camera)
+            self.camera = BaseCamera(cfg_body, cfg_camera)
             self.camera.create_camera(camera_path=self.cfg_body.camera_path)
 
         # 第三视角相机 一个机器人只有一个

@@ -4,7 +4,7 @@ from pydantic import  Field
 from config.cfg_base import CfgBase
 
 
-class LidarCfg(CfgBase):
+class CfgLidar(CfgBase):
     """
     配置类，用于定义一个 RTX Lidar 传感器的属性。
     """

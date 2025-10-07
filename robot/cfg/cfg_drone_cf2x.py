@@ -1,7 +1,7 @@
-from .robot_cfg import RobotCfg, ASSET_PATH
+from .cfg_robot import CfgRobot, ASSET_PATH
 
 
-class RobotCfgCf2x(RobotCfg):
+class CfgDroneCf2X(CfgRobot):
     # meta info
     type: str = "cf2x"
     id: int = 0

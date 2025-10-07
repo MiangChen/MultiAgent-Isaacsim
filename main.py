@@ -41,9 +41,9 @@ from environment.env import Env
 from log.log_manager import LogManager
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
-from robot.robot_drone_cf2x import RobotCf2x, RobotCfgCf2x
-from robot.robot_h1 import RobotH1, RobotCfgH1
-from robot.robot_jetbot import RobotCfgJetbot, RobotJetbot
+from robot.robot_drone_cf2x import RobotCf2x, CfgDroneCf2X
+from robot.robot_h1 import RobotH1, CfgH1
+from robot.robot_jetbot import CfgJetbot, RobotJetbot
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
 
@@ -69,13 +69,13 @@ def setup_simulation(
     swarm_manager.register_robot_class(
         robot_class_name="jetbot",
         robot_class=RobotJetbot,
-        robot_class_cfg=RobotCfgJetbot,
+        robot_class_cfg=CfgJetbot,
     )
     swarm_manager.register_robot_class(
-        robot_class_name="h1", robot_class=RobotH1, robot_class_cfg=RobotCfgH1
+        robot_class_name="h1", robot_class=RobotH1, robot_class_cfg=CfgH1
     )
     swarm_manager.register_robot_class(
-        robot_class_name="cf2x", robot_class=RobotCf2x, robot_class_cfg=RobotCfgCf2x
+        robot_class_name="cf2x", robot_class=RobotCf2x, robot_class_cfg=CfgDroneCf2X
     )
 
     # Create initialization tasks
@@ -320,14 +320,14 @@ def main():
 
     flag = 0
     # LiDAR -------------------------------------------------------------
-    # from lidar.lidar_base import LidarCfg, LidarBase
+    # from lidar.lidar_base import CfgLidar, BaseLidar
     # prim_path = "/World/Critical_Package_Alpha2"
     # lidar_config = "autel_perception_120x352"
-    # lidar_cfg = LidarCfg()
+    # lidar_cfg = CfgLidar()
     # lidar_cfg.position = [5, 5, 1]
     # lidar_cfg.prim_path = prim_path + "/Lidar/lfr"
     # lidar_cfg.config_file_name = lidar_config
-    # lidar = LidarBase(
+    # lidar = BaseLidar(
     #     cfg_lidar=lidar_cfg,
     # )
     # # lidar.copy_lidar_config(lidar_config=lidar_config)

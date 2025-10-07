@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 from config.cfg_base import CfgBase
 
 
-class CameraCfg(CfgBase):
+class CfgCamera(CfgBase):
 
     type: Optional[str] = "camera"
     prim_path_relative: Optional[str] = None

@@ -1,7 +1,7 @@
-from .robot_cfg import RobotCfg, ASSET_PATH
+from .cfg_robot import CfgRobot, ASSET_PATH
 
 
-class RobotCfgAutelDrone(RobotCfg):
+class CfgDroneAutel(CfgRobot):
     # meta info
     type: str = "auteldrone"
     id: int = 0

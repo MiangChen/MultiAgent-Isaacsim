@@ -1,9 +1,10 @@
 # In a file like camera/camera_cfg.py
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import List, Optional
 
+from config.cfg_base import CfgBase
 
-class CameraThirdCfg(BaseModel):
+class CfgCameraThird(CfgBase):
     enabled: bool = Field(default=False, description="是否启用此相机")
     relative_position: List[float] = Field(
         default=[-5.0, 0.0, 3.0], description="相机相对于机器人的位置，主要用于确定角度"

@@ -2,14 +2,14 @@ import torch
 
 from controller.controller_pid import ControllerPID
 from controller.controller_pid_jetbot import ControllerJetbot
-from camera.camera_cfg import CameraCfg
-from camera.camera_third_cfg import CameraThirdCfg
+from robot.sensor.camera.cfg_camera import CfgCamera
+from robot.camera.cfg_camera_third import CfgCameraThird
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
-from robot.robot_base import RobotBase
+from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
-from robot.robot_cfg import RobotCfgJetbot
-from robot.robot_body.body_jetbot import BodyJetbot
+from robot.cfg import CfgJetbot
+from robot.robot_body.body_jetbot import BodyRobotJetbot
 from utils import to_torch
 
 
@@ -28,13 +28,12 @@ from gsi2isaacsim.gsi_msgs_helper import (
 )
 
 
-
-class RobotJetbot(RobotBase[BodyJetbot]):
+class RobotJetbot(Robot[BodyRobotJetbot]):
     def __init__(
         self,
-        cfg_body: RobotCfgJetbot,
-        cfg_camera: CameraCfg = None,
-        cfg_camera_third_person: CameraThirdCfg = None,
+        cfg_body: CfgJetbot,
+        cfg_camera: CfgCamera = None,
+        cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager=None,

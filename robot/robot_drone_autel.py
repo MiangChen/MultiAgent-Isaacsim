@@ -9,14 +9,14 @@ from isaacsim.core.api.scenes import Scene
 from rclpy.node import Node
 
 from map.map_grid_map import GridMap
-from camera.camera_cfg import CameraCfg
-from camera.camera_third_cfg import CameraThirdCfg
+from robot.sensor.camera.cfg_camera import CfgCamera
+from robot.camera.cfg_camera_third import CfgCameraThird
 from controller.controller_pid import ControllerPID
-from robot.robot_cfg import RobotCfg
-from robot.robot_base import RobotBase
+from robot.cfg import CfgRobot
+from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from scene.scene_manager import SceneManager
-from robot.robot_body.body_drone_autel import BodyDroneAutel
+from robot.robot_body.body_drone_autel import BodyRobotDroneAutel
 
 DRONE_COLOR_SCHEMES = {
     "Gray": {"main": [0.6, 0.6, 0.6], "nose": [0.3, 0.3, 0.3]},
@@ -55,16 +55,16 @@ class DronePose:
         self.quat = quat
 
 
-class RobotDrone(RobotBase[BodyDroneAutel]):
+class RobotDrone(Robot[BodyRobotDroneAutel]):
     """
     一个完整的无人机机器人实例，包含了模型创建、ROS接口和传感器逻辑。
     """
 
     def __init__(
         self,
-        cfg_body: RobotCfg = None,
-        cfg_camera: CameraCfg = None,
-        cfg_camera_third_person: CameraThirdCfg = None,
+        cfg_body: CfgRobot = None,
+        cfg_camera: CfgCamera = None,
+        cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager: SceneManager = None,

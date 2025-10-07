@@ -6,24 +6,24 @@ import omni.appwindow
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import Articulation
 
-from camera.camera_cfg import CameraCfg
-from camera.camera_third_cfg import CameraThirdCfg
+from robot.sensor.camera.cfg_camera import CfgCamera
+from robot.camera.cfg_camera_third import CfgCameraThird
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from log.log_manager import LogManager
 from controller.controller_cf2x import ControllerCf2x
-from robot.robot_base import RobotBase
+from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
-from robot.robot_cfg.robot_cfg_drone_cf2x import RobotCfgCf2x
+from robot.cfg import CfgDroneCf2X
 from utils import to_torch
-from robot.robot_body.body_drone_cf2x import BodyDroneCf2x
+from robot.robot_body.body_drone_cf2x import BodyRobotDroneCf2X
 
 import threading
 
 logger = LogManager.get_logger(__name__)
 
 
-class RobotCf2x(RobotBase[BodyDroneCf2x]):
+class RobotCf2x(Robot[BodyRobotDroneCf2X]):
     """
     CF2x无人机控制类
 
@@ -38,9 +38,9 @@ class RobotCf2x(RobotBase[BodyDroneCf2x]):
 
     def __init__(
         self,
-        cfg_body: RobotCfgCf2x,
-        cfg_camera: CameraCfg = None,
-        cfg_camera_third_person: CameraThirdCfg = None,
+        cfg_body: CfgDroneCf2X,
+        cfg_camera: CfgCamera = None,
+        cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager=None,

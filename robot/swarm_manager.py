@@ -4,12 +4,12 @@ import yaml
 
 from isaacsim.core.api.scenes import Scene
 
-from camera.camera_cfg import CameraCfg
-from camera.camera_third_cfg import CameraThirdCfg
+from robot.sensor.camera.cfg_camera import CfgCamera
+from robot.camera.cfg_camera_third import CfgCameraThird
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
-from robot.robot_base import RobotBase
-from robot.robot_cfg import RobotCfg
+from robot.robot import Robot
+from robot.robot_cfg import CfgRobot
 from ros.ros_manager import RosManager
 from scene.scene_manager import SceneManager
 
@@ -33,9 +33,9 @@ class SwarmManager:
     ):
         self.scene: Scene = None
         self.scene_manager = scene_manager
-        self.robot_warehouse: Dict[str, List[RobotBase]] = {}
+        self.robot_warehouse: Dict[str, List[Robot]] = {}
         self.flag_active: Dict[str, List[int]] = {}
-        self.robot_active: Dict[str, List[RobotBase]] = {
+        self.robot_active: Dict[str, List[Robot]] = {
             # 'jetbot': Jetbot cls instance,
         }
         self.robot_class = {  # 可扩展的机器人类注册
@@ -51,7 +51,7 @@ class SwarmManager:
     async def create_robot(
         self,
         robot_class_name: str = None,
-        robot_class_cfg: Type[RobotCfg] = None,
+        robot_class_cfg: Type[CfgRobot] = None,
         cfg_body_dict: Dict = None,
         cfg_camera_dict: Dict = None,
         cfg_camera_third_person_dict: Dict = None,
@@ -69,11 +69,11 @@ class SwarmManager:
 
         cfg_camera = None
         if cfg_camera_dict:
-            cfg_camera = CameraCfg(**cfg_camera_dict)
+            cfg_camera = CfgCamera(**cfg_camera_dict)
 
         cfg_camera_third_person = None
         if cfg_camera_third_person_dict:
-            cfg_camera_third_person = CameraThirdCfg(**cfg_camera_third_person_dict)
+            cfg_camera_third_person = CfgCameraThird(**cfg_camera_third_person_dict)
 
         # 选择同步或异步创建
         robot_cls = self.robot_class[robot_class_name]
@@ -113,8 +113,8 @@ class SwarmManager:
     def register_robot_class(
         self,
         robot_class_name: str,
-        robot_class: Type[RobotBase],
-        robot_class_cfg: Type[RobotCfg],
+        robot_class: Type[Robot],
+        robot_class_cfg: Type[CfgRobot],
     ) -> None:
         """注册新的机器人类型"""
         self.robot_warehouse[robot_class_name] = []

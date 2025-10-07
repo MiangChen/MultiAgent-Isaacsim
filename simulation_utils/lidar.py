@@ -1,17 +1,7 @@
-import os
-import shutil
-from isaacsim.core.utils.extensions import get_extension_path_from_name
 import omni
 import carb
-from typing import Optional, Tuple, Dict, Any
 import numpy as np
 from pxr import Gf
-
-from isaacsim.sensors.rtx import LidarRtx
-
-from lidar.lidar_cfg import LidarCfg
-from robot.robot_cfg import RobotCfg
-from log.log_manager import LogManager
 
 
 def add_drone_lidar(drone_prim_path, lidar_config):

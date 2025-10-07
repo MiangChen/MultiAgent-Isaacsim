@@ -6,13 +6,13 @@ import torch
 from isaacsim.core.api.scenes import Scene
 
 from map.map_grid_map import GridMap
-from camera.camera_cfg import CameraCfg
-from camera.camera_third_cfg import CameraThirdCfg
+from robot.sensor.camera.cfg_camera import CfgCamera
+from robot.camera.cfg_camera_third import CfgCameraThird
 from controller.controller_pid import ControllerPID
-from robot.robot_base import RobotBase
-from robot.robot_body.body_h1 import BodyH1
+from robot.robot import Robot
+from robot.robot_body.body_h1 import BodyRobotH1
 from robot.robot_trajectory import Trajectory
-from robot.robot_cfg import RobotCfgH1
+from robot.cfg import CfgH1
 from controller.controller_policy_h1 import H1FlatTerrainPolicy
 from utils import to_torch
 
@@ -29,7 +29,7 @@ from gsi2isaacsim.gsi_msgs_helper import (
 )
 
 
-class RobotH1(RobotBase[BodyH1]):
+class RobotH1(Robot[BodyRobotH1]):
     """
     H1 Robot Class.
     This class uses an asynchronous factory pattern for initialization
@@ -39,9 +39,9 @@ class RobotH1(RobotBase[BodyH1]):
 
     def __init__(
         self,
-        cfg_body: RobotCfgH1,
-        cfg_camera: CameraCfg = None,
-        cfg_camera_third_person: CameraThirdCfg = None,
+        cfg_body: CfgH1,
+        cfg_camera: CfgCamera = None,
+        cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager=None,
@@ -82,9 +82,9 @@ class RobotH1(RobotBase[BodyH1]):
     @classmethod
     async def create(
         cls,
-        cfg_body: RobotCfgH1,
-        cfg_camera: CameraCfg = None,
-        cfg_camera_third_person: CameraThirdCfg = None,
+        cfg_body: CfgH1,
+        cfg_camera: CfgCamera = None,
+        cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager=None,

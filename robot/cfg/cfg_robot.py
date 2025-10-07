@@ -1,16 +1,14 @@
 from typing import Dict, Optional, Tuple
-from pydantic import BaseModel
 
-from camera.camera_cfg import CameraCfg
-from camera.camera_third_cfg import CameraThirdCfg
+from robot.sensor.camera.cfg_camera import CfgCamera
 from config.config_manager import config_manager
 from config.cfg_base import CfgBase
-from lidar.lidar_cfg import LidarCfg
+from robot.sensor.lidar import CfgLidar
 
 ASSET_PATH = config_manager.get("asset_path")
 
 
-class RobotCfg(CfgBase):
+class CfgRobot(CfgBase):
     # meta info
     type: str = "robot"
     name: str = "robot"
@@ -19,8 +17,8 @@ class RobotCfg(CfgBase):
     prim_path_robot: Optional[str] = "/World/robot"
     usd_path: str = None
 
-    cfg_dict_camera: Optional[Dict[str, CameraCfg]] = {}
-    cfg_dict_lidar: Optional[Dict[str, LidarCfg]] = {}
+    cfg_dict_camera: Optional[Dict[str, CfgCamera]] = {}
+    cfg_dict_lidar: Optional[Dict[str, CfgLidar]] = {}
     cfg_dict_camera_third: Optional[Dict[str, CameraThirdCfg]] = {}
     # controllers: Optional[List[ControllerCfg]] = None
 

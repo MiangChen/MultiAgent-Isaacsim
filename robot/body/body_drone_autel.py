@@ -4,18 +4,18 @@ from isaacsim.core.prims import Articulation
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from pxr import Usd, UsdGeom
 
-from robot.robot_body import RobotBody
-from robot.robot_cfg import RobotCfg
+from robot.robot_body import BodyRobot
+from robot.cfg import CfgRobot
 from utils import to_torch
 from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
 
 
-class BodyH1(RobotBody):
+class BodyRobotDroneAutel(BodyRobot):
     def __init__(
         self,
-        cfg_body: RobotCfg = None,
+        cfg_body: CfgRobot = None,
         scene: Scene = None,
     ):
         super().__init__(cfg_body=cfg_body, scene=scene)
