@@ -1,6 +1,6 @@
 from typing import Dict, Optional, Tuple
 
-from robot.sensor.camera.cfg_camera import CfgCamera
+from robot.sensor.camera import CfgCamera, CfgCameraThird
 from config.config_manager import config_manager
 from config.cfg_base import CfgBase
 from robot.sensor.lidar import CfgLidar
@@ -19,7 +19,7 @@ class CfgRobot(CfgBase):
 
     cfg_dict_camera: Optional[Dict[str, CfgCamera]] = {}
     cfg_dict_lidar: Optional[Dict[str, CfgLidar]] = {}
-    cfg_dict_camera_third: Optional[Dict[str, CameraThirdCfg]] = {}
+    cfg_dict_camera_third: Optional[Dict[str, CfgCameraThird]] = {}
     # controllers: Optional[List[ControllerCfg]] = None
 
     # common config

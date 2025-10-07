@@ -4,7 +4,7 @@ from isaacsim.core.prims import Articulation
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from pxr import Usd, UsdGeom
 
-from robot.robot_body import BodyRobot
+from robot.body import BodyRobot
 from robot.cfg import CfgRobot
 from utils import to_torch
 from log.log_manager import LogManager

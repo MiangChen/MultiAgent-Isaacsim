@@ -9,8 +9,7 @@ from isaacsim.sensors.camera import CameraView
 from isaacsim.core.utils.numpy import rotations
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 
-from robot.sensor.camera.cfg_camera import CfgCamera
-from robot.robot_cfg import CfgRobot
+from robot.sensor.camera import CfgCamera
 from log.log_manager import LogManager
 from utils import to_torch
 
@@ -19,7 +18,7 @@ logger = LogManager.get_logger(__name__)
 
 class Camera:
 
-    def __init__(self, cfg_body: CfgRobot, cfg_camera: CfgCamera):
+    def __init__(self, cfg_body, cfg_camera: CfgCamera):
         self.cfg_camera = cfg_camera
         self.cfg_body = cfg_body
 

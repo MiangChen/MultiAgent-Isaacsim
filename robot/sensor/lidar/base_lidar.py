@@ -90,7 +90,6 @@ from pxr import Gf
 from isaacsim.sensors.rtx import LidarRtx
 
 from robot.sensor.lidar.cfg_lidar import CfgLidar
-from robot.robot_cfg import CfgRobot
 from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
@@ -101,7 +100,7 @@ class BaseLidar:
     一个高层级的封装器，用于在 Isaac Sim 中创建、管理和读取 RTX Lidar 传感器数据。
     """
 
-    def __init__(self, cfg_lidar: CfgLidar, cfg_body: CfgRobot = None):
+    def __init__(self, cfg_lidar: CfgLidar, cfg_body):
         self.cfg_lidar = cfg_lidar
         self.cfg_body = cfg_body
         self.lidar_sensor: Optional[LidarRtx] = None  # 用于持有 LidarRtx 实例
