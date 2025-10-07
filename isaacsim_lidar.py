@@ -20,7 +20,7 @@ rclpy.init()
 
 from scene.scene_manager import SceneManager
 from map.map_semantic_map import MapSemantic
-from robot.robot_drone_autel import RobotDrone
+from robot.robot_drone_autel import RobotDroneAutel
 from simulation_utils.ros_bridge import setup_ros
 from simulation_utils.simulation_core import run_simulation_loop_multi
 from config.config_manager import config_manager
@@ -59,7 +59,7 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
     lidar_step_wrapper = create_lidar_step_wrapper(lidar_annotators)
     print(f"Adding drone body to {prim_path} with color scheme {idx}")
 
-    partial_ctx = RobotDrone(
+    partial_ctx = RobotDroneAutel(
         namespace=namespace,
         prim_path=prim_path,
         scene_manager=scene_manager,
@@ -207,7 +207,7 @@ def main():  # Needed in build_drone_ctx
     semantic_camera = result.get("result").get("camera_instance")
     semantic_camera_prim_path = result.get("result").get("prim_path")
 
-    drone_ctxs: list[RobotDrone] = []
+    drone_ctxs: list[RobotDroneAutel] = []
     for idx, ns in enumerate(namespace_list):
         drone_ctxs.append(build_drone_ctx(ns, idx, scene_manager=scene_manager))
 

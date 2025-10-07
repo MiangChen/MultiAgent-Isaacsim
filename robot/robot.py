@@ -1,20 +1,18 @@
 from typing import Tuple, TypeVar, Generic
 
 from rclpy.action import ActionServer
-from pxr import Usd, UsdGeom
 import numpy as np
 import torch
-import carb
 
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import RigidPrim
-from isaacsim.core.utils.rotations import quat_to_rot_matrix
 import isaacsim.core.utils.prims as prims_utils
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.viewports import (
     create_viewport_for_camera,
     set_camera_view,
 )
+from pxr import Usd, UsdGeom
 
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
@@ -56,73 +54,36 @@ def _get_viewport_manager_from_container():
         raise Exception("ViewportManager not found in container") from e
 
 
-RobotBody = TypeVar("BodyRobot", bound=BodyRobot)
-
-
-class Robot(Generic[RobotBody]):
+class Robot:
     def __init__(
         self,
-        cfg_body: CfgRobot = None,
+        cfg_robot: CfgRobot = None,
         cfg_camera: CfgCamera = None,
         cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
-        map_grid: GridMap = None,
         scene_manager: SceneManager = None,
+        map_grid: GridMap = None,
     ):
-        self.cfg_body = cfg_body
+        self.cfg_robot = cfg_robot
         self.cfg_camera = cfg_camera
+        self.cfg_camera_third_person = cfg_camera_third_person
         self.scene = scene
         self.scene_manager = scene_manager
-        # self.node = node
+        self.map_grid = map_grid
         self.viewport_manager = (
             _get_viewport_manager_from_container()
         )  # 通过依赖注入获取viewport_manager
 
         # 通用的机器人本体初始化代码
-        self.cfg_body.prim_path_swarm = (
-            cfg_body.prim_path_swarm
-            + f"/{cfg_body.type}"
-            + f"/{cfg_body.type}_{cfg_body.id}"
+        self.cfg_robot.prim_path_robot = (
+            self.cfg_robot.prim_path_swarm
+            + f"/{self.cfg_robot.type}"
+            + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
         )
-        self.cfg_body.name = cfg_body.type + f"_{cfg_body.id}"
-        self.name = self.cfg_body.name
+        self.cfg_robot.name = self.cfg_robot.type + f"_{self.cfg_robot.id}"
+        self.name = self.cfg_robot.name
 
-        prim = get_prim_at_path(self.cfg_body.prim_path_swarm)
-        if not prim.IsValid():
-            prim = define_prim(self.cfg_body.prim_path_swarm, "Xform")
-            if cfg_body.usd_path:
-                prim.GetReferences().AddReference(
-                    cfg_body.usd_path
-                )  # 加载机器人USD模型
-            else:
-                carb.log_error("unable to add robot usd, usd_path not provided")
-        elif prim.IsA(UsdGeom.Xformable):
-            # Convert the prim to an Xformable object
-            xformable = UsdGeom.Xformable(prim)
-
-            # Get the local-to-world transformation matrix
-            # CORRECTED METHOD NAME: ComputeLocalToWorldTransform
-            # You need to specify a time code.
-            timecode = Usd.TimeCode.Default()  # Use default time or simulation time
-            local_to_world_matrix = xformable.ComputeLocalToWorldTransform(timecode)
-
-            # The local_to_world_matrix is a Gf.Matrix4d
-            # Extract the translation (position) from the matrix
-            cfg_body.position = list(
-                local_to_world_matrix.ExtractTranslation()
-            )  # Returns a Gf.Vec3d
-
-            # Extract the rotation from the matrix
-            quat = local_to_world_matrix.ExtractRotationQuat()  # Returns a Gf.Quatd
-            cfg_body.quat = [quat.real] + list(quat.imaginary)
-            cfg_body.euler_degree = None
-        else:
-            if prim:
-                logger.info(
-                    f"Prim at {prim.GetPath()} is not Xformable or does not exist."
-                )
-            else:
-                logger.info(f"Prim not found at path {prim.GetPath()}")
+        self.body: BodyRobot = None
 
         # 机器人的历史轨迹
         self.trajectory: Trajectory = None
@@ -149,13 +110,12 @@ class Robot(Generic[RobotBody]):
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
         if cfg_camera is not None:
-            logger.info(f"create camera for {self.cfg_body.type}")
-            self.camera = Camera(cfg_body, cfg_camera)
-            self.camera.create_camera(camera_path=self.cfg_body.camera_path)
+            logger.info(f"create camera for {self.cfg_robot.type}")
+            self.camera = Camera(cfg_robot, cfg_camera)
+            self.camera.create_camera(camera_path=self.cfg_robot.camera_path)
 
         # 第三视角相机 一个机器人只有一个
         self.cfg_camera_third_person = cfg_camera_third_person
-        self.camera_prim_path = None
         self.viewport_name = None  # 存储viewport名称
         self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
         self.transform_camera_pos = np.array([0, 0, 0])
@@ -244,13 +204,6 @@ class Robot(Generic[RobotBody]):
         return torch.as_tensor(data, dtype=dtype, device=device).requires_grad_(
             requires_grad
         )
-
-    def get_world_poses(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        pos_IB, q_IB = self.robot_entity.get_world_poses()
-        pos_IB, q_IB = pos_IB[0], q_IB[0]
-        pos_IB = to_torch(pos_IB, device=pos_IB.device)
-        q_IB = to_torch(q_IB, device=q_IB.device)
-        return pos_IB, q_IB
 
     def create_robot_entity(self):
         """
@@ -550,19 +503,6 @@ class Robot(Generic[RobotBody]):
         else:
             return None
 
-    def quaternion_to_yaw(self, quaternion: Tuple[float, float, float, float]) -> float:
-        """
-        Args:
-            quaternion: 四元数, 顺序是
-        Returns:
-            yaw: 绕着z轴的旋转角度
-        """
-        from math import atan2
-
-        matrix = quat_to_rot_matrix(quaternion)
-        yaw = atan2(matrix[1, 0], matrix[0, 0])
-        return yaw
-
     def step(self, action: np.ndarray) -> Tuple[np.ndarray]:
         """
 
@@ -577,11 +517,11 @@ class Robot(Generic[RobotBody]):
 
     def _initialize_third_person_camera(self):
         """初始化第三人称相机并注册到ViewportManager"""
-        logger.info(f"Creating third-person camera for robot {self.cfg_body.id}...")
+        logger.info(f"Creating third-person camera for robot {self.cfg_robot.id}...")
 
         # 1. 为相机创建唯一的prim路径和视口名称
-        self.camera_prim_path = f"/World/Robot_{self.cfg_body.id}_Camera"
-        self.viewport_name = f"Viewport_Robot_{self.cfg_body.id}"
+        self.camera_prim_path = f"/World/Robot_{self.cfg_robot.id}_Camera"
+        self.viewport_name = f"Viewport_Robot_{self.cfg_robot.id}"
 
         # 如果prim已存在，先删除（可选，用于热重载）
         if prims_utils.is_prim_path_valid(self.camera_prim_path):
@@ -613,11 +553,11 @@ class Robot(Generic[RobotBody]):
                     self.viewport_name, self.camera_prim_path
                 )
                 logger.info(
-                    f"Robot {self.cfg_body.id} viewport registered to ViewportManager"
+                    f"Robot {self.cfg_robot.id} viewport registered to ViewportManager"
                 )
             else:
                 raise RuntimeError(
-                    f"Failed to register viewport for robot {self.cfg_body.id}"
+                    f"Failed to register viewport for robot {self.cfg_robot.id}"
                 )
 
         # 5. 将相对位置转换为numpy数组以便后续计算
@@ -661,7 +601,7 @@ class Robot(Generic[RobotBody]):
         return {
             "viewport_name": self.viewport_name,
             "camera_path": self.camera_prim_path,
-            "robot_id": self.cfg_body.id if self.cfg_body else None,
+            "robot_id": self.cfg_robot.id if self.cfg_robot else None,
             "enabled": (
                 self.cfg_camera_third_person.enabled
                 if self.cfg_camera_third_person
@@ -736,11 +676,11 @@ class Robot(Generic[RobotBody]):
         )
 
         msg = RobotFeedback(
-            robot_id=f"{self.cfg_body.type}_{self.cfg_body.id}",
+            robot_id=f"{self.cfg_robot.type}_{self.cfg_robot.id}",
             skill_feedback=skill,
         )
 
-        # self.node.publish_feedback(self.cfg_body.type, self.cfg_body.id, msg)
+        # self.node.publish_feedback(self.cfg_robot.type, self.cfg_robot.id, msg)
 
     def _publish_status_pose(self):
 
@@ -788,8 +728,8 @@ class Robot(Generic[RobotBody]):
             msg.pose.orientation.w,
         ) = (float(v) for v in quat_xyzw)
         # self.node.publish_motion(
-        #     robot_class=self.cfg_body.type,
-        #     robot_id=self.cfg_body.id,
+        #     robot_class=self.cfg_robot.type,
+        #     robot_id=self.cfg_robot.id,
         #     msg=msg
         # )
 

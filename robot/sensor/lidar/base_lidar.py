@@ -100,9 +100,9 @@ class BaseLidar:
     一个高层级的封装器，用于在 Isaac Sim 中创建、管理和读取 RTX Lidar 传感器数据。
     """
 
-    def __init__(self, cfg_lidar: CfgLidar, cfg_body):
+    def __init__(self, cfg_lidar: CfgLidar, cfg_robot):
         self.cfg_lidar = cfg_lidar
-        self.cfg_body = cfg_body
+        self.cfg_robot = cfg_robot
         self.lidar_sensor: Optional[LidarRtx] = None  # 用于持有 LidarRtx 实例
 
     def create_lidar(self, prim_path: Optional[str] = None) -> None:
@@ -112,7 +112,7 @@ class BaseLidar:
         if prim_path is None:
             # 如果没有提供特定路径，则在机器人 Prim 下创建一个默认路径
             self.cfg_lidar.prim_path = (
-                f"{self.cfg_body.prim_path_swarm}/lidar/{self.cfg_lidar.type}"
+                f"{self.cfg_robot.prim_path_swarm}/lidar/{self.cfg_lidar.type}"
             )
         else:
             self.cfg_lidar.prim_path = prim_path

@@ -18,14 +18,14 @@ logger = LogManager.get_logger(__name__)
 
 class Camera:
 
-    def __init__(self, cfg_body, cfg_camera: CfgCamera):
+    def __init__(self, cfg_robot, cfg_camera: CfgCamera):
         self.cfg_camera = cfg_camera
-        self.cfg_body = cfg_body
+        self.cfg_robot = cfg_robot
 
     def create_camera(self, camera_path: str = None):
         if camera_path is None:
             self.cfg_camera.prim_path_absolute = (
-                self.cfg_body.prim_path_swarm + "/camera/Camera"
+                self.cfg_robot.prim_path_swarm + "/camera/Camera"
             )
         else:
             self.cfg_camera.prim_path_absolute = camera_path

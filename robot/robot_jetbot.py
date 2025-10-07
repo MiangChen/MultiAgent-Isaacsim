@@ -12,10 +12,7 @@ from robot.body.body_jetbot import BodyJetbot
 from utils import to_torch
 
 
-import carb
 from isaacsim.core.api.scenes import Scene
-from isaacsim.core.prims import Articulation
-from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.types import ArticulationActions
 
 from gsi2isaacsim.gsi_msgs_helper import (
@@ -27,7 +24,7 @@ from gsi2isaacsim.gsi_msgs_helper import (
 )
 
 
-class RobotJetbot(Robot[BodyJetbot]):
+class RobotJetbot(Robot):
     def __init__(
         self,
         cfg_body: CfgJetbot,
@@ -37,15 +34,8 @@ class RobotJetbot(Robot[BodyJetbot]):
         map_grid: GridMap = None,
         scene_manager=None,
     ) -> None:
-        super().__init__(
-            cfg_body,
-            cfg_camera,
-            cfg_camera_third_person,
-            scene,
-            map_grid,
-            scene_manager=scene_manager,
-        )
-        self.create_robot_entity()
+        super().__init__(cfg_body, cfg_camera, cfg_camera_third_person, scene=scene, map_grid=map_grid, scene_manager=scene_manager)
+        self.body = BodyJetbot(cfg_robot=self.cfg_robot, scene=scene)
         self.controller = ControllerJetbot()
         self.control_mode = "joint_velocities"
         # # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
@@ -62,13 +52,13 @@ class RobotJetbot(Robot[BodyJetbot]):
         # self.node = node
         #
         # self.node.register_feedback_publisher(
-        #     robot_class=self.cfg_body.type,
-        #     robot_id=self.cfg_body.id,
+        #     robot_class=self.cfg_robot.type,
+        #     robot_id=self.cfg_robot.id,
         #     qos=50
         # )
         # self.node.register_motion_publisher(
-        #     robot_class=self.cfg_body.type,
-        #     robot_id=self.cfg_body.id,
+        #     robot_class=self.cfg_robot.type,
+        #     robot_id=self.cfg_robot.id,
         #     qos=50
         # )
 
@@ -78,23 +68,12 @@ class RobotJetbot(Robot[BodyJetbot]):
         super().initialize()
         return
 
-    def create_robot_entity(self):
-        """
-        初始化机器人关节树
-        """
-        self.robot_entity = Articulation(
-            prim_paths_expr=self.cfg_body.prim_path_swarm,
-            name=self.cfg_body.name,
-            positions=to_torch(self.cfg_body.position).reshape(1, 3),
-            orientations=to_torch(self.cfg_body.quat).reshape(1, 4),
-        )
-
     def init_ros2(self):
         import omni.graph.core as og
 
         og.Controller.edit(
             {
-                "graph_path": f"/ActionGraph/{self.cfg_body.type}_{self.cfg_body.id}",
+                "graph_path": f"/ActionGraph/{self.cfg_robot.type}_{self.cfg_robot.id}",
                 "evaluator_name": "execution",
             },
             {
@@ -148,15 +127,15 @@ class RobotJetbot(Robot[BodyJetbot]):
                     # ("ArticulationController.inputs:usePath", True),      # if you are using an older version of Isaac Sim, you may need to uncomment this line
                     (
                         "PublishJointState.inputs:topicName",
-                        f"joint_states_{self.cfg_body.type}_{self.cfg_body.id}",
+                        f"joint_states_{self.cfg_robot.type}_{self.cfg_robot.id}",
                     ),
                     (
                         "ArticulationController.inputs:robotPath",
-                        f"{self.cfg_body.prim_path_swarm}",
+                        f"{self.cfg_robot.prim_path_swarm}",
                     ),
                     (
                         "PublishJointState.inputs:targetPrim",
-                        f"{self.cfg_body.prim_path_swarm}",
+                        f"{self.cfg_robot.prim_path_swarm}",
                     ),
                 ],
             },

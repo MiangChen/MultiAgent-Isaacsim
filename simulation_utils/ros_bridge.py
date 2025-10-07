@@ -21,13 +21,13 @@ from sensor_msgs.msg import PointCloud2, PointField, Image
 
 from containers import get_container
 from map.map_semantic_map import MapSemantic
-from robot.robot_drone_autel import DronePose, RobotDrone
+from robot.robot_drone_autel import DronePose, RobotDroneAutel
 
 # -----------------------------------------------------------------------------
 # Global variables (legacy single-UAV path)
 # -----------------------------------------------------------------------------
 # NOTE: These globals are kept for backward compatibility with the previous
-# single-UAV implementation.  The multi-UAV refactor introduces the RobotDrone
+# single-UAV implementation.  The multi-UAV refactor introduces the RobotDroneAutel
 # dataclass (see below) and associated helpers, but the old code path still
 # works when only **one** namespace/drone is spawned.
 
@@ -56,7 +56,7 @@ def setup_ros(namespace: str = "", ctx=None):
 
     Args:
         namespace: ROS namespace for this drone
-        ctx: RobotDrone for setting up per-drone pose callbacks
+        ctx: RobotDroneAutel for setting up per-drone pose callbacks
     """
 
     global g_node
@@ -167,7 +167,7 @@ def setup_ros(namespace: str = "", ctx=None):
     return node, pubs, subs, srvs
 
 
-def create_drone_pose_callback(ctx: RobotDrone):
+def create_drone_pose_callback(ctx: RobotDroneAutel):
     """Create a pose callback function for a specific drone context."""
 
     def callback_drone_entitystate_msg(entitystate_msg):
@@ -209,7 +209,7 @@ def callback_gazebo_entitystate_msg(entitystate_msg):
             g_is_drone_des_pose_changed = True
 
 
-def create_drone_set_entity_state_callback(ctx: RobotDrone):
+def create_drone_set_entity_state_callback(ctx: RobotDroneAutel):
     """Create a SetEntityState service callback function for a specific drone context."""
 
     def set_entity_state_callback(req, response):
@@ -254,7 +254,7 @@ def create_drone_set_entity_state_callback(ctx: RobotDrone):
     return set_entity_state_callback
 
 
-def create_drone_linkstate_callback(ctx: RobotDrone):
+def create_drone_linkstate_callback(ctx: RobotDroneAutel):
     """Create a LinkState callback function for a specific drone context."""
 
     def callback_drone_linkstate_msg(linkstate_msg):

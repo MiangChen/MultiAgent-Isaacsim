@@ -272,8 +272,8 @@ class ViewportManager:
                     if viewport_name:
                         viewport_obj = self._get_viewport_by_name(viewport_name)
 
-            elif hasattr(robot, 'cfg_body') and hasattr(robot.cfg_body, 'id'):
-                viewport_name = f"Viewport_Robot_{robot.cfg_body.id}"
+            elif hasattr(robot, 'cfg_robot') and hasattr(robot.cfg_robot, 'id'):
+                viewport_name = f"Viewport_Robot_{robot.cfg_robot.id}"
                 viewport_obj = self._get_viewport_by_name(viewport_name)
             elif hasattr(robot, 'id'):
                 viewport_name = f"Viewport_Robot_{robot.id}"
@@ -299,10 +299,10 @@ class ViewportManager:
 
             if hasattr(robot, 'camera_prim_path') and robot.camera_prim_path:
                 return robot.camera_prim_path
-            elif hasattr(robot, 'cfg_body') and hasattr(robot.cfg_body, 'camera_path'):
-                return robot.cfg_body.camera_path
-            elif hasattr(robot, 'cfg_body') and hasattr(robot.cfg_body, 'id'):
-                return f"/World/Robot_{robot.cfg_body.id}_Camera"
+            elif hasattr(robot, 'cfg_robot') and hasattr(robot.cfg_robot, 'camera_path'):
+                return robot.cfg_robot.camera_path
+            elif hasattr(robot, 'cfg_robot') and hasattr(robot.cfg_robot, 'id'):
+                return f"/World/Robot_{robot.cfg_robot.id}_Camera"
 
         except (AttributeError, Exception):
             pass

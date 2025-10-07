@@ -8,22 +8,24 @@
 #
 
 import io
-import asyncio
 from typing import Optional
 
-import carb
 import numpy as np
 import omni
 import torch
+
 from isaacsim.core.api.controllers.base_controller import BaseController
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 
+from log.log_manager import LogManager
 from controller.controller_cfg_loader import (
     get_articulation_props,
     get_physics_properties,
     get_robot_joint_properties,
     parse_env_config,
 )
+
+logger = LogManager.get_logger(__name__)
 
 
 class PolicyController(BaseController):
@@ -80,7 +82,7 @@ class PolicyController(BaseController):
         # 读取策略
         result, _, file_content = await omni.client.read_file_async(policy_file_path)
         if result != omni.client.Result.OK:
-            carb.log_error(
+            logger.info(
                 f"Failed to read policy file from {policy_file_path}. Result: {result}"
             )
             return

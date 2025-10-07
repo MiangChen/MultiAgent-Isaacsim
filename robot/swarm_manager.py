@@ -4,9 +4,9 @@ import yaml
 
 from isaacsim.core.api.scenes import Scene
 
-from robot.sensor.camera import CfgCamera, CfgCameraThird
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
+from robot.sensor.camera import CfgCamera, CfgCameraThird
 from robot.robot import Robot
 from robot.cfg import CfgRobot
 from ros.ros_manager import RosManager
@@ -87,8 +87,8 @@ class SwarmManager:
                 cfg_body=cfg_body,
                 cfg_camera=cfg_camera,
                 cfg_camera_third_person=cfg_camera_third_person,
-                scene=self.scene,
                 map_grid=self.map_grid,
+                scene=self.scene,
                 scene_manager=self.scene_manager,
             )
         else:
@@ -104,8 +104,8 @@ class SwarmManager:
             )
 
         self.robot_warehouse[robot_class_name].append(robot)
-        self.map_semantic.map_semantic[robot.cfg_body.name] = (
-            robot.cfg_body.prim_path_swarm
+        self.map_semantic.map_semantic[robot.cfg_robot.name] = (
+            robot.cfg_robot.prim_path_swarm
         )
         return robot
 
@@ -191,36 +191,36 @@ class SwarmManager:
 
         for key in self.robot_class.keys():
             for robot in self.robot_warehouse[key]:
-                if robot.cfg_body.type in flag_dict.keys():
-                    if robot.cfg_body.id in flag_dict[key]:
+                if robot.cfg_robot.type in flag_dict.keys():
+                    if robot.cfg_robot.id in flag_dict[key]:
                         robot.flag_active = True  # 机器人自身记录一份
                         self.robot_active[key].append(robot)
-                        self.scene.add(robot.robot_entity)
+                        self.scene.add(robot.body.robot_articulation)
         return
 
     def deactivate_robot(self, name: str):
         """停用机器人并返回仓库"""
-        for robot_type in list(self.active_robots.keys()):
-            for i, robot in enumerate(self.active_robots[robot_type]):
-                if robot.type == name:
+        for robot_type in list(self.robot_active.keys()):
+            for i, robot in enumerate(self.robot_active[robot_type]):
+                if robot.cfg_robot.type == name:
                     robot.is_active = False
-                    self.robot_warehouse.append(robot)
-                    self.active_robots[robot_type].pop(i)
+                    # self.robot_warehouse.append(robot)
+                    self.robot_active[robot_type].pop(i)
 
                     # 清理空类型
-                    if not self.active_robots[robot_type]:
-                        del self.active_robots[robot_type]
+                    if not self.robot_active[robot_type]:
+                        del self.robot_active[robot_type]
                     return True
         return False
 
     def _find_robot(self, name: str):
         """在所有机器人中查找"""
-        for robots in self.active_robots.values():
+        for robots in self.robot_active.values():
             for robot in robots:
-                if robot.type == name:
+                if robot.cfg_robot.type == name:
                     return robot
-        for robot in self.robot_warehouse:
-            if robot.name == name:
+        for robot in self.robot_warehouse.keys():
+            if robot.cfg_robot.name == name:
                 return robot
         return None
 

@@ -54,7 +54,7 @@ class DronePose:
         self.quat = quat
 
 
-class RobotDrone(Robot[BodyDroneAutel]):
+class RobotDroneAutel(Robot):
     """
     一个完整的无人机机器人实例，包含了模型创建、ROS接口和传感器逻辑。
     """
@@ -72,7 +72,7 @@ class RobotDrone(Robot[BodyDroneAutel]):
         color_scheme_id: int = 0,  # 新增参数，用于选择颜色
     ):
         # super().__init__(
-        #     cfg_body=cfg_body,
+        #     cfg_robot=cfg_robot,
         #     cfg_camera=cfg_camera,
         #     cfg_camera_third_person=cfg_camera_third_person,
         #     scene=scene,
@@ -114,13 +114,13 @@ class RobotDrone(Robot[BodyDroneAutel]):
 
         #
         # self.node.register_feedback_publisher(
-        #     robot_class=self.cfg_body.type,
-        #     robot_id=self.cfg_body.id,
+        #     robot_class=self.cfg_robot.type,
+        #     robot_id=self.cfg_robot.id,
         #     qos=50
         # )
         # self.node.register_motion_publisher(
-        #     robot_class=self.cfg_body.type,
-        #     robot_id=self.cfg_body.id,
+        #     robot_class=self.cfg_robot.type,
+        #     robot_id=self.cfg_robot.id,
         #     qos=50
         # )
         #
@@ -160,10 +160,6 @@ class RobotDrone(Robot[BodyDroneAutel]):
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
         # self._publish_status_pose()  # 例如，每一步都发布状态
-
-        # 如果有Lidar等传感器，在这里调用
-        if self.custom_step_fn:
-            sensor_data = self.custom_step_fn()
 
     def step(self, action: np.ndarray):
         # 无人机的动作控制逻辑 (例如，应用推力)

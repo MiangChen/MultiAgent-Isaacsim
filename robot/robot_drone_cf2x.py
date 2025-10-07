@@ -1,8 +1,12 @@
+import threading
+
 import numpy as np
 import torch
 
+import carb
 import omni
 import omni.appwindow
+import omni.physx
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import Articulation
 
@@ -17,12 +21,10 @@ from robot.cfg import CfgDroneCf2X
 from utils import to_torch
 from robot.body.body_drone_cf2x import BodyDroneCf2X
 
-import threading
-
 logger = LogManager.get_logger(__name__)
 
 
-class RobotCf2x(Robot[BodyDroneCf2X]):
+class RobotCf2x(Robot):
     """
     CF2x无人机控制类
 
@@ -37,7 +39,7 @@ class RobotCf2x(Robot[BodyDroneCf2X]):
 
     def __init__(
         self,
-        cfg_body: CfgDroneCf2X,
+        cfg_robot: CfgDroneCf2X,
         cfg_camera: CfgCamera = None,
         cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
@@ -45,28 +47,28 @@ class RobotCf2x(Robot[BodyDroneCf2X]):
         scene_manager=None,
     ) -> None:
         super().__init__(
-            cfg_body,
+            cfg_robot,
             cfg_camera,
             cfg_camera_third_person,
-            scene,
-            map_grid,
+            scene=scene,
+            map_grid=map_grid,
             scene_manager=scene_manager,
         )
-        self.create_robot_entity()
 
-        self.is_drone = True  # 标记为无人机
+        self.body = BodyDroneCf2X(cfg_robot=self.cfg_robot, scene=self.scene)
+        self.is_drone = True
         self.controller = ControllerCf2x()
         self.map_grid = map_grid
 
         # 无人机基本属性
         self.position = np.array(
-            getattr(cfg_body, "position", [0.0, 0.0, 0.0]), dtype=np.float32
+            getattr(cfg_robot, "position", [0.0, 0.0, 0.0]), dtype=np.float32
         )
         self.target_position = self.position.copy()
         self.velocity = np.zeros(3, dtype=np.float32)  # 当前速度 [vx, vy, vz]
-        self.default_speed = getattr(cfg_body, "default_speed", 1.0)  # 默认移动速度
-        self.takeoff_height = getattr(cfg_body, "takeoff_height", 1.0)  # 起飞悬停高度
-        self.land_height = getattr(cfg_body, "land_height", 0.0)  # 降落高度
+        self.default_speed = getattr(cfg_robot, "default_speed", 1.0)  # 默认移动速度
+        self.takeoff_height = getattr(cfg_robot, "takeoff_height", 1.0)  # 起飞悬停高度
+        self.land_height = getattr(cfg_robot, "land_height", 0.0)  # 降落高度
 
         # 飞行状态
         self.flight_state = "landed"  # 'landed', 'hovering'
@@ -100,18 +102,18 @@ class RobotCf2x(Robot[BodyDroneCf2X]):
         self.nav_stop_radius = 0.30  # 到点判定半径（m）
 
         # self.node.register_feedback_publisher(
-        #     robot_class=self.cfg_body.type,
-        #     robot_id=self.cfg_body.id,
+        #     robot_class=self.cfg_robot.type,
+        #     robot_id=self.cfg_robot.id,
         #     qos=50
         # )
         # self.node.register_motion_publisher(
-        #     robot_class=self.cfg_body.type,
-        #     robot_id=self.cfg_body.id,
+        #     robot_class=self.cfg_robot.type,
+        #     robot_id=self.cfg_robot.id,
         #     qos=50
         # )
         # self.node.register_cmd_subscriber(
-        #     robot_class=self.cfg_body.type,
-        #     robot_id=self.cfg_body.id,
+        #     robot_class=self.cfg_robot.type,
+        #     robot_id=self.cfg_robot.id,
         #     callback=self.cmd_vel_callback,
         #     qos=50
         # )
@@ -121,20 +123,8 @@ class RobotCf2x(Robot[BodyDroneCf2X]):
         # 初始化键盘事件监听
         self._setup_keyboard_events()
 
-    def create_robot_entity(self):
-        """
-        初始化机器人关节树
-        """
-        self.robot_entity = Articulation(
-            prim_paths_expr=self.cfg_body.prim_path_swarm,
-            name=self.cfg_body.name,
-            positions=to_torch(self.cfg_body.position).reshape(1, 3),
-            orientations=to_torch(self.cfg_body.quat).reshape(1, 4),
-        )
-
     def _setup_keyboard_events(self):
         """设置键盘事件监听"""
-        import carb
 
         try:
             appwindow = omni.appwindow.get_default_app_window()
@@ -151,7 +141,6 @@ class RobotCf2x(Robot[BodyDroneCf2X]):
 
     def _on_keyboard_event(self, event, *args, **kwargs):
         """键盘事件回调函数"""
-        import carb
 
         try:
             # 按键按下事件
@@ -188,7 +177,7 @@ class RobotCf2x(Robot[BodyDroneCf2X]):
     def apply_action(self, action=None):
         """应用动作"""
         if action is not None:
-            self.robot_entity.apply_action(self.controller.velocity(action))
+            self.body.robot_articulation.apply_action(self.controller.velocity(action))
         return
 
     def forward(self, velocity=None):
@@ -243,8 +232,6 @@ class RobotCf2x(Robot[BodyDroneCf2X]):
             float: 检测到的地面Z坐标。如果未检测到地面，则返回None。
         """
         # 1. 获取 Isaac Sim 的物理场景接口
-        import omni.physx
-        import carb
 
         physx_interface = omni.physx.get_physx_scene_query_interface()
 
@@ -399,8 +386,6 @@ class RobotCf2x(Robot[BodyDroneCf2X]):
             self._movement_command[2] = float(msg.linear.z)
 
     def move_to(self):
-
-        import numpy as np
 
         # 落地就先起飞到悬停高度（一次性瞬移到 hover 高度即可）
         if self.flight_state == "landed":
@@ -563,7 +548,7 @@ class RobotCf2x(Robot[BodyDroneCf2X]):
     def explore_zone(
         self,
         zone_corners: list = None,
-        scane_direction: str = "horizontal",
+        scan_direction: str = "horizontal",
         reset_flag: bool = False,
     ):
         """探索指定区域"""
@@ -572,7 +557,7 @@ class RobotCf2x(Robot[BodyDroneCf2X]):
         min_y = min(corner[1] for corner in zone_corners)
         max_y = max(corner[1] for corner in zone_corners)
 
-        scan_direction = scane_direction
+        scan_direction = scan_direction
 
         import math
 
