@@ -2,14 +2,13 @@ import torch
 
 from controller.controller_pid import ControllerPID
 from controller.controller_pid_jetbot import ControllerJetbot
-from robot.sensor.camera.cfg_camera import CfgCamera
-from robot.camera.cfg_camera_third import CfgCameraThird
+from robot.sensor.camera import CfgCamera, CfgCameraThird
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.cfg import CfgJetbot
-from robot.robot_body.body_jetbot import BodyRobotJetbot
+from robot.body.body_jetbot import BodyRobotJetbot
 from utils import to_torch
 
 

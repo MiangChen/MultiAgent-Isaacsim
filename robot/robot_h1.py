@@ -6,11 +6,10 @@ import torch
 from isaacsim.core.api.scenes import Scene
 
 from map.map_grid_map import GridMap
-from robot.sensor.camera.cfg_camera import CfgCamera
-from robot.camera.cfg_camera_third import CfgCameraThird
+from robot.sensor.camera import CfgCamera, CfgCameraThird
 from controller.controller_pid import ControllerPID
 from robot.robot import Robot
-from robot.robot_body.body_h1 import BodyRobotH1
+from robot.body.body_h1 import BodyRobotH1
 from robot.robot_trajectory import Trajectory
 from robot.cfg import CfgH1
 from controller.controller_policy_h1 import H1FlatTerrainPolicy

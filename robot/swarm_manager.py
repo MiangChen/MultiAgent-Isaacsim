@@ -4,12 +4,11 @@ import yaml
 
 from isaacsim.core.api.scenes import Scene
 
-from robot.sensor.camera.cfg_camera import CfgCamera
-from robot.camera.cfg_camera_third import CfgCameraThird
+from robot.sensor.camera import CfgCamera, CfgCameraThird
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
 from robot.robot import Robot
-from robot.robot_cfg import CfgRobot
+from robot.cfg import CfgRobot
 from ros.ros_manager import RosManager
 from scene.scene_manager import SceneManager
 

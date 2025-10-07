@@ -6,8 +6,7 @@ import omni.appwindow
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import Articulation
 
-from robot.sensor.camera.cfg_camera import CfgCamera
-from robot.camera.cfg_camera_third import CfgCameraThird
+from robot.sensor.camera import CfgCamera, CfgCameraThird
 from map.map_grid_map import GridMap
 from path_planning.path_planning_astar import AStar
 from log.log_manager import LogManager
@@ -16,7 +15,7 @@ from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.cfg import CfgDroneCf2X
 from utils import to_torch
-from robot.robot_body.body_drone_cf2x import BodyRobotDroneCf2X
+from robot.body.body_drone_cf2x import BodyRobotDroneCf2X
 
 import threading
 

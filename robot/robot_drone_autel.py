@@ -9,14 +9,13 @@ from isaacsim.core.api.scenes import Scene
 from rclpy.node import Node
 
 from map.map_grid_map import GridMap
-from robot.sensor.camera.cfg_camera import CfgCamera
-from robot.camera.cfg_camera_third import CfgCameraThird
+from robot.sensor.camera import CfgCamera, CfgCameraThird
 from controller.controller_pid import ControllerPID
 from robot.cfg import CfgRobot
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from scene.scene_manager import SceneManager
-from robot.robot_body.body_drone_autel import BodyRobotDroneAutel
+from robot.body.body_drone_autel import BodyRobotDroneAutel
 
 DRONE_COLOR_SCHEMES = {
     "Gray": {"main": [0.6, 0.6, 0.6], "nose": [0.3, 0.3, 0.3]},
