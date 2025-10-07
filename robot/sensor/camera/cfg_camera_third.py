@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from config.cfg_base import CfgBase
 
+
 class CfgCameraThird(CfgBase):
     enabled: bool = Field(default=False, description="是否启用此相机")
     relative_position: List[float] = Field(

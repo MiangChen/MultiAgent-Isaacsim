@@ -4,6 +4,7 @@ from isaacsim.core.utils.extensions import get_extension_path_from_name
 import omni
 import carb
 
+
 def add_drone_lidar(drone_prim_path, lidar_config):
     """Adds lidar sensors to the drone."""
 
@@ -111,11 +112,11 @@ class BaseLidar:
         """
         if prim_path is None:
             # 如果没有提供特定路径，则在机器人 Prim 下创建一个默认路径
-            self.cfg_lidar.prim_path = f"{self.cfg_body.prim_path_swarm}/lidar/{self.cfg_lidar.type}"
+            self.cfg_lidar.prim_path = (
+                f"{self.cfg_body.prim_path_swarm}/lidar/{self.cfg_lidar.type}"
+            )
         else:
             self.cfg_lidar.prim_path = prim_path
-
-
 
         self.lidar_sensor = LidarRtx(
             prim_path=self.cfg_lidar.prim_path,
@@ -125,11 +126,15 @@ class BaseLidar:
             config_file_name=self.cfg_lidar.config_file_name,
         )
 
-        logger.info(f"Lidar sensor created or encapsulated at path: {self.cfg_lidar.prim_path}")
+        logger.info(
+            f"Lidar sensor created or encapsulated at path: {self.cfg_lidar.prim_path}"
+        )
 
     def copy_lidar_config(self, lidar_config):
         """Copy the lidar config from the current directory to the extension directory."""
-        src_file_path = os.path.join(os.path.dirname(__file__), "../config/", lidar_config + ".json")
+        src_file_path = os.path.join(
+            os.path.dirname(__file__), "../config/", lidar_config + ".json"
+        )
         dst_file_path = os.path.abspath(
             os.path.join(
                 get_extension_path_from_name("isaacsim.sensors.rtx"),
@@ -167,7 +172,9 @@ class BaseLidar:
             return self.lidar_sensor.get_current_frame()
         else:
             print(type(self.lidar_sensor), self.lidar_sensor.is_valid())
-            logger.warning("Attempted to get frame from an invalid or uninitialized Lidar sensor.")
+            logger.warning(
+                "Attempted to get frame from an invalid or uninitialized Lidar sensor."
+            )
             return {}
 
     def get_world_pose(self) -> Optional[Tuple[Gf.Vec3d, Gf.Quatd]]:
@@ -181,5 +188,8 @@ class BaseLidar:
             prim = self.lidar_sensor.prim
             xformable = Gf.Xformable(prim)
             world_transform = xformable.GetLocalToWorldTransform()
-            return world_transform.ExtractTranslation(), world_transform.ExtractRotationQuat()
+            return (
+                world_transform.ExtractTranslation(),
+                world_transform.ExtractRotationQuat(),
+            )
         return None
