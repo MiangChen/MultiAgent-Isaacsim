@@ -689,8 +689,12 @@ class Robot:
         pos, orn = self.body.get_world_poses()
 
         # 这些 API 返回 (N, 3) 的数组/张量；这里只取第 0 个
-        lin_v = self.body.robot_articulation.get_linear_velocities(indices=[0], clone=True)
-        ang_v = self.body.robot_articulation.get_angular_velocities(indices=[0], clone=True)
+        lin_v = self.body.robot_articulation.get_linear_velocities(
+            indices=[0], clone=True
+        )
+        ang_v = self.body.robot_articulation.get_angular_velocities(
+            indices=[0], clone=True
+        )
 
         # 统一成 numpy，做个健壮性兜底
         lin_v0 = np.asarray(lin_v)[0] if np.size(lin_v) else np.zeros(3, dtype=float)

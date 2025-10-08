@@ -10,11 +10,12 @@ PY_EXECUTABLE="/home/ubuntu/anaconda3/envs/env_isaaclab/bin/python"
 # --- 3. 要运行的主 Python 脚本 ---
 MAIN_PY_SCRIPT="main.py"
 
-# --- 4. ROS 2 环境设置文件 ---
-ROS2_SETUP_PATH="/opt/ros/humble/setup.bash"
-
-# --- 5. (可选) 自定义 ROS 2 工作空间 ---
-CUSTOM_WORKSPACE_SETUP_PATH="$PROJECT_ROOT/src/gsi_msgs/install/setup.bash"
+# --- 4. 自定义 ROS 2 工作空间 ---
+CUSTOM_WORKSPACE_SETUP_PATH=(
+  "/opt/ros/humble/setup.bash"
+  "/home/ubuntu/planner/install/setup.bash"
+  "$PROJECT_ROOT/src/gsi_msgs/install/setup.bash"
+)
 
 # --- 6. 默认参数 ---
 DEFAULT_ARGS=(
@@ -26,19 +27,15 @@ DEFAULT_ARGS=(
 # ==============================================================================
 
 # --- 1. 环境设置 ---
-echo "[INFO] Sourcing ROS 2 environments..."
-
-if [ -f "$ROS2_SETUP_PATH" ]; then
-  source "$ROS2_SETUP_PATH"
-else
-  echo "[ERROR] ROS 2 setup file not found at: $ROS2_SETUP_PATH"
-  exit 1
-fi
-
-if [ -n "$CUSTOM_WORKSPACE_SETUP_PATH" ] && [ -f "$CUSTOM_WORKSPACE_SETUP_PATH" ]; then
-  source "$CUSTOM_WORKSPACE_SETUP_PATH"
-  echo "[INFO] Sourced custom workspace: $CUSTOM_WORKSPACE_SETUP_PATH"
-fi
+echo "[INFO] Sourcing custom workspaces..."
+for ws_path in "${CUSTOM_WORKSPACE_SETUP_PATHS[@]}"; do
+  if [ -f "$ws_path" ]; then
+    source "$ws_path"
+    echo "  -> Sourced: $ws_path"
+  else
+    echo "  -> [WARNING] Custom workspace setup file not found: $ws_path"
+  fi
+done
 
 # --- 2. 处理命令行参数 ---
 # 将所有传递给此脚本的参数存储到 EXTRA_ARGS 数组中

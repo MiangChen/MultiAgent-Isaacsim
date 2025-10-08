@@ -34,7 +34,14 @@ class RobotJetbot(Robot):
         map_grid: GridMap = None,
         scene_manager=None,
     ) -> None:
-        super().__init__(cfg_robot, cfg_camera, cfg_camera_third_person, scene=scene, map_grid=map_grid, scene_manager=scene_manager)
+        super().__init__(
+            cfg_robot,
+            cfg_camera,
+            cfg_camera_third_person,
+            scene=scene,
+            map_grid=map_grid,
+            scene_manager=scene_manager,
+        )
         self.body = BodyJetbot(cfg_robot=self.cfg_robot, scene=scene)
         self.controller = ControllerJetbot()
         self.control_mode = "joint_velocities"

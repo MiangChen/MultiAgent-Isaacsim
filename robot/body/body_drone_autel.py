@@ -19,4 +19,3 @@ class BodyDroneAutel(BodyRobot):
         scene: Scene = None,
     ):
         super().__init__(cfg_robot=cfg_robot, scene=scene)
-
