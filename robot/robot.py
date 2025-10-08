@@ -57,7 +57,6 @@ def _get_viewport_manager_from_container():
 class Robot:
     def __init__(
         self,
-        cfg_robot: Dict = None,
         scene: Scene = None,
         scene_manager: SceneManager = None,
         map_grid: GridMap = None,
@@ -72,6 +71,16 @@ class Robot:
         # cfg_camera_third_person = None
         # if cfg_dict_camera_third_person:
         #     cfg_camera_third_person = CfgCameraThird(**cfg_dict_camera_third_person)
+        self.cfg_dict_camera = self.cfg_robot.cfg_dict_camera
+        self.cfg_dict_camera_third = self.cfg_robot.cfg_dict_camera_third
+        self.camera = {}
+        self.camera_third = {}
+        for camera_name, camera_cfg in self.cfg_robot.cfg_dict_camera.items():
+            camera_instance = Camera(cfg_robot=self.cfg_robot, cfg_camera=camera_cfg)
+            self.camera[camera_name] = camera_instance
+        for cam_name, cam_cfg in self.cfg_robot.cfg_dict_camera_third.items():
+            camera_instance = Camera(cfg_robot=self.cfg_robot, cfg_camera=cam_cfg)
+            self.camera_third[cam_name] = camera_instance
 
         self.scene = scene
         self.scene_manager = scene_manager
@@ -193,12 +202,12 @@ class Robot:
         raise NotImplementedError()
 
     def initialize(self) -> None:
-        if self.cfg_camera is not None:
-            self.camera.initialize()
+        for camera in self.camera.values():
+            camera.initialize()
 
         # 第三视角相机初始化 - 使用ViewportManager
-        if self.cfg_camera_third_person and self.cfg_camera_third_person.enabled:
-            self._initialize_third_person_camera()
+        # if self.cfg_camera_third_person and self.cfg_camera_third_person.enabled:
+        #     self._initialize_third_person_camera()
 
     def move_to(
         self, target_position: np.ndarray, target_orientation: np.ndarray
@@ -549,11 +558,7 @@ class Robot:
 
     def _update_camera_view(self):
         """更新第三人称相机的位置和朝向"""
-        if (
-            self.cfg_camera_third_person
-            and self.cfg_camera_third_person.enabled
-            and self.camera_prim_path
-        ):
+        if self.camera_third:
             # 1. 获取机器人的当前位置
             robot_position, _ = self.get_world_poses()  # torch.tensor
 

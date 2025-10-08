@@ -38,7 +38,7 @@ class RobotH1(Robot):
 
     def __init__(
         self,
-        cfg_robot: Dict,
+        cfg_robot: Dict = {},
         map_grid: GridMap = None,
         scene: Scene = None,
         scene_manager=None,

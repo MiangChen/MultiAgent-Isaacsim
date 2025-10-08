@@ -18,7 +18,7 @@ jetbot:
     quat: [ 0.0, 0.0, 0.0, 1.0 ]
     cfg_dict_camera:
       front:
-        use_existing: True
+        use_existing_camera: True
         path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
         id: 0
         frequency: 30
@@ -30,7 +30,7 @@ jetbot:
     quat: [ 0.0, 0.0, 0.0, 1.0 ]
     cfg_dict_camera:
       front:
-        use_existing: True
+        use_existing_camera: True
         path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
         id: 0
         frequency: 30
@@ -42,7 +42,7 @@ jetbot:
     quat: [ 0.0, 0.0, 0.0, 1.0 ]
     cfg_dict_camera:
       front:
-        use_existing: True
+        use_existing_camera: True
         path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
         id: 0
         frequency: 30
@@ -54,7 +54,7 @@ jetbot:
     quat: [ 0.0, 0.0, 0.0, 1.0 ]
     cfg_dict_camera:
       front:
-        use_existing: True
+        use_existing_camera: True
         path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
         id: 0
         frequency: 30

@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torchvision.utils import save_image
 
-from isaacsim.sensors.camera import Camera
+from isaacsim.sensors.camera import Camera as IsaacCamera
 from isaacsim.core.utils.numpy import rotations
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from pxr import Usd, UsdGeom, Gf
@@ -21,6 +21,7 @@ class Camera:
     def __init__(self, cfg_robot, cfg_camera: CfgCamera):
         self.cfg_camera = cfg_camera
         self.cfg_robot = cfg_robot
+        self.create_camera()
 
     def create_camera(self):
         self.cfg_camera.name = self.cfg_camera.type + "_" + str(self.cfg_camera.id)
@@ -29,19 +30,19 @@ class Camera:
                 self.cfg_robot.path_prim_robot
                 + self.cfg_camera.path_prim_relative_to_robot
             )
-            self.camera = Camera(
+            self.camera = IsaacCamera(
                 prim_path=self.cfg_camera.path_prim_absolute,
                 name=self.cfg_camera.name,
                 frequency=self.cfg_camera.frequency,
-                dt=self.cfg_camera.dt,
+                # dt=self.cfg_camera.dt,
                 resolution=self.cfg_camera.resolution,
                 # position=self.cfg_camera.position,
                 # orientation=self.cfg_camera.orientation,
                 # translation=self.cfg_camera.translation,
-                render_product_path=None,
+                # render_product_path=None,
             )
         else:
-            self.cfg_camera.prim_path_absolute = (
+            self.cfg_camera.path_prim_absolute = (
                 self.cfg_robot.path_prim_robot
                 + self.cfg_camera.path_prim_relative_to_robot
                 + "/"
@@ -67,9 +68,9 @@ class Camera:
                         quat_value.imaginary
                     )
             except Exception as e:
-                logger.error(f"{e}")
+                raise (f"{e}")
 
-            self.camera = Camera(
+            self.camera = IsaacCamera(
                 prim_path=self.cfg_camera.path_prim_absolute,
                 name=self.cfg_camera.name,
                 frequency=self.cfg_camera.frequency,
@@ -95,7 +96,7 @@ class Camera:
             True if the view object was initialized (after the first call of .initialize()). False otherwise.
         """
         self.camera.initialize()
-        if self.cfg_camera.enable_semantic_segmentation:
+        if self.cfg_camera.enable_semantic_detection:
             self.camera.add_bounding_box_2d_loose_to_frame()
 
     def set_local_pose(

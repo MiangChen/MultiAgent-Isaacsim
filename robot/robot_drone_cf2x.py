@@ -40,7 +40,7 @@ class RobotCf2x(Robot):
 
     def __init__(
         self,
-        cfg_robot: Dict,
+        cfg_robot: Dict = {},
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager=None,
