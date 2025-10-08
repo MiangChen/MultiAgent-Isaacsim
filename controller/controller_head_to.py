@@ -2,26 +2,29 @@ from typing import List
 
 
 class ControllerHeadTo:
-    def __init__(self,
-                 position_robot: List[int] = None,
-                 orientation: List[int] = None,
-                 position_target: List[int] = None,
-                 )
-
+    def __init__(
+        self,
+        position_robot: List[int] = None,
+        orientation: List[int] = None,
+        position_target: List[int] = None,
+    ):
+        pass
 
     def on_physics_step(self, step_size):
         self.apply_action(action=[5, 5])
 
 
-
 def move_to(self, target_postion):
     import numpy as np
+
     """
     让2轮差速小车在一个2D平面上运动到目标点
     缺点：不适合3D，无法避障，地面要是平的
     速度有两个分两，自转的分量 + 前进的分量
     """
-    car_position, car_orientation = self.robot_entity.get_world_pose()  # self.get_world_pose()  ## type np.array
+    car_position, car_orientation = (
+        self.robot_entity.get_world_pose()
+    )  # self.get_world_pose()  ## type np.array
     # print(car_orientation)
     # print(type(car_orientation))
     # car_position, car_orientation = self.robot.get_world_pose()  ## type np.array
@@ -29,14 +32,18 @@ def move_to(self, target_postion):
     car_yaw_angle = self.quaternion_to_yaw(car_orientation)
 
     # 获取机器人和目标连线的XY平面上的偏移角度
-    car_to_target_angle = np.arctan2(target_postion[1] - car_position[1], target_postion[0] - car_position[0])
+    car_to_target_angle = np.arctan2(
+        target_postion[1] - car_position[1], target_postion[0] - car_position[0]
+    )
     # 差速, 和偏移角度成正比，通过pi归一化
     delta_angle = car_to_target_angle - car_yaw_angle
     # if abs(car_to_target_angle - car_yaw_angle) > np.pi * 11/10:  # 超过pi，那么用另一个旋转方向更好， 归一化到 -pi ～ pi区间, 以及一个滞回，防止振荡
     #     delta_angle = delta_angle - 2 * np.pi
     if abs(delta_angle) < 0.017:  # 角度控制死区
         delta_angle = 0
-    elif delta_angle < -np.pi:  # 当差距abs超过pi后, 就代表从这个方向转弯不好, 要从另一个方向转弯
+    elif (
+        delta_angle < -np.pi
+    ):  # 当差距abs超过pi后, 就代表从这个方向转弯不好, 要从另一个方向转弯
         delta_angle += 2 * np.pi
     elif delta_angle > np.pi:
         delta_angle -= 2 * np.pi
