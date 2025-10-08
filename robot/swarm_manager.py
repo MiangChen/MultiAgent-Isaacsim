@@ -66,7 +66,7 @@ class SwarmManager:
             raise ValueError(f"Unknown robot type: {robot_class_name}")
 
         # 定义对应的机器人的位置和姿态, 以及编号
-        print(f"尝试加载{robot_class_name} {cfg_dict_body['id']}号的配置文件")
+        logger.info(f"尝试加载{robot_class_name} {cfg_dict_body['id']}号的配置文件")
         cfg_body = cfg_class_robot(**cfg_dict_body)
 
         cfg_camera = None
@@ -164,20 +164,20 @@ class SwarmManager:
         for robot_class_name in dict.keys():
             for robot_cfg in dict[
                 robot_class_name
-            ]:  # 可能有多个机器人  这里可以优化一下 让yaml的格式就和robot cfg一样
-                robot_id = robot_cfg["id"]
-                cfg_body_dict = robot_cfg["body"]
-                cfg_body_dict["id"] = robot_id
-                cfg_camera_dict = robot_cfg.get("camera")
-                cfg_camera_third_person_dict = robot_cfg.get("camera_third_person")
+            ]:
+
+                cfg_dict_body = robot_cfg["body"]
+                cfg_dict_body["id"] = robot_cfg["id"]
+                cfg_dict_camera = robot_cfg.get("cfg_dict_camera")
+                cfg_dict_camera_third = robot_cfg.get("cfg_dict_camera_third")
 
                 # --- 3. 修改点: 使用 await 调用现在是异步的 create_robot ---
                 await self.create_robot(
                     robot_class_name=robot_class_name,
                     cfg_class_robot=self.robot_class_cfg[robot_class_name],
-                    cfg_dict_body=cfg_body_dict,
-                    cfg_dict_camera=cfg_camera_dict,
-                    cfg_dict_camera_third_person=cfg_camera_third_person_dict,
+                    cfg_dict_body=cfg_dict_body,
+                    cfg_dict_camera=cfg_dict_camera,
+                    cfg_dict_camera_third_person=cfg_dict_camera_third,
                 )
 
     def activate_robot(

@@ -2,8 +2,6 @@ from typing import List, Optional, Tuple, Sequence
 
 import numpy as np
 import torch
-from taichi.examples.real_func.algorithm.marching_squares import resolution
-from taichi.examples.simulation.pbf2d import positions
 from torchvision.utils import save_image
 
 from isaacsim.sensors.camera import Camera
