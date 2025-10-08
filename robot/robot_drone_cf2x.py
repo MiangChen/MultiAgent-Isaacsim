@@ -1,3 +1,4 @@
+from typing import Dict
 import threading
 
 import numpy as np
@@ -39,17 +40,13 @@ class RobotCf2x(Robot):
 
     def __init__(
         self,
-        cfg_robot: CfgDroneCf2X,
-        # cfg_camera: CfgCamera = None,
-        # cfg_camera_third_person: CfgCameraThird = None,
+        cfg_robot: Dict,
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager=None,
     ) -> None:
+        self.cfg_robot = CfgDroneCf2X(**cfg_robot)
         super().__init__(
-            cfg_robot,
-            cfg_camera,
-            cfg_camera_third_person,
             scene=scene,
             map_grid=map_grid,
             scene_manager=scene_manager,

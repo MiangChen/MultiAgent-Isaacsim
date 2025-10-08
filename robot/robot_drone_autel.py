@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Dict
 
 import numpy as np
 import threading
@@ -11,7 +12,7 @@ from rclpy.node import Node
 from map.map_grid_map import GridMap
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from controller.controller_pid import ControllerPID
-from robot.cfg import CfgRobot
+from robot.cfg import CfgRobot, CfgDroneAutel
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from scene.scene_manager import SceneManager
@@ -61,7 +62,7 @@ class RobotDroneAutel(Robot):
 
     def __init__(
         self,
-        cfg_robot: CfgRobot = None,
+        cfg_robot: Dict = None,
         # cfg_camera: CfgCamera = None,
         # cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
@@ -71,6 +72,7 @@ class RobotDroneAutel(Robot):
         prim_path: str = None,
         color_scheme_id: int = 0,  # 新增参数，用于选择颜色
     ):
+        self.cfg_robot = CfgDroneAutel(**cfg_robot)
         # super().__init__(
         #     cfg_robot=cfg_robot,
         #     cfg_camera=cfg_camera,

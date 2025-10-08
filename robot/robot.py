@@ -1,4 +1,4 @@
-from typing import Tuple, TypeVar, Generic
+from typing import Tuple, Dict
 
 from rclpy.action import ActionServer
 import numpy as np
@@ -57,16 +57,14 @@ def _get_viewport_manager_from_container():
 class Robot:
     def __init__(
         self,
-        cfg_robot: CfgRobot = None,
-        # cfg_camera: CfgCamera = None,
-        # cfg_camera_third_person: CfgCameraThird = None,
+        cfg_robot: Dict = None,
         scene: Scene = None,
         scene_manager: SceneManager = None,
         map_grid: GridMap = None,
     ):
-        self.cfg_robot = cfg_robot
-        self.cfg_camera = self.cfg_robot.cfg_dict_camera
-        self.cfg_camera_third_person = self.cfg_robot.cfg_dict_camera_third
+        # self.cfg_robot = CfgRobot(**cfg_robot)
+        # self.cfg_camera = self.cfg_robot.cfg_dict_camera
+        # self.cfg_camera_third_person = self.cfg_robot.cfg_dict_camera_third
         # cfg_camera = None
         # if cfg_dict_camera:
         #     cfg_camera = CfgCamera(**cfg_dict_camera)
@@ -117,13 +115,13 @@ class Robot:
         self.cameras: dict = {}
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
-        if cfg_camera is not None:
-            logger.info(f"create camera for {self.cfg_robot.type}")
-            self.camera = Camera(cfg_robot, cfg_camera)
-            self.camera.create_camera(camera_path=self.cfg_robot.camera_path)
+        # if cfg_camera is not None:
+        #     logger.info(f"create camera for {self.cfg_robot.type}")
+        #     self.camera = Camera(cfg_robot, cfg_camera)
+        #     self.camera.create_camera(camera_path=self.cfg_robot.camera_path)
 
         # 第三视角相机 一个机器人只有一个
-        self.cfg_camera_third_person = cfg_camera_third_person
+        # self.cfg_camera_third_person = cfg_camera_third_person
         self.viewport_name = None  # 存储viewport名称
         self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
         self.transform_camera_pos = np.array([0, 0, 0])
@@ -193,33 +191,6 @@ class Robot:
         Get observation of robot, including controllers, cameras, and world pose.
         """
         raise NotImplementedError()
-
-    @staticmethod
-    def to_torch(
-        data,
-        dtype: torch.dtype = torch.float32,
-        device: str = None,
-        requires_grad: bool = False,
-    ) -> torch.Tensor:
-        if device is None:
-            if hasattr(data, "device"):
-                device = data.device
-            else:
-                device = "cpu"
-
-        if isinstance(data, torch.Tensor):
-            return data.to(device=device, dtype=dtype)
-        return torch.as_tensor(data, dtype=dtype, device=device).requires_grad_(
-            requires_grad
-        )
-
-    def create_robot_entity(self):
-        """
-        [Abstract Method] Initializes the specific robot entity wrapper.
-        Subclasses MUST override this method to create either an Articulation,
-        a RigidPrim, or another appropriate wrapper and assign it to self.robot_entity.
-        """
-        raise NotImplementedError
 
     def initialize(self) -> None:
         if self.cfg_camera is not None:

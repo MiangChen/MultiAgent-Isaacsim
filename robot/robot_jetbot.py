@@ -1,3 +1,5 @@
+from typing import Dict
+
 import torch
 
 from controller.controller_pid import ControllerPID
@@ -27,15 +29,15 @@ from gsi2isaacsim.gsi_msgs_helper import (
 class RobotJetbot(Robot):
     def __init__(
         self,
-        cfg_robot: CfgJetbot,
+        cfg_robot: Dict,
         # cfg_camera: CfgCamera = None,
         # cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager=None,
     ) -> None:
+        self.cfg_robot = CfgJetbot(**cfg_robot)
         super().__init__(
-            cfg_robot,
             # cfg_camera,
             # cfg_camera_third_person,
             scene=scene,

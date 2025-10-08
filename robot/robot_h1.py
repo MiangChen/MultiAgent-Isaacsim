@@ -1,3 +1,5 @@
+from typing import Dict
+
 import numpy as np
 
 from controller.controller_pid import ControllerPID
@@ -36,17 +38,13 @@ class RobotH1(Robot):
 
     def __init__(
         self,
-        cfg_robot: CfgH1,
-        # cfg_camera: CfgCamera = None,
-        # cfg_camera_third_person: CfgCameraThird = None,
+        cfg_robot: Dict,
         map_grid: GridMap = None,
         scene: Scene = None,
         scene_manager=None,
     ) -> None:
+        self.cfg_robot = CfgH1(**cfg_robot)
         super().__init__(
-            cfg_robot,
-            # cfg_camera,
-            # cfg_camera_third_person,
             scene,
             scene_manager,
             map_grid,
