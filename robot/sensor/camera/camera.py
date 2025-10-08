@@ -27,7 +27,10 @@ class Camera:
     def create_camera(self):
         self.cfg_camera.name = self.cfg_camera.type + "_" + str(self.cfg_camera.id)
         if self.cfg_camera.use_existing_camera == True:
-            self.cfg_camera.path_prim_absolute = self.cfg_robot.path_prim_robot + self.cfg_camera.path_prim_relative_to_robot
+            self.cfg_camera.path_prim_absolute = (
+                self.cfg_robot.path_prim_robot
+                + self.cfg_camera.path_prim_relative_to_robot
+            )
             self.camera = Camera(
                 prim_path=self.cfg_camera.path_prim_absolute,
                 name=self.cfg_camera.name,

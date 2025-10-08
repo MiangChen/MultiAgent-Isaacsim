@@ -4,13 +4,16 @@ import yaml
 
 from isaacsim.core.api.scenes import Scene
 
+from log.log_manager import LogManager
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from robot.robot import Robot
 from robot.cfg import CfgRobot
-from ros.ros_manager import RosManager
+from ros.ros_manager import RosManager, logger
 from scene.scene_manager import SceneManager
+
+logger = LogManager.get_logger(__name__)
 
 
 class SwarmManager:
@@ -152,11 +155,10 @@ class SwarmManager:
     ) -> None:
         """异步加载并创建配置文件中定义的所有机器人。"""
 
-        if robot_swarm_cfg_file is not None:
-            with open(robot_swarm_cfg_file, "r") as file:
-                dict = yaml.safe_load(file)
+        with open(robot_swarm_cfg_file, "r") as file:
+            dict = yaml.safe_load(file)
         if dict is None:
-            print("No configuration file or dictionary found")
+            logger.error("No configuration file or dictionary found")
             return  # 加上 return 避免下面出错
 
         for robot_class_name in dict.keys():
@@ -170,10 +172,13 @@ class SwarmManager:
                 cfg_camera_third_person_dict = robot_cfg.get("camera_third_person")
 
                 # --- 3. 修改点: 使用 await 调用现在是异步的 create_robot ---
-                await self.create_robot(robot_class_name=robot_class_name,
-                                        cfg_class_robot=self.robot_class_cfg[robot_class_name],
-                                        cfg_dict_body=cfg_body_dict, cfg_dict_camera=cfg_camera_dict,
-                                        cfg_dict_camera_third_person=cfg_camera_third_person_dict)
+                await self.create_robot(
+                    robot_class_name=robot_class_name,
+                    cfg_class_robot=self.robot_class_cfg[robot_class_name],
+                    cfg_dict_body=cfg_body_dict,
+                    cfg_dict_camera=cfg_camera_dict,
+                    cfg_dict_camera_third_person=cfg_camera_third_person_dict,
+                )
 
     def activate_robot(
         self, flag_file_path: str = None, flag_dict: Dict = None
