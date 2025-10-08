@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # --- 1. 项目根目录 ---
-# 这个脚本会自动检测其所在的目录为项目根目录，通常无需修改。
 PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # --- 2. Python 可执行文件路径 ---
@@ -11,7 +10,7 @@ PY_EXECUTABLE="/home/ubuntu/anaconda3/envs/env_isaaclab/bin/python"
 MAIN_PY_SCRIPT="isaacsim_lidar.py"
 
 # --- 4. 自定义 ROS 2 工作空间 ---
-CUSTOM_WORKSPACE_SETUP_PATH=(
+WORKSPACE_SETUP_PATH=(
   "/opt/ros/humble/setup.bash"
   "/home/ubuntu/planner/install/setup.bash"
   "$PROJECT_ROOT/src/gsi_msgs/install/setup.bash"
@@ -28,7 +27,7 @@ DEFAULT_ARGS=(
 
 # --- 1. 环境设置 ---
 echo "[INFO] Sourcing custom workspaces..."
-for ws_path in "${CUSTOM_WORKSPACE_SETUP_PATHS[@]}"; do
+for ws_path in "${WORKSPACE_SETUP_PATHS[@]}"; do
   if [ -f "$ws_path" ]; then
     source "$ws_path"
     echo "  -> Sourced: $ws_path"
