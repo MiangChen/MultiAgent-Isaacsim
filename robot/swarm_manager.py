@@ -50,10 +50,10 @@ class SwarmManager:
     async def create_robot(
         self,
         robot_class_name: str = None,
-        robot_class_cfg: Type[CfgRobot] = None,
-        cfg_body_dict: Dict = None,
-        cfg_camera_dict: Dict = None,
-        cfg_camera_third_person_dict: Dict = None,
+        cfg_class_robot: Type[CfgRobot] = None,
+        cfg_dict_body: Dict = None,
+        cfg_dict_camera: Dict = None,
+        cfg_dict_camera_third_person: Dict = None,
     ):
         """
         异步创建新机器人并加入仓库。
@@ -63,16 +63,16 @@ class SwarmManager:
             raise ValueError(f"Unknown robot type: {robot_class_name}")
 
         # 定义对应的机器人的位置和姿态, 以及编号
-        print(f"尝试加载{robot_class_name} {cfg_body_dict['id']}号的配置文件")
-        cfg_body = robot_class_cfg(**cfg_body_dict)
+        print(f"尝试加载{robot_class_name} {cfg_dict_body['id']}号的配置文件")
+        cfg_body = cfg_class_robot(**cfg_dict_body)
 
         cfg_camera = None
-        if cfg_camera_dict:
-            cfg_camera = CfgCamera(**cfg_camera_dict)
+        if cfg_dict_camera:
+            cfg_camera = CfgCamera(**cfg_dict_camera)
 
         cfg_camera_third_person = None
-        if cfg_camera_third_person_dict:
-            cfg_camera_third_person = CfgCameraThird(**cfg_camera_third_person_dict)
+        if cfg_dict_camera_third_person:
+            cfg_camera_third_person = CfgCameraThird(**cfg_dict_camera_third_person)
 
         # 选择同步或异步创建
         robot_cls = self.robot_class[robot_class_name]
@@ -170,13 +170,10 @@ class SwarmManager:
                 cfg_camera_third_person_dict = robot_cfg.get("camera_third_person")
 
                 # --- 3. 修改点: 使用 await 调用现在是异步的 create_robot ---
-                await self.create_robot(
-                    robot_class_name=robot_class_name,
-                    robot_class_cfg=self.robot_class_cfg[robot_class_name],
-                    cfg_body_dict=cfg_body_dict,
-                    cfg_camera_dict=cfg_camera_dict,
-                    cfg_camera_third_person_dict=cfg_camera_third_person_dict,
-                )
+                await self.create_robot(robot_class_name=robot_class_name,
+                                        cfg_class_robot=self.robot_class_cfg[robot_class_name],
+                                        cfg_dict_body=cfg_body_dict, cfg_dict_camera=cfg_camera_dict,
+                                        cfg_dict_camera_third_person=cfg_camera_third_person_dict)
 
     def activate_robot(
         self, flag_file_path: str = None, flag_dict: Dict = None
