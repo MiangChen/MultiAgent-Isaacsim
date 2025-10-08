@@ -75,8 +75,8 @@ class Robot:
         )  # 通过依赖注入获取viewport_manager
 
         # 通用的机器人本体初始化代码
-        self.cfg_robot.prim_path_robot = (
-            self.cfg_robot.prim_path_swarm
+        self.cfg_robot.path_prim_robot = (
+            self.cfg_robot.path_prim_swarm
             + f"/{self.cfg_robot.type}"
             + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
         )

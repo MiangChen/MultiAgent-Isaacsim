@@ -13,9 +13,9 @@ class CfgRobot(CfgBase):
     type: str = "robot"
     name: str = "robot"
     id: int = 0
-    prim_path_swarm: str = "/World/robot"
-    prim_path_robot: Optional[str] = "/World/robot"
-    usd_path: str = None
+    path_prim_swarm: str = "/World/robot"
+    path_prim_robot: str = None
+    path_usd: str = None
 
     cfg_dict_camera: Optional[Dict[str, CfgCamera]] = {}
     cfg_dict_lidar: Optional[Dict[str, CfgLidar]] = {}

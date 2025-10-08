@@ -58,10 +58,10 @@ class PolicyController(BaseController):
         #
         # if not prim.IsValid():
         #     prim = define_prim(prim_path, "Xform")
-        #     if usd_path:
-        #         prim.GetReferences().AddReference(usd_path) # 加载机器人USD模型
+        #     if path_usd:
+        #         prim.GetReferences().AddReference(path_usd) # 加载机器人USD模型
         #     else:
-        #         carb.log_error("unable to add robot usd, usd_path not provided")
+        #         carb.log_error("unable to add robot usd, path_usd not provided")
         #
         # # 移动到机器人本体中声明
 

@@ -5,6 +5,6 @@ class CfgJetbot(CfgRobot):
     # meta info
     type: str = "jetbot"
     id: int = 0
-    prim_path_swarm: str = "/World/robot/jetbot"
-    prim_path_robot: str = "/World/robot/jetbot"
-    usd_path: str = ASSET_PATH + "/Isaac/Robots/Jetbot/jetbot.usd"
+    path_prim_swarm: str = "/World/robot"
+    path_prim_robot: str = "/World/robot/jetbot"
+    path_usd: str = ASSET_PATH + "/Isaac/Robots/Jetbot/jetbot.usd"

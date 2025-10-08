@@ -1,8 +1,6 @@
 import os
 import yaml
 
-import argparse
-
 from isaacsim import SimulationApp
 import omni
 
@@ -14,7 +12,7 @@ def start_isaacsim_simulation_app():
 
     # 1. 读取YAML配置文件
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(current_dir, '../config/config_parameter.yaml')
+    config_path = os.path.join(current_dir, "../config/config_parameter.yaml")
     normalized_config_path = os.path.normpath(config_path)
     with open(normalized_config_path, "r") as f:
         config = yaml.safe_load(f)
@@ -53,4 +51,3 @@ def start_isaacsim_simulation_app():
     #     omni.kit.viewport.utility.get_active_viewport().updates_enabled = False
 
     return simulation_app
-

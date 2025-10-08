@@ -138,11 +138,11 @@ class RobotJetbot(Robot):
                     ),
                     (
                         "ArticulationController.inputs:robotPath",
-                        f"{self.cfg_robot.prim_path_swarm}",
+                        f"{self.cfg_robot.path_prim_swarm}",
                     ),
                     (
                         "PublishJointState.inputs:targetPrim",
-                        f"{self.cfg_robot.prim_path_swarm}",
+                        f"{self.cfg_robot.path_prim_swarm}",
                     ),
                 ],
             },

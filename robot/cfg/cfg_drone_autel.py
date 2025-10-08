@@ -5,6 +5,6 @@ class CfgDroneAutel(CfgRobot):
     # meta info
     type: str = "auteldrone"
     id: int = 0
-    prim_path_swarm: str = "/World/robot"
-    prim_path_robot: str = "/World/robot/drone"
-    usd_path: str = None
+    path_prim_swarm: str = "/World/robot"
+    path_prim_robot: str = "/World/robot/drone"
+    path_usd: str = None

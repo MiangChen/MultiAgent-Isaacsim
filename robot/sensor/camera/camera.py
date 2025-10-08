@@ -1,16 +1,18 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Sequence
 
 import numpy as np
-from pxr import Usd, UsdGeom, Gf
 import torch
+from taichi.examples.real_func.algorithm.marching_squares import resolution
+from taichi.examples.simulation.pbf2d import positions
 from torchvision.utils import save_image
 
-from isaacsim.sensors.camera import CameraView
+from isaacsim.sensors.camera import Camera
 from isaacsim.core.utils.numpy import rotations
 from isaacsim.core.utils.prims import define_prim, get_prim_at_path
+from pxr import Usd, UsdGeom, Gf
 
-from robot.sensor.camera import CfgCamera
 from log.log_manager import LogManager
+from robot.sensor.camera import CfgCamera
 from utils import to_torch
 
 logger = LogManager.get_logger(__name__)
@@ -22,100 +24,98 @@ class Camera:
         self.cfg_camera = cfg_camera
         self.cfg_robot = cfg_robot
 
-    def create_camera(self, camera_path: str = None):
-        if camera_path is None:
+    def create_camera(self):
+        self.cfg_camera.name = self.cfg_camera.type + "_" + str(self.cfg_camera.id)
+        if self.cfg_camera.use_existing_camera == True:
+            self.cfg_camera.path_prim_absolute = self.cfg_robot.path_prim_robot + self.cfg_camera.path_prim_relative_to_robot
+            self.camera = Camera(
+                prim_path=self.cfg_camera.path_prim_absolute,
+                name=self.cfg_camera.name,
+                frequency=self.cfg_camera.frequency,
+                dt=self.cfg_camera.dt,
+                resolution=self.cfg_camera.resolution,
+                # position=self.cfg_camera.position,
+                # orientation=self.cfg_camera.orientation,
+                # translation=self.cfg_camera.translation,
+                render_product_path=None,
+            )
+        else:
             self.cfg_camera.prim_path_absolute = (
-                self.cfg_robot.prim_path_swarm + "/camera/Camera"
-            )
-        else:
-            self.cfg_camera.prim_path_absolute = camera_path
-        prim = get_prim_at_path(self.cfg_camera.prim_path_absolute)
-
-        if prim.IsValid():
-            self.camera_view = CameraView(
-                prim_paths_expr=self.cfg_camera.prim_path_absolute,
-                output_annotators=["rgb"],
+                self.cfg_robot.path_prim_robot
+                + self.cfg_camera.path_prim_relative_to_robot
+                + "/"
+                + self.cfg_camera.name
             )
 
-        else:
-            prim = define_prim(self.cfg_camera.prim_path_absolute, "Xform")
-            if prim.IsA(UsdGeom.Xformable):
+            try:
 
+                prim = define_prim(self.cfg_camera.path_prim_absolute, "Xform")
                 # 获取值（默认时间或指定时间）
                 timecode = Usd.TimeCode.Default()
-
                 translate_attr = prim.GetAttribute("xformOp:translate")
-                if not translate_attr:
-                    print("Prim 未定义 xformOp:translate 属性")
-                else:  # 静态用默认时间，动态用 Usd.TimeCode(frame)
-                    translate_value: Gf.Vec3d = translate_attr.Get(timecode)
-                    # print(f"平移值: {tra/slate_value}")  # 例如 (1.0, 2.0, 3.0)
-                    self.cfg_camera.position = list(translate_value)
 
+                # 静态用默认时间，动态用 Usd.TimeCode(frame)
+                translate_value: Gf.Vec3d = translate_attr.Get(timecode)
+                self.cfg_camera.position = list(translate_value)
                 quat_attr = prim.GetAttribute("xformOp:orient")
                 if not quat_attr:
                     print("Prim 未定义 xformOp:orient 属性")
                 else:
                     quat_value = quat_attr.Get(timecode)
-                    self.cfg_camera.quat = [quat_value.real] + list(
+                    self.cfg_camera.orientation = [quat_value.real] + list(
                         quat_value.imaginary
                     )
-                    self.cfg_camera.euler_degree = None
-            else:
-                if prim:
-                    print(
-                        f"Prim at {prim.GetPath()} is not Xformable or does not exist."
-                    )
-                else:
-                    print(f"Prim not found at path {prim.GetPath()}")
+            except Exception as e:
+                logger.error(f"{e}")
 
-            self.camera_view = CameraView(
-                prim_paths_expr=self.cfg_camera.prim_path_absolute,
-                # frequency=self.cfg_camera.frequency,
-                # resolution=self.cfg_camera.resolution,
-                translations=to_torch(self.cfg_camera.position).reshape(1, 3),
-                orientations=to_torch(self.cfg_camera.quat).reshape(1, 4),
-                output_annotators=["rgb"],
+            self.camera = Camera(
+                prim_path=self.cfg_camera.path_prim_absolute,
+                name=self.cfg_camera.name,
+                frequency=self.cfg_camera.frequency,
+                dt=self.cfg_camera.dt,
+                resolution=self.cfg_camera.resolution,
+                position=self.cfg_camera.position,
+                orientation=self.cfg_camera.orientation,
+                translation=self.cfg_camera.translation,
+                render_product_path=None,
             )
 
             self.set_local_pose(
-                positions=to_torch(self.cfg_camera.position).reshape(1, 3),
-                orientations=to_torch(self.cfg_camera.quat).reshape(1, 4),
+                position=to_torch(self.cfg_camera.position),
+                orientation=to_torch(self.cfg_camera.orientation),
                 camera_axes="usd",
             )
+
         return
 
-    def initialize(self) -> bool:
+    def initialize(self) -> None:
         """
         Returns:
             True if the view object was initialized (after the first call of .initialize()). False otherwise.
         """
-        self.camera_view.initialize()
-        # 设置深度功能
-        # self.camera.add_distance_to_camera_to_frame() # camera view不用
-        # 物品检测功能
-        # self.camera.add_bounding_box_2d_loose_to_frame() # camera view不用
-        return self.camera_view.initialized
+        self.camera.initialize()
+        if self.cfg_camera.enable_semantic_segmentation:
+            self.camera.add_bounding_box_2d_loose_to_frame()
 
     def set_local_pose(
         self,
-        positions: Tuple[float, float, float],
-        orientations: Tuple[float, float, float, float],
+        position: Sequence[float] = None,
+        orientation: Sequence[float] = None,
         camera_axes: str = "usd",
     ) -> None:
-        self.camera_view.set_local_poses(
-            positions=positions, orientations=orientations, camera_axes=camera_axes
+        self.camera.set_local_poses(
+            position=position, orientation=orientation, camera_axes=camera_axes
         )
         return None
 
     def get_current_frame(self):
-        return self.camera_view.get_current_frame()
+        return self.camera.get_current_frame()
 
     def get_depth(self):
-        return self.camera_view.get_depth()
+        return self.camera.get_depth()
 
     def get_point_cloud(self):
-        return self.camera_view.get_point_cloud()
+        return self.camera.get_point_cloud()
 
     def get_rgb(self) -> torch.Tensor:
         """
@@ -124,13 +124,13 @@ class Camera:
             containing the RGB data for each camera. Shape is (num_cameras, height, width, 3) with type torch.float32.
 
         """
-        return self.camera_view.get_rgb()
+        return self.camera.get_rgb()
 
     def get_local_pose(self, camera_axes: str = "usd"):
-        return self.camera_view.get_local_pose(camera_axes=camera_axes)
+        return self.camera.get_local_pose(camera_axes=camera_axes)
 
     def get_world_pose(self, camera_axes: str = "usd") -> Tuple[np.ndarray, np.ndarray]:
-        return self.camera_view.get_world_pose(camera_axes=camera_axes)
+        return self.camera.get_world_pose(camera_axes=camera_axes)
 
     def save_rgb_to_file(
         self, rgb_tensor_gpu: torch.Tensor, file_path: str = None

@@ -16,7 +16,7 @@ class ConfigManager:
     def __init__(self):
         # 通过args传递的参数
         self._parser = self._create_argument_parser()
-        self.args, self.unknown_args = self._parser.parse_known_args()
+        self.args, self.args_unknown = self._parser.parse_known_args()
         # 通过文件读取的参数
         self.config: Dict[str, Any] = {}
         current_dir = os.path.dirname(os.path.abspath(__file__))

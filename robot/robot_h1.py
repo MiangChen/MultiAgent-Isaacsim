@@ -106,7 +106,7 @@ class RobotH1(Robot):
 
         # 异步地创建并加载 H1FlatTerrainPolicy 控制器
         instance.controller_policy = await H1FlatTerrainPolicy.create(
-            prim_path=instance.cfg_robot.prim_path_swarm
+            prim_path=instance.cfg_robot.path_prim_swarm
         )
         return instance
 

@@ -19,14 +19,14 @@ jetbot:
       position: [ 5, 4, 0.035 ]
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Allen
-#    camera:
-#      position: [ 0, 0, 0.5 ]  # 相对于机器人中心的偏移距离
-#      quat: [0, 0, 0, 1]  # 相对于机器人中心朝向偏移
-#      frequency: 30 # 相机帧率
-#      resolution: [300, 400] # 相机分辨率
-#      focal_length: 30 # 相机的焦段 mm
-#      lens_aperture: 0 # 相机的光圈 0 表示没有景深 全部清晰
-#      focus_distance: 0 # 相机的对焦距离
+    cfg_dict_camera:
+      front:
+        use_existing: True
+        path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
+        id: 0
+        frequency: 30
+        resolution: [1280, 720]
+        lens_aperture: 0
 #    camera_third_person: False
 
   - id: 1
@@ -34,7 +34,14 @@ jetbot:
       position: [ 5, 3, 0.035 ]
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Bob
-    camera: {}
+    cfg_dict_camera:
+      front:
+        use_existing: True
+        path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
+        id: 0
+        frequency: 30
+        resolution: [ 1280, 720 ]
+        lens_aperture: 0
     camera_third_person: False
 
   - id: 2
@@ -42,7 +49,14 @@ jetbot:
       position: [ 5, 2, 0.035 ]
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: Candy
-    camera: {}
+    cfg_dict_camera:
+      front:
+        use_existing: True
+        path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
+        id: 0
+        frequency: 30
+        resolution: [ 1280, 720 ]
+        lens_aperture: 0
 #    camera_third_person:
 #      enabled: true
 #      relative_position: [ 0, -2, -0.5 ]  # 相机相对于机器人的位置 (后方2米, 上方3米)
@@ -56,7 +70,14 @@ jetbot:
       position: [ 5, 1, 0.035 ]
       orientation: [ 0.0, 0.0, 0.0, 1.0 ]
       alias: David
-    camera: {}
+    cfg_dict_camera:
+      front:
+        use_existing: True
+        path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
+        id: 0
+        frequency: 30
+        resolution: [ 1280, 720 ]
+        lens_aperture: 0
     camera_third_person: False
 
 h1:

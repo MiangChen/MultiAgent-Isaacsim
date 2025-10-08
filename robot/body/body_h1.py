@@ -29,14 +29,14 @@ class BodyH1(BodyRobot):
         初始化机器人关节树
         """
 
-        prim = get_prim_at_path(self.cfg_robot.prim_path_robot)
+        prim = get_prim_at_path(self.cfg_robot.path_prim_robot)
         if not prim.IsValid():
-            prim = define_prim(self.cfg_robot.prim_path_robot, "Xform")
-            if self.cfg_robot.usd_path:
+            prim = define_prim(self.cfg_robot.path_prim_robot, "Xform")
+            if self.cfg_robot.path_usd:
                 # load USD model
-                prim.GetReferences().AddReference(self.cfg_robot.usd_path)
+                prim.GetReferences().AddReference(self.cfg_robot.path_usd)
             else:
-                logger.error("unable to add robot usd, usd_path not provided")
+                logger.error("unable to add robot usd, path_usd not provided")
         elif prim.IsA(UsdGeom.Xformable):
             # Convert the prim to an Xformable object
             xformable = UsdGeom.Xformable(prim)
@@ -63,7 +63,7 @@ class BodyH1(BodyRobot):
                 logger.info(f"Prim not found at path {prim.GetPath()}")
 
         self.robot_articulation = Articulation(
-            prim_paths_expr=self.cfg_robot.prim_path_robot,
+            prim_paths_expr=self.cfg_robot.path_prim_robot,
             name=self.cfg_robot.name,
             positions=to_torch(self.cfg_robot.position).reshape(1, 3),
             orientations=to_torch(self.cfg_robot.quat).reshape(1, 4),

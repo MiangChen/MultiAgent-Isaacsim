@@ -205,8 +205,8 @@ class Trajectory:
 #     # Make sure the prim path used below ('/World/Franka/panda_link0') exists after loading.
 #     from omni.isaac.core.robots import Robot
 #     # prim_path = "/World/Franka" # Adjust if needed
-#     # usd_path = "/Isaac/Robots/Franka/franka_alt_fingers.usd"
-#     # prim_utils.create_prim(prim_path, "Xform", usd_path=usd_path, position=np.array([0,0,0]))
+#     # path_usd = "/Isaac/Robots/Franka/franka_alt_fingers.usd"
+#     # prim_utils.create_prim(prim_path, "Xform", path_usd=path_usd, position=np.array([0,0,0]))
 #
 #     # --- B. Define the path to the prim you want to track ---
 #     # IMPORTANT: Replace this with the actual path to your robot's base or relevant link

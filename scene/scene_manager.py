@@ -537,32 +537,32 @@ class SceneManager:
 
         ROBOT_CONFIGS = {
             "franka": {
-                "usd_path": "/Isaac/Robots/Franka/franka.usd",
+                "path_usd": "/Isaac/Robots/Franka/franka.usd",
                 "base_prim_path": "/World/Arm",
                 "base_name": "my_arm",
             },
             "jetbot": {
-                "usd_path": "/Isaac/Robots/Jetbot/jetbot.usd",
+                "path_usd": "/Isaac/Robots/Jetbot/jetbot.usd",
                 "base_prim_path": "/World/Jetbot",
                 "base_name": "my_jetbot",
             },
             "carter": {
-                "usd_path": "/Isaac/Robots/NVIDIA/Carter/nova_carter/nova_carter.usd",
+                "path_usd": "/Isaac/Robots/NVIDIA/Carter/nova_carter/nova_carter.usd",
                 "base_prim_path": "/World/Car",
                 "base_name": "my_car",
             },
             "g1": {
-                "usd_path": "/Isaac/Robots/Unitree/G1/g1.usd",
+                "path_usd": "/Isaac/Robots/Unitree/G1/g1.usd",
                 "base_prim_path": "/World/G1",
                 "base_name": "my_g1",
             },
             "go1": {
-                "usd_path": "/Isaac/Robots/Unitree/Go1/go1.usd",
+                "path_usd": "/Isaac/Robots/Unitree/Go1/go1.usd",
                 "base_prim_path": "/World/Go1",
                 "base_name": "my_go1",
             },
             "h1": {
-                "usd_path": "/Isaac/Robots/Unitree/H1/h1.usd",
+                "path_usd": "/Isaac/Robots/Unitree/H1/h1.usd",
                 "base_prim_path": "/World/H1",
                 "base_name": "my_h1",
             },
@@ -570,7 +570,7 @@ class SceneManager:
 
         robot_type = robot_type.lower()
         config = ROBOT_CONFIGS.get(robot_type, ROBOT_CONFIGS["franka"])
-        asset_path = ASSET_PATH + config["usd_path"]
+        asset_path = ASSET_PATH + config["path_usd"]
 
         # 获取当前 prim 信息
         scene_info = self.get_scene_info()
