@@ -50,68 +50,6 @@ class SwarmManager:
         self.map_semantic = map_semantic
         self.ros_manager = ros_manager
 
-    async def create_robot(
-        self,
-        robot_class_name: str = None,
-        cfg_class_robot: Type[CfgRobot] = None,
-        cfg_dict_body: Dict = None,
-        cfg_dict_camera: Dict = None,
-        cfg_dict_camera_third_person: Dict = None,
-    ):
-        """
-        异步创建新机器人并加入仓库。
-        处理同步和异步两种机器人创建方式
-        """
-        if robot_class_name not in self.robot_class:
-            raise ValueError(f"Unknown robot type: {robot_class_name}")
-
-        # 定义对应的机器人的位置和姿态, 以及编号
-        logger.info(f"尝试加载{robot_class_name} {cfg_dict_body['id']}号的配置文件")
-        cfg_body = cfg_class_robot(**cfg_dict_body)
-
-        cfg_camera = None
-        if cfg_dict_camera:
-            cfg_camera = CfgCamera(**cfg_dict_camera)
-
-        cfg_camera_third_person = None
-        if cfg_dict_camera_third_person:
-            cfg_camera_third_person = CfgCameraThird(**cfg_dict_camera_third_person)
-
-        # 选择同步或异步创建
-        robot_cls = self.robot_class[robot_class_name]
-
-        # 检查机器人class是否有 'create' 方法，并且它是一个异步函数
-        if hasattr(robot_cls, "create") and inspect.iscoroutinefunction(
-            robot_cls.create
-        ):
-            # 如果是，使用 await 调用异步工厂 create 方法
-            print(f"'{robot_class_name}' has an async factory. Using await .create()")
-            robot = await robot_cls.create(
-                cfg_robot=cfg_body,
-                cfg_camera=cfg_camera,
-                cfg_camera_third_person=cfg_camera_third_person,
-                map_grid=self.map_grid,
-                scene=self.scene,
-                scene_manager=self.scene_manager,
-            )
-        else:
-            # 如果不是，使用传统的同步 __init__ 方法
-            print(f"'{robot_class_name}' has a standard constructor. Using .__init__()")
-            robot = robot_cls(
-                cfg_robot=cfg_body,
-                cfg_camera=cfg_camera,
-                cfg_camera_third_person=cfg_camera_third_person,
-                scene=self.scene,
-                map_grid=self.map_grid,
-                scene_manager=self.scene_manager,
-            )
-
-        self.robot_warehouse[robot_class_name].append(robot)
-        self.map_semantic.map_semantic[robot.cfg_robot.name] = (
-            robot.cfg_robot.path_prim_swarm
-        )
-        return robot
-
     def register_robot_class(
         self,
         robot_class_name: str,
@@ -134,11 +72,6 @@ class SwarmManager:
         """
         Complete async initialization of the swarm manager.
         """
-
-        # Validate scene parameter
-        if scene is None:
-            raise ValueError("Scene parameter cannot be None")
-
         # Set scene reference
         self.scene = scene
 
@@ -150,34 +83,42 @@ class SwarmManager:
         if robot_active_flag_path is not None:
             self.activate_robot(robot_active_flag_path)
 
-    async def load_robot_swarm_cfg(
-        self, robot_swarm_cfg_file: str = None, dict: Dict = None
-    ) -> None:
+    async def load_robot_swarm_cfg(self, robot_swarm_cfg_file: str = None) -> None:
         """异步加载并创建配置文件中定义的所有机器人。"""
-
         with open(robot_swarm_cfg_file, "r") as file:
             dict = yaml.safe_load(file)
-        if dict is None:
-            logger.error("No configuration file or dictionary found")
-            return  # 加上 return 避免下面出错
 
         for robot_class_name in dict.keys():
-            for robot_cfg in dict[
-                robot_class_name
-            ]:
+            for cfg_robot in dict[robot_class_name]:
+                if robot_class_name not in self.robot_class:
+                    raise ValueError(f"Unknown robot type: {robot_class_name}")
 
-                cfg_dict_body = robot_cfg["body"]
-                cfg_dict_body["id"] = robot_cfg["id"]
-                cfg_dict_camera = robot_cfg.get("cfg_dict_camera")
-                cfg_dict_camera_third = robot_cfg.get("cfg_dict_camera_third")
+                # 选择同步或异步创建
+                robot_cls = self.robot_class[robot_class_name]
 
-                # --- 3. 修改点: 使用 await 调用现在是异步的 create_robot ---
-                await self.create_robot(
-                    robot_class_name=robot_class_name,
-                    cfg_class_robot=self.robot_class_cfg[robot_class_name],
-                    cfg_dict_body=cfg_dict_body,
-                    cfg_dict_camera=cfg_dict_camera,
-                    cfg_dict_camera_third_person=cfg_dict_camera_third,
+                # 检查机器人class是否有 'create' 方法，并且它是一个异步函数
+                if hasattr(robot_cls, "create") and inspect.iscoroutinefunction(
+                    robot_cls.create
+                ):
+                    # 如果是，使用 await 调用异步工厂 create 方法
+                    robot = await robot_cls.create(
+                        cfg_robot=cfg_robot,
+                        map_grid=self.map_grid,
+                        scene=self.scene,
+                        scene_manager=self.scene_manager,
+                    )
+                else:
+                    # 如果不是，使用传统的同步 __init__ 方法
+                    robot = robot_cls(
+                        cfg_robot=cfg_robot,
+                        scene=self.scene,
+                        map_grid=self.map_grid,
+                        scene_manager=self.scene_manager,
+                    )
+
+                self.robot_warehouse[robot_class_name].append(robot)
+                self.map_semantic.map_semantic[robot.cfg_robot.name] = (
+                    robot.cfg_robot.path_prim_robot
                 )
 
     def activate_robot(

@@ -37,16 +37,16 @@ class RobotH1(Robot):
     def __init__(
         self,
         cfg_robot: CfgH1,
-        cfg_camera: CfgCamera = None,
-        cfg_camera_third_person: CfgCameraThird = None,
+        # cfg_camera: CfgCamera = None,
+        # cfg_camera_third_person: CfgCameraThird = None,
         map_grid: GridMap = None,
         scene: Scene = None,
         scene_manager=None,
     ) -> None:
         super().__init__(
             cfg_robot,
-            cfg_camera,
-            cfg_camera_third_person,
+            # cfg_camera,
+            # cfg_camera_third_person,
             scene,
             scene_manager,
             map_grid,
@@ -85,8 +85,8 @@ class RobotH1(Robot):
     async def create(
         cls,
         cfg_robot: CfgH1,
-        cfg_camera: CfgCamera = None,
-        cfg_camera_third_person: CfgCameraThird = None,
+        # cfg_camera: CfgCamera = None,
+        # cfg_camera_third_person: CfgCameraThird = None,
         map_grid: GridMap = None,
         scene: Scene = None,
         scene_manager=None,
@@ -97,8 +97,8 @@ class RobotH1(Robot):
         """
         instance = cls(
             cfg_robot=cfg_robot,
-            cfg_camera=cfg_camera,
-            cfg_camera_third_person=cfg_camera_third_person,
+            # cfg_camera=cfg_camera,
+            # cfg_camera_third_person=cfg_camera_third_person,
             map_grid=map_grid,
             scene=scene,
             scene_manager=scene_manager,

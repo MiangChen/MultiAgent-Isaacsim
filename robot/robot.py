@@ -58,15 +58,23 @@ class Robot:
     def __init__(
         self,
         cfg_robot: CfgRobot = None,
-        cfg_camera: CfgCamera = None,
-        cfg_camera_third_person: CfgCameraThird = None,
+        # cfg_camera: CfgCamera = None,
+        # cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
         scene_manager: SceneManager = None,
         map_grid: GridMap = None,
     ):
         self.cfg_robot = cfg_robot
-        self.cfg_camera = cfg_camera
-        self.cfg_camera_third_person = cfg_camera_third_person
+        self.cfg_camera = self.cfg_robot.cfg_dict_camera
+        self.cfg_camera_third_person = self.cfg_robot.cfg_dict_camera_third
+        # cfg_camera = None
+        # if cfg_dict_camera:
+        #     cfg_camera = CfgCamera(**cfg_dict_camera)
+        #
+        # cfg_camera_third_person = None
+        # if cfg_dict_camera_third_person:
+        #     cfg_camera_third_person = CfgCameraThird(**cfg_dict_camera_third_person)
+
         self.scene = scene
         self.scene_manager = scene_manager
         self.map_grid = map_grid

@@ -93,7 +93,7 @@ def setup_simulation(
 
     # Wait for initialization to complete before proceeding
     # We'll do this by running a few simulation steps to let the async tasks execute
-    print("Waiting for async initialization to complete...")
+    logger.info("Waiting for async initialization to complete...")
     for _ in range(10):  # Give some time for async initialization
         simulation_app.update()
         if init_task.done():

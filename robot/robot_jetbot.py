@@ -28,16 +28,16 @@ class RobotJetbot(Robot):
     def __init__(
         self,
         cfg_robot: CfgJetbot,
-        cfg_camera: CfgCamera = None,
-        cfg_camera_third_person: CfgCameraThird = None,
+        # cfg_camera: CfgCamera = None,
+        # cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
         map_grid: GridMap = None,
         scene_manager=None,
     ) -> None:
         super().__init__(
             cfg_robot,
-            cfg_camera,
-            cfg_camera_third_person,
+            # cfg_camera,
+            # cfg_camera_third_person,
             scene=scene,
             map_grid=map_grid,
             scene_manager=scene_manager,
