@@ -32,7 +32,7 @@ class RosManager:
         if config_node_enable.get("node_action_server_plan_execution", False):
             node = NodeActionServerPlanExecution(loop=self.loop)
             self.node.append(node)
-            self.node.append(node.action_server_skill_client)
+            self.node.append(node.action_client_skill)
 
         logger.info("ROS nodes built successfully.")
 

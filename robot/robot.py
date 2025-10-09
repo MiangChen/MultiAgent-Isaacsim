@@ -61,16 +61,7 @@ class Robot:
         scene_manager: SceneManager = None,
         map_grid: GridMap = None,
     ):
-        # self.cfg_robot = CfgRobot(**cfg_robot)
-        # self.cfg_camera = self.cfg_robot.cfg_dict_camera
-        # self.cfg_camera_third_person = self.cfg_robot.cfg_dict_camera_third
-        # cfg_camera = None
-        # if cfg_dict_camera:
-        #     cfg_camera = CfgCamera(**cfg_dict_camera)
-        #
-        # cfg_camera_third_person = None
-        # if cfg_dict_camera_third_person:
-        #     cfg_camera_third_person = CfgCameraThird(**cfg_dict_camera_third_person)
+
         self.cfg_dict_camera = self.cfg_robot.cfg_dict_camera
         self.cfg_dict_camera_third = self.cfg_robot.cfg_dict_camera_third
         self.camera = {}
@@ -124,10 +115,6 @@ class Robot:
         self.cameras: dict = {}
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
-        # if cfg_camera is not None:
-        #     logger.info(f"create camera for {self.cfg_robot.type}")
-        #     self.camera = Camera(cfg_robot, cfg_camera)
-        #     self.camera.create_camera(camera_path=self.cfg_robot.camera_path)
 
         # 第三视角相机 一个机器人只有一个
         # self.cfg_camera_third_person = cfg_camera_third_person
@@ -137,7 +124,7 @@ class Robot:
 
         # 机器人的ros node
         self.node = NodeRobot(robot_name=self.name)
-        self.skill_action_server = ActionServer(
+        self.action_server_skill = ActionServer(
             node=self.node,
             action_type=SkillExecution,
             action_name=f"/skill/{self.name}",

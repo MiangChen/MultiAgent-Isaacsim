@@ -36,8 +36,8 @@ class NodeActionServerPlanExecution(Node):
             action_name="/isaac_sim/plan_execution",
             execute_callback=self.execute_callback_wrapper,
         )
-        self.action_server_skill_client = NodeActionClientSkill(
-            node_name="action_server_skill_client", loop=self.loop
+        self.action_client_skill = NodeActionClientSkill(
+            node_name="action_client_skill", loop=self.loop
         )
 
         self._feedback_state = {}
@@ -77,7 +77,7 @@ class NodeActionServerPlanExecution(Node):
                     current_timestep=step.timestep,
                 )
 
-                task = self.action_server_skill_client.send_skill_goal(
+                task = self.action_client_skill.send_skill_goal(
                     robot_skill_msg=robot_skill_msg,
                     feedback_handler=feedback_handler,
                 )
