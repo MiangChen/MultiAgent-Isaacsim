@@ -33,15 +33,15 @@ class CfgCamera(CfgBase):
     translation: Tuple[float, float, float] = None
     # quaternion orientation in the world/ local frame of the prim (depends if translation or position is specified). quaternion is scalar-first (w, x, y, z). shape is (4, ).
     orientation: Tuple[float, float, float, float] = (
-        0.0,
-        0.0,
-        0.0,
         1.0,
+        0.0,
+        0.0,
+        0.0,
     )
     # Attach the bounding_box_2d_loose annotator to this camera
     enable_semantic_detection: bool = False
     # Longer Lens Lengths Narrower FOV, Shorter Lens Lengths Wider FOV. Unit: mm
-    focal_length: int = 30
+    focal_length: int = 20
     # The distance at which perfect sharpness is achieved.
     focus_distance: float = None
     # Controls Distance Blurring. Lower Numbers decrease focus range, larger; 0 turns off focusing.

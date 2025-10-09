@@ -25,9 +25,9 @@ class CfgRobot(CfgBase):
     # common config
     position: Optional[Tuple[float, float, float]] = (0.0, 0.0, 0.0)
     quat: Optional[Tuple[float, float, float, float]] = (
-        0.0,
-        0.0,
-        0.0,
         1.0,
+        0.0,
+        0.0,
+        0.0,
     )
     scale: Optional[Tuple[float, float, float]] = (1.0, 1.0, 1.0)

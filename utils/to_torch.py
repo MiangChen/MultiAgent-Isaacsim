@@ -7,6 +7,8 @@ def to_torch(
         device: str = None,
         requires_grad: bool = False
 ) -> torch.Tensor:
+    if data is None:
+        return None
     if device is None:
         if hasattr(data, "device"):
             device = data.device

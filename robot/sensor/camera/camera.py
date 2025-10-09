@@ -34,12 +34,12 @@ class Camera:
                 prim_path=self.cfg_camera.path_prim_absolute,
                 name=self.cfg_camera.name,
                 frequency=self.cfg_camera.frequency,
-                # dt=self.cfg_camera.dt,
+                dt=self.cfg_camera.dt,
                 resolution=self.cfg_camera.resolution,
                 # position=self.cfg_camera.position,
                 # orientation=self.cfg_camera.orientation,
                 # translation=self.cfg_camera.translation,
-                # render_product_path=None,
+                render_product_path=None,
             )
         else:
             self.cfg_camera.path_prim_absolute = (
@@ -48,27 +48,34 @@ class Camera:
                 + "/"
                 + self.cfg_camera.name
             )
+            # prim = define_prim(self.cfg_camera.path_prim_absolute, "Xform")
+            # xformable = UsdGeom.Xformable(prim)
+            # translate_op = xformable.AddTranslateOp()
+            # translate_op.Set(Gf.Vec3d(self.cfg_camera.position))
+            # orient_op = xformable.AddOrientOp()
+            # w, x, y, z = self.cfg_camera.orientation
+            # orient_op.Set(Gf.Quatf(w, x, y, z))
 
-            try:
-
-                prim = define_prim(self.cfg_camera.path_prim_absolute, "Xform")
+            # try:
+            #
+                # prim = define_prim(self.cfg_camera.path_prim_absolute, "Xform")
                 # 获取值（默认时间或指定时间）
-                timecode = Usd.TimeCode.Default()
-                translate_attr = prim.GetAttribute("xformOp:translate")
-
+                # timecode = Usd.TimeCode.Default()
+                # translate_attr = prim.GetAttribute("xformOp:translate")
+                #
                 # 静态用默认时间，动态用 Usd.TimeCode(frame)
-                translate_value: Gf.Vec3d = translate_attr.Get(timecode)
-                self.cfg_camera.position = list(translate_value)
-                quat_attr = prim.GetAttribute("xformOp:orient")
-                if not quat_attr:
-                    print("Prim 未定义 xformOp:orient 属性")
-                else:
-                    quat_value = quat_attr.Get(timecode)
-                    self.cfg_camera.orientation = [quat_value.real] + list(
-                        quat_value.imaginary
-                    )
-            except Exception as e:
-                raise (f"{e}")
+                # translate_value: Gf.Vec3d = translate_attr.Get(timecode)
+                # self.cfg_camera.position = list(translate_value)
+                # quat_attr = prim.GetAttribute("xformOp:orient")
+                # if not quat_attr:
+                #     print("Prim 未定义 xformOp:orient 属性")
+                # else:
+                #     quat_value = quat_attr.Get(timecode)
+                #     self.cfg_camera.orientation = [quat_value.real] + list(
+                #         quat_value.imaginary
+                #     )
+            # except Exception as e:
+            #     raise (f"{e}")
 
             self.camera = IsaacCamera(
                 prim_path=self.cfg_camera.path_prim_absolute,
@@ -76,17 +83,14 @@ class Camera:
                 frequency=self.cfg_camera.frequency,
                 dt=self.cfg_camera.dt,
                 resolution=self.cfg_camera.resolution,
-                position=self.cfg_camera.position,
-                orientation=self.cfg_camera.orientation,
-                translation=self.cfg_camera.translation,
+                # position=self.cfg_camera.position,
+                # orientation=self.cfg_camera.orientation,
+                # translation=self.cfg_camera.translation,
                 render_product_path=None,
             )
 
-            self.set_local_pose(
-                position=to_torch(self.cfg_camera.position),
-                orientation=to_torch(self.cfg_camera.orientation),
-                camera_axes="usd",
-            )
+            self.set_local_pose(translation=to_torch(self.cfg_camera.translation),
+                                orientation=to_torch(self.cfg_camera.orientation), camera_axes="usd")
 
         return
 
@@ -101,13 +105,11 @@ class Camera:
 
     def set_local_pose(
         self,
-        position: Sequence[float] = None,
+        translation: Sequence[float] = None,
         orientation: Sequence[float] = None,
         camera_axes: str = "usd",
     ) -> None:
-        self.camera.set_local_poses(
-            position=position, orientation=orientation, camera_axes=camera_axes
-        )
+        self.camera.set_local_pose(translation=translation, orientation=orientation, camera_axes=camera_axes)
         return None
 
     def get_current_frame(self):
