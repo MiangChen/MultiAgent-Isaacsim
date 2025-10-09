@@ -66,12 +66,6 @@ class Robot:
         self.cfg_dict_camera_third = self.cfg_robot.cfg_dict_camera_third
         self.camera = {}
         self.camera_third = {}
-        for camera_name, camera_cfg in self.cfg_robot.cfg_dict_camera.items():
-            camera_instance = Camera(cfg_robot=self.cfg_robot, cfg_camera=camera_cfg)
-            self.camera[camera_name] = camera_instance
-        for cam_name, cam_cfg in self.cfg_robot.cfg_dict_camera_third.items():
-            camera_instance = Camera(cfg_robot=self.cfg_robot, cfg_camera=cam_cfg)
-            self.camera_third[cam_name] = camera_instance
 
         self.scene = scene
         self.scene_manager = scene_manager
@@ -189,6 +183,12 @@ class Robot:
         raise NotImplementedError()
 
     def initialize(self) -> None:
+        for camera_name, camera_cfg in self.cfg_robot.cfg_dict_camera.items():
+            camera_instance = Camera(cfg_robot=self.cfg_robot, cfg_camera=camera_cfg)
+            self.camera[camera_name] = camera_instance
+        for cam_name, cam_cfg in self.cfg_robot.cfg_dict_camera_third.items():
+            camera_instance = Camera(cfg_robot=self.cfg_robot, cfg_camera=cam_cfg)
+            self.camera_third[cam_name] = camera_instance
         for camera in self.camera.values():
             camera.initialize()
 
