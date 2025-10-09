@@ -65,4 +65,10 @@ h1:
     name: Hellen
     position: [ 3, 2, 1.05 ]
     quat: [ 0.0, 0.0, 0.0, 1.0 ]
-    cfg_dict_camera: {}
+    cfg_dict_camera:
+      front:
+        use_existing_camera: False
+        path_prim_relative_to_robotz: "d435_rgb_module_link"
+        id: 0
+        frequency: 30
+        resolution: [1280, 720]
