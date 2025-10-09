@@ -4,7 +4,8 @@ from math import atan2
 
 from isaacsim.core.utils.rotations import quat_to_rot_matrix
 
-def quaternion_to_yaw(quaternion: Tuple[float, float, float, float]) -> float:
+
+def quat_to_yaw(quaternion: Tuple[float, float, float, float]) -> float:
     """
     Args:
         quaternion: 四元数, 顺序是 wxyz

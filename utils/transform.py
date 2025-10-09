@@ -1,6 +1,6 @@
 from typing import List
 
-from quat_to_angle import quaternion_to_euler_scipy  # 可以将quat变成角度, 能输入xyz/zxy等顺序
+from quat_to_euler import quat_to_euler  # 可以将quat变成角度, 能输入xyz/zxy等顺序
 import math
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -13,10 +13,10 @@ isaacsim中默认的顺序是zyx
 
 """
 
-def transform_object_rotate_then_translate(origin_pos, origin_angle,
-                                           translate_pos,
-                                           rotate,
-                                           rotation_order='xyz'):
+
+def transform_object_rotate_then_translate(
+    origin_pos, origin_angle, translate_pos, rotate, rotation_order="xyz"
+):
     """
     对物体进行变换：先旋转，再平移
 
@@ -40,7 +40,7 @@ def transform_object_rotate_then_translate(origin_pos, origin_angle,
     # === 步骤2: 姿态变换 - 组合旋转 ===
 
     # 创建原始旋转对象
-    original_rotation = R.from_euler('xyz', origin_angle, degrees=True)
+    original_rotation = R.from_euler("xyz", origin_angle, degrees=True)
 
     # 组合旋转：先应用变换旋转，再应用原始旋转
     combined_rotation = rotation_transform * original_rotation
@@ -57,10 +57,10 @@ def extract_yaw_from_rotation(rotation):
 
 def calculate_robot_yaw(rotate_map: List = None, orien_robot: List = None) -> float:
     # 地图校正变换
-    map_correction = R.from_euler('xyz', rotate_map, degrees=True)
+    map_correction = R.from_euler("xyz", rotate_map, degrees=True)
 
     # 机器人原始姿态
-    robot_original = R.from_euler('xyz', orien_robot, degrees=True)
+    robot_original = R.from_euler("xyz", orien_robot, degrees=True)
 
     # 校正机器人姿态
     robot_corrected = map_correction * robot_original
@@ -71,7 +71,7 @@ def calculate_robot_yaw(rotate_map: List = None, orien_robot: List = None) -> fl
     return yaw
 
 
-def calculate_angle_with_y_axis(robot_pose: list, angle_unit='degrees'):
+def calculate_angle_with_y_axis(robot_pose: list, angle_unit="degrees"):
     """
     通过向量计算与y轴的夹角
 
@@ -111,7 +111,7 @@ def calculate_angle_with_y_axis(robot_pose: list, angle_unit='degrees'):
     else:
         angle_rad = angle_rad  # 顺时针为正
 
-    if angle_unit == 'degrees':
+    if angle_unit == "degrees":
         return math.degrees(angle_rad)
     else:
         return angle_rad
@@ -122,7 +122,12 @@ def calculate_angle_with_y_axis(robot_pose: list, angle_unit='degrees'):
 # 机器人的原始信息
 pos = [10.518024444580078, -3.9358742237091064, 15.300127029418945]
 pos = [0, 0, 0]
-quat = [-0.015559980645775795, 0.8029360175132751, 0.21828925609588623, 0.5544393658638]  # xyzw格式的quat
+quat = [
+    -0.015559980645775795,
+    0.8029360175132751,
+    0.21828925609588623,
+    0.5544393658638,
+]  # xyzw格式的quat
 # quat = [-0.010639474727213383, 0.6564741134643555, 0.17408470809459686, 0.7339093089103699]
 quat = [0, 0, 0, 1]  # xyzw格式的quat
 
@@ -135,13 +140,14 @@ rotate = [-103, -0.4, -1.4]
 
 if __name__ == "__main__":
     # === 方法1: 只返回新的位置和四元数 ===
-    angle = quaternion_to_euler_scipy(quat, 'xyzw', euler_order='xyz')
+    angle = quat_to_euler(quat, "xyzw", euler_order="xyz")
 
     new_pos, new_angle = transform_object_rotate_then_translate(
-        pos, angle,
+        pos,
+        angle,
         translate_pos,
         rotate,
-        rotation_order='xyz',
+        rotation_order="xyz",
     )
 
     yaw = calculate_robot_yaw(rotate_map=rotate, orien_robot=angle)

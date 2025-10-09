@@ -12,7 +12,7 @@ from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from controller.controller_policy_h1 import H1FlatTerrainPolicy
-from utils import to_torch, quaternion_to_yaw
+from utils import to_torch, quat_to_yaw
 
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.utils.types import ArticulationActions
@@ -132,7 +132,7 @@ class RobotH1(Robot):
         #         progress=self._calc_dist(pos, self.nav_end) * 100 / self.nav_dist,
         #     )
         # 获取2D方向的朝向，逆时针是正
-        yaw = quaternion_to_yaw(quaternion=quat)
+        yaw = quat_to_yaw(quaternion=quat)
 
         # 获取机器人和目标连线的XY平面上的偏移角度
         robot_to_target_angle = np.arctan2(

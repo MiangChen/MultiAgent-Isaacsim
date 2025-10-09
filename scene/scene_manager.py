@@ -40,9 +40,8 @@ class SceneManager:
             "add_semantic": self.add_semantic,
             "count_semantics_in_scene": self.count_semantics_in_scene,
             "remove_all_semantics": self.remove_all_semantics,
-            "add_semantic_camera": self.add_camera,
             ## create ##
-            "create_camera": self.create_camera,
+            "add_camera": self.add_camera,
             "create_robot": self.create_robot,
             "create_shape_components": self.create_shape_components,
             # "create_shape": self.create_shape_single,
@@ -96,14 +95,17 @@ class SceneManager:
                 traceback.print_exc()
                 return {"status": "error", "message": str(e)}
         else:
-            return {"status": "error", "message": f"Unknown command type: {command_type}"}
+            return {
+                "status": "error",
+                "message": f"Unknown command type: {command_type}",
+            }
 
     def add_semantic(
-            self,
-            prim_path: str,
-            semantic_label: str,
-            type_label: str = 'class',
-            suffix: str = ''
+        self,
+        prim_path: str,
+        semantic_label: str,
+        type_label: str = "class",
+        suffix: str = "",
     ) -> Dict[str, Any]:
         """
         [已弃用 API] 为一个 prim 添加或更新一个语义标签。
@@ -120,32 +122,37 @@ class SceneManager:
             Dict[str, Any]: 包含操作状态和消息的字典。
         """
         try:
-            from isaacsim.core.utils.semantics import \
-                add_update_semantics  # isaacsim 4.5; will be deprecated in isaacsim 5.0
+            from isaacsim.core.utils.semantics import (
+                add_update_semantics,
+            )  # isaacsim 4.5; will be deprecated in isaacsim 5.0
 
             prim = self.stage.GetPrimAtPath(prim_path)
             if not prim.IsValid():
-                return {"status": "error", "message": f"Prim not found at path: {prim_path}"}
+                return {
+                    "status": "error",
+                    "message": f"Prim not found at path: {prim_path}",
+                }
 
             # 调用官方 API
             add_update_semantics(
                 prim=prim,
                 semantic_label=semantic_label,
                 type_label=type_label,
-                suffix=suffix
+                suffix=suffix,
             )
 
             return {
                 "status": "success",
-                "message": f"Successfully applied semantic '{semantic_label}' to prim <{prim_path}>"
+                "message": f"Successfully applied semantic '{semantic_label}' to prim <{prim_path}>",
             }
 
         except Exception as e:
             import traceback
+
             traceback.print_exc()
             return {"status": "error", "message": str(e)}
 
-    def remove_all_semantics(self, prim_path: str = '/') -> Dict[str, Any]:
+    def remove_all_semantics(self, prim_path: str = "/") -> Dict[str, Any]:
         """
         Removes all semantic tags from a given prim and its children
         Args:
@@ -155,29 +162,31 @@ class SceneManager:
         """
         try:
             from isaacsim.core.utils.semantics import remove_all_semantics
+
             stage = omni.usd.get_context().get_stage()
             if not stage:
                 return {"status": "error", "message": "No active USD stage."}
 
             prim = stage.GetPrimAtPath(prim_path)
             if not prim.IsValid():
-                return {"status": "error", "message": f"Prim not found at path: {prim_path}"}
+                return {
+                    "status": "error",
+                    "message": f"Prim not found at path: {prim_path}",
+                }
 
-            remove_all_semantics(
-                prim=prim,
-                recursive=True
-            )
+            remove_all_semantics(prim=prim, recursive=True)
 
             return {
                 "status": "success",
-                "message": f"Successfully removed all semantics from prim <{prim_path}>"
+                "message": f"Successfully removed all semantics from prim <{prim_path}>",
             }
         except Exception as e:
             import traceback
+
             traceback.print_exc()
             return {"status": "error", "message": str(e)}
 
-    def count_semantics_in_scene(self, prim_path: str = '/') -> Dict[str, Any]:
+    def count_semantics_in_scene(self, prim_path: str = "/") -> Dict[str, Any]:
         """
         [已弃用 API in isaacsim 5.0] 统计场景中（或指定路径下）所有语义标签的数量。
 
@@ -195,10 +204,11 @@ class SceneManager:
             return {
                 "status": "success",
                 "message": f"Counted semantics for path: {'Entire Scene' if prim_path is None else prim_path}",
-                "result": count_data
+                "result": count_data,
             }
         except Exception as e:
             import traceback
+
             traceback.print_exc()
             return {"status": "error", "message": str(e)}
 
@@ -215,17 +225,27 @@ class SceneManager:
             prim_to_delete = stage.GetPrimAtPath(prim_path)
             if not prim_to_delete.IsValid():
                 # Prim不存在，可以认为删除“成功”或“已完成”
-                return {"status": "skipped", "message": f"Prim at '{prim_path}' does not exist. Nothing to delete."}
+                return {
+                    "status": "skipped",
+                    "message": f"Prim at '{prim_path}' does not exist. Nothing to delete.",
+                }
 
             # 直接删除
             stage.RemovePrim(Sdf.Path(prim_path))
 
-            return {"status": "success", "message": f"Successfully deleted {prim_path}."}
+            return {
+                "status": "success",
+                "message": f"Successfully deleted {prim_path}.",
+            }
 
         except Exception as e:
             import traceback
+
             traceback.print_exc()
-            return {"status": "error", "message": f"An error occurred while deleting {prim_path}: {str(e)}"}
+            return {
+                "status": "error",
+                "message": f"An error occurred while deleting {prim_path}: {str(e)}",
+            }
 
     def get_scene_info(self, max_depth: int = 2) -> Dict[str, Any]:
         try:
@@ -242,10 +262,10 @@ class SceneManager:
                     # 计算prim的层级深度
                     prim_path = str(prim.GetPath().pathString)
                     # 计算路径深度：去掉开头的'/'，然后按'/'分割计算层数
-                    if prim_path == '/':
+                    if prim_path == "/":
                         depth = 0
                     else:
-                        depth = prim_path.strip('/').count('/') + 1
+                        depth = prim_path.strip("/").count("/") + 1
 
                     # 如果超过最大深度限制，跳过此prim
                     if depth > max_depth:
@@ -256,7 +276,9 @@ class SceneManager:
                     if world_transform is not None:
                         try:
                             # 将Matrix4d对象转换为嵌套列表
-                            if hasattr(world_transform, '__iter__') and hasattr(world_transform, '__getitem__'):
+                            if hasattr(world_transform, "__iter__") and hasattr(
+                                world_transform, "__getitem__"
+                            ):
                                 transform_list = []
                                 for i in range(4):
                                     row = []
@@ -270,7 +292,9 @@ class SceneManager:
                                 # 如果无法访问矩阵元素，设为None
                                 transform_list = None
                         except Exception as e:
-                            print(f"[Scene Info] Failed to convert transform matrix for {prim.GetPath()}: {e}")
+                            print(
+                                f"[Scene Info] Failed to convert transform matrix for {prim.GetPath()}: {e}"
+                            )
                             transform_list = None
 
                     # 获取文档信息，确保是字符串格式
@@ -292,7 +316,9 @@ class SceneManager:
                     }
                     self.prim_info.append(info)
                 except Exception as e:
-                    print(f"[Scene Info] Failed to extract info for prim: {prim.GetPath()} — {e}")
+                    print(
+                        f"[Scene Info] Failed to extract info for prim: {prim.GetPath()} — {e}"
+                    )
                     continue
 
             return {"status": "success", "result": self.prim_info}
@@ -334,7 +360,9 @@ class SceneManager:
             print(f"WARNING: Collision detected for drone {prim_path}")
         return ret
 
-    def check_prim_overlap(self, position: list, threshold: float = 0.1) -> Dict[str, Any]:
+    def check_prim_overlap(
+        self, position: list, threshold: float = 0.1
+    ) -> Dict[str, Any]:
         """
         检查给定位置附近是否已有 prim，避免重复创建
 
@@ -356,48 +384,81 @@ class SceneManager:
             try:
                 for op in xformable.GetOrderedXformOps():
                     # 只检查平移或整体变换
-                    if op.GetOpType() in (UsdGeom.XformOp.TypeTranslate, UsdGeom.XformOp.TypeTransform):
+                    if op.GetOpType() in (
+                        UsdGeom.XformOp.TypeTranslate,
+                        UsdGeom.XformOp.TypeTransform,
+                    ):
                         existing_pos = Gf.Vec3f(op.Get())
                         if (existing_pos - pos_vec).GetLength() < threshold:
-                            return {"status": "error", "message": f"Prim already exists near position {position}"}
+                            return {
+                                "status": "error",
+                                "message": f"Prim already exists near position {position}",
+                            }
             except Exception:
                 continue
-        return {"status": "success", "message": "No overlapping prims found at the specified position."}
+        return {
+            "status": "success",
+            "message": "No overlapping prims found at the specified position.",
+        }
 
     def focus_on_prim(self, prim_path: str) -> Dict[str, Any]:
-        from omni.kit.viewport.utility import get_active_viewport, frame_viewport_selection
+        from omni.kit.viewport.utility import (
+            get_active_viewport,
+            frame_viewport_selection,
+        )
+
         try:
             ctx = omni.usd.get_context()
         except Exception as e:
-            return {"status": "error", "message": f"Unable to retrieve USD context: {e}"}
+            return {
+                "status": "error",
+                "message": f"Unable to retrieve USD context: {e}",
+            }
 
         # 选中目标 prim
         try:
             ctx.get_selection().set_selected_prim_paths([prim_path], True)
         except Exception as e:
-            return {"status": "error", "message": f"Failed to select prim '{prim_path}': {e}"}
+            return {
+                "status": "error",
+                "message": f"Failed to select prim '{prim_path}': {e}",
+            }
 
         # 获取活跃视口
         try:
             viewport = get_active_viewport()
             if viewport is None:
-                return {"status": "error", "message": f"No active viewport to focus on '{prim_path}'"}
+                return {
+                    "status": "error",
+                    "message": f"No active viewport to focus on '{prim_path}'",
+                }
         except Exception as e:
-            return {"status": "error", "message": f"Error obtaining active viewport: {e}"}
+            return {
+                "status": "error",
+                "message": f"Error obtaining active viewport: {e}",
+            }
 
         # 框选并聚焦
         try:
             frame_viewport_selection(viewport)
         except Exception as e:
-            return {"status": "error", "message": f"Failed to frame prim '{prim_path}' in viewport: {e}"}
+            return {
+                "status": "error",
+                "message": f"Failed to frame prim '{prim_path}' in viewport: {e}",
+            }
 
-        return {"status": "success", "message": f"Prim '{prim_path}' focused in viewport"}
+        return {
+            "status": "success",
+            "message": f"Prim '{prim_path}' focused in viewport",
+        }
 
-    def add_camera(self,
-                   position: List[float],
-                   quat: List[float],
-                   focal_length: float = 2.0,
-                   prim_path: str = "/World/MyCam", ) -> Dict[str, Any]:
+    def add_camera(
+        self,
+        position: List[float],
+        quat: List[float],
+        focal_length: float = 2.0,
+        prim_path: str = "/World/MyCam",
+    ) -> Dict[str, Any]:
         """
         使用 Isaac Sim 的高层 API 创建或封装一个相机。
 
@@ -428,71 +489,23 @@ class SceneManager:
                 prim_path=prim_path,
             )
             # set positon and quat here (important!)
-            camera_instance.set_local_pose(translation=position, orientation=quat, camera_axes='usd')
+            camera_instance.set_local_pose(
+                translation=position, orientation=quat, camera_axes="usd"
+            )
             camera_instance.set_focal_length(focal_length)
 
             return {
                 "status": "success",
                 "message": f"Isaac Sim Camera 实例已在 '{prim_path}' 创建或封装。",
-                "result": {
-                    "prim_path": prim_path,
-                    "camera_instance": camera_instance
-                }
+                "result": {"prim_path": prim_path, "camera_instance": camera_instance},
             }
 
         except Exception as e:
             raise RuntimeError(f"add semantic camera failed '{prim_path}': {e}") from e
 
-    def create_camera(self,
-                      position: List[float],
-                      quat: List[float],
-                      prim_path: str = "/World/MyCam") -> Dict[str, Any]:
-
-        try:
-            # 获取当前 USD Stage
-            ctx = omni.usd.get_context()
-            stage = ctx.get_stage()
-            if stage is None:
-                return {"status": "error", "message": "No USD stage is currently open."}
-
-            # 定义或获取 Camera prim
-            cam = UsdGeom.Camera.Define(stage, prim_path)
-            xformable = UsdGeom.Xformable(cam)
-
-            # 查找已有的 translate/orient Op
-            ops = xformable.GetOrderedXformOps()
-            translate_op = next(
-                (op for op in ops if op.GetOpType() == UsdGeom.XformOp.TypeTranslate), None
-            )
-            orient_op = next(
-                (op for op in ops if op.GetOpType() == UsdGeom.XformOp.TypeOrient), None
-            )
-
-            # 如果不存在就创建
-            if translate_op is None:
-                translate_op = xformable.AddTranslateOp()
-            if orient_op is None:
-                orient_op = xformable.AddOrientOp()
-
-            # 设置平移
-            translate_op.Set(Gf.Vec3f(*position))
-
-            # 设置旋转
-            orient_op.Set(Gf.Quatf(*quat))
-
-            return {
-                "status": "success",
-                "message": f"Camera prim '{prim_path}' created (or reused) and focused.",
-                "result": prim_path
-            }
-
-        except Exception as e:
-            return {
-                "status": "error",
-                "message": f"Failed to create or focus camera at '{prim_path}': {e}"
-            }
-
-    def load_usd(self, usd_path: str, position: List[float], orientation: List[float]) -> Dict[str, Any]:
+    def load_usd(
+        self, usd_path: str, position: List[float], orientation: List[float]
+    ) -> Dict[str, Any]:
         from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
 
         # 检查重合
@@ -523,14 +536,19 @@ class SceneManager:
         add_reference_to_stage(usd_path=asset_path, prim_path=new_prim_path)
 
         # 设置初始位姿（使用 adjust_pose 方法）
-        result = self.adjust_pose(new_prim_path, position,
-                                  self.eluer_to_quaternion(orientation[0], orientation[1], orientation[2]))
+        result = self.adjust_pose(
+            new_prim_path,
+            position,
+            self.eluer_to_quaternion(orientation[0], orientation[1], orientation[2]),
+        )
         if result.get("status") != "success":
             return result
 
         return {"status": "success", "result": new_prim_path}
 
-    def create_robot(self, robot_type: str = "g1", position: List[float] = [0, 0, 0]) -> Dict[str, Any]:
+    def create_robot(
+        self, robot_type: str = "g1", position: List[float] = [0, 0, 0]
+    ) -> Dict[str, Any]:
         from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
         from config.variables import ASSET_PATH
         from isaacsim.core.prims import Articulation
@@ -599,24 +617,27 @@ class SceneManager:
 
         # 设置初始位姿
         robot.set_world_poses(positions=np.array([position]) / get_stage_units())
-        return {"status": "success", "message": f"{robot_type} robot created at {new_prim_path}"}
+        return {
+            "status": "success",
+            "message": f"{robot_type} robot created at {new_prim_path}",
+        }
 
     def create_shape_unified(
-            self,
-            shape_type: str,
-            prim_path: str,
-            name: str = None,
-            position: Optional[Sequence[float]] = None,
-            translation: Optional[Sequence[float]] = None,
-            orientation: Optional[Sequence[float]] = None,
-            scale: Optional[Sequence[float]] = None,
-            color: Optional[np.ndarray] = None,
-            size: Optional[float] = None,
-            radius: Optional[float] = None,
-            height: Optional[float] = None,
-            mass: Optional[float] = None,
-            density: Optional[float] = None,
-            entity_type: Optional[str] = "visual",  # rigid\fixed\visual
+        self,
+        shape_type: str,
+        prim_path: str,
+        name: str = None,
+        position: Optional[Sequence[float]] = None,
+        translation: Optional[Sequence[float]] = None,
+        orientation: Optional[Sequence[float]] = None,
+        scale: Optional[Sequence[float]] = None,
+        color: Optional[np.ndarray] = None,
+        size: Optional[float] = None,
+        radius: Optional[float] = None,
+        height: Optional[float] = None,
+        mass: Optional[float] = None,
+        density: Optional[float] = None,
+        entity_type: Optional[str] = "visual",  # rigid\fixed\visual
     ) -> Dict[str, Any]:
         """
         在场景中创建一个几何形状，此版本统一使用 isaacsim.core 高层级API。
@@ -643,7 +664,7 @@ class SceneManager:
                     size=size,
                     scale=scale,
                     color=color,
-                    mass=mass
+                    mass=mass,
                 )
             elif entity_type == "fixed":
                 # FixedCuboid 会自动应用 CollisionAPI，但不会应用 RigidBodyAPI
@@ -654,7 +675,7 @@ class SceneManager:
                     orientation=orientation,
                     size=size,
                     scale=scale,
-                    color=color
+                    color=color,
                 )
             else:
                 created_object = cuboid.VisualCuboid(
@@ -664,7 +685,7 @@ class SceneManager:
                     orientation=orientation,
                     size=size,
                     scale=scale,
-                    color=color
+                    color=color,
                 )
         elif shape_type == "sphere":
             if entity_type == "rigid":
@@ -676,7 +697,7 @@ class SceneManager:
                     radius=radius,
                     color=color,
                     scale=scale,
-                    mass=mass
+                    mass=mass,
                 )
             elif entity_type == "fixed":
                 created_object = sphere.FixedSphere(
@@ -706,7 +727,7 @@ class SceneManager:
                     radius=radius,
                     height=height,
                     color=color,
-                    mass=mass
+                    mass=mass,
                 )
             elif entity_type == "fixed":
                 created_object = sphere.FixedSphere(
@@ -716,7 +737,7 @@ class SceneManager:
                     orientation=orientation,
                     radius=radius,
                     height=height,
-                    color=color
+                    color=color,
                 )
             else:
                 created_object = sphere.VisualSphere(
@@ -726,7 +747,7 @@ class SceneManager:
                     orientation=orientation,
                     radius=radius,
                     height=height,
-                    color=color
+                    color=color,
                 )
 
         else:
@@ -741,19 +762,19 @@ class SceneManager:
             "status": "success",
             "message": f"Successfully created shape '{shape_type}' at {prim_path} using unified API.",
             "prim_path": prim_path,
-            "object": created_object
+            "object": created_object,
         }
 
     def create_shape_components(
-            self,
-            prim_path: str,
-            name: str = None,
-            position: List[float] = [0, 0, 0],
-            orientation: List[float] = [1, 0, 0, 0],  # WXYZ
-            # size: Union[float, List[float]] = 1.0,
-            # color: List[float] = [0.8, 0.1, 0.1],
-            # physics_preset: str = 'dynamic_rigid_body',  # 'visual', 'static_collider', 'dynamic_rigid_body'
-            components: Optional[Dict[str, Dict]] = None
+        self,
+        prim_path: str,
+        name: str = None,
+        position: List[float] = [0, 0, 0],
+        orientation: List[float] = [1, 0, 0, 0],  # WXYZ
+        # size: Union[float, List[float]] = 1.0,
+        # color: List[float] = [0.8, 0.1, 0.1],
+        # physics_preset: str = 'dynamic_rigid_body',  # 'visual', 'static_collider', 'dynamic_rigid_body'
+        components: Optional[Dict[str, Dict]] = None,
     ) -> Dict[str, Any]:
 
         xform = UsdGeom.Xform.Define(self.stage, prim_path)
@@ -770,47 +791,27 @@ class SceneManager:
             child_path = f"{prim_path}/{child_name}"
             self.create_shape_unified(
                 prim_path=child_path,
-                shape_type=comp_data.get('shape_type', 'cuboid'),
-                position=comp_data.get('position', [0, 0, 0]),
-                orientation=comp_data.get('orientation', [1, 0, 0, 0]),
-                size=comp_data.get('size', 1.0),
-                color=comp_data.get('color', [0.5, 0.5, 0.5]),
+                shape_type=comp_data.get("shape_type", "cuboid"),
+                position=comp_data.get("position", [0, 0, 0]),
+                orientation=comp_data.get("orientation", [1, 0, 0, 0]),
+                size=comp_data.get("size", 1.0),
+                color=comp_data.get("color", [0.5, 0.5, 0.5]),
                 # physics_preset=physics_preset,  # 复合体的所有部分共享同一个物理预设
-                mass=comp_data.get('mass', 0.1),
-                name=comp_data.get('name', None),
-                entity_type=comp_data.get('entity_type', 'visual'),
+                mass=comp_data.get("mass", 0.1),
+                name=comp_data.get("name", None),
+                entity_type=comp_data.get("entity_type", "visual"),
             )
 
         return {"status": "success", "result": prim_path, "usd_prim": xform.GetPrim()}
 
-    def euler_to_quaternion(
-            self,
-            roll: float = 0.0,
-            pitch: float = 0.0,
-            yaw: float = 0.0,
-            degrees: bool = True,
-            order: str = "xyz"
-    ) -> List[float]:
-        """使用 scipy 将欧拉角转换为四元数。"""
 
-        # 1. 使用 order(default 'xyz' ) 从欧拉角创建 Rotation 对象。
-        from scipy.spatial.transform import Rotation as R
-        rotation = R.from_euler(order, [roll, pitch, yaw], degrees=degrees)
-
-        # 2. 将 Rotation 对象转换为四元数。
-        # 注意：scipy 默认输出 [x, y, z, w] 格式。
-        quat_xyzw = rotation.as_quat()
-
-        # 3. 重新排列为 [w, x, y, z] Isaacsim的顺序
-        w = quat_xyzw[3]
-        x = quat_xyzw[0]
-        y = quat_xyzw[1]
-        z = quat_xyzw[2]
-
-        return [w, x, y, z]
-
-    def adjust_prim(self, prim_path: str = None, position: list = None, quat: list = None,
-                    scale: list = None) -> dict:
+    def adjust_prim(
+        self,
+        prim_path: str = None,
+        position: list = None,
+        quat: list = None,
+        scale: list = None,
+    ) -> dict:
         try:
             geom_prim = self.stage.GetPrimAtPath(prim_path)
             if not geom_prim.IsValid():
@@ -837,7 +838,10 @@ class SceneManager:
 
             return {"status": True}
         except Exception as e:
-            return {"status": False, "message": str(e), }
+            return {
+                "status": False,
+                "message": str(e),
+            }
 
     def adjust_pose(self, prim_path: str, position: list, orientation: list) -> dict:
         from isaacsim.core.prims import Articulation
@@ -861,6 +865,7 @@ class SceneManager:
                     is_articulation = True
                     # 设置位置（Articulation 不支持旋转，需用 Xformable 设置）
                     import numpy as np
+
                     position_np = np.array([position]) / get_stage_units()
                     robot.set_world_poses(positions=position_np)
             except Exception as e:
@@ -894,7 +899,7 @@ class SceneManager:
 
             return {
                 "status": "success",
-                "message": f"Set position and orientation for {prim_path}"
+                "message": f"Set position and orientation for {prim_path}",
             }
 
         except Exception as e:
@@ -920,9 +925,14 @@ class SceneManager:
             return {"status": "success", "message": f"Prim '{prim_path}' {state_str}."}
 
         except Exception as e:
-            return {"status": "error", "message": f"Failed to set prim active state: {str(e)}"}
+            return {
+                "status": "error",
+                "message": f"Failed to set prim active state: {str(e)}",
+            }
 
-    def set_collision_offsets(self, prim_path: str, contact_offset: float, rest_offset: float) -> dict:
+    def set_collision_offsets(
+        self, prim_path: str, contact_offset: float, rest_offset: float
+    ) -> dict:
         try:
             # 获取并缓存 Stage
             self.stage = omni.usd.get_context().get_stage()
@@ -936,6 +946,7 @@ class SceneManager:
 
             # 导入并应用基础碰撞 API
             from pxr import UsdPhysics, PhysxSchema
+
             UsdPhysics.CollisionAPI.Apply(prim)
 
             # 应用 PhysX 扩展碰撞 API，设置偏移
@@ -946,11 +957,14 @@ class SceneManager:
             return {
                 "status": "success",
                 "message": f"Set contactOffset={contact_offset}, restOffset={rest_offset} for '{prim_path}'",
-                "result": prim_path
+                "result": prim_path,
             }
 
         except Exception as e:
-            return {"status": "error", "message": f"Failed to set collision offsets: {e}"}
+            return {
+                "status": "error",
+                "message": f"Failed to set collision offsets: {e}",
+            }
 
     def set_collision_enabled(self, prim_path: str, collision_enabled: bool) -> dict:
         # 禁用碰撞属性
@@ -961,7 +975,9 @@ class SceneManager:
         collision_api = UsdPhysics.CollisionAPI.Apply(rigid_prim.prims[0])
         collision_api.GetCollisionEnabledAttr().Set(collision_enabled)
 
-    def set_physics_properties(self, prim_path: str, mass: float, velocity: list, gravity_enabled: bool) -> dict:
+    def set_physics_properties(
+        self, prim_path: str, mass: float, velocity: list, gravity_enabled: bool
+    ) -> dict:
         try:
             # 获取并缓存 Stage
             self.stage = omni.usd.get_context().get_stage()
@@ -991,11 +1007,14 @@ class SceneManager:
             return {
                 "status": "success",
                 "message": f"Physics properties set for '{prim_path}'",
-                "result": prim_path
+                "result": prim_path,
             }
 
         except Exception as e:
-            return {"status": "error", "message": f"Failed to set physics properties: {e}"}
+            return {
+                "status": "error",
+                "message": f"Failed to set physics properties: {e}",
+            }
 
     def set_collision_approximation(self, prim_path: str, approximation: str) -> dict:
         """
@@ -1026,7 +1045,10 @@ class SceneManager:
 
             # 2. 仅对 Mesh prim 应用 MeshCollisionAPI
             if prim.GetTypeName() != "Mesh":
-                return {"status": "error", "message": f"Prim '{prim_path}' is not a Mesh."}
+                return {
+                    "status": "error",
+                    "message": f"Prim '{prim_path}' is not a Mesh.",
+                }
             mesh_api = UsdPhysics.MeshCollisionAPI.Apply(prim)
             mesh_api.CreateApproximationAttr().Set(approximation)
 
@@ -1038,21 +1060,24 @@ class SceneManager:
             return {
                 "status": "success",
                 "message": f"Set collision approximation '{approximation}' for '{prim_path}'",
-                "result": prim_path
+                "result": prim_path,
             }
 
         except Exception as e:
-            return {"status": "error", "message": f"Failed to set collision approximation: {e}"}
+            return {
+                "status": "error",
+                "message": f"Failed to set collision approximation: {e}",
+            }
 
     def set_material_properties(
-            self,
-            material_path: str,
-            static_friction: float,
-            dynamic_friction: float,
-            restitution: float,
-            static_friction_mode: str,
-            dynamic_friction_mode: str,
-            restitution_mode: str
+        self,
+        material_path: str,
+        static_friction: float,
+        dynamic_friction: float,
+        restitution: float,
+        static_friction_mode: str,
+        dynamic_friction_mode: str,
+        restitution_mode: str,
     ) -> dict:
         """
         在当前 USD Stage 上，为指定 Material prim 设置物理材质属性：
@@ -1072,7 +1097,10 @@ class SceneManager:
             # 查找 material prim
             prim = self.stage.GetPrimAtPath(material_path)
             if not prim or not prim.IsValid():
-                return {"status": "error", "message": f"Material '{material_path}' not found."}
+                return {
+                    "status": "error",
+                    "message": f"Material '{material_path}' not found.",
+                }
 
             from pxr import UsdPhysics, PhysxSchema
 
@@ -1091,18 +1119,17 @@ class SceneManager:
             return {
                 "status": "success",
                 "message": f"Material properties updated for '{material_path}'",
-                "result": material_path
+                "result": material_path,
             }
 
         except Exception as e:
-            return {"status": "error", "message": f"Failed to set material properties: {e}"}
+            return {
+                "status": "error",
+                "message": f"Failed to set material properties: {e}",
+            }
 
     def set_physics_scene_config(
-            self,
-            gravity: list,
-            unit_system: str,
-            scale: float,
-            default_material: str = ""
+        self, gravity: list, unit_system: str, scale: float, default_material: str = ""
     ) -> dict:
         """
         在当前 USD Stage 上配置全局物理场景：
@@ -1140,30 +1167,36 @@ class SceneManager:
                 mat_binding = UsdShade.MaterialBindingAPI.Apply(scene_prim)
                 mat_prim = stage.GetPrimAtPath(default_material)
                 if not mat_prim or not mat_prim.IsValid():
-                    return {"status": "error", "message": f"Default material '{default_material}' not found."}
+                    return {
+                        "status": "error",
+                        "message": f"Default material '{default_material}' not found.",
+                    }
                 material = UsdShade.Material(mat_prim)
                 mat_binding.Bind(material, materialPurpose="physics")
 
             return {
                 "status": "success",
                 "message": "Physics scene configuration updated.",
-                "result": scene_path
+                "result": scene_path,
             }
 
         except Exception as e:
-            return {"status": "error", "message": f"Failed to set physics scene config: {e}"}
+            return {
+                "status": "error",
+                "message": f"Failed to set physics scene config: {e}",
+            }
 
     def create_joint(
-            self,
-            joint_path: str,
-            joint_type: str,
-            body0: str,
-            body1: str,
-            axis: list,
-            local_pos0: list,
-            local_pos1: list,
-            lower_limit: float = None,
-            upper_limit: float = None
+        self,
+        joint_path: str,
+        joint_type: str,
+        body0: str,
+        body1: str,
+        axis: list,
+        local_pos0: list,
+        local_pos1: list,
+        lower_limit: float = None,
+        upper_limit: float = None,
     ) -> dict:
         try:
             from pxr import UsdPhysics, Gf
@@ -1187,7 +1220,10 @@ class SceneManager:
             elif joint_type == "fixed":
                 joint = UsdPhysics.FixedJoint.Define(self.stage, joint_path)
             else:
-                return {"status": "error", "message": f"Invalid joint type: {joint_type}"}
+                return {
+                    "status": "error",
+                    "message": f"Invalid joint type: {joint_type}",
+                }
 
             # 绑定连接体
             joint.CreateBody0Rel().SetTargets([body0])
@@ -1210,21 +1246,21 @@ class SceneManager:
             return {
                 "status": "success",
                 "message": f"{joint_type.capitalize()} joint created at {joint_path}",
-                "result": joint_path
+                "result": joint_path,
             }
 
         except Exception as e:
             return {"status": "error", "message": f"Failed to create joint: {str(e)}"}
 
     def set_drive_parameters(
-            self,
-            joint_path: str,
-            drive_name: str,
-            target_position: float,
-            target_velocity: float,
-            stiffness: float,
-            damping: float,
-            max_force: float
+        self,
+        joint_path: str,
+        drive_name: str,
+        target_position: float,
+        target_velocity: float,
+        stiffness: float,
+        damping: float,
+        max_force: float,
     ) -> dict:
         try:
             from pxr import UsdPhysics
@@ -1235,7 +1271,10 @@ class SceneManager:
 
             joint = self.stage.GetPrimAtPath(joint_path)
             if not joint.IsValid():
-                return {"status": "error", "message": f"Joint prim '{joint_path}' not found."}
+                return {
+                    "status": "error",
+                    "message": f"Joint prim '{joint_path}' not found.",
+                }
 
             # 应用 DriveAPI 到关节上（名称可以是 "angular" 或 "linear"）
             drive_api = UsdPhysics.DriveAPI.Apply(joint, drive_name)
@@ -1249,18 +1288,21 @@ class SceneManager:
             return {
                 "status": "success",
                 "message": f"Drive parameters set on {joint_path} ({drive_name})",
-                "result": joint_path
+                "result": joint_path,
             }
 
         except Exception as e:
-            return {"status": "error", "message": f"Failed to set drive parameters: {str(e)}"}
+            return {
+                "status": "error",
+                "message": f"Failed to set drive parameters: {str(e)}",
+            }
 
     ###############################################################################################################
     ###############################################################################################################
 
     # TODO:扩展到isaacsim官方Assets,支持更多的场景，或者使用Asset browser mcp的resource 功能。
     def browse_scene_repository(
-            self,
+        self,
     ) -> Dict[str, Any]:
         """Browse the scene repository and return a list of files."""
         try:
@@ -1312,9 +1354,14 @@ class SceneManager:
 
             root_prim = stage.GetPrimAtPath(root_prim_path)
             if not root_prim.IsValid():
-                return {"status": "error", "message": f"Root prim '{root_prim_path}' not found."}
+                return {
+                    "status": "error",
+                    "message": f"Root prim '{root_prim_path}' not found.",
+                }
 
-            print(f"INFO: Starting to disable gravity for all rigid bodies under '{root_prim_path}'...")
+            print(
+                f"INFO: Starting to disable gravity for all rigid bodies under '{root_prim_path}'..."
+            )
 
             modified_prims_count = 0
 
@@ -1335,17 +1382,23 @@ class SceneManager:
                     modified_prims_count += 1
                     # print(f"  - Disabled gravity for: {prim.GetPath()}")
 
-            print(f"INFO: Gravity disabled for a total of {modified_prims_count} rigid bodies.")
+            print(
+                f"INFO: Gravity disabled for a total of {modified_prims_count} rigid bodies."
+            )
             return {
                 "status": "success",
                 "message": f"Disabled gravity for {modified_prims_count} prims under '{root_prim_path}'.",
-                "modified_count": modified_prims_count
+                "modified_count": modified_prims_count,
             }
 
         except Exception as e:
             import traceback
+
             traceback.print_exc()
-            return {"status": "error", "message": f"An unexpected error occurred: {str(e)}"}
+            return {
+                "status": "error",
+                "message": f"An unexpected error occurred: {str(e)}",
+            }
 
     def load_scene(self, usd_path: str, prim_path_root: str):
         """
@@ -1355,12 +1408,13 @@ class SceneManager:
             prim_path_root (str): path to root prim
         """
         if (
-                usd_path.endswith("usd")
-                or usd_path.endswith("usda")
-                or usd_path.endswith("usdc")
+            usd_path.endswith("usd")
+            or usd_path.endswith("usda")
+            or usd_path.endswith("usdc")
         ):
 
             from isaacsim.core.utils.prims import create_prim
+
             root_prim = create_prim(
                 prim_path_root,
                 usd_path=usd_path,
@@ -1378,21 +1432,21 @@ class SceneManager:
         return
 
     def save_scene(
-            self,
-            scene_name: str = None,
-            save_directory: str = None,
-            flatten_scene: bool = True
+        self,
+        scene_name: str = None,
+        save_directory: str = None,
+        flatten_scene: bool = True,
     ) -> Dict[str, Any]:
         """
         Save the current scene to a specified directory.
-        
+
         Args:
             scene_name (str, optional): Name of the scene file (without extension).
-            save_directory (str, optional): Absolute path to save directory. 
+            save_directory (str, optional): Absolute path to save directory.
                                           If None, uses self.scene_repository_path.
-            flatten_scene (bool, optional): If True, flattens the scene to include all 
+            flatten_scene (bool, optional): If True, flattens the scene to include all
                                           referenced assets. If False, saves only references.
-        
+
         Returns:
             Dict[str, Any]: Status and result information.
         """
@@ -1412,11 +1466,14 @@ class SceneManager:
             # 如果没有提供场景名称，使用时间戳
             if scene_name is None:
                 import datetime
-                scene_name = f"scene_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+                scene_name = (
+                    f"scene_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                )
 
             # 构建完整的保存路径
-            if not scene_name.endswith('.usd'):
-                scene_name += '.usd'
+            if not scene_name.endswith(".usd"):
+                scene_name += ".usd"
             save_path = os.path.join(save_directory, scene_name)
 
             # 获取当前stage
@@ -1451,7 +1508,7 @@ class SceneManager:
                     "result": {
                         "path": save_path,
                         "size_mb": file_size,
-                        "flattened": True
+                        "flattened": True,
                     },
                 }
             else:
@@ -1468,12 +1525,13 @@ class SceneManager:
                     "result": {
                         "path": save_path,
                         "size_kb": file_size,
-                        "flattened": False
+                        "flattened": False,
                     },
                 }
 
         except Exception as e:
             import traceback
+
             traceback.print_exc()
             return {
                 "status": "error",
@@ -1498,11 +1556,16 @@ class SceneManager:
 
             prim = stage.GetPrimAtPath(prim_path)
             if not prim.IsValid():
-                return {"status": "error", "message": f"Prim at '{prim_path}' is not valid."}
+                return {
+                    "status": "error",
+                    "message": f"Prim at '{prim_path}' is not valid.",
+                }
 
             # 1. 场景查询的属性属于 UsdPhysics.CollisionAPI
             if not prim.HasAPI(UsdPhysics.CollisionAPI):
-                print(f"INFO: CollisionAPI not found on '{prim_path}'. Applying it now.")
+                print(
+                    f"INFO: CollisionAPI not found on '{prim_path}'. Applying it now."
+                )
                 collision_api = UsdPhysics.CollisionAPI.Apply(prim)
             else:
                 collision_api = UsdPhysics.CollisionAPI(prim)
@@ -1511,9 +1574,16 @@ class SceneManager:
             #    这个属性默认是 False！
             # collision_api.GetSceneQueryEnabledAttr().Set(True)
 
-            return {"status": "success", "message": f"Raycasting (Scene Query) successfully enabled for '{prim_path}'."}
+            return {
+                "status": "success",
+                "message": f"Raycasting (Scene Query) successfully enabled for '{prim_path}'.",
+            }
 
         except Exception as e:
             import traceback
+
             traceback.print_exc()
-            return {"status": "error", "message": f"An unexpected error occurred: {str(e)}"}
+            return {
+                "status": "error",
+                "message": f"An unexpected error occurred: {str(e)}",
+            }

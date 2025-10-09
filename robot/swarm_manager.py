@@ -45,7 +45,6 @@ class SwarmManager:
             # 'g1': G1,
             # 'go2': Go2
         }
-        self.robot_class_cfg = {}  # 对应的机器人
         self.map_grid = map_grid
         self.map_semantic = map_semantic
         self.ros_manager = ros_manager
@@ -54,14 +53,12 @@ class SwarmManager:
         self,
         robot_class_name: str,
         robot_class: Type[Robot],
-        robot_class_cfg: Type[CfgRobot],
     ) -> None:
         """注册新的机器人类型"""
         self.robot_warehouse[robot_class_name] = []
         self.robot_active[robot_class_name] = []
         self.flag_active[robot_class_name] = []
         self.robot_class[robot_class_name] = robot_class
-        self.robot_class_cfg[robot_class_name] = robot_class_cfg
 
     async def initialize_async(
         self,

@@ -18,16 +18,16 @@ logger = LogManager.get_logger(__name__)
 
 class Camera:
 
-    def __init__(self, cfg_robot, cfg_camera: CfgCamera):
+    def __init__(self, path_prim_parent:str, cfg_camera: CfgCamera):
         self.cfg_camera = cfg_camera
-        self.cfg_robot = cfg_robot
+        self.path_prim_parent = path_prim_parent
         self.create_camera()
 
     def create_camera(self):
         self.cfg_camera.name = self.cfg_camera.type + "_" + str(self.cfg_camera.id)
         if self.cfg_camera.use_existing_camera == True:
             self.cfg_camera.path_prim_absolute = (
-                self.cfg_robot.path_prim_robot
+                self.path_prim_parent
                 + self.cfg_camera.path_prim_relative_to_robot
             )
             self.camera = IsaacCamera(
@@ -43,39 +43,11 @@ class Camera:
             )
         else:
             self.cfg_camera.path_prim_absolute = (
-                self.cfg_robot.path_prim_robot
+                self.path_prim_parent
                 + self.cfg_camera.path_prim_relative_to_robot
                 + "/"
                 + self.cfg_camera.name
             )
-            # prim = define_prim(self.cfg_camera.path_prim_absolute, "Xform")
-            # xformable = UsdGeom.Xformable(prim)
-            # translate_op = xformable.AddTranslateOp()
-            # translate_op.Set(Gf.Vec3d(self.cfg_camera.position))
-            # orient_op = xformable.AddOrientOp()
-            # w, x, y, z = self.cfg_camera.orientation
-            # orient_op.Set(Gf.Quatf(w, x, y, z))
-
-            # try:
-            #
-                # prim = define_prim(self.cfg_camera.path_prim_absolute, "Xform")
-                # 获取值（默认时间或指定时间）
-                # timecode = Usd.TimeCode.Default()
-                # translate_attr = prim.GetAttribute("xformOp:translate")
-                #
-                # 静态用默认时间，动态用 Usd.TimeCode(frame)
-                # translate_value: Gf.Vec3d = translate_attr.Get(timecode)
-                # self.cfg_camera.position = list(translate_value)
-                # quat_attr = prim.GetAttribute("xformOp:orient")
-                # if not quat_attr:
-                #     print("Prim 未定义 xformOp:orient 属性")
-                # else:
-                #     quat_value = quat_attr.Get(timecode)
-                #     self.cfg_camera.orientation = [quat_value.real] + list(
-                #         quat_value.imaginary
-                #     )
-            # except Exception as e:
-            #     raise (f"{e}")
 
             self.camera = IsaacCamera(
                 prim_path=self.cfg_camera.path_prim_absolute,

@@ -71,6 +71,6 @@ h1:
         path_prim_relative_to_robot: "/d435_rgb_module_link"
         id: 0
         frequency: 30
-        focal_length: 20
+        focal_length: 2
         orientation: [0.3827, -0.9239, 0.0000, 0.0000]
         resolution: [1280, 720]

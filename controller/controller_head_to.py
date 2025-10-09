@@ -29,7 +29,7 @@ def move_to(self, target_postion):
     # print(type(car_orientation))
     # car_position, car_orientation = self.robot.get_world_pose()  ## type np.array
     # 获取2D方向的小车朝向，逆时针是正
-    car_yaw_angle = self.quaternion_to_yaw(car_orientation)
+    car_yaw_angle = self.quat_to_yaw(car_orientation)
 
     # 获取机器人和目标连线的XY平面上的偏移角度
     car_to_target_angle = np.arctan2(

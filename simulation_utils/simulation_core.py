@@ -69,9 +69,9 @@ def update_viewer_camera(curr_stage):
 
         # Extract yaw from quaternion for directional following
         try:
-            from utils.quat_to_angle import quaternion_to_euler_scipy
+            from utils.quat_to_euler import quat_to_euler
             quat = (drone_quat.real, drone_quat.imaginary[0], drone_quat.imaginary[1], drone_quat.imaginary[2])
-            _, _, yaw = quaternion_to_euler_scipy(quat)
+            _, _, yaw = quat_to_euler(quat)
 
             # Calculate camera position relative to drone orientation
             offset_distance = 5.0  # distance behind the drone

@@ -46,6 +46,7 @@ from robot.robot_h1 import RobotH1, CfgH1
 from robot.robot_jetbot import CfgJetbot, RobotJetbot
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
+from utils import euler_to_quat
 
 
 rclpy.init(args=None)
@@ -69,14 +70,9 @@ def setup_simulation(
     swarm_manager.register_robot_class(
         robot_class_name="jetbot",
         robot_class=RobotJetbot,
-        robot_class_cfg=CfgJetbot,
     )
-    swarm_manager.register_robot_class(
-        robot_class_name="h1", robot_class=RobotH1, robot_class_cfg=CfgH1
-    )
-    swarm_manager.register_robot_class(
-        robot_class_name="cf2x", robot_class=RobotCf2x, robot_class_cfg=CfgDroneCf2X
-    )
+    swarm_manager.register_robot_class(robot_class_name="h1", robot_class=RobotH1)
+    swarm_manager.register_robot_class(robot_class_name="cf2x", robot_class=RobotCf2x)
 
     # Create initialization tasks
     async def init_env_and_swarm():
@@ -94,18 +90,15 @@ def setup_simulation(
     # Wait for initialization to complete before proceeding
     # We'll do this by running a few simulation steps to let the async tasks execute
     logger.info("Waiting for async initialization to complete...")
-    for _ in range(10):  # Give some time for async initialization
+    while True:  # Give some time for async initialization
         simulation_app.update()
         if init_task.done():
+            logger.info("Async initialization completed successfully")
             break
-
-    # Check if initialization completed successfully
-    if init_task.done():
-        if init_task.exception():
+        elif init_task.exception():
             raise init_task.exception()
-        print("Async initialization completed successfully")
-    else:
-        print("Warning: Async initialization may still be running")
+        else:
+            logger.warn("Warning: Async initialization may still be running")
 
 
 def create_car_objects(scene_manager: SceneManager) -> list:
@@ -267,11 +260,8 @@ def main():
 
     # Create and initialize semantic camera
     create_car_objects(scene_manager)
-    result = scene_manager.add_camera(
-        position=[1, 4, 2],
-        quat=scene_manager.euler_to_quaternion(roll=90),
-        prim_path="/World/semantic_camera",
-    )
+    result = scene_manager.add_camera(translation=[1, 4, 2], orientation=euler_to_quat(roll=90),
+                                      prim_path="/World/semantic_camera")
     semantic_camera = result.get("result").get("camera_instance")
     semantic_camera_prim_path = result.get("result").get("prim_path")
     semantic_camera.initialize()

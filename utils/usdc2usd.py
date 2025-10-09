@@ -14,6 +14,7 @@ except ImportError:
     print("are set correctly.")
     sys.exit(1)
 
+
 def convert_usdc_to_usda(input_usdc_path, output_usd_path):
     """
     Converts a binary USDC file (.usdc) to an ASCII USDA file (.usd or .usda).
@@ -33,13 +34,15 @@ def convert_usdc_to_usda(input_usdc_path, output_usd_path):
         return False
 
     # 2. 检查输入文件扩展名 (可选，但推荐)
-    if not input_usdc_path.lower().endswith('.usdc'):
+    if not input_usdc_path.lower().endswith(".usdc"):
         print(f"Warning: Input file '{input_usdc_path}' does not end with .usdc.")
         # 你可以选择在这里返回 False 或继续执行
 
     # 3. 检查输出文件扩展名 (可选，但推荐)
-    if not output_usd_path.lower().endswith(('.usd', '.usda')):
-        print(f"Warning: Output file '{output_usd_path}' should ideally end with .usd or .usda for clarity.")
+    if not output_usd_path.lower().endswith((".usd", ".usda")):
+        print(
+            f"Warning: Output file '{output_usd_path}' should ideally end with .usd or .usda for clarity."
+        )
         print("It will still be saved in ASCII format regardless.")
 
     # 4. 确保输出目录存在 (可选)
@@ -58,14 +61,16 @@ def convert_usdc_to_usda(input_usdc_path, output_usd_path):
         stage = Usd.Stage.Open(input_usdc_path)
 
         if not stage:
-            print(f"Error: Failed to open stage '{input_usdc_path}'. Is it a valid USD file?")
+            print(
+                f"Error: Failed to open stage '{input_usdc_path}'. Is it a valid USD file?"
+            )
             return False
 
         # 6. 导出为 USDA (ASCII) 格式
         # Usd.Stage.Export() 会根据输出文件的扩展名自动推断格式。
         # .usd 或 .usda 会被导出为 ASCII 格式。
         print(f"Exporting stage to ASCII format: {output_usd_path}...")
-        success = stage.Export(output_usd_path) # 关键步骤
+        success = stage.Export(output_usd_path)  # 关键步骤
 
         if not success:
             print(f"Error: Failed to export stage to '{output_usd_path}'")
@@ -83,6 +88,7 @@ def convert_usdc_to_usda(input_usdc_path, output_usd_path):
         #     print(f"USD Error: {e}")
         return False
 
+
 def main():
     """主函数，处理命令行参数并调用转换函数。"""
     parser = argparse.ArgumentParser(
@@ -92,19 +98,20 @@ def main():
         "input_usdc",
         help="Path to the input .usdc file.",
         default="/home/ubuntu/Downloads/CrazyCock_Character_low_poly_animated/scene.usdc",
-        nargs='?',  # 允许不提供该参数
+        nargs="?",  # 允许不提供该参数
     )
     parser.add_argument(
         "output_usd",
         help="Path for the output ASCII .usd or .usda file.",
         default="/home/ubuntu/Downloads/CrazyCock_Character_low_poly_animated/scene.usd",
-        nargs='?',  # 允许不提供该参数
+        nargs="?",  # 允许不提供该参数
     )
 
     args = parser.parse_args()
 
     if not convert_usdc_to_usda(args.input_usdc, args.output_usd):
-        sys.exit(1) # 以错误状态退出
+        sys.exit(1)  # 以错误状态退出
+
 
 if __name__ == "__main__":
     main()

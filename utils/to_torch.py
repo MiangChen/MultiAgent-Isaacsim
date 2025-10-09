@@ -2,10 +2,10 @@ import torch
 
 
 def to_torch(
-        data,
-        dtype: torch.dtype = torch.float32,
-        device: str = None,
-        requires_grad: bool = False
+    data,
+    dtype: torch.dtype = torch.float32,
+    device: str = None,
+    requires_grad: bool = False,
 ) -> torch.Tensor:
     if data is None:
         return None
@@ -17,4 +17,6 @@ def to_torch(
 
     if isinstance(data, torch.Tensor):
         return data.to(device=device, dtype=dtype)
-    return torch.as_tensor(data, dtype=dtype, device=device).requires_grad_(requires_grad)
+    return torch.as_tensor(data, dtype=dtype, device=device).requires_grad_(
+        requires_grad
+    )

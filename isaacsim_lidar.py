@@ -18,13 +18,14 @@ import rclpy
 
 rclpy.init()
 
-from scene.scene_manager import SceneManager
-from map.map_semantic_map import MapSemantic
-from robot.robot_drone_autel import RobotDroneAutel
-from simulation_utils.ros_bridge import setup_ros
-from simulation_utils.simulation_core import run_simulation_loop_multi
 from config.config_manager import config_manager
 from log.log_manager import LogManager
+from map.map_semantic_map import MapSemantic
+from robot.robot_drone_autel import RobotDroneAutel
+from scene.scene_manager import SceneManager
+from simulation_utils.ros_bridge import setup_ros
+from simulation_utils.simulation_core import run_simulation_loop_multi
+from utils import euler_to_quat
 
 logger = LogManager.get_logger(__name__)
 
@@ -193,11 +194,8 @@ def main():  # Needed in build_drone_ctx
     print(scene_manager.count_semantics_in_scene().get("result"))
 
     # Create and initialize semantic camera
-    result = scene_manager.add_camera(
-        position=[1, 4, 2],
-        quat=scene_manager.euler_to_quaternion(roll=90),
-        prim_path="/World/semantic_camera",
-    )
+    result = scene_manager.add_camera(translation=[1, 4, 2], orientation=euler_to_quat(roll=90),
+                                      prim_path="/World/semantic_camera")
 
     semantic_map = MapSemantic()
     semantic_camera = result.get("result").get("camera_instance")
