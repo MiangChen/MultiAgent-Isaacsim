@@ -454,8 +454,8 @@ class SceneManager:
 
     def add_camera(
         self,
-        position: List[float],
-        quat: List[float],
+        translation: List[float],
+        orientation: List[float],
         focal_length: float = 2.0,
         prim_path: str = "/World/MyCam",
     ) -> Dict[str, Any]:
@@ -466,8 +466,8 @@ class SceneManager:
         USD prim 的创建和属性设置。
 
         Args:
-            position (List[float]): 相机在世界坐标系中的位置 [x, y, z]。
-            quat (List[float]): 相机在世界坐标系中的朝向，使用四元数 [w, x, y, z] 格式。
+            translation (List[float]): 相机在世界坐标系中的位置 [x, y, z]。
+            orientation (List[float]): 相机在世界坐标系中的朝向，使用四元数 [w, x, y, z] 格式。
             prim_path (str, optional): 要创建或封装的相机 Prim 的路径。
                                        默认为 "/World/MyCam"。
 
@@ -490,7 +490,7 @@ class SceneManager:
             )
             # set positon and quat here (important!)
             camera_instance.set_local_pose(
-                translation=position, orientation=quat, camera_axes="usd"
+                translation=translation, orientation=orientation, camera_axes="usd"
             )
             camera_instance.set_focal_length(focal_length)
 

@@ -194,8 +194,7 @@ def main():  # Needed in build_drone_ctx
     print(scene_manager.count_semantics_in_scene().get("result"))
 
     # Create and initialize semantic camera
-    result = scene_manager.add_camera(translation=[1, 4, 2], orientation=euler_to_quat(roll=90),
-                                      prim_path="/World/semantic_camera")
+    result = scene_manager.add_camera(,,
 
     semantic_map = MapSemantic()
     semantic_camera = result.get("result").get("camera_instance")

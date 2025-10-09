@@ -93,10 +93,11 @@ def setup_simulation(
     while True:  # Give some time for async initialization
         simulation_app.update()
         if init_task.done():
-            logger.info("Async initialization completed successfully")
-            break
-        elif init_task.exception():
-            raise init_task.exception()
+            if init_task.exception():
+                raise init_task.exception()
+            else:
+                logger.info("Async initialization completed successfully")
+                break
         else:
             logger.warn("Warning: Async initialization may still be running")
 
@@ -260,8 +261,7 @@ def main():
 
     # Create and initialize semantic camera
     create_car_objects(scene_manager)
-    result = scene_manager.add_camera(translation=[1, 4, 2], orientation=euler_to_quat(roll=90),
-                                      prim_path="/World/semantic_camera")
+    result = scene_manager.add_camera(translation=[1,4,2], orientation=euler_to_quat(roll=90))
     semantic_camera = result.get("result").get("camera_instance")
     semantic_camera_prim_path = result.get("result").get("prim_path")
     semantic_camera.initialize()
