@@ -68,7 +68,7 @@ h1:
     cfg_dict_camera:
       front:
         use_existing_camera: False
-        path_prim_relative_to_robotz: "d435_rgb_module_link"
+        path_prim_relative_to_robot: "d435_rgb_module_link"
         id: 0
         frequency: 30
         resolution: [1280, 720]
