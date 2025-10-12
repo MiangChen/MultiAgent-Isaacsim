@@ -40,7 +40,7 @@ import json
 from pathlib import Path
 
 # 目录
-folder_to_scan = "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5/Isaac/User"
+folder_to_scan = "/home/cleanuser/isaacsim_assets/Assets/Isaac/4.5/Isaac/User"
 output_json = "user_usd_files.json"
 
 def collect_available_usd_files(base_folder):

@@ -1,6 +1,6 @@
 simulation_app_config:
   renderer: "RaytracedLighting"
-  headless: True # 是否关闭渲染界面
+  headless: False # 是否关闭渲染界面
   anti_aliasing: 0
 
 # 定义启动时需要启用的扩展列表
@@ -30,7 +30,7 @@ settings:
   "/persistent/physics/numThreads": 0
 
 # Isaacsim资产的位置
-asset_path: "/home/ubuntu/isaacsim_assets/Assets/Isaac/4.5/"
+asset_path: "/home/cleanuser/isaacsim_assets/Assets/Isaac/4.5/"
 
 # 场景的位置
 world:

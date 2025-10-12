@@ -1,23 +1,23 @@
 import os
 
-ld_path = os.environ.get("LD_LIBRARY_PATH", "")
-os.environ["LD_LIBRARY_PATH"] = (
-    f"/home/ubuntu/anaconda3/envs/env_isaaclab/lib/python3.10/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib"
-    f":/opt/ros/humble/lib"
-    f":/home/ubuntu/PycharmProjects/isaacsim-gsi/src/gsi_msgs/install/scene_msgs/lib"
-    f":/home/ubuntu/PycharmProjects/isaacsim-gsi/src/gsi_msgs/install/plan_msgs/lib"
-    f":{ld_path}"
-)
-py_path = os.environ.get("PYTHONPATH", "")
-os.environ["PYTHONPATH"] = (
-    f"/opt/ros/humble/local/lib/python3.10/dist-packages:{py_path}"
-)
-os.environ["ROS_DISTRO"] = "humble"
-os.environ["RMW_IMPLEMENTATION"] = "rmw_fastrtps_cpp"
+# ld_path = os.environ.get("LD_LIBRARY_PATH", "")
+# os.environ["LD_LIBRARY_PATH"] = (
+#     f"/home/ubuntu/anaconda3/envs/env_isaaclab/lib/python3.10/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib"
+#     f":/opt/ros/humble/lib"
+#     f":/home/ubuntu/PycharmProjects/isaacsim-gsi/src/gsi_msgs/install/scene_msgs/lib"
+#     f":/home/ubuntu/PycharmProjects/isaacsim-gsi/src/gsi_msgs/install/plan_msgs/lib"
+#     f":{ld_path}"
+# )
+# py_path = os.environ.get("PYTHONPATH", "")
+# os.environ["PYTHONPATH"] = (
+#     f"/opt/ros/humble/local/lib/python3.10/dist-packages:{py_path}"
+# )
+# os.environ["ROS_DISTRO"] = "humble"
+# os.environ["RMW_IMPLEMENTATION"] = "rmw_fastrtps_cpp"
 
 import sys
 
-sys.path.insert(0, "/home/ubuntu/PycharmProjects/isaacsim-gsi/src")
+sys.path.insert(0, "/home/cleanuser/PycharmProjects/isaacsim-gsi/src")
 
 ###################################################################################################################
 

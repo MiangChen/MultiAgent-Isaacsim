@@ -1,8 +1,8 @@
 # python-pid # pid控制，后来自己写pid了，不需要了
-# pathfinding # 一个A*的包，后来也自己写了
+# pathfinding # 一个A*的包
 matplotlib>=3.7.0  # 绘图
 pydantic>=2.0.0  # Data validation
-pyyaml>=6.0  # 用于读取robot swarm的配置文件
+pyyaml>=6.0  # 用于读取yaml文件
 usd-core>=23.0  # pixar的官方库，处理usd文件
 dependency-injector>=4.41.0  # 依赖注入
 
@@ -14,7 +14,7 @@ langchain>=0.1.0
 langchain_openai>=0.1.0
 
 # Scientific Computing and Data Processing
-numpy>=1.24.0,<2.0.0  # 科学计算基础 (compatible with Isaac Sim)
+numpy>=1.24.0,<2.0.0  # 科学计算基础
 scipy>=1.10.0  # 建立在numpy上的科学计算库
 opencv-python>=4.8.0  # Computer vision and image processing
 Pillow>=10.0.0  # Image processing
@@ -38,9 +38,9 @@ asyncio-mqtt>=0.13.0,<1.0.0  # For potential MQTT integration
 python-json-logger>=2.0.0,<3.0.0
 
 # PDDL Planning
-unified-planning[engines]>=1.0.0
-networks>=3.0
-tamer>=0.4.0
+#unified-planning[engines]>=1.0.0
+#networks>=3.0
+#tamer>=0.4.0
 
 # Optional ROS2 dependencies (uncomment if ROS2 integration is needed)
 # rclpy>=3.3.0
