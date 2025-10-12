@@ -9,17 +9,18 @@ PY_EXECUTABLE="/home/ubuntu/anaconda3/envs/env_isaaclab/bin/python"
 # --- 3. 要运行的主 Python 脚本 ---
 MAIN_PY_SCRIPT="main.py"
 
-# --- 4. ROS 2 工作空间 ---
+# --- 4. 自定义 ROS 2 工作空间 ---
 WORKSPACE_SETUP_PATH=(
   "/opt/ros/humble/setup.bash"
-  "/home/ubuntu/planner/install/setup.bash"
   "$PROJECT_ROOT/src/gsi_msgs/install/setup.bash"
 )
 
-# --- 6. 默认参数 ---
-DEFAULT_ARGS=(
-  "--config-path" "$PROJECT_ROOT/config/config_parameter.yaml"
-)
+
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export ROS_DISTRO=humble
+export PYTHONPATH=/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:$PYTHONPATH
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/ros/humble/lib:/home/ubuntu/anaconda3/envs/env_isaaclab/lib/python3.10/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib:/home/ubuntu/PycharmProjects/isaacsim-gsi/src/gsi_msgs/install/scene_msgs/lib:/home/ubuntu/PycharmProjects/isaacsim-gsi/src/gsi_msgs/install/plan_msgs/lib
+export FASTRTPS_DEFAULT_PROFILES_FILE=~/.ros/fastdds.xml
 
 # ==============================================================================
 #                                  LOGIC
@@ -36,14 +37,8 @@ for ws_path in "${WORKSPACE_SETUP_PATHS[@]}"; do
   fi
 done
 
-# --- 2. 处理命令行参数 ---
-# 将所有传递给此脚本的参数存储到 EXTRA_ARGS 数组中
-EXTRA_ARGS=("$@")
-
-# --- 3. 拼接最终的 Python 脚本路径 ---
+# --- 2. 拼接最终的 Python 脚本路径 ---
 MAIN_PY_FULL_PATH="$PROJECT_ROOT/$MAIN_PY_SCRIPT"
 
-# --- 4. 启动主程序 ---
-exec "$PY_EXECUTABLE" "$MAIN_PY_FULL_PATH" \
-  "${DEFAULT_ARGS[@]}" \
-  "${EXTRA_ARGS[@]}"
+# --- 3. 启动主程序 ---
+exec "$PY_EXECUTABLE" "$MAIN_PY_FULL_PATH"

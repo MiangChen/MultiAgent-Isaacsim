@@ -39,7 +39,7 @@ class RosManager:
     def start(self):
         """在后台线程中启动ROS节点"""
         if not self.node:
-            logger.warning("ROS nodes not built. Cannot start.")
+            logger.warning("No ROS nodes was built. Cannot start.")
             return
 
         self.thread = threading.Thread(target=self._spin_in_background, daemon=True)

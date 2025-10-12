@@ -123,7 +123,7 @@ class NodeActionClientSkill(Node):
             return {"success": False, "message": f"Exception while sending goal: {e}"}
 
         if not goal_handle.accepted:
-            logger.warn(f"Goal for '{robot_name}' was rejected.")
+            logger.warning(f"Goal for '{robot_name}' was rejected.")
             return {"success": False, "message": "Goal rejected by server."}
 
         logger.info(f"Goal for '{robot_name}' was accepted. Waiting for result...")

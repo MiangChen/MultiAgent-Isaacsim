@@ -21,6 +21,10 @@ DEFAULT_ARGS=(
   "--namespace" "uav1,uav2,uav3"
 )
 
+# export FASTRTPS_DEFAULT_PROFILES_FILE=~/.ros/fastdds.xml
+# export PYTHONPATH=/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:$PYTHONPATH
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/ubuntu/PycharmProjects/isaacsim-gsi/src/gsi_msgs/install/scene_msgs/lib:/home/ubuntu/PycharmProjects/isaacsim-gsi/src/gsi_msgs/install/plan_msgs/lib
 # ==============================================================================
 #                                  LOGIC
 # ==============================================================================
@@ -36,14 +40,10 @@ for ws_path in "${WORKSPACE_SETUP_PATHS[@]}"; do
   fi
 done
 
-# --- 2. 处理命令行参数 ---
-# 将所有传递给此脚本的参数存储到 EXTRA_ARGS 数组中
-EXTRA_ARGS=("$@")
 
-# --- 3. 拼接最终的 Python 脚本路径 ---
+# --- 2. 拼接最终的 Python 脚本路径 ---
 MAIN_PY_FULL_PATH="$PROJECT_ROOT/$MAIN_PY_SCRIPT"
 
 # --- 4. 启动主程序 ---
 exec "$PY_EXECUTABLE" "$MAIN_PY_FULL_PATH" \
-  "${DEFAULT_ARGS[@]}" \
-  "${EXTRA_ARGS[@]}"
+  "${DEFAULT_ARGS[@]}"

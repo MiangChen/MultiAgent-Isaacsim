@@ -1,6 +1,9 @@
 # config
 config/llm_cfg.yaml
 config/config_parameter.yaml
+#run_main_ros.sh
+#run_plan.sh
+#run_lidar_ros.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

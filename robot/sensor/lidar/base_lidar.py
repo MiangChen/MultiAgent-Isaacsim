@@ -64,13 +64,13 @@ def create_lidar_step_wrapper(lidar_annotators):
         # Process lidar data
         for i, annotator in enumerate(lidar_annotators):
             data = annotator.get_data()
-            for key in data.keys():
-                print(key)
-                try:
-                    print(data[key].shape)
-                except Exception as e:
-                    print(data[key])
-            print("***********************")
+            # for key in data.keys():
+            #     print(key)
+            #     try:
+            #         print(data[key].shape)
+            #     except Exception as e:
+            #         print(data[key])
+            # print("***********************")
             # print(f"Lidar {i}\n{data}")
             lidar_depths = data["distances"]
             emitter_ids = data["emitterIds"]

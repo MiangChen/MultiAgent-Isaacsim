@@ -99,7 +99,7 @@ def setup_simulation(
                 logger.info("Async initialization completed successfully")
                 break
         else:
-            logger.warn("Warning: Async initialization may still be running")
+            logger.warning("Warning: Async initialization may still be running")
 
 
 def create_car_objects(scene_manager: SceneManager) -> list:
