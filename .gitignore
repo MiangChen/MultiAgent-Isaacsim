@@ -1,5 +1,4 @@
 # config
-/asset
 /config/llm_cfg.yaml
 /config/config_parameter.yaml
 run_lidar_ros.sh
