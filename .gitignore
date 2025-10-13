@@ -1,7 +1,10 @@
 # config
-/config/llm_cfg.yaml
-/config/config_parameter.yaml
+#/asset
+#/config/llm_cfg.yaml
+#/config/config_parameter.yaml
+#run_lidar_ros.sh
 #run_main_ros.sh
+#run_plan_ros.sh
 #run_plan.sh
 #run_lidar_ros.sh
 
