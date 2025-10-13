@@ -1,9 +1,9 @@
 # config
-#/asset
-#/config/llm_cfg.yaml
-#/config/config_parameter.yaml
-#run_lidar_ros.sh
-#run_main_ros.sh
+/asset
+/config/llm_cfg.yaml
+/config/config_parameter.yaml
+run_lidar_ros.sh
+run_main_ros.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
