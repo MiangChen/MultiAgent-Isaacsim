@@ -41,7 +41,7 @@ fi
 
 # --- 1. 环境设置 ---
 echo "[INFO] Sourcing custom workspaces..."
-for ws_path in "${WORKSPACE_SETUP_PATHS[@]}"; do
+for ws_path in "${WORKSPACE_SETUP_PATH[@]}"; do
   if [ -f "$ws_path" ]; then
     source "$ws_path"
     echo "  -> Sourced: $ws_path"
