@@ -5,7 +5,7 @@ from config.config_manager import config_manager
 from config.cfg_base import CfgBase
 from robot.sensor.lidar import CfgLidar
 
-ASSET_PATH = config_manager.get("asset_path")
+ASSET_PATH = config_manager.get("path_asset")
 
 
 class CfgRobot(CfgBase):
