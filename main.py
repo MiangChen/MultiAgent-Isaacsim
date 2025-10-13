@@ -260,7 +260,9 @@ def main():
 
     # Create and initialize semantic camera
     create_car_objects(scene_manager)
-    result = scene_manager.add_camera(translation=[1,4,2], orientation=euler_to_quat(roll=90))
+    result = scene_manager.add_camera(
+        translation=[1, 4, 2], orientation=euler_to_quat(roll=90)
+    )
     semantic_camera = result.get("result").get("camera_instance")
     semantic_camera_prim_path = result.get("result").get("prim_path")
     semantic_camera.initialize()
@@ -332,22 +334,9 @@ def main():
 
     # Main simulation loop
     while simulation_app.is_running():
-        # World step
         env.step(action=None)
 
-        # if config_manager.get("ros"):
-        # skill_manager.process_ros_skills()
-        # swarm_manager.robot_active['jetbot'][0]._publish_status_pose()
-
         count += 1
-        # data = lidar.get_current_frame()
-        # for key in data.keys():
-        #     print(key)
-        #     try:
-        #         print(data[key].shape)
-        #     except Exception as e:
-        #         print(data[key])
-        # print("***********************")
 
     ros_manager.stop()
 
