@@ -11,7 +11,7 @@ from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.cfg import CfgJetbot
 from robot.body.body_jetbot import BodyJetbot
-from utils import to_torch
+from utils import to_torch, quat_to_yaw
 
 
 from isaacsim.core.api.scenes import Scene
@@ -158,7 +158,7 @@ class RobotJetbot(Robot):
         缺点：不适合3D，无法避障，地面要是平的
         速度有两个分两，自转的分量 + 前进的分量
         """
-        pos, quat = self.get_world_poses()  # type np.array
+        pos, quat = self.body.get_world_poses()  # type np.array
         target_pos = to_torch(target_pos, device=pos.device)
 
         if self.counter % self.pub_period == 0:
@@ -168,7 +168,7 @@ class RobotJetbot(Robot):
             )
 
         # 获取2D方向的朝向，逆时针是正
-        yaw = self.quaternion_to_yaw(quat)
+        yaw = quat_to_yaw(quat)
         # 获取机器人和目标连线的XY平面上的偏移角度
         robot_to_target_angle = np.arctan2(
             target_pos[1] - pos[1], target_pos[0] - pos[0]
