@@ -19,7 +19,6 @@ WORKSPACE_SETUP_PATH=(
   "$PATH_GSI_MSG/install/setup.bash"
 )
 
-
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export ROS_DISTRO=humble
 export PYTHONPATH="/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:$PYTHONPATH"
