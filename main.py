@@ -311,14 +311,14 @@ def main():
 
     flag = 0
     # LiDAR -------------------------------------------------------------
-    # from lidar.lidar_base import CfgLidar, BaseLidar
+    # from lidar.lidar_base import CfgLidar, Lidar
     # prim_path = "/World/Critical_Package_Alpha2"
     # lidar_config = "autel_perception_120x352"
     # lidar_cfg = CfgLidar()
     # lidar_cfg.position = [5, 5, 1]
     # lidar_cfg.prim_path = prim_path + "/Lidar/lfr"
     # lidar_cfg.config_file_name = lidar_config
-    # lidar = BaseLidar(
+    # lidar = Lidar(
     #     cfg_lidar=lidar_cfg,
     # )
     # # lidar.copy_lidar_config(lidar_config=lidar_config)

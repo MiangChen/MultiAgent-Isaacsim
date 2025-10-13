@@ -95,7 +95,7 @@ from log.log_manager import LogManager
 logger = LogManager.get_logger(__name__)
 
 
-class BaseLidar:
+class Lidar:
     """
     一个高层级的封装器，用于在 Isaac Sim 中创建、管理和读取 RTX Lidar 传感器数据。
     """

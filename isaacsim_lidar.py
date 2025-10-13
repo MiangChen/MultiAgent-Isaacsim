@@ -1,7 +1,3 @@
-import sys
-
-sys.path.insert(0, "/home/ubuntu/PycharmProjects/isaacsim-gsi/src")
-
 ##########################################################################################################################
 from physics_engine.isaacsim_simulation_app import start_isaacsim_simulation_app
 
@@ -47,7 +43,7 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
     # lidar_cfg.prim_path = prim_path + "/Lidar/lfr"
     #
     # lidar_cfg.config_file_name = "autel_perception_120x352"
-    # lidar = BaseLidar(cfg_lidar=lidar_cfg)
+    # lidar = Lidar(cfg_lidar=lidar_cfg)
     # lidar.create_lidar(prim_path=lidar_cfg.prim_path)
     # lidar.lidar_sensor.add_point_cloud_data_to_frame()
     # lidar.initialize()
