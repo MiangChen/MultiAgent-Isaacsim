@@ -10,6 +10,7 @@ import omni
 from isaacsim.core.api.objects import cuboid, sphere
 from isaacsim.core.prims import XFormPrim
 from isaacsim.core.api.world import World
+from omni.physx import get_physx_scene_query_interface
 from pxr import Gf, Sdf, UsdGeom, UsdPhysics, PhysxSchema, Usd
 
 from config.config_manager import config_manager
@@ -400,6 +401,45 @@ class SceneManager:
             "status": "success",
             "message": "No overlapping prims found at the specified position.",
         }
+
+    def overlap_hits_target_ancestor(self, radius_cm:float = 500.0, pos = None, target_prim: str = None) -> bool:
+        """
+        用一个半径=radius_cm 的球做 Overlap 检测。
+
+        若任意命中的刚体/碰撞体 prim 的路径处于 target_prim 子树下（或本身），返回 True，否则 False。
+        - radius_cm: 浮点半径（与场景单位一致；Isaac 文档示例以 cm 说明）
+        - pos3: 3D 位置（tensor/numpy/list/tuple 都可）
+        - target_prim: 要判定的祖先 prim 路径（如 "/World/MyRobot"）
+        需要保证：仿真处于运行状态，且相关物体具备 collider。
+        """
+        tx = float(pos[0])
+        ty = float(pos[1])
+        tz = float(pos[2])
+        origin = carb.Float3(tx, ty, tz)
+        target = target_prim.rstrip("/")
+
+        # 允许 target_prim 是 rigid_body/collision 的祖先或本身
+        def _is_ancestor(hit_path: str) -> bool:
+            if not hit_path:
+                return False
+            hp = hit_path.rstrip("/")
+            return hp == target or hp.startswith(target + "/")
+
+        # 回调：一旦发现命中属于 target 子树，立即早停
+        found = {"v": False}
+
+        def _report(hit) -> bool:
+            # OverlapHit 暴露 rigid_body / collision 的 USD 路径（Python 绑定）
+            rb = getattr(hit, "rigid_body", None) or getattr(hit, "rigidBody", None)
+            col = getattr(hit, "collision", None) or getattr(hit, "collision_path", None)
+            if _is_ancestor(rb) or _is_ancestor(col):
+                found["v"] = True
+                return False  # 早停
+            return True  # 继续收集其它命中
+
+        get_physx_scene_query_interface.overlap_sphere(float(radius_cm), origin, _report, False)
+
+        return found["v"]
 
     def focus_on_prim(self, prim_path: str) -> Dict[str, Any]:
         from omni.kit.viewport.utility import (
