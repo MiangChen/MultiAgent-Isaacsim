@@ -1,4 +1,3 @@
-# config
 /config/llm_cfg.yaml
 /config/config_parameter.yaml
 run_lidar_ros.sh
@@ -79,7 +78,6 @@ dmypy.json
 # JetBrains IDEs
 .idea/
 
-
 # MacOS
 .DS_Store
 
@@ -91,5 +89,3 @@ dmypy.json
 *.swp
 *.swo
 *~
-/PX4-Autopilot/
-/IsaacLab/
