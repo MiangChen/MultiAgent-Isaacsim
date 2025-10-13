@@ -5,7 +5,7 @@ from rclpy.node import Node
 from rclpy.action import ActionClient
 from rclpy.task import Future as RclpyFuture
 
-from gsi2isaacsim.gsi_msgs_helper import (
+from gsi_msgs.gsi_msgs_helper import (
     PrimTransform,
     SceneModifications,
     RobotFeedback,

@@ -13,7 +13,7 @@ from map.map_grid_map import GridMap
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from controller.controller_pid import ControllerPID
 from robot.cfg import CfgRobot, CfgDroneAutel
-from robot.robot import Robot
+# from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from scene.scene_manager import SceneManager
 from robot.body.body_drone_autel import BodyDroneAutel
@@ -55,7 +55,7 @@ class DronePose:
         self.quat = quat
 
 
-class RobotDroneAutel(Robot):
+class RobotDroneAutel():
     """
     一个完整的无人机机器人实例，包含了模型创建、ROS接口和传感器逻辑。
     """

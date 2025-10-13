@@ -24,7 +24,7 @@ from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
 from log.log_manager import LogManager
 from utils import to_torch
-from gsi2isaacsim.gsi_msgs_helper import (
+from gsi_msgs.gsi_msgs_helper import (
     RobotFeedback,
     SkillExecution,
     SkillInfo,

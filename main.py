@@ -1,5 +1,4 @@
-import os
-
+# import os
 # ld_path = os.environ.get("LD_LIBRARY_PATH", "")
 # os.environ["LD_LIBRARY_PATH"] = (
 #     f"/home/ubuntu/anaconda3/envs/env_isaaclab/lib/python3.10/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib"

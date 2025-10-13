@@ -20,7 +20,7 @@ WORKSPACE_SETUP_PATH=(
 
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export ROS_DISTRO=humble
-export PYTHONPATH="/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:$PYTHONPATH"
+export PYTHONPATH="$PATH_GSI_MSG/..:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:$PYTHONPATH"
 export LD_LIBRARY_PATH="/opt/ros/humble/lib:$PATH_PYTHON/lib/python3.10/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib:$PATH_GSI_MSG/install/scene_msgs/lib:$PATH_GSI_MSG/install/plan_msgs/lib:$LD_LIBRARY_PATH"
 
 SYSTEM_LIBSTDC=$(find /usr/lib/x86_64-linux-gnu/ -name "libstdc++.so.6" | head -n 1)

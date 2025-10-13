@@ -6,7 +6,7 @@ import uuid
 from rclpy.action import ActionServer
 from rclpy.node import Node
 
-from gsi2isaacsim.gsi_msgs_helper import (
+from gsi_msgs.gsi_msgs_helper import (
     PrimTransform,
     SceneModifications,
     RobotFeedback,

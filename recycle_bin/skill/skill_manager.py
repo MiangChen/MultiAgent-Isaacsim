@@ -3,7 +3,7 @@
 # from typing import Dict, Any
 #
 # from log.log_manager import LogManager
-# from gsi2isaacsim.gsi_msgs_helper import Plan
+# from gsi_msgs.gsi_msgs_helper import Plan
 # from map.map_semantic_map import MapSemantic
 #
 # # Global variables for ROS integration

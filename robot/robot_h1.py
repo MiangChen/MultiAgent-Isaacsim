@@ -17,7 +17,7 @@ from utils import to_torch, quat_to_yaw
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.utils.types import ArticulationActions
 
-from gsi2isaacsim.gsi_msgs_helper import (
+from gsi_msgs.gsi_msgs_helper import (
     Plan,
     RobotFeedback,
     SkillInfo,
