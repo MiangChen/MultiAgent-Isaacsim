@@ -1,4 +1,4 @@
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Any
 
 from rclpy.action import ActionServer
 import numpy as np
@@ -477,6 +477,17 @@ class Robot:
             return rgb
         else:
             return None
+
+    def detect(self, target_prim:str = None):
+        pos, quat = self.body.get_world_poses()
+        result = self.scene_manager.overlap_hits_target_ancestor(target_prim)
+        logger.info(f"[Skill] {self.cfg_robot.name} is detecting for {target_prim}. The result is {result}")
+        return result
+
+    def broadcast(self, params: Dict[str, Any]):
+        content = params.get("content")
+        logger.info(f"[Skill] {self.cfg_robot.name} executing broadcasting. The content is {content}")
+        return True
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray]:
         """
