@@ -16,7 +16,7 @@
 
 import sys
 
-sys.path.insert(0, "/home/cleanuser/PycharmProjects/isaacsim-gsi/src")
+# sys.path.insert(0, "/home/cleanuser/PycharmProjects/isaacsim-gsi/src")
 
 ###################################################################################################################
 

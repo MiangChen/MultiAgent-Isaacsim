@@ -33,8 +33,7 @@ else
     echo "[WARNING] 未能找到系统的 libstdc++.so.6 或 libspdlog.so.*，可能会出现库冲突。"
 fi
 
-
-export FASTRTPS_DEFAULT_PROFILES_FILE=~/.ros/fastdds.xml
+#export FASTRTPS_DEFAULT_PROFILES_FILE=~/.ros/fastdds.xml
 
 # ==============================================================================
 #                                  LOGIC
