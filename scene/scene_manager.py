@@ -15,7 +15,7 @@ from pxr import Gf, Sdf, UsdGeom, UsdPhysics, PhysxSchema, Usd
 
 from config.config_manager import config_manager
 
-ASSET_PATH = config_manager.get("asset_path")
+ASSET_PATH = config_manager.get("path_asset")
 
 
 class SceneManager:

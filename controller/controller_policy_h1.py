@@ -8,7 +8,7 @@ from isaacsim.core.utils.rotations import quat_to_rot_matrix
 from isaacsim.core.utils.types import ArticulationActions
 from config.config_manager import config_manager
 
-ASSET_PATH = config_manager.get("asset_path")
+ASSET_PATH = config_manager.get("path_asset")
 
 
 class H1FlatTerrainPolicy(PolicyController):

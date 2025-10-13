@@ -84,8 +84,9 @@ class ConfigManager:
             raise ValueError("配置中必须提供 'world.name'")
 
         # 获取场景 USD 文件的绝对路径
-        user_usd_files_json_path = project_root / "asset" / "user_usd_files.json"
+        user_usd_files_json_path = project_root / "asset" / "User_assets.json"
         if not user_usd_files_json_path.exists():
+
             raise FileNotFoundError(f"找不到场景定义文件: {user_usd_files_json_path}")
 
         with open(user_usd_files_json_path, "r") as f:
