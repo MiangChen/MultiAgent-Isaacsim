@@ -302,11 +302,11 @@ class Robot:
         self.move_along_path(real_path, flag_reset=True)
 
         # 标记一下, 开始运动
-        self.flag_action_navigation = True
+        self.flag_action_navigation = True # todo 删除
 
         # 标记当前的动作
-        self.state_skill = "navigate_to"
-        self.state_skill_complete = False
+        self.state_skill = "navigate_to" # todo 改为 skill_name = 'navigate'
+        self.state_skill_complete = False  # todo 改为 skill_state: str
 
         return
 
