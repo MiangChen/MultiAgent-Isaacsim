@@ -31,3 +31,4 @@ class CfgRobot(CfgBase):
         0.0,
     )
     scale: Optional[Tuple[float, float, float]] = (1.0, 1.0, 1.0)
+    base: Optional[Tuple[float, float, float]] = (5.0, 3.0, 0.0)

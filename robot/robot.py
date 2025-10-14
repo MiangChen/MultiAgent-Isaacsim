@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Any, List
 
 from rclpy.action import ActionServer
 
@@ -51,12 +51,10 @@ def _get_viewport_manager_from_container():
     """
     try:
         from containers import get_container
-
         container = get_container()
         return container.viewport_manager()
     except Exception as e:
         raise Exception("ViewportManager not found in container") from e
-
 
 class Robot:
     def __init__(
@@ -137,6 +135,10 @@ class Robot:
         self.nav_begin = None
         self.nav_end = None
         self.nav_dist = 1.0
+
+        #机器人探索区域状态
+        self.is_detecting = False
+        self.target_prim = None
 
     ########################## Skill Action Server ############################
     def execute_skill_callback(self, goal_handle):
@@ -260,7 +262,7 @@ class Robot:
             raise ValueError("no target position")
         elif pos_target[2] != 0:
             raise ValueError("The z-axis height of the robot must be on the plane")
-        pos_robot = self.get_world_poses()[0]
+        pos_robot = self.body.get_world_poses()[0]
 
         self.nav_begin = np.array(pos_robot)
         self.nav_end = np.array(pos_target)
@@ -482,15 +484,30 @@ class Robot:
         else:
             return None
 
+    def return_home(self):
+        self.navigate_to(self.body.cfg_robot.base)
+
     def detect(self, target_prim:str = None):
         pos, quat = self.body.get_world_poses()
         result = self.scene_manager.overlap_hits_target_ancestor(target_prim)
-        logger.info(f"[Skill] {self.cfg_robot.name} is detecting for {target_prim}. The result is {result}")
+        logger.info(f"[Skill] {self.body.cfg_robot.name} is detecting for {target_prim}. The result is {result}")
         return result
 
     def broadcast(self, params: Dict[str, Any]):
         content = params.get("content")
-        logger.info(f"[Skill] {self.cfg_robot.name} executing broadcasting. The content is {content}")
+        logger.info(f"[Skill] {self.body.cfg_robot.name} executing broadcasting. The content is {content}")
+        return True
+
+    def explore(
+        self,
+        boundary: List[tuple] = None,
+        holes: List[tuple] = None,
+        target_prim: str = "/TARGET_PRIM_NOT_SPECIFIED",
+    ):
+        waypoints = self.plan_exploration_waypoints(boundary, holes, lane_width = self.body.cfg_robot.detection_radius, robot_radius = self.body.cfg_robot.robot_radius)
+        self.is_detecting = True
+        self.target_prim = target_prim
+        self.move_along_path(waypoints, flag_reset= True)
         return True
 
     def plan_exploration_waypoints(
@@ -624,9 +641,13 @@ class Robot:
         waypoints = [(x, y, float(z_out)) for (x, y) in simplified_2d]
         return waypoints
 
+    def controller_simplified(self, linear_velocity:torch.Tensor, angular_velocity:torch.Tensor) -> None:
+        self.body.robot_articulation.set_linear_velocities(linear_velocity)
+        self.body.robot_articulation.set_angular_velocities(angular_velocity)
+        return None
+
     def step(self, action: np.ndarray) -> Tuple[np.ndarray]:
         """
-
         Args:
             action: 使用np.ndarray存储的机器人速度
 

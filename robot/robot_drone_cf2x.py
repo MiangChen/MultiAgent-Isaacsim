@@ -180,43 +180,39 @@ class RobotCf2x(Robot):
     def forward(self, velocity=None):
         """前进动作"""
         if velocity is not None:
-            self.robot_entity.apply_action(self.controller.forward(velocity))
+            self.body.robot_articulation.apply_action(self.controller.forward(velocity))
         return
 
     def takeoff(self):
         """起飞到预设高度并悬停"""
         if self.flight_state == "landed":
             # 获取当前位置，只改变高度
-            positions, orientations = self.robot_entity.get_world_poses()
+            positions, orientations = self.body.get_world_poses()
             current_pos = positions[0]
-
-            # 设置新的悬停位置
-            self.position = torch.as_tensor(
-                [current_pos[0], current_pos[1], self.takeoff_height],
-                dtype=torch.float32,
-            )
+            #上升
             self.hovering_height = self.takeoff_height
+            self.move_vertically(self.takeoff_height, "hovering")
 
-            # 直接设置位置（瞬移到悬停高度）
-            orientation = orientations[0]
-            self.robot_entity.set_world_poses(self.position, orientation)
-            # 设置速度为0
-            zero_velocities = torch.zeros((1, 6), dtype=torch.float32)
-            self.robot_entity.set_velocities(velocities=zero_velocities)
-
-            # 更新状态
-            self.flight_state = "hovering"
-            self.velocity = np.zeros(3, dtype=np.float32)  # 悬停时速度为0
-
-            # 取消重力
-            M = 1
-            K = self.robot_entity.num_bodies
-            values_array = torch.full((M, K), fill_value=1, dtype=torch.uint8)
-            self.robot_entity.set_body_disable_gravity(values=values_array)
-
-            print(f"无人机起飞到高度: {self.takeoff_height}m，进入悬停状态")
+        elif self.flight_state == "fluctuating":
+            print("无人机正在起降")
         else:
-            print("无人机已在飞行状态")
+            print("无人机已处于悬停状态")
+
+    def land(self):
+        """降落到地面"""
+        if self.flight_state == "hovering":
+            # 获取当前位置，只改变高度
+            positions, orientations = self.body.get_world_poses()
+            current_pos = positions[0]
+            ground_z = self.get_ground_height_with_raycast(current_pos)
+            # 下降
+            self.flight_state = "fluctuating"
+            self.move_vertically(current_pos[2] - ground_z, "landing")
+
+        elif self.flight_state == "fluctuating":
+            print("无人机正在起降")
+        else:
+            print("无人机已在地面状态")
 
     def get_ground_height_with_raycast(self, current_position: np.ndarray) -> float:
         """
@@ -257,41 +253,6 @@ class RobotCf2x(Robot):
             print("WARNING: Raycast did not hit any surface below the robot.")
             return None  # 或者返回一个默认的安全高度，比如 0.0
 
-    def land(self):
-        """降落到地面"""
-        if self.flight_state == "hovering":
-            # 获取当前位置，只改变高度
-            positions, orientations = self.robot_entity.get_world_poses()
-            current_pos = positions[0]
-
-            # 获取地面的高度
-            ground_z = self.get_ground_height_with_raycast(current_pos)
-
-            # 设置降落位置
-            self.position = np.array(
-                [current_pos[0], current_pos[1], current_pos[2] - ground_z],
-                dtype=np.float32,
-            )
-
-            # 直接设置位置（瞬移到地面）
-            orientation = orientations[0]
-            self.robot_entity.set_world_poses([self.position], [orientation])
-
-            # 设置速度为0
-            zero_velocities = np.zeros((1, 6), dtype=np.float32)
-            self.robot_entity.set_velocities(velocities=zero_velocities)
-
-            # 立即清零所有运动相关变量
-            self.velocity = np.zeros(3, dtype=np.float32)  # 清零速度
-            self._movement_command = np.zeros(3, dtype=np.float32)  # 清除移动命令
-
-            # 更新状态
-            self.flight_state = "landed"
-
-            print(f"无人机降落到高度: {self.current_pos[2] - ground_z}m")
-        else:
-            print("无人机已在地面状态")
-
     def update_position_with_velocity(self, dt):
         """基于速度和时间步长更新位置 (ds = v * dt)"""
         if self.flight_state == "hovering":
@@ -306,9 +267,9 @@ class RobotCf2x(Robot):
 
             # 应用新位置到无人机实体
             self.position = to_torch(self.position)
-            _, orientations = self.robot_entity.get_world_poses()
+            _, orientations = self.body.get_world_poses()
             orientation = orientations[0]
-            self.robot_entity.set_world_poses(self.position, orientation)
+            self.body.robot_articulation.set_world_poses(self.position, orientation)
 
     def set_waypoints(self, waypoints):
         """设置路径点列表进行瞬移"""
@@ -329,9 +290,9 @@ class RobotCf2x(Robot):
 
             # 瞬移
             self.position = to_torch(target)
-            _, orientations = self.robot_entity.get_world_poses()
+            _, orientations = self.body.get_world_poses()
             orientation = orientations[0]
-            self.robot_entity.set_world_poses(self.position, orientation)
+            self.body.robot_articulation.set_world_poses(self.position, orientation)
 
             print(f"瞬移到路径点 {index + 1}/{len(self.waypoints)}: {target}")
             return True
@@ -360,9 +321,9 @@ class RobotCf2x(Robot):
         target_pos[2] = self.hovering_height
 
         self.position = target_pos
-        _, orientations = self.robot_entity.get_world_poses()
+        _, orientations = self.body.get_world_poses()
         orientation = orientations[0]
-        self.robot_entity.set_world_poses([self.position], [orientation])
+        self.body.robot_articulation.set_world_poses([self.position], [orientation])
         print(f"瞬移到位置: {target_pos}")
 
     def keyboard_control(self, dt):
@@ -382,6 +343,34 @@ class RobotCf2x(Robot):
             self._movement_command[1] = float(msg.linear.y)
             self._movement_command[2] = float(msg.linear.z)
 
+    def move_vertically(self, target_height, state):
+
+        pos, quat = self.body.get_world_poses()
+        self.position = to_torch(pos)
+        cur_pos = np.array(pos[0], dtype=np.float32)
+        delta_z = target_height - cur_pos[2]
+
+        if delta_z <= 0.05:
+            zero_velocity = torch.zeros((1, 3), dtype=torch.float32)
+            self.body.robot_articulation.set_linear_velocities(zero_velocity)
+            if state == "landing":
+                self.flight_state = "landed"
+                print(f"无人机降落到高度: {target_height}m")
+            elif state == "hovering":
+                # 取消重力
+                M = 1
+                K = self.body.robot_articulation.num_bodies
+                values_array = torch.full((M, K), fill_value=1, dtype=torch.uint8)
+                self.body.robot_articulation.set_body_disable_gravity(values=values_array)
+                self.flight_state = "hovering"
+                print(f"无人机起飞到高度: {target_height}m")
+            return
+
+        linear_velocity = torch.tensor([0,0,delta_z], dtype=torch.float32)
+        self.body.robot_articulation.set_linear_velocities(linear_velocity)
+        self.velocity = linear_velocity
+
+
     def move_to(self):
 
         # 落地就先起飞到悬停高度（一次性瞬移到 hover 高度即可）
@@ -389,7 +378,7 @@ class RobotCf2x(Robot):
             self.takeoff()
 
         # === 读取当前位姿（用仿真里的真实位姿，不再用 self.position 作为“真值”） ===
-        positions, orientations = self.robot_entity.get_world_poses()
+        positions, orientations = self.body.get_world_poses()
 
         if self.counter % self.pub_period == 0:
             self._publish_feedback(
@@ -413,8 +402,8 @@ class RobotCf2x(Robot):
             self.velocity = torch.zeros((3,), dtype=torch.float32)
             self.nav_target_xy = None
 
-            self.robot_entity.set_linear_velocities(zero_velocity)
-            self.robot_entity.set_angular_velocities(zero_velocity)
+            self.body.robot_articulation.set_linear_velocities(zero_velocity)
+            self.body.robot_articulation.set_angular_velocities(zero_velocity)
 
             self.flag_action_navigation = False
             self.state_skill_complete = True
@@ -433,11 +422,9 @@ class RobotCf2x(Robot):
         )
 
         # === 把速度交给“根刚体” ===
-        self.robot_entity.set_linear_velocities(v_world)
-
+        self.body.robot_articulation.set_linear_velocities(v_world)
         # 可选：如果希望机体绕 z 朝速度方向缓慢对齐，也可以给一个角速度：
         # self.robot_entity.set_angular_velocity(np.array([0.0, 0.0, yaw_rate], dtype=np.float32))
-
         self.velocity = v_world
 
     def on_physics_step(self, step_size):
@@ -454,8 +441,8 @@ class RobotCf2x(Robot):
             and self.flag_world_reset
         ):
             self.move_to()
-            # if self.counter % self.pub_period == 0:
-            #     self._publish_feedback_pose()
+        elif self.flight_state == "fluctuating":
+            self.move_vertically()
         else:
             if self.keyboard_control_enabled:
                 self.keyboard_control(step_size)
