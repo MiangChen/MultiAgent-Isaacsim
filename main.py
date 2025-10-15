@@ -324,7 +324,7 @@ def main():
     )
 
     path = ros_manager.node["node_server_planner_ompl"].compute_path(
-        start_pos=[6, 5,0],
+        start_pos=[6, 5,3],
         goal_pos=[10.0, 10.0,0]
     )
     print(path)

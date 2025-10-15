@@ -43,32 +43,6 @@ controller_server:
       max_robot_pose_search_dist: 10.0
       use_interpolation: false
 
-    # ------------------------------------------------------------------
-    # --- START OF REQUIRED MINIMAL COSTMAP CONFIGURATION ---
-    # This section is necessary to satisfy the controller_server's
-    # dependency on the costmap framework, even if not used for obstacles.
-    # ------------------------------------------------------------------
-    local_costmap:
-      plugin: "nav2_costmap_2d::Costmap2DROS"
-
-    # These parameters are namespaced for the 'local_costmap' plugin.
-    # CRITICAL: This sets the global frame to 'odom', fixing the TF error.
-    local_costmap.global_frame: "odom"
-    local_costmap.robot_base_frame: "base_link"
-
-    # Other basic costmap settings to make it run.
-    local_costmap.update_frequency: 5.0
-    local_costmap.publish_frequency: 2.0
-    local_costmap.static_map: false
-    local_costmap.width: 3
-    local_costmap.height: 3
-    local_costmap.resolution: 1.0
-
-    # CRITICAL: This ensures no sensor layers are loaded, which would
-    # create more dependencies. It should be an empty list.
-    local_costmap.plugins: []
-    # --- END OF REQUIRED MINIMAL COSTMAP CONFIGURATION ---
-
 lifecycle_manager:
   ros__parameters:
     use_sim_time: True
