@@ -98,32 +98,53 @@ class GridMap:
         self._remove_ground_obstacles(ground_height, ground_tolerance)
             
         return self.value_map
-    
+
     def _remove_ground_obstacles(self, ground_height: float, tolerance: float) -> None:
         """
-        Remove obstacles at ground level using height threshold.
-        
+        Remove ground obstacles while preserving building bases.
+
         Args:
             ground_height: Expected ground level height
             tolerance: Height tolerance for ground detection
         """
         if self.value_map is None:
             return
-            
+
+        # Ensure parameters are float
+        ground_height = float(ground_height)
+        tolerance = float(tolerance)
+        effective_tolerance = max(tolerance, self.cell_size / 2)
+
         x_dim, y_dim, z_dim = self.value_map.shape
-        
+
+        # Calculate how many z layers to check based on cell_size
+        # Smaller cell_size -> check more layers
+        max_ground_layers = max(1, int((effective_tolerance * 2) / self.cell_size))
+        max_ground_layers = min(max_ground_layers, z_dim)
+
         for x in range(x_dim):
             for y in range(y_dim):
-                for z in range(z_dim):
+                for z in range(max_ground_layers):
                     if self.value_map[x, y, z] == self.occupied_value:
                         # Get world coordinates for this grid cell
                         min_bound = np.array(self.generator.get_min_bound(), dtype=np.float32)
-                        world_pos = min_bound + np.array([x, y, z]) * self.cell_size
-                        actual_height = world_pos[2]
-                        
-                        # Remove if within ground height tolerance
-                        if abs(actual_height - ground_height) <= tolerance:
-                            self.value_map[x, y, z] = self.free_value
+                        world_pos = min_bound + np.array([x, y, z], dtype=np.float32) * self.cell_size
+                        actual_height = float(world_pos[2])
+
+                        # Check if this cell is within ground height range
+                        if abs(actual_height - ground_height) <= effective_tolerance:
+                            # Check if there are obstacles above this position
+                            # If the layer above (z+1) is empty, this is likely ground
+                            check_z = z + 1
+                            if check_z < z_dim:
+                                is_empty_above = (self.value_map[x, y, check_z] == self.free_value)
+                            else:
+                                # If we're at the top layer, consider it empty above
+                                is_empty_above = True
+
+                            # Only remove if it's empty above (indicating ground, not building base)
+                            if is_empty_above:
+                                self.value_map[x, y, z] = self.free_value
 
     def is_valid_position(self, position: List[float]) -> bool:
         """

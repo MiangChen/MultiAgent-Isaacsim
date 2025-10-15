@@ -315,16 +315,16 @@ def main():
     # lidar.initialize()
 
     # Build grid map for planning
-    grid_map.generate("3d")
+    grid_map.generate()
     ros_manager.node["node_server_planner_ompl"].set_map(
         grid_map.value_map[:, :, :],
-        cell_size=1,
+        cell_size=grid_map.cell_size,
         min_bounds=grid_map.min_bounds.tolist(),
         max_bounds=grid_map.max_bounds.tolist()
     )
 
     path = ros_manager.node["node_server_planner_ompl"].compute_path(
-        start_pos=[11, 11,0],
+        start_pos=[6, 5,0],
         goal_pos=[10.0, 10.0,0]
     )
     print(path)
