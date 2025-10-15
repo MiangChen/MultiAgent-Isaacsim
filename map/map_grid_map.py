@@ -35,13 +35,6 @@ class GridMap:
         self.start_point = np.array(start_point, dtype=np.float32)
         self.min_bounds = np.array(min_bounds, dtype=np.float32)
         self.max_bounds = np.array(max_bounds, dtype=np.float32)
-        
-        # Auto-adjust z bounds to avoid ground collision issues
-        if self.min_bounds[2] < cell_size / 2:
-            self.min_bounds[2] = cell_size / 2
-            
-        if self.max_bounds[2] <= self.min_bounds[2]:
-            self.max_bounds[2] = self.min_bounds[2] + cell_size
             
         self.occupied_value = occupied_value
         self.free_value = free_value
@@ -51,7 +44,6 @@ class GridMap:
         self._is_2d_generated = False
         self._is_3d_generated = False
         self.value_map: Optional[np.ndarray] = None
-        self.pos_map: Optional[np.ndarray] = None
         self.generator: Optional[_omap.Generator] = None
 
     def initialize(self) -> None:
@@ -72,7 +64,7 @@ class GridMap:
         self.generator.set_transform(self.start_point, self.min_bounds, self.max_bounds)
 
 
-    def generate(self, dimension: str = '2d') -> Tuple[np.ndarray, np.ndarray]:
+    def generate(self, dimension: str = '2d') -> np.ndarray:
         """
         Generate grid map from the current scene.
         
@@ -101,11 +93,9 @@ class GridMap:
             
         # Get occupied and free positions
         occupied_positions = self.generator.get_occupied_positions()
-        free_positions = self.generator.get_free_positions()
         
         # Initialize maps
         x, y, z = self.generator.get_dimensions()
-        # self.pos_map = np.zeros((x, y, z, 3), dtype=np.float32)
         self.value_map = np.full((x, y, z), self.free_value, dtype=np.uint8)
         
         # Convert positions to grid indices and populate maps
@@ -113,12 +103,7 @@ class GridMap:
             occupied_indices = self.compute_index(occupied_positions)
             if occupied_indices is not None:
                 self.value_map[tuple(occupied_indices.T)] = self.occupied_value
-                # self.pos_map[tuple(occupied_indices.T)] = occupied_positions
-                
-        # if free_positions:
-        #     free_indices = self.compute_index(free_positions)
-            # if free_indices is not None:
-                # self.pos_map[tuple(free_indices.T)] = free_positions
+
                 
         return self.value_map
 
