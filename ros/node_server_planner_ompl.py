@@ -35,34 +35,22 @@ class NodeServerPlannerOmpl(Node):
         self.publisher_map = self.create_publisher(PointCloud2, '/map_pointcloud', qos_profile)
         self.publisher_path = self.create_publisher(Path, '/planned_path', qos_profile)
 
-    def set_map(self, grid_map: np.ndarray, cell_size: float, origin: list) -> bool:
+    def set_map(self, grid_map: np.ndarray, cell_size: float, min_bounds: list, max_bounds: list) -> bool:
+
         self.grid_map = grid_map
         self.cell_size = cell_size
-        self.origin = origin
-
+        self.origin = min_bounds
         # 自动检测维度
         if len(grid_map.shape) == 2:
             # 2D 地图
             self.dimensions = 2
-            width, height = grid_map.shape
-            self.bounds = [
-                origin[0], origin[1],
-                origin[0] + width * cell_size,
-                origin[1] + height * cell_size
-            ]
         elif len(grid_map.shape) == 3:
             # 3D 地图
             self.dimensions = 3
-            width, height, depth = grid_map.shape
-            self.bounds = [
-                origin[0], origin[1], origin[2],
-                origin[0] + width * cell_size,
-                origin[1] + height * cell_size,
-                origin[2] + depth * cell_size
-            ]
         else:
             return False
 
+        self.bounds = min_bounds[:self.dimensions] + max_bounds[:self.dimensions]
         # 创建对应维度的状态空间
         self.space = ob.RealVectorStateSpace(self.dimensions)
         bounds_ompl = ob.RealVectorBounds(self.dimensions)
@@ -79,7 +67,7 @@ class NodeServerPlannerOmpl(Node):
 
         # 发布地图点云（2D/3D通用）
         if self.publisher_map:
-            self.publish_map(grid_map, cell_size, origin)
+            self.publish_map(grid_map, cell_size, min_bounds)
 
         return True
 
@@ -118,11 +106,10 @@ class NodeServerPlannerOmpl(Node):
                     x, y, z = float(state[0]), float(state[1]), float(state[2])
                     path.append([x, y, z])
 
-        self.publish_waypoints()
+        self.publish_waypoint(start_pos)
+        self.publish_waypoint(goal_pos)
         if path:
             self.publish_path(path)  # 2D/3D都发布路径
-            self.publish_waypoint(start_pos)
-            self.publish_waypoint(goal_pos)
 
         return path
 
@@ -149,7 +136,7 @@ class NodeServerPlannerOmpl(Node):
 
         return False
 
-    def publish_map(self, grid_map: np.ndarray, cell_size: float, origin: list) -> bool:
+    def publish_map(self, grid_map: np.ndarray, cell_size: float, min_bounds: list) -> bool:
         points = []
 
         if self.dimensions == 2:
@@ -157,8 +144,8 @@ class NodeServerPlannerOmpl(Node):
             for x in range(grid_map.shape[0]):
                 for y in range(grid_map.shape[1]):
                     if grid_map[x, y] == 100:  # 占用格子
-                        world_x = origin[0] + x * cell_size
-                        world_y = origin[1] + y * cell_size
+                        world_x = min_bounds[0] + x * cell_size
+                        world_y = min_bounds[1] + y * cell_size
                         points.append([world_x, world_y, 0.0])
 
         elif self.dimensions == 3:
@@ -167,9 +154,9 @@ class NodeServerPlannerOmpl(Node):
                 for y in range(grid_map.shape[1]):
                     for z in range(grid_map.shape[2]):
                         if grid_map[x, y, z] == 100:  # 占用格子
-                            world_x = origin[0] + x * cell_size
-                            world_y = origin[1] + y * cell_size
-                            world_z = origin[2] + z * cell_size
+                            world_x = min_bounds[0] + x * cell_size
+                            world_y = min_bounds[1] + y * cell_size
+                            world_z = min_bounds[2] + z * cell_size
                             points.append([world_x, world_y, world_z])
 
         if points:
@@ -229,11 +216,19 @@ class NodeServerPlannerOmpl(Node):
         self.publisher_path.publish(path_msg)
 
     def publish_waypoint(self, pos: list, color: list = [0.0, 1.0, 0.0, 1.0], marker_id: int = None):
+        if not hasattr(self, 'publisher_waypoint'):
+            self.publisher_waypoint = self.create_publisher(Marker, '/waypoint_marker', 10)
+            self.waypoint_counter = 0
+
         marker = Marker()
         marker.header.frame_id = "map"
         marker.header.stamp = self.get_clock().now().to_msg()
         marker.type = Marker.SPHERE
         marker.action = Marker.ADD
+        # 自动分配 marker_id
+        if marker_id is None:
+            marker_id = self.waypoint_counter
+            self.waypoint_counter += 1
         marker.id = marker_id
         marker.pose.position.x = float(pos[0])
         marker.pose.position.y = float(pos[1])
@@ -244,14 +239,7 @@ class NodeServerPlannerOmpl(Node):
         marker.color.b = float(color[2])
         marker.color.a = float(color[3])
         
-        if not hasattr(self, 'publisher_waypoint'):
-            self.publisher_waypoint = self.create_publisher(Marker, '/waypoint_marker', 10)
-            self.waypoint_counter = 0
+
         
-        # 自动分配 marker_id
-        if marker_id is None:
-            marker_id = self.waypoint_counter
-            self.waypoint_counter += 1
-        
-        marker.id = marker_id
+
         self.publisher_waypoint.publish(marker)

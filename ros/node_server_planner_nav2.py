@@ -44,7 +44,9 @@ class NodeServerNav2Planner(Node):
         time.sleep(10)
         
     def publish_map(self, grid_map_2d: np.ndarray, cell_size: float, origin: list) -> bool:
-        
+        """
+        origin: the min bound of the map
+        """
         msg = OccupancyGrid()
         msg.header = Header()
         msg.header.stamp = self.get_clock().now().to_msg()

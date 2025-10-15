@@ -45,9 +45,9 @@ class AppContainer(containers.DeclarativeContainer):
         start_point=config.provided["map"]["start_point"],
         min_bounds=config.provided["map"]["min_bounds"],
         max_bounds=config.provided["map"]["max_bounds"],
-        occupied_cell=config.provided["map"]["occupied_cell"],
-        empty_cell=config.provided["map"]["empty_cell"],
-        invisible_cell=config.provided["map"]["invisible_cell"],
+        occupied_value=config.provided["map"]["occupied_cell"],
+        free_value=config.provided["map"]["free_cell"],
+        unknown_value=config.provided["map"]["unknown_cell"],
     )
 
     ros_manager = providers.Singleton(

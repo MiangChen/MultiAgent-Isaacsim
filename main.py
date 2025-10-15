@@ -233,7 +233,7 @@ def main():
 
     # Reset environment to ensure all objects are properly initialized
     env.reset()
-    grid_map.generate_grid_map("2d")
+
     # Add physics callbacks for active robots
     for robot_class in swarm_manager.robot_class:
         for i, robot in enumerate(swarm_manager.robot_active[robot_class]):
@@ -269,8 +269,6 @@ def main():
         camera_prim_path=semantic_camera_prim_path, viewport_name="Viewport"
     )
 
-    # Build grid map for planning
-    grid_map.generate_grid_map("3d")
 
     count = 0
     logger.info("Starting main simulation loop...")
@@ -316,15 +314,18 @@ def main():
     # lidar.lidar_sensor.enable_visualization()
     # lidar.initialize()
 
+    # Build grid map for planning
+    grid_map.generate("3d")
     ros_manager.node["node_server_planner_ompl"].set_map(
         grid_map.value_map[:, :, :],
-        cell_size=0.1,
-        origin=[0.0, 0.0, 0.0]
+        cell_size=1,
+        min_bounds=grid_map.min_bounds.tolist(),
+        max_bounds=grid_map.max_bounds.tolist()
     )
 
     path = ros_manager.node["node_server_planner_ompl"].compute_path(
-        start_pos=[11, 11],
-        goal_pos=[10.0, 10.0]
+        start_pos=[11, 11,0],
+        goal_pos=[10.0, 10.0,0]
     )
     print(path)
     # Main simulation loop
