@@ -1,23 +1,8 @@
-# import os
-# ld_path = os.environ.get("LD_LIBRARY_PATH", "")
-# os.environ["LD_LIBRARY_PATH"] = (
-#     f"/home/ubuntu/anaconda3/envs/env_isaaclab/lib/python3.10/site-packages/isaacsim/exts/isaacsim.ros2.bridge/humble/lib"
-#     f":/opt/ros/humble/lib"
-#     f":/home/ubuntu/PycharmProjects/isaacsim-gsi/src/gsi_msgs/install/scene_msgs/lib"
-#     f":/home/ubuntu/PycharmProjects/isaacsim-gsi/src/gsi_msgs/install/plan_msgs/lib"
-#     f":{ld_path}"
-# )
-# py_path = os.environ.get("PYTHONPATH", "")
-# os.environ["PYTHONPATH"] = (
-#     f"/opt/ros/humble/local/lib/python3.10/dist-packages:{py_path}"
-# )
-# os.environ["ROS_DISTRO"] = "humble"
-# os.environ["RMW_IMPLEMENTATION"] = "rmw_fastrtps_cpp"
-
-import sys
-
-# sys.path.insert(0, "/home/cleanuser/PycharmProjects/isaacsim-gsi/src")
-
+try:
+    import pydevd_pycharm
+    pydevd_pycharm.settrace('localhost', port=12345, stdoutToServer=True, stderrToServer=True)
+except:
+    print("no pydevd found")
 ###################################################################################################################
 
 from physics_engine.isaacsim_simulation_app import start_isaacsim_simulation_app
@@ -285,12 +270,11 @@ def main():
     )
 
     # Build grid map for planning
-    grid_map.generate_grid_map("2d")
+    grid_map.generate_grid_map("3d")
 
     count = 0
     logger.info("Starting main simulation loop...")
 
-    robot_prim_path = "/World/robot/jetbot/jetbot/jetbot_0/chassis"
     object_name = "Critical-Package-Alpha"
     object_prim_path = "/World/Critical_Package_Alpha"
     object = {
@@ -309,7 +293,7 @@ def main():
     semantic_map.map_semantic[object_name] = object_prim_path
     scene_manager.create_shape_unified(**object)
 
-    flag = 0
+    # flag = 0
     # LiDAR -------------------------------------------------------------
     # from lidar.lidar_base import CfgLidar, Lidar
     # prim_path = "/World/Critical_Package_Alpha2"
@@ -332,6 +316,17 @@ def main():
     # lidar.lidar_sensor.enable_visualization()
     # lidar.initialize()
 
+    ros_manager.node["node_server_planner_ompl"].set_map(
+        grid_map.value_map[:, :, :],
+        cell_size=0.1,
+        origin=[0.0, 0.0, 0.0]
+    )
+
+    path = ros_manager.node["node_server_planner_ompl"].compute_path(
+        start_pos=[11, 11],
+        goal_pos=[10.0, 10.0]
+    )
+    print(path)
     # Main simulation loop
     while simulation_app.is_running():
         env.step(action=None)

@@ -48,7 +48,7 @@ map:
   start_point: [ 0, 0, 0 ]  # 构建gridmap的起点, 要保证这里是没有障碍物的
   min_bounds: [ -34, -10, 0 ]
   max_bounds: [ 19, 32, 10 ]
-  occupied_cell: 1
+  occupied_cell: 100
   empty_cell: 0
   invisible_cell: -1 # also unknown cell
 
@@ -74,3 +74,5 @@ ros:
   node_enable:
     node_scene_monitor: False
     node_action_server_plan_execution: True
+    node_server_planner_nav2: False
+    node_server_planner_ompl: True
