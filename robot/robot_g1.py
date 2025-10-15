@@ -86,8 +86,8 @@ class RobotG1(Robot):
 
         return False
 
-
     def step(self, action):
+
         action = to_torch(action)
         if self.control_mode == 'joint_positions':
             action = ArticulationActions(joint_positions=action)
@@ -97,11 +97,10 @@ class RobotG1(Robot):
             action = ArticulationActions(joint_efforts=action)
         else:
             raise NotImplementedError
+
         self.body.robot_articulation.set_linear_velocities(self.linear_velocity)
         self.body.robot_articulation.set_angular_velocities(self.angular_velocity)
-
         # FIXME:为了让G1能运动，先用平移来代替
-
         # obs暂时未实现
         obs = None
         return obs
@@ -116,3 +115,5 @@ class RobotG1(Robot):
             if self.flag_action_navigation:
                 self.move_along_path()  # 每一次都计算下速度
                 self.step(self.action)
+            if self.is_detecting:
+                self.detect(self, target_prim = self.target_prim)
