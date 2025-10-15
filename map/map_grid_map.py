@@ -10,6 +10,7 @@ class GridMap:
     """
     Grid map generator for OMPL path planning.
     Converts continuous 3D space into discrete grid representation.
+    Includes height filtering to remove ground obstacles.
     """
     
     def __init__(self,
@@ -19,17 +20,18 @@ class GridMap:
                  max_bounds: List[float] = [20, 20, 5],
                  occupied_value: int = 100,
                  free_value: int = 0,
-                 unknown_value: int = -1,):
+                 unknown_value: int = -1):
         """
         Initialize GridMap for path planning.
         
         Args:
-            start_point: Should be empty
+            start_point: Reference point for map generation
             cell_size: Size of each grid cell in meters
             min_bounds: [x_min, y_min, z_min] bounds of the map
             max_bounds: [x_max, y_max, z_max] bounds of the map  
             occupied_value: Value for occupied cells (obstacles)
             free_value: Value for free cells (navigable space)
+            unknown_value: Value for unknown cells
         """
         self.cell_size = cell_size
         self.start_point = np.array(start_point, dtype=np.float32)
@@ -41,8 +43,6 @@ class GridMap:
         self.unknown_value = unknown_value
         
         # Internal state
-        self._is_2d_generated = False
-        self._is_3d_generated = False
         self.value_map: Optional[np.ndarray] = None
         self.generator: Optional[_omap.Generator] = None
 
@@ -56,56 +56,74 @@ class GridMap:
 
         self.generator.update_settings(
             self.cell_size,
-            self.occupied_value,
-            self.free_value,
-            self.unknown_value
+            float(self.occupied_value),
+            float(self.free_value),
+            float(self.unknown_value)
         )
 
         self.generator.set_transform(self.start_point, self.min_bounds, self.max_bounds)
 
 
-    def generate(self, dimension: str = '2d') -> np.ndarray:
+    def generate(self, ground_height: float = 0.0, ground_tolerance: float = 0.2) -> np.ndarray:
         """
-        Generate grid map from the current scene.
+        Generate 3D grid map with height-based ground filtering.
         
         Args:
-            dimension: '2d' or '3d' map generation
+            ground_height: Expected ground level height
+            ground_tolerance: Height tolerance for ground detection
             
         Returns:
-            Tuple of (position_map, value_map)
-            - position_map: Real-world coordinates for each grid cell
-            - value_map: Occupancy values (0=free, 1=occupied)
+            The 3D value_map (occupancy grid) as a numpy array
         """
         if not self.generator:
             raise RuntimeError("GridMap not initialized. Call initialize() first.")
             
-        # Generate map if not already done
-        if dimension == '2d' and not self._is_2d_generated:
-            self.generator.generate2d()
-            self._is_2d_generated = True
-            self._is_3d_generated = False
-        elif dimension == '3d' and not self._is_3d_generated:
-            self.generator.generate3d()
-            self._is_3d_generated = True
-            self._is_2d_generated = False
-        elif dimension not in ['2d', '3d']:
-            raise ValueError(f"Invalid dimension: {dimension}. Use '2d' or '3d'.")
-            
-        # Get occupied and free positions
+        # Generate 3D map
+        self.generator.generate3d()
+        
+        # Get all occupied positions in 3D world coordinates
         occupied_positions = self.generator.get_occupied_positions()
+        x_dim, y_dim, z_dim = self.generator.get_dimensions()
         
-        # Initialize maps
-        x, y, z = self.generator.get_dimensions()
-        self.value_map = np.full((x, y, z), self.free_value, dtype=np.uint8)
+        # Initialize 3D map
+        self.value_map = np.full((x_dim, y_dim, z_dim), self.free_value, dtype=np.uint8)
         
-        # Convert positions to grid indices and populate maps
-        if occupied_positions:
+        # Populate map with all obstacles first
+        if occupied_positions is not None and len(occupied_positions) > 0:
             occupied_indices = self.compute_index(occupied_positions)
             if occupied_indices is not None:
                 self.value_map[tuple(occupied_indices.T)] = self.occupied_value
-
-                
+        
+        # Apply height-based ground filtering
+        self._remove_ground_obstacles(ground_height, ground_tolerance)
+            
         return self.value_map
+    
+    def _remove_ground_obstacles(self, ground_height: float, tolerance: float) -> None:
+        """
+        Remove obstacles at ground level using height threshold.
+        
+        Args:
+            ground_height: Expected ground level height
+            tolerance: Height tolerance for ground detection
+        """
+        if self.value_map is None:
+            return
+            
+        x_dim, y_dim, z_dim = self.value_map.shape
+        
+        for x in range(x_dim):
+            for y in range(y_dim):
+                for z in range(z_dim):
+                    if self.value_map[x, y, z] == self.occupied_value:
+                        # Get world coordinates for this grid cell
+                        min_bound = np.array(self.generator.get_min_bound(), dtype=np.float32)
+                        world_pos = min_bound + np.array([x, y, z]) * self.cell_size
+                        actual_height = world_pos[2]
+                        
+                        # Remove if within ground height tolerance
+                        if abs(actual_height - ground_height) <= tolerance:
+                            self.value_map[x, y, z] = self.free_value
 
     def is_valid_position(self, position: List[float]) -> bool:
         """
@@ -198,8 +216,11 @@ if __name__ == "__main__":
     # Initialize (must be called after world reset)
     grid_map.initialize()
     
-    # Generate 2D map for ground robots
-    pos_map, value_map = grid_map.generate('2d')
+    # Generate 2D map for ground robots with height filtering
+    value_map = grid_map.generate('2d', min_height=0.1, max_height=2.0)
+    
+    # Generate 3D map for aerial robots
+    # value_map_3d = grid_map.generate('3d')
     
     # Check if position is valid for planning
     start_pos = [0, 0, 0]
@@ -208,3 +229,4 @@ if __name__ == "__main__":
     print(f"Start position valid: {grid_map.is_valid_position(start_pos)}")
     print(f"Goal position occupied: {grid_map.is_occupied(goal_pos)}")
     print(f"Map info: {grid_map.get_map_info()}")
+    print(f"Map shape: {value_map.shape}")
