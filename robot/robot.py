@@ -140,6 +140,12 @@ class Robot:
         self.is_detecting = False
         self.target_prim = None
 
+        self.track_waypoints = []
+        self.track_waypoint_index = 0
+        self.is_tracking = False
+        self.track_waypoints_sub = None
+        self.track_waypoints_sub
+
     ########################## Skill Action Server ############################
     def execute_skill_callback(self, goal_handle):
         if self.state_skill_complete is False:
@@ -299,6 +305,7 @@ class Robot:
         for i in range(path.shape[0]):  # 把index变成连续实际世界的坐标
             real_path[i] = self.map_grid.pos_map[tuple(path[i])]
             real_path[i][-1] = 0
+
         logger.info(real_path)
 
         self.move_along_path(real_path, flag_reset=True)
@@ -505,7 +512,7 @@ class Robot:
         target_prim: str = "/TARGET_PRIM_NOT_SPECIFIED",
     ):
         waypoints = self.plan_exploration_waypoints(boundary, holes, lane_width = self.body.cfg_robot.detection_radius, robot_radius = self.body.cfg_robot.robot_radius)
-        self.is_detecting = True
+        self.is_detecting = True #TODO:detect的反馈机制
         self.target_prim = target_prim
         self.move_along_path(waypoints, flag_reset= True)
         return True
@@ -645,6 +652,37 @@ class Robot:
         self.body.robot_articulation.set_linear_velocities(linear_velocity)
         self.body.robot_articulation.set_angular_velocities(angular_velocity)
         return None
+
+    def track_callback(self, msg):
+        pos = (
+            msg.pos.position.x,
+            msg.pos.position.y,
+            msg.pos.position.z,
+        )
+        self.track_waypoints.append(pos)
+
+
+    def start_tracking(self, target_prim: str = None):
+        self.is_tracking = True
+        self.track_waypoints = self.node.create_subscription(
+            VelTwistPose,
+            "/target/motion",
+            self.track_callback,
+            50,
+        )
+
+    def track(self):
+        if self.track_waypoint_index < len(self.track_waypoints):  # 当index==len的时候, 就已经到达目标了
+            flag_reach = self.move_to(self.track_waypoints[self.track_waypoint_index])
+            if flag_reach == True:
+                self.track_waypoint_index += 1 #TODO：Step里应用这个技能
+
+    def stop_tracking(self):
+        self.is_tracking = False
+        self.track_waypoints = []
+        self.track_waypoint_index = 0
+        self.node.destroy_subscription(self.track_waypoints)
+        self.track_waypoints_sub = None
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray]:
         """
@@ -867,6 +905,7 @@ class Robot:
             msg.pose.orientation.z,
             msg.pose.orientation.w,
         ) = (float(v) for v in quat_xyzw)
+
         # self.node.publish_motion(
         #     robot_class=self.cfg_robot.type,
         #     robot_id=self.cfg_robot.id,
