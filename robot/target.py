@@ -7,7 +7,7 @@ from controller.controller_pid import ControllerPID
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from map.map_grid_map import GridMap
 # from path_planning.path_planning_astar import AStar
-from robot.robot import Robot`
+from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.cfg.cfg_target import CfgTarget
 from robot.body.body_target import BodyTarget
