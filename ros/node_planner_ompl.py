@@ -57,11 +57,11 @@ class NodePlannerOmpl(Node):
             queue_size=10,
             slop=0.5,  # 对于一次性消息，时间差可以放宽一些
         )
-        self.time_synchronizer.registerCallback(self.map_callback)
+        self.time_synchronizer.registerCallback(self.callback)
 
         self.publisher_path = self.create_publisher(Path, "/planned_path", qos_profile)
 
-    def map_callback(self, info_msg: DiagnosticArray, pc_msg: PointCloud2):
+    def callback(self, info_msg: DiagnosticArray, pc_msg: PointCloud2):
         self.callback_info(info_msg=info_msg)
         self.callback_point_cloud(pc_msg=pc_msg)
 
