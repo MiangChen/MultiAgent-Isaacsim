@@ -317,13 +317,16 @@ def main():
     # Build grid map for planning
     grid_map.generate()
 
+    # wait for node planner ompl to receive message
     import time
     time.sleep(2)
+
     path = ros_manager.node["node_planner_ompl"].compute_path(
         start_pos=[6, 5,3],
         goal_pos=[10.0, 10.0,0],
         start_quat=[0.0, 0.0, 0.0, 1]
     )
+
     print("path", path)
     orientation = []
     for p in path:

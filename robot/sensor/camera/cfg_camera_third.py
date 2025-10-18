@@ -13,7 +13,5 @@ class CfgCameraThird(CfgBase):
     transform_position: List[float] = Field(
         default=[0, 0, 1], description="相机的朝向确定好后， 再进行一个水平的平移"
     )
-    viewport_position: List[int] = Field(
-        default=[800, 0], description="视口在屏幕上的x, y位置"
-    )
+    viewport_position: List[int] = Field(default=[800, 0], description="视口在屏幕上的x, y位置")
     viewport_size: List[int] = Field(default=[360, 360], description="视口的宽度和高度")

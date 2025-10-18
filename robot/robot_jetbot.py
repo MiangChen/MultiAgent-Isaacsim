@@ -6,7 +6,7 @@ from controller.controller_pid import ControllerPID
 from controller.controller_pid_jetbot import ControllerJetbot
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from map.map_grid_map import GridMap
-from path_planning.path_planning_astar import AStar
+from recycle_bin.path_planning_astar import AStar
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.cfg import CfgJetbot
@@ -54,9 +54,7 @@ class RobotJetbot(Robot):
         self.counter = 0
         self.pub_period = 50
         self.previous_pos = None
-        self.movement_threshold = (
-            0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
-        )
+        self.movement_threshold = 0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
 
         # self.node = node
         #
@@ -177,9 +175,7 @@ class RobotJetbot(Robot):
         delta_angle = robot_to_target_angle - yaw
         if abs(delta_angle) < 0.017:  # 角度控制死区
             delta_angle = 0
-        elif (
-            delta_angle < -np.pi
-        ):  # 当差距abs超过pi后, 就代表从这个方向转弯不好, 要从另一个方向转弯
+        elif delta_angle < -np.pi:  # 当差距abs超过pi后, 就代表从这个方向转弯不好, 要从另一个方向转弯
             delta_angle += 2 * np.pi
         elif delta_angle > np.pi:
             delta_angle -= 2 * np.pi

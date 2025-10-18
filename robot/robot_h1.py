@@ -63,9 +63,7 @@ class RobotH1(Robot):
         self.counter = 0
         self.pub_period = 50
         self.previous_pos = None
-        self.movement_threshold = (
-            0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
-        )
+        self.movement_threshold = 0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
         self.body = BodyH1(cfg_robot=self.cfg_robot, scene=self.scene)
 
         # self.node.register_feedback_publisher(
@@ -132,7 +130,7 @@ class RobotH1(Robot):
         #         progress=self._calc_dist(pos, self.nav_end) * 100 / self.nav_dist,
         #     )
         # 获取2D方向的朝向，逆时针是正
-        yaw = quat_to_yaw(quaternion=quat)
+        yaw = quat_to_yaw(quat_xyzw=quat)
 
         # 获取机器人和目标连线的XY平面上的偏移角度
         robot_to_target_angle = np.arctan2(
@@ -143,9 +141,7 @@ class RobotH1(Robot):
         delta_angle = robot_to_target_angle - yaw
         if abs(delta_angle) < 0.017:  # 角度控制死区
             delta_angle = 0
-        elif (
-            delta_angle < -np.pi
-        ):  # 当差距abs超过pi后, 就代表从这个方向转弯不好, 要从另一个方向转弯
+        elif delta_angle < -np.pi:  # 当差距abs超过pi后, 就代表从这个方向转弯不好, 要从另一个方向转弯
             delta_angle += 2 * np.pi
         elif delta_angle > np.pi:
             delta_angle -= 2 * np.pi

@@ -3,29 +3,38 @@ import numpy as np
 
 
 class BaseMap:
-    def __init__(self,
-                 min_bounds: List[float],
-                 max_bounds: List[float],
-                 cell_size: float):
+    def __init__(
+        self, min_bounds: List[float], max_bounds: List[float], cell_size: float
+    ):
         self.min_bounds = np.array(min_bounds, dtype=np.float32)
         self.max_bounds = np.array(max_bounds, dtype=np.float32)
         self.cell_size = cell_size
 
         # 计算网格尺寸，xyz方向格子数量
-        self.grid_size = ((self.max_bounds - self.min_bounds) / self.cell_size).astype(int)
+        self.grid_size = ((self.max_bounds - self.min_bounds) / self.cell_size).astype(
+            int
+        )
 
         # 生成网格中每个体素中心坐标
         # 形状 (X, Y, Z, 3)
-        x_lin = np.linspace(self.min_bounds[0] + cell_size / 2,
-                            self.max_bounds[0] - cell_size / 2,
-                            self.grid_size[0])
-        y_lin = np.linspace(self.min_bounds[1] + cell_size / 2,
-                            self.max_bounds[1] - cell_size / 2,
-                            self.grid_size[1])
-        z_lin = np.linspace(self.min_bounds[2] + cell_size / 2,
-                            self.max_bounds[2] - cell_size / 2,
-                            self.grid_size[2])
-        self.pos_map = np.stack(np.meshgrid(x_lin, y_lin, z_lin, indexing='ij'), axis=-1).astype(np.float32)
+        x_lin = np.linspace(
+            self.min_bounds[0] + cell_size / 2,
+            self.max_bounds[0] - cell_size / 2,
+            self.grid_size[0],
+        )
+        y_lin = np.linspace(
+            self.min_bounds[1] + cell_size / 2,
+            self.max_bounds[1] - cell_size / 2,
+            self.grid_size[1],
+        )
+        z_lin = np.linspace(
+            self.min_bounds[2] + cell_size / 2,
+            self.max_bounds[2] - cell_size / 2,
+            self.grid_size[2],
+        )
+        self.pos_map = np.stack(
+            np.meshgrid(x_lin, y_lin, z_lin, indexing="ij"), axis=-1
+        ).astype(np.float32)
 
     def get_voxel_index(self, point):
         """
@@ -55,5 +64,6 @@ class BaseMap:
         z = self.min_bounds[2] + cell_idx[2] * self.cell_size
         return [x, y, z]
 
-if __name__ == '__main__':
-    semantic_map = BaseMap(min_bounds=[0,0,0], max_bounds=[1,1,1])
+
+if __name__ == "__main__":
+    semantic_map = BaseMap(min_bounds=[0, 0, 0], max_bounds=[1, 1, 1])

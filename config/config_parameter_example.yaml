@@ -46,8 +46,8 @@ settings:
 map:
   cell_size: 0.5
   start_point: [ 0, 0, 0 ]  # 构建gridmap的起点, 要保证这里是没有障碍物的
-  min_bounds: [ -34, -10, 0 ]
-  max_bounds: [ 19, 32, 10 ]
+  min_bound: [ -34, -10, 0 ]
+  max_bound: [ 19, 32, 10 ]
   occupied_cell: 100
   free_cell: 0
   unknown_cell: -1
@@ -75,4 +75,4 @@ ros:
     node_scene_monitor: False
     node_action_server_plan_execution: True
     node_server_planner_nav2: False
-    node_server_planner_ompl: True
+    node_planner_ompl: True

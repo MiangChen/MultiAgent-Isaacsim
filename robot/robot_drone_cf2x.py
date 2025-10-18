@@ -13,7 +13,7 @@ from isaacsim.core.prims import Articulation
 
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from map.map_grid_map import GridMap
-from path_planning.path_planning_astar import AStar
+from recycle_bin.path_planning_astar import AStar
 from log.log_manager import LogManager
 from controller.controller_cf2x import ControllerCf2x
 from robot.robot import Robot
@@ -88,9 +88,7 @@ class RobotCf2x(Robot):
         self.counter = 0
         self.pub_period = 50
         self.previous_pos = None
-        self.movement_threshold = (
-            0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
-        )
+        self.movement_threshold = 0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
 
         # —— 平滑导航配置（无人机专用）——
         self.nav_target_xy = None  # 目标点的 XY
@@ -189,7 +187,7 @@ class RobotCf2x(Robot):
             # 获取当前位置，只改变高度
             positions, orientations = self.body.get_world_poses()
             current_pos = positions[0]
-            #上升
+            # 上升
             self.hovering_height = self.takeoff_height
             self.move_vertically(self.takeoff_height, "hovering")
 
@@ -361,15 +359,16 @@ class RobotCf2x(Robot):
                 M = 1
                 K = self.body.robot_articulation.num_bodies
                 values_array = torch.full((M, K), fill_value=1, dtype=torch.uint8)
-                self.body.robot_articulation.set_body_disable_gravity(values=values_array)
+                self.body.robot_articulation.set_body_disable_gravity(
+                    values=values_array
+                )
                 self.flight_state = "hovering"
                 print(f"无人机起飞到高度: {target_height}m")
             return
 
-        linear_velocity = torch.tensor([0,0,delta_z], dtype=torch.float32)
+        linear_velocity = torch.tensor([0, 0, delta_z], dtype=torch.float32)
         self.body.robot_articulation.set_linear_velocities(linear_velocity)
         self.velocity = linear_velocity
-
 
     def move_to(self):
 

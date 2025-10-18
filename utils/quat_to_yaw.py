@@ -1,18 +1,26 @@
-from typing import Tuple
+from typing import List
 
-from math import atan2
+import numpy as np
+from scipy.spatial.transform import Rotation as R
 
-from isaacsim.core.utils.rotations import quat_to_rot_matrix
 
-
-def quat_to_yaw(quaternion: Tuple[float, float, float, float]) -> float:
+def quat_to_yaw(quat_xyzw: List[List[float]]) -> np.ndarray:
     """
     Args:
-        quaternion: 四元数, 顺序是 wxyz
+        quat_xyzw: 四元数, 顺序是 wxyz
     Returns:
         yaw: 绕着z轴的旋转角度
     """
 
-    matrix = quat_to_rot_matrix(quaternion)
-    yaw = atan2(matrix[1, 0], matrix[0, 0])
+    if not quat_xyzw:
+        return np.array([])
+
+    quat_array = np.array(quat_xyzw)
+
+    rotations = R.from_quat(quat_array)
+    euler_angles = rotations.as_euler('zyx', degrees=False)
+    raw_yaw_angles = euler_angles[:, 0]
+
+    yaw = np.unwrap(raw_yaw_angles)
+
     return yaw

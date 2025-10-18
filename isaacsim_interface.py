@@ -478,7 +478,7 @@ def gen_cam_rig_components_mdjjie():
 
 def set_cam_prim_params(width, height, hfov_degrees, cam_prim):
     """
-    Calculates and sets camera prim attributes based on image dimensions and HFOV.
+    Calculates and sets camera prim attributes based on image dimension and HFOV.
 
     Args:
         width (int): Width of the camera image in pixels.

@@ -17,8 +17,7 @@ logger = LogManager.get_logger(__name__)
 
 
 class Camera:
-
-    def __init__(self, path_prim_parent:str, cfg_camera: CfgCamera):
+    def __init__(self, path_prim_parent: str, cfg_camera: CfgCamera):
         self.cfg_camera = cfg_camera
         self.path_prim_parent = path_prim_parent
         self.create_camera()
@@ -27,8 +26,7 @@ class Camera:
         self.cfg_camera.name = self.cfg_camera.type + "_" + str(self.cfg_camera.id)
         if self.cfg_camera.use_existing_camera == True:
             self.cfg_camera.path_prim_absolute = (
-                self.path_prim_parent
-                + self.cfg_camera.path_prim_relative_to_robot
+                self.path_prim_parent + self.cfg_camera.path_prim_relative_to_robot
             )
             self.camera = IsaacCamera(
                 prim_path=self.cfg_camera.path_prim_absolute,
@@ -61,8 +59,11 @@ class Camera:
                 render_product_path=None,
             )
 
-            self.set_local_pose(translation=to_torch(self.cfg_camera.translation),
-                                orientation=to_torch(self.cfg_camera.orientation), camera_axes="usd")
+            self.set_local_pose(
+                translation=to_torch(self.cfg_camera.translation),
+                orientation=to_torch(self.cfg_camera.orientation),
+                camera_axes="usd",
+            )
 
         return
 
@@ -81,7 +82,9 @@ class Camera:
         orientation: Sequence[float] = None,
         camera_axes: str = "usd",
     ) -> None:
-        self.camera.set_local_pose(translation=translation, orientation=orientation, camera_axes=camera_axes)
+        self.camera.set_local_pose(
+            translation=translation, orientation=orientation, camera_axes=camera_axes
+        )
         return None
 
     def get_current_frame(self):
@@ -123,29 +126,21 @@ class Camera:
         """
         try:
             if not isinstance(rgb_tensor_gpu, torch.Tensor):
-                logger.error(
-                    f"输入无效：期望一个 torch.Tensor，但收到了 {type(rgb_tensor_gpu)}。"
-                )
+                logger.error(f"输入无效：期望一个 torch.Tensor，但收到了 {type(rgb_tensor_gpu)}。")
                 return False
 
             if not isinstance(file_path, str) or not file_path:
-                logger.error(
-                    f"文件路径无效：路径必须是一个非空字符串，但收到了 '{file_path}'。"
-                )
+                logger.error(f"文件路径无效：路径必须是一个非空字符串，但收到了 '{file_path}'。")
                 return False
 
             # 如果是4维张量 (batch, H, W, C)，则只取第一张图
             if rgb_tensor_gpu.ndim == 4:
-                logger.warning(
-                    f"输入为4维张量，将只保存第一张图像。形状: {rgb_tensor_gpu.shape}"
-                )
+                logger.warning(f"输入为4维张量，将只保存第一张图像。形状: {rgb_tensor_gpu.shape}")
                 rgb_tensor_gpu = rgb_tensor_gpu[0]
 
             # 核心检查：必须是3维张量
             if rgb_tensor_gpu.ndim != 3 or rgb_tensor_gpu.shape[2] != 3:
-                logger.error(
-                    f"张量形状错误：期望 [H, W, 3]，但收到了 {rgb_tensor_gpu.shape}"
-                )
+                logger.error(f"张量形状错误：期望 [H, W, 3]，但收到了 {rgb_tensor_gpu.shape}")
                 return False
 
             logger.info(f"开始处理图像，准备保存到 {file_path}...")

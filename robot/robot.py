@@ -2,7 +2,6 @@ from typing import Tuple, Dict, Any, List
 
 from rclpy.action import ActionServer
 
-import numpy as np
 from shapely.geometry import Polygon, LineString, MultiLineString
 from shapely.affinity import rotate
 import numpy as np
@@ -11,17 +10,14 @@ import torch
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import RigidPrim
 import isaacsim.core.utils.prims as prims_utils
-from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 from isaacsim.core.utils.viewports import (
     create_viewport_for_camera,
     set_camera_view,
 )
-from pxr import Usd, UsdGeom
 
 from map.map_grid_map import GridMap
-from path_planning.path_planning_astar import AStar
-from robot.sensor.camera import CfgCamera, CfgCameraThird, Camera
-from robot.cfg import CfgRobot
+from recycle_bin.path_planning_astar import AStar
+from robot.sensor.camera import Camera
 from robot.body import BodyRobot
 from robot.robot_trajectory import Trajectory
 from ros.node_robot import NodeRobot
@@ -51,10 +47,12 @@ def _get_viewport_manager_from_container():
     """
     try:
         from containers import get_container
+
         container = get_container()
         return container.viewport_manager()
     except Exception as e:
         raise Exception("ViewportManager not found in container") from e
+
 
 class Robot:
     def __init__(
@@ -91,9 +89,7 @@ class Robot:
         self.trajectory: Trajectory = None
         # 机器人的控制器
         self.controllers: dict = {}  # 用于存储多个控制器, 'controller name': function
-        self.control_mode: str = (
-            ""  # 'joint_efforts', 'joint_velocities', 'joint_positions', 'joint_indices', 'joint_names'
-        )
+        self.control_mode: str = ""  # 'joint_efforts', 'joint_velocities', 'joint_positions', 'joint_indices', 'joint_names'
         self.action: np.ndarray = None
         # 机器人的技能
         self.skills: dict = {}  # 用于记录其技能: 'skill name': function
@@ -136,7 +132,7 @@ class Robot:
         self.nav_end = None
         self.nav_dist = 1.0
 
-        #机器人探索区域状态
+        # 机器人探索区域状态
         self.is_detecting = False
         self.target_prim = None
 
@@ -190,10 +186,14 @@ class Robot:
 
     def initialize(self) -> None:
         for camera_name, camera_cfg in self.cfg_robot.cfg_dict_camera.items():
-            camera_instance = Camera(path_prim_parent=self.cfg_robot.path_prim_robot, cfg_camera=camera_cfg)
+            camera_instance = Camera(
+                path_prim_parent=self.cfg_robot.path_prim_robot, cfg_camera=camera_cfg
+            )
             self.camera[camera_name] = camera_instance
         for cam_name, cam_cfg in self.cfg_robot.cfg_dict_camera_third.items():
-            camera_instance = Camera(path_prim_parent=self.cfg_robot.path_prim_robot, cfg_camera=cam_cfg)
+            camera_instance = Camera(
+                path_prim_parent=self.cfg_robot.path_prim_robot, cfg_camera=cam_cfg
+            )
             self.camera_third[cam_name] = camera_instance
         for camera in self.camera.values():
             camera.initialize()
@@ -304,10 +304,10 @@ class Robot:
         self.move_along_path(real_path, flag_reset=True)
 
         # 标记一下, 开始运动
-        self.flag_action_navigation = True # todo 删除
+        self.flag_action_navigation = True  # todo 删除
 
         # 标记当前的动作
-        self.state_skill = "navigate_to" # todo 改为 skill_name = 'navigate'
+        self.state_skill = "navigate_to"  # todo 改为 skill_name = 'navigate'
         self.state_skill_complete = False  # todo 改为 skill_state: str
 
         return
@@ -487,15 +487,19 @@ class Robot:
     def return_home(self):
         self.navigate_to(self.body.cfg_robot.base)
 
-    def detect(self, target_prim:str = None):
+    def detect(self, target_prim: str = None):
         pos, quat = self.body.get_world_poses()
         result = self.scene_manager.overlap_hits_target_ancestor(target_prim)
-        logger.info(f"[Skill] {self.body.cfg_robot.name} is detecting for {target_prim}. The result is {result}")
+        logger.info(
+            f"[Skill] {self.body.cfg_robot.name} is detecting for {target_prim}. The result is {result}"
+        )
         return result
 
     def broadcast(self, params: Dict[str, Any]):
         content = params.get("content")
-        logger.info(f"[Skill] {self.body.cfg_robot.name} executing broadcasting. The content is {content}")
+        logger.info(
+            f"[Skill] {self.body.cfg_robot.name} executing broadcasting. The content is {content}"
+        )
         return True
 
     def explore(
@@ -504,10 +508,15 @@ class Robot:
         holes: List[tuple] = None,
         target_prim: str = "/TARGET_PRIM_NOT_SPECIFIED",
     ):
-        waypoints = self.plan_exploration_waypoints(boundary, holes, lane_width = self.body.cfg_robot.detection_radius, robot_radius = self.body.cfg_robot.robot_radius)
+        waypoints = self.plan_exploration_waypoints(
+            boundary,
+            holes,
+            lane_width=self.body.cfg_robot.detection_radius,
+            robot_radius=self.body.cfg_robot.robot_radius,
+        )
         self.is_detecting = True
         self.target_prim = target_prim
-        self.move_along_path(waypoints, flag_reset= True)
+        self.move_along_path(waypoints, flag_reset=True)
         return True
 
     def plan_exploration_waypoints(
@@ -582,7 +591,7 @@ class Robot:
             raise ValueError("区域太窄或 robot_radius 过大，收缩后为空。")
 
         # ---- 2) 扫掠坐标系旋转 ----
-        rot = rotate(shrunk, -sweep_deg, origin='centroid', use_radians=False)
+        rot = rotate(shrunk, -sweep_deg, origin="centroid", use_radians=False)
         minx, miny, maxx, maxy = rot.bounds
 
         # ---- 3) 竖直切片 ----
@@ -627,21 +636,27 @@ class Robot:
             raise ValueError("没有生成任何覆盖航点，请检查 lane_width/robot_radius/区域大小。")
 
         # ---- 5) 旋回原坐标系并转 3D ----
-        back = rotate(LineString(path_pts_2d), sweep_deg,
-                      origin=poly.centroid, use_radians=False)
+        back = rotate(
+            LineString(path_pts_2d), sweep_deg, origin=poly.centroid, use_radians=False
+        )
         waypoints_2d = list(back.coords)
 
         # 去抖
         simplified_2d = [waypoints_2d[0]]
         for p in waypoints_2d[1:]:
-            if np.hypot(p[0] - simplified_2d[-1][0], p[1] - simplified_2d[-1][1]) > 1e-3:
+            if (
+                np.hypot(p[0] - simplified_2d[-1][0], p[1] - simplified_2d[-1][1])
+                > 1e-3
+            ):
                 simplified_2d.append(p)
 
         # 输出 3D（z 固定为 z_out，默认 0）
         waypoints = [(x, y, float(z_out)) for (x, y) in simplified_2d]
         return waypoints
 
-    def controller_simplified(self, linear_velocity:torch.Tensor, angular_velocity:torch.Tensor) -> None:
+    def controller_simplified(
+        self, linear_velocity: torch.Tensor, angular_velocity: torch.Tensor
+    ) -> None:
         self.body.robot_articulation.set_linear_velocities(linear_velocity)
         self.body.robot_articulation.set_angular_velocities(angular_velocity)
         return None
@@ -808,9 +823,7 @@ class Robot:
             params=params,
             object_id=object_id,
             task_id=self.current_task_id,
-            progress=int(
-                progress
-            ),  # progress 是当前技能的执行进度，progress是从0到100的一个 int32
+            progress=int(progress),  # progress 是当前技能的执行进度，progress是从0到100的一个 int32
         )
 
         msg = RobotFeedback(
