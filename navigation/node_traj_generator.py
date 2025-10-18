@@ -43,7 +43,6 @@ def generate_trajectory_with_toppra(
     ss[1:] = np.cumsum(np.linalg.norm(np.diff(path_np, axis=0), axis=1))
 
     path = ta.SplineInterpolator(ss, path_np)
-    dof = path.dof  # 对于3D路径, dof = 3
 
     v_lims = [
         [-max_velocity, max_velocity],  # X
@@ -63,7 +62,6 @@ def generate_trajectory_with_toppra(
     con_acc = constraint.JointAccelerationConstraint(a_lims)
     con_acc.set_discretization_type(constraint.DiscretizationType.Interpolation)
 
-    # 实例化求解器，传入正确的约束列表
     instance = algo.TOPPRA([con_vel, con_acc], path, solver_wrapper='seidel')
 
     traj = instance.compute_trajectory(0, 0)

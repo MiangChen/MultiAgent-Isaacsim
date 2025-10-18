@@ -6,7 +6,7 @@ from rclpy.executors import MultiThreadedExecutor
 from ros.node_action_server_plan_execution import NodeActionServerPlanExecution
 from ros.node_scene_monitor import NodeSceneMonitor
 from ros.node_server_planner_nav2 import NodeServerNav2Planner
-from ros.node_planner_ompl import NodePlannerOmpl
+from navigation.node_path_planner_ompl import NodePlannerOmpl
 from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
