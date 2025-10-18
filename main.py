@@ -316,18 +316,28 @@ def main():
 
     # Build grid map for planning
     grid_map.generate()
-    ros_manager.node["node_server_planner_ompl"].set_map(
-        grid_map.value_map[:, :, :],
-        cell_size=grid_map.cell_size,
-        min_bounds=grid_map.min_bounds.tolist(),
-        max_bounds=grid_map.max_bounds.tolist()
-    )
 
-    path = ros_manager.node["node_server_planner_ompl"].compute_path(
+    import time
+    time.sleep(2)
+    path = ros_manager.node["node_planner_ompl"].compute_path(
         start_pos=[6, 5,3],
-        goal_pos=[10.0, 10.0,0]
+        goal_pos=[10.0, 10.0,0],
+        start_quat=[0.0, 0.0, 0.0, 1]
     )
-    print(path)
+    print("path", path)
+    orientation = []
+    for p in path:
+        orientation.append(p[1])
+    print("orientation", orientation)
+
+    from utils import quat_to_yaw
+    yaw = quat_to_yaw(quat_xyzw=orientation)
+    print(yaw)
+
+    path_yaw = [path[i][0] + [yaw[i]] for i in range(len(path))]
+    print(path_yaw)
+
+
     # Main simulation loop
     while simulation_app.is_running():
         env.step(action=None)
