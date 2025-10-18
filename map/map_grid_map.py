@@ -1,18 +1,26 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
+import json
 import numpy as np
 
 from isaacsim.asset.gen.omap.bindings import _omap
 import omni
 
+from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
+from sensor_msgs.msg import PointCloud2, PointField
+from std_msgs.msg import Header
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
+import struct
 
-class GridMap:
+
+class GridMap(Node):
     """
     Grid map generator for OMPL path planning.
     Converts continuous 3D space into discrete grid representation.
     Includes height filtering to remove ground obstacles.
     """
-    
+
     def __init__(self,
                  cell_size: float = 1.0,
                  start_point: list = [0, 0, 0],
@@ -33,18 +41,38 @@ class GridMap:
             free_value: Value for free cells (navigable space)
             unknown_value: Value for unknown cells
         """
+
+        super().__init__("node_map_grid")
         self.cell_size = cell_size
         self.start_point = np.array(start_point, dtype=np.float32)
         self.min_bounds = np.array(min_bounds, dtype=np.float32)
         self.max_bounds = np.array(max_bounds, dtype=np.float32)
-            
+
         self.occupied_value = occupied_value
         self.free_value = free_value
         self.unknown_value = unknown_value
-        
+
         # Internal state
         self.value_map: Optional[np.ndarray] = None
         self.generator: Optional[_omap.Generator] = None
+
+        qos_profile = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+        )
+        self.publisher_point_cloud = self.create_publisher(
+            PointCloud2,
+            '/map_point_cloud',
+            qos_profile
+        )
+
+        self.publisher_info = self.create_publisher(
+            DiagnosticArray,
+            '/map_info',
+            qos_profile
+        )
 
     def initialize(self) -> None:
         """
@@ -63,6 +91,102 @@ class GridMap:
 
         self.generator.set_transform(self.start_point, self.min_bounds, self.max_bounds)
 
+    def publish_map(
+            self
+    ) -> bool:
+        points = []
+        self.dimensions = 3
+        if self.dimensions == 2:
+            # 2D 地图：z=0
+            for x in range(self.value_map.shape[0]):
+                for y in range(self.value_map.shape[1]):
+                    if grid_map[x, y] == 100:  # 占用格子
+                        world_x = self.min_bounds[0] + x * self.cell_size
+                        world_y = self.min_bounds[1] + y * self.cell_size
+                        points.append([world_x, world_y, 0.0])
+
+        elif self.dimensions == 3:
+            # 3D 地图：真实 z 值
+            for x in range(self.value_map.shape[0]):
+                for y in range(self.value_map.shape[1]):
+                    for z in range(self.value_map.shape[2]):
+                        if self.value_map[x, y, z] == 100:  # 占用格子
+                            world_x = self.min_bounds[0] + x * self.cell_size
+                            world_y = self.min_bounds[1] + y * self.cell_size
+                            world_z = self.min_bounds[2] + z * self.cell_size
+                            points.append([world_x, world_y, world_z])
+
+        if points:
+            stamp = self.get_clock().now().to_msg()
+            msg_pc = self.create_point_cloud_msg(points, stamp)
+            self.publisher_point_cloud.publish(msg_pc)
+            msg_info = self.create_map_info(stamp)
+            self.publisher_info.publish(msg_info)
+
+        return True
+
+    def create_point_cloud_msg(self, points, stamp):
+        header = Header()
+        header.stamp = stamp
+        header.frame_id = "map"
+
+        fields = [
+            PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
+            PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),
+            PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1),
+            PointField(
+                name="intensity", offset=12, datatype=PointField.FLOAT32, count=1
+            ),
+        ]
+
+        cloud_data = []
+        for point in points:
+            # 根据 z 轴高度设置强度
+            intensity = point[2]  # 直接使用 z 坐标作为强度
+            cloud_data.extend(
+                struct.pack("ffff", point[0], point[1], point[2], intensity)
+            )
+
+        pc2_msg = PointCloud2()
+        pc2_msg.header = header
+        pc2_msg.height = 1
+        pc2_msg.width = len(points)
+        pc2_msg.fields = fields
+        pc2_msg.is_bigendian = False
+        pc2_msg.point_step = 16  # 4 * 4 bytes
+        pc2_msg.row_step = pc2_msg.point_step * len(points)
+        pc2_msg.data = bytes(cloud_data)
+        pc2_msg.is_dense = True
+
+        return pc2_msg
+
+    def create_map_info(self, stamp) -> DiagnosticArray:
+        """
+        create aDiagnosticArray to carry 3d map information。
+        """
+        map_info_dict = self.get_map_info()
+
+        key_values = []
+        for key, value in map_info_dict.items():
+            if not isinstance(value, str):
+                value_str = json.dumps(value)
+            else:
+                value_str = value
+            key_values.append(KeyValue(key=key, value=value_str))
+
+        status = DiagnosticStatus(
+            level=DiagnosticStatus.OK,
+            name='GridMapInfo',
+            message='3D Map Metadata',
+            values=key_values
+        )
+
+        msg = DiagnosticArray()
+        msg.header.stamp = stamp
+        msg.header.frame_id = "map"
+        msg.status.append(status)
+
+        return msg
 
     def generate(self, ground_height: float = 0.0, ground_tolerance: float = 0.2) -> np.ndarray:
         """
@@ -77,26 +201,28 @@ class GridMap:
         """
         if not self.generator:
             raise RuntimeError("GridMap not initialized. Call initialize() first.")
-            
+
         # Generate 3D map
         self.generator.generate3d()
-        
+
         # Get all occupied positions in 3D world coordinates
         occupied_positions = self.generator.get_occupied_positions()
         x_dim, y_dim, z_dim = self.generator.get_dimensions()
-        
+
         # Initialize 3D map
         self.value_map = np.full((x_dim, y_dim, z_dim), self.free_value, dtype=np.uint8)
-        
+
         # Populate map with all obstacles first
         if occupied_positions is not None and len(occupied_positions) > 0:
             occupied_indices = self.compute_index(occupied_positions)
             if occupied_indices is not None:
                 self.value_map[tuple(occupied_indices.T)] = self.occupied_value
-        
+
         # Apply height-based ground filtering
         self._remove_ground_obstacles(ground_height, ground_tolerance)
-            
+
+        # publish point cloud and map info to ros2
+        self.publish_map()
         return self.value_map
 
     def _remove_ground_obstacles(self, ground_height: float, tolerance: float) -> None:
@@ -156,9 +282,9 @@ class GridMap:
         Returns:
             True if position is within bounds
         """
-        return all(self.min_bounds[i] <= position[i] <= self.max_bounds[i] 
-                  for i in range(len(position)))
-    
+        return all(self.min_bounds[i] <= position[i] <= self.max_bounds[i]
+                   for i in range(len(position)))
+
     def is_occupied(self, position: List[float]) -> bool:
         """
         Check if a position is occupied (obstacle).
@@ -171,14 +297,14 @@ class GridMap:
         """
         if not self.is_valid_position(position):
             return True  # Out of bounds considered occupied
-            
+
         indices = self.compute_index([position])
         if indices is None:
             return True
-            
+
         idx = tuple(indices[0])
         return self.value_map[idx] == self.occupied_value
-    
+
     def get_map_info(self) -> dict:
         """
         Get map metadata for OMPL planning.
@@ -188,14 +314,15 @@ class GridMap:
         """
         if self.value_map is None:
             raise RuntimeError("Map not generated. Call generate() first.")
-            
+
         return {
-            'dimensions': self.value_map.shape,
+            'dimensions': 3,
             'cell_size': self.cell_size,
             'min_bounds': self.min_bounds.tolist(),
             'max_bounds': self.max_bounds.tolist(),
             'occupied_value': self.occupied_value,
-            'free_value': self.free_value
+            'free_value': self.free_value,
+            'unknown_value': self.unknown_value
         }
 
     def compute_index(self, positions) -> Optional[np.ndarray]:
@@ -210,19 +337,18 @@ class GridMap:
         """
         if positions is None or len(positions) == 0:
             return None
-            
+
         if not self.generator:
             raise RuntimeError("GridMap not initialized.")
-            
+
         # Get grid bounds
         min_bound = np.array(self.generator.get_min_bound(), dtype=np.float32)
         positions = np.array(positions, dtype=np.float32)
-        
+
         # Convert to grid indices
         indices = ((positions - min_bound) / self.cell_size).astype(int)
-        
-        return indices
 
+        return indices
 
 
 # Example usage for OMPL path planning
@@ -233,20 +359,20 @@ if __name__ == "__main__":
         min_bounds=[-10, -10, 0],
         max_bounds=[10, 10, 5]
     )
-    
+
     # Initialize (must be called after world reset)
     grid_map.initialize()
-    
+
     # Generate 2D map for ground robots with height filtering
     value_map = grid_map.generate('2d', min_height=0.1, max_height=2.0)
-    
+
     # Generate 3D map for aerial robots
     # value_map_3d = grid_map.generate('3d')
-    
+
     # Check if position is valid for planning
     start_pos = [0, 0, 0]
     goal_pos = [5, 5, 0]
-    
+
     print(f"Start position valid: {grid_map.is_valid_position(start_pos)}")
     print(f"Goal position occupied: {grid_map.is_occupied(goal_pos)}")
     print(f"Map info: {grid_map.get_map_info()}")
