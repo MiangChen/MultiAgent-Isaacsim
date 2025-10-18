@@ -186,8 +186,8 @@ class NodePlannerOmpl(Node):
                         ]
                     )
 
-        self.publish_waypoint(start_pos)
-        self.publish_waypoint(goal_pos)
+        self.publish_point(start_pos)
+        self.publish_point(goal_pos)
         if path:
             self.publish_path(path)  # 2D/3D都发布路径
 
@@ -255,12 +255,12 @@ class NodePlannerOmpl(Node):
 
         self.publisher_path.publish(path_msg)
 
-    def publish_waypoint(
+    def publish_point(
         self, pos: list, color: list = [0.0, 1.0, 0.0, 1.0], marker_id: int = None
     ):
-        if not hasattr(self, "publisher_waypoint"):
-            self.publisher_waypoint = self.create_publisher(
-                Marker, "/waypoint_marker", 10
+        if not hasattr(self, "publisher_point"):
+            self.publisher_point = self.create_publisher(
+                Marker, "/point_marker", 10
             )
             self.waypoint_counter = 0
 
@@ -283,4 +283,4 @@ class NodePlannerOmpl(Node):
         marker.color.b = float(color[2])
         marker.color.a = float(color[3])
 
-        self.publisher_waypoint.publish(marker)
+        self.publisher_point.publish(marker)
