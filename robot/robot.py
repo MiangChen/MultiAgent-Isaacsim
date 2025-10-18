@@ -19,7 +19,7 @@ from isaacsim.core.utils.viewports import (
 from pxr import Usd, UsdGeom
 
 from map.map_grid_map import GridMap
-from path_planning.path_planning_astar import AStar
+# from path_planning.path_planning_astar import AStar
 from robot.sensor.camera import CfgCamera, CfgCameraThird, Camera
 from robot.cfg import CfgRobot
 from robot.body import BodyRobot
