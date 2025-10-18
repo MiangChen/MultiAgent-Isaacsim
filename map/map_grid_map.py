@@ -21,22 +21,24 @@ class GridMap(Node):
     Includes height filtering to remove ground obstacles.
     """
 
-    def __init__(self,
-                 cell_size: float = 1.0,
-                 start_point: list = [0, 0, 0],
-                 min_bounds: List[float] = [-20, -20, 0],
-                 max_bounds: List[float] = [20, 20, 5],
-                 occupied_value: int = 100,
-                 free_value: int = 0,
-                 unknown_value: int = -1):
+    def __init__(
+        self,
+        cell_size: float = 1.0,
+        start_point: list = [0, 0, 0],
+        min_bound: List[float] = [-20, -20, 0],
+        max_bound: List[float] = [20, 20, 5],
+        occupied_value: int = 100,
+        free_value: int = 0,
+        unknown_value: int = -1,
+    ):
         """
         Initialize GridMap for path planning.
-        
+
         Args:
             start_point: Reference point for map generation
             cell_size: Size of each grid cell in meters
-            min_bounds: [x_min, y_min, z_min] bounds of the map
-            max_bounds: [x_max, y_max, z_max] bounds of the map  
+            min_bound: [x_min, y_min, z_min] bounds of the map
+            max_bound: [x_max, y_max, z_max] bounds of the map
             occupied_value: Value for occupied cells (obstacles)
             free_value: Value for free cells (navigable space)
             unknown_value: Value for unknown cells
@@ -45,8 +47,8 @@ class GridMap(Node):
         super().__init__("node_map_grid")
         self.cell_size = cell_size
         self.start_point = np.array(start_point, dtype=np.float32)
-        self.min_bounds = np.array(min_bounds, dtype=np.float32)
-        self.max_bounds = np.array(max_bounds, dtype=np.float32)
+        self.min_bound = np.array(min_bound, dtype=np.float32)
+        self.max_bound = np.array(max_bound, dtype=np.float32)
 
         self.occupied_value = occupied_value
         self.free_value = free_value
@@ -63,15 +65,11 @@ class GridMap(Node):
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
         )
         self.publisher_point_cloud = self.create_publisher(
-            PointCloud2,
-            '/map_point_cloud',
-            qos_profile
+            PointCloud2, "/map_point_cloud", qos_profile
         )
 
         self.publisher_info = self.create_publisher(
-            DiagnosticArray,
-            '/map_info',
-            qos_profile
+            DiagnosticArray, "/map_info", qos_profile
         )
 
     def initialize(self) -> None:
@@ -86,34 +84,32 @@ class GridMap(Node):
             self.cell_size,
             float(self.occupied_value),
             float(self.free_value),
-            float(self.unknown_value)
+            float(self.unknown_value),
         )
 
-        self.generator.set_transform(self.start_point, self.min_bounds, self.max_bounds)
+        self.generator.set_transform(self.start_point, self.min_bound, self.max_bound)
 
-    def publish_map(
-            self
-    ) -> bool:
+    def publish_map(self) -> bool:
         points = []
-        self.dimensions = 3
-        if self.dimensions == 2:
+        self.dimension = 3
+        if self.dimension == 2:
             # 2D 地图：z=0
             for x in range(self.value_map.shape[0]):
                 for y in range(self.value_map.shape[1]):
                     if grid_map[x, y] == 100:  # 占用格子
-                        world_x = self.min_bounds[0] + x * self.cell_size
-                        world_y = self.min_bounds[1] + y * self.cell_size
+                        world_x = self.min_bound[0] + x * self.cell_size
+                        world_y = self.min_bound[1] + y * self.cell_size
                         points.append([world_x, world_y, 0.0])
 
-        elif self.dimensions == 3:
+        elif self.dimension == 3:
             # 3D 地图：真实 z 值
             for x in range(self.value_map.shape[0]):
                 for y in range(self.value_map.shape[1]):
                     for z in range(self.value_map.shape[2]):
                         if self.value_map[x, y, z] == 100:  # 占用格子
-                            world_x = self.min_bounds[0] + x * self.cell_size
-                            world_y = self.min_bounds[1] + y * self.cell_size
-                            world_z = self.min_bounds[2] + z * self.cell_size
+                            world_x = self.min_bound[0] + x * self.cell_size
+                            world_y = self.min_bound[1] + y * self.cell_size
+                            world_z = self.min_bound[2] + z * self.cell_size
                             points.append([world_x, world_y, world_z])
 
         if points:
@@ -176,9 +172,9 @@ class GridMap(Node):
 
         status = DiagnosticStatus(
             level=DiagnosticStatus.OK,
-            name='GridMapInfo',
-            message='3D Map Metadata',
-            values=key_values
+            name="GridMapInfo",
+            message="3D Map Metadata",
+            values=key_values,
         )
 
         msg = DiagnosticArray()
@@ -188,14 +184,16 @@ class GridMap(Node):
 
         return msg
 
-    def generate(self, ground_height: float = 0.0, ground_tolerance: float = 0.2) -> np.ndarray:
+    def generate(
+        self, ground_height: float = 0.0, ground_tolerance: float = 0.2
+    ) -> np.ndarray:
         """
         Generate 3D grid map with height-based ground filtering.
-        
+
         Args:
             ground_height: Expected ground level height
             ground_tolerance: Height tolerance for ground detection
-            
+
         Returns:
             The 3D value_map (occupancy grid) as a numpy array
         """
@@ -253,8 +251,13 @@ class GridMap(Node):
                 for z in range(max_ground_layers):
                     if self.value_map[x, y, z] == self.occupied_value:
                         # Get world coordinates for this grid cell
-                        min_bound = np.array(self.generator.get_min_bound(), dtype=np.float32)
-                        world_pos = min_bound + np.array([x, y, z], dtype=np.float32) * self.cell_size
+                        min_bound = np.array(
+                            self.generator.get_min_bound(), dtype=np.float32
+                        )
+                        world_pos = (
+                            min_bound
+                            + np.array([x, y, z], dtype=np.float32) * self.cell_size
+                        )
                         actual_height = float(world_pos[2])
 
                         # Check if this cell is within ground height range
@@ -263,7 +266,9 @@ class GridMap(Node):
                             # If the layer above (z+1) is empty, this is likely ground
                             check_z = z + 1
                             if check_z < z_dim:
-                                is_empty_above = (self.value_map[x, y, check_z] == self.free_value)
+                                is_empty_above = (
+                                    self.value_map[x, y, check_z] == self.free_value
+                                )
                             else:
                                 # If we're at the top layer, consider it empty above
                                 is_empty_above = True
@@ -275,23 +280,25 @@ class GridMap(Node):
     def is_valid_position(self, position: List[float]) -> bool:
         """
         Check if a position is within map bounds.
-        
+
         Args:
             position: [x, y, z] coordinates
-            
+
         Returns:
             True if position is within bounds
         """
-        return all(self.min_bounds[i] <= position[i] <= self.max_bounds[i]
-                   for i in range(len(position)))
+        return all(
+            self.min_bound[i] <= position[i] <= self.max_bound[i]
+            for i in range(len(position))
+        )
 
     def is_occupied(self, position: List[float]) -> bool:
         """
         Check if a position is occupied (obstacle).
-        
+
         Args:
             position: [x, y, z] coordinates
-            
+
         Returns:
             True if position is occupied
         """
@@ -308,7 +315,7 @@ class GridMap(Node):
     def get_map_info(self) -> dict:
         """
         Get map metadata for OMPL planning.
-        
+
         Returns:
             Dictionary with map information
         """
@@ -316,22 +323,23 @@ class GridMap(Node):
             raise RuntimeError("Map not generated. Call generate() first.")
 
         return {
-            'dimensions': 3,
-            'cell_size': self.cell_size,
-            'min_bounds': self.min_bounds.tolist(),
-            'max_bounds': self.max_bounds.tolist(),
-            'occupied_value': self.occupied_value,
-            'free_value': self.free_value,
-            'unknown_value': self.unknown_value
+            "dimension": 3,
+            "cell_size": self.cell_size,
+            "min_bound": self.min_bound.tolist(),
+            "max_bound": self.max_bound.tolist(),
+            "occupied_value": self.occupied_value,
+            "free_value": self.free_value,
+            "unknown_value": self.unknown_value,
+            "shape": self.value_map.shape,
         }
 
     def compute_index(self, positions) -> Optional[np.ndarray]:
         """
         Convert world coordinates to grid indices.
-        
+
         Args:
             positions: List of [x, y, z] coordinates or single position
-            
+
         Returns:
             Array of grid indices or None if invalid input
         """
@@ -354,17 +362,13 @@ class GridMap(Node):
 # Example usage for OMPL path planning
 if __name__ == "__main__":
     # Create grid map
-    grid_map = GridMap(
-        cell_size=0.5,
-        min_bounds=[-10, -10, 0],
-        max_bounds=[10, 10, 5]
-    )
+    grid_map = GridMap(cell_size=0.5, min_bound=[-10, -10, 0], max_bound=[10, 10, 5])
 
     # Initialize (must be called after world reset)
     grid_map.initialize()
 
     # Generate 2D map for ground robots with height filtering
-    value_map = grid_map.generate('2d', min_height=0.1, max_height=2.0)
+    value_map = grid_map.generate("2d", min_height=0.1, max_height=2.0)
 
     # Generate 3D map for aerial robots
     # value_map_3d = grid_map.generate('3d')
