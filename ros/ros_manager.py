@@ -6,14 +6,13 @@ from rclpy.executors import MultiThreadedExecutor
 from ros.node_action_server_plan_execution import NodeActionServerPlanExecution
 from ros.node_scene_monitor import NodeSceneMonitor
 from ros.node_server_planner_nav2 import NodeServerNav2Planner
-from ros.node_server_planner_ompl import NodeServerPlannerOmpl
+from ros.node_planner_ompl import NodePlannerOmpl
 from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
 
 
 class RosManager:
-
     def __init__(self, loop=None, config: dict = None):
         self.config = config if config is not None else {}
 
@@ -30,15 +29,15 @@ class RosManager:
         """构建ROS节点"""
         config_node_enable = self.config.get("node_enable", {})
         if config_node_enable.get("node_scene_monitor", False):
-            self.node['node_scene_monitor'] = NodeSceneMonitor()
+            self.node["node_scene_monitor"] = NodeSceneMonitor()
         if config_node_enable.get("node_action_server_plan_execution", False):
             node = NodeActionServerPlanExecution(loop=self.loop)
-            self.node['node_action_server_plan_execution'] = node
-            self.node['node_action_client_skill'] = node.action_client_skill
+            self.node["node_action_server_plan_execution"] = node
+            self.node["node_action_client_skill"] = node.action_client_skill
         if config_node_enable.get("node_server_nav2_planner", False):
-            self.node['node_server_nav2_planner'] = NodeServerNav2Planner()
-        if config_node_enable.get("node_server_planner_ompl", False):
-            self.node['node_server_planner_ompl'] = NodeServerPlannerOmpl()
+            self.node["node_server_nav2_planner"] = NodeServerNav2Planner()
+        if config_node_enable.get("node_planner_ompl", False):
+            self.node["node_planner_ompl"] = NodePlannerOmpl()
 
         logger.info("ROS nodes built successfully.")
 
