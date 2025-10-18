@@ -7,6 +7,9 @@ from ros.node_action_server_plan_execution import NodeActionServerPlanExecution
 from ros.node_scene_monitor import NodeSceneMonitor
 from ros.node_server_planner_nav2 import NodeServerNav2Planner
 from navigation.node_path_planner_ompl import NodePlannerOmpl
+from navigation.node_trajectory_generator import NodeTrajectoryGenerator
+from navigation.node_controller_mpc import NodeMpcController
+from navigation.simple_robot import SimpleRobotSimulatorNode
 from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
@@ -36,8 +39,11 @@ class RosManager:
             self.node["node_action_client_skill"] = node.action_client_skill
         if config_node_enable.get("node_server_nav2_planner", False):
             self.node["node_server_nav2_planner"] = NodeServerNav2Planner()
-        if config_node_enable.get("node_planner_ompl", False):
+        if config_node_enable.get("navigation", False):
             self.node["node_planner_ompl"] = NodePlannerOmpl()
+            self.node["node_trajectory_generator"] = NodeTrajectoryGenerator()
+            self.node["node_controller_mpc"] = NodeMpcController()
+            self.node["robot"] = SimpleRobotSimulatorNode()
 
         logger.info("ROS nodes built successfully.")
 

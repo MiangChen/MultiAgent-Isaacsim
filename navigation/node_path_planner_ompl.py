@@ -251,6 +251,7 @@ class NodePlannerOmpl(Node):
             pose.pose.orientation.y = point[1][1]
             pose.pose.orientation.z = point[1][2]
             pose.pose.orientation.w = point[1][3]
+
             path_msg.poses.append(pose)
 
         self.publisher_path.publish(path_msg)
@@ -259,9 +260,7 @@ class NodePlannerOmpl(Node):
         self, pos: list, color: list = [0.0, 1.0, 0.0, 1.0], marker_id: int = None
     ):
         if not hasattr(self, "publisher_point"):
-            self.publisher_point = self.create_publisher(
-                Marker, "/point_marker", 10
-            )
+            self.publisher_point = self.create_publisher(Marker, "/point_marker", 10)
             self.waypoint_counter = 0
 
         marker = Marker()
