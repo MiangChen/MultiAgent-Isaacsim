@@ -10,7 +10,7 @@ PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PY_EXECUTABLE="$PATH_PYTHON/bin/python"
 
 # --- 3. 要运行的主 Python 脚本 ---
-MAIN_PY_SCRIPT="main.py"
+MAIN_PY_SCRIPT="main_example.py"
 
 # --- 4. 自定义 ROS 2 工作空间 ---
 WORKSPACE_SETUP_PATH=(
