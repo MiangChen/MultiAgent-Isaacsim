@@ -68,4 +68,3 @@ class BodyDroneCf2X(BodyRobot):
             positions=to_torch(self.cfg_robot.position).reshape(1, 3),
             orientations=to_torch(self.cfg_robot.quat).reshape(1, 4),
         )
-

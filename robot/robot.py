@@ -12,7 +12,6 @@ import torch
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import RigidPrim
 import isaacsim.core.utils.prims as prims_utils
-
 from isaacsim.core.utils.viewports import (
     create_viewport_for_camera,
     set_camera_view,
@@ -20,8 +19,9 @@ from isaacsim.core.utils.viewports import (
 from pxr import Usd, UsdGeom
 
 from map.map_grid_map import GridMap
-
-# from path_planning.path_planning_astar import AStar
+from navigation.node_path_planner_ompl import NodePlannerOmpl
+from navigation.node_trajectory_generator import NodeTrajectoryGenerator
+from navigation.node_controller_mpc import NodeMpcController
 from robot.sensor.camera import CfgCamera, CfgCameraThird, Camera
 from robot.cfg import CfgRobot
 from robot.body import BodyRobot
@@ -127,6 +127,11 @@ class Robot:
         self.node.callback_cmd_vel = self.callback_cmd_vel
         self.node.callback_execute_skill = self.callback_execute_skill
 
+        self.node_planner_ompl = NodePlannerOmpl(namespace=self.namespace)
+        self.node_trajectory_generator = NodeTrajectoryGenerator(
+            namespace=self.namespace
+        )
+        self.node_controller_mpc = NodeMpcController(namespace=self.namespace)
         # 机器人的任务状态
         self.current_task_id = "0"
         self.current_task_name = "n"
@@ -192,7 +197,6 @@ class Robot:
         """发布机器人状态到/odom话题"""
         pos, quat = self.body.get_world_pose()  # quat: wxyz
         vel_linear, vel_angular = self.body.get_world_vel()
-
 
         pos = pos.detach().cpu().numpy()
         quat = quat.detach().cpu().numpy()

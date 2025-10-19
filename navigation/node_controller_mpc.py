@@ -179,9 +179,8 @@ class NodeMpcController(Node):
     - Publishes velocity commands to `/cmd_vel`.
     """
 
-    def __init__(self):
-        super().__init__("mpc_controller_node")
-        self.get_logger().info("MPC Controller Node has started.")
+    def __init__(self, namespace:str):
+        super().__init__(node_name="node_mpc_controller", namespace=namespace)
 
         # Load parameters
         self.declare_parameters(
@@ -222,13 +221,15 @@ class NodeMpcController(Node):
 
         # ROS 2 Communications
         self.trajectory_sub = self.create_subscription(
-            JointTrajectory, "/timed_trajectory", self.trajectory_callback, 10
+            JointTrajectory, "timed_trajectory", self.trajectory_callback, 10
         )
         self.odom_sub = self.create_subscription(
-            Odometry, "/odom", self.odom_callback, 10
+            Odometry, "odom", self.odom_callback, 10
         )
-        self.cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, "cmd_vel", 10)
         self.control_timer = self.create_timer(self.mpc_dt, self.control_loop)
+
+        self.get_logger().info("MPC Controller Node has started.")
 
     def trajectory_callback(self, msg: JointTrajectory):
         """Handles incoming trajectory messages."""

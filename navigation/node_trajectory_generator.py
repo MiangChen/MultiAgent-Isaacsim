@@ -22,9 +22,8 @@ class NodeTrajectoryGenerator(Node):
     the result as a `trajectory_msgs/JointTrajectory`.
     """
 
-    def __init__(self):
-        super().__init__("trajectory_generator_node")
-        self.get_logger().info("Trajectory Generator Node has started.")
+    def __init__(self,namespace:str):
+        super().__init__(node_name="node_trajectory_generator",namespace=namespace)
 
         # Load robot dynamics and configuration from ROS 2 parameters
         self.declare_parameters(
@@ -48,13 +47,14 @@ class NodeTrajectoryGenerator(Node):
 
         # Subscribe to the geometric path from the planner
         self.path_subscription = self.create_subscription(
-            Path, "/planned_path", self.path_callback, 10
+            Path, "planned_path", self.path_callback, 10
         )
 
         # Publish the timed trajectory for the controller
         self.trajectory_publisher = self.create_publisher(
-            JointTrajectory, "/timed_trajectory", 10
+            JointTrajectory, "timed_trajectory", 10
         )
+        self.get_logger().info("Trajectory Generator Node has started.")
 
     def path_callback(self, msg: Path):
         """Callback function for the /planned_path topic."""

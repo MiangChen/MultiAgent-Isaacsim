@@ -15,8 +15,8 @@ import message_filters
 
 
 class NodePlannerOmpl(Node):
-    def __init__(self):
-        super().__init__("node_planner_ompl")
+    def __init__(self, namespace: str):
+        super().__init__(node_name="node_planner_ompl", namespace=namespace)
 
         self.grid_map = None
         self.cell_size = 0.1
@@ -59,7 +59,7 @@ class NodePlannerOmpl(Node):
         )
         self.time_synchronizer.registerCallback(self.callback)
 
-        self.publisher_path = self.create_publisher(Path, "/planned_path", qos_profile)
+        self.publisher_path = self.create_publisher(Path, "planned_path", qos_profile)
 
     def callback(self, info_msg: DiagnosticArray, pc_msg: PointCloud2):
         self.callback_info(info_msg=info_msg)
@@ -260,7 +260,7 @@ class NodePlannerOmpl(Node):
         self, pos: list, color: list = [0.0, 1.0, 0.0, 1.0], marker_id: int = None
     ):
         if not hasattr(self, "publisher_point"):
-            self.publisher_point = self.create_publisher(Marker, "/point_marker", 10)
+            self.publisher_point = self.create_publisher(Marker, "point_marker", 10)
             self.waypoint_counter = 0
 
         marker = Marker()
