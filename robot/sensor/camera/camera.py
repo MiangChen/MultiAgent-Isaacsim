@@ -126,21 +126,29 @@ class Camera:
         """
         try:
             if not isinstance(rgb_tensor_gpu, torch.Tensor):
-                logger.error(f"输入无效：期望一个 torch.Tensor，但收到了 {type(rgb_tensor_gpu)}。")
+                logger.error(
+                    f"输入无效：期望一个 torch.Tensor，但收到了 {type(rgb_tensor_gpu)}。"
+                )
                 return False
 
             if not isinstance(file_path, str) or not file_path:
-                logger.error(f"文件路径无效：路径必须是一个非空字符串，但收到了 '{file_path}'。")
+                logger.error(
+                    f"文件路径无效：路径必须是一个非空字符串，但收到了 '{file_path}'。"
+                )
                 return False
 
             # 如果是4维张量 (batch, H, W, C)，则只取第一张图
             if rgb_tensor_gpu.ndim == 4:
-                logger.warning(f"输入为4维张量，将只保存第一张图像。形状: {rgb_tensor_gpu.shape}")
+                logger.warning(
+                    f"输入为4维张量，将只保存第一张图像。形状: {rgb_tensor_gpu.shape}"
+                )
                 rgb_tensor_gpu = rgb_tensor_gpu[0]
 
             # 核心检查：必须是3维张量
             if rgb_tensor_gpu.ndim != 3 or rgb_tensor_gpu.shape[2] != 3:
-                logger.error(f"张量形状错误：期望 [H, W, 3]，但收到了 {rgb_tensor_gpu.shape}")
+                logger.error(
+                    f"张量形状错误：期望 [H, W, 3]，但收到了 {rgb_tensor_gpu.shape}"
+                )
                 return False
 
             logger.info(f"开始处理图像，准备保存到 {file_path}...")

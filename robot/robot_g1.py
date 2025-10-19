@@ -51,49 +51,9 @@ class RobotG1(Robot):
         self.counter = 0
         self.pub_period = 50
         self.previous_pos = None
-        self.movement_threshold = 0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
-
-    def _move_to(self, target_pos):
-
-        import numpy as np
-
-        pos, quat = self.body.get_world_poses()  # type np.array
-        target_pos = to_torch(target_pos, device=pos.device)
-
-        if self.counter % self.pub_period == 0:
-            self._publish_feedback(
-                params=self._params_from_pose(pos, quat),
-                progress=self._calc_dist(pos, self.nav_end) * 100 / self.nav_dist,
-            )
-
-        if torch.linalg.norm(target_pos[0:2] - pos[0:2]) < 0.1:
-            zero_velocity = torch.zeros((1, 3), dtype=torch.float32)
-            self.body.robot_articulation.set_linear_velocities(zero_velocity)
-            self.body.robot_articulation.set_angular_velocities(zero_velocity)
-            self._publish_feedback(
-                params=self._params_from_pose(pos, quat), progress=100
-            )
-            return True  # 已经到达目标点附近10cm, 停止运动
-
-        delta = target_pos - pos
-        delta_x, delta_y = delta[0], delta[1]
-        x_control = self.pid_distance.compute(delta_x, dt=1 / 60)
-        y_control = self.pid_distance.compute(delta_y, dt=1 / 60)
-        self.linear_velocity = torch.tensor(
-            [[x_control, y_control, 0]], dtype=torch.float32
+        self.movement_threshold = (
+            0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
         )
-
-        yaw = quat_to_yaw(quat)
-        robot_to_target_angle = np.arctan2(
-            target_pos[1] - pos[1], target_pos[0] - pos[0]
-        )
-        delta_angle = robot_to_target_angle - yaw
-        angular_control = self.pid_angle.compute(delta_angle, dt=1 / 60)
-        self.angular_velocity = torch.tensor(
-            [[0.0, 0.0, angular_control]], dtype=torch.float32
-        )
-
-        return False
 
     def step(self, action):
 
@@ -122,7 +82,6 @@ class RobotG1(Robot):
 
         if self.flag_world_reset:
             if self.flag_action_navigation:
-                self.move_along_path()  # 每一次都计算下速度
                 self.step(self.action)
             if self.is_detecting:
                 self.detect(self, target_prim=self.target_prim)

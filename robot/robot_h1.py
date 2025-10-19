@@ -63,7 +63,9 @@ class RobotH1(Robot):
         self.counter = 0
         self.pub_period = 50
         self.previous_pos = None
-        self.movement_threshold = 0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
+        self.movement_threshold = (
+            0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
+        )
         self.body = BodyH1(cfg_robot=self.cfg_robot, scene=self.scene)
 
         # self.node.register_feedback_publisher(
@@ -115,54 +117,9 @@ class RobotH1(Robot):
         if self.controller_policy:
             self.controller_policy.initialize(self.body.robot_articulation)
         else:
-            logger.error(f"[Warning] RobotH1 '{self.namespace}' has no controller_policy")
-
-    def move_to(self, target_pos):
-        """
-        让2轮差速小车在一个2D平面上运动到目标点
-        缺点：不适合3D，无法避障，地面要是平的
-        速度有两个分两，自转的分量 + 前进的分量
-        """
-        pos, quat = self.body.get_world_poses()
-        # if self.counter % self.pub_period == 0:
-        #     self._publish_feedback(
-        #         params=self._params_from_pose(pos, quat),
-        #         progress=self._calc_dist(pos, self.nav_end) * 100 / self.nav_dist,
-        #     )
-        # 获取2D方向的朝向，逆时针是正
-        yaw = quat_to_yaw(quat_xyzw=quat)
-
-        # 获取机器人和目标连线的XY平面上的偏移角度
-        robot_to_target_angle = np.arctan2(
-            target_pos[1] - pos[1], target_pos[0] - pos[0]
-        )
-
-        # 差速, 和偏移角度成正比，通过pi归一化
-        delta_angle = robot_to_target_angle - yaw
-        if abs(delta_angle) < 0.017:  # 角度控制死区
-            delta_angle = 0
-        elif delta_angle < -np.pi:  # 当差距abs超过pi后, 就代表从这个方向转弯不好, 要从另一个方向转弯
-            delta_angle += 2 * np.pi
-        elif delta_angle > np.pi:
-            delta_angle -= 2 * np.pi
-        if np.linalg.norm(target_pos[0:2] - pos[0:2]) < 1:
-            self.action = [0, 0]
-            self._publish_feedback(
-                params=self._params_from_pose(pos, quat), progress=100
+            logger.error(
+                f"[Warning] RobotH1 '{self.namespace}' has no controller_policy"
             )
-            return True  # 已经到达目标点附近10cm, 停止运动
-        # logger.info(f"delta_angle, np.linalg.norm(target_pos[0:2] - pos[0:2])")
-        k_rotate = 1 / np.pi
-        v_rotation = self.pid_angle.compute(delta_angle, dt=1 / 200)
-        if v_rotation > 1:
-            v_rotation = 1
-        elif v_rotation < -1:
-            v_rotation = -1
-        # 前进速度，和距离成正比
-        k_forward = 1
-        v_forward = 1
-        self.base_command = [v_forward, 0, -1 * v_rotation]
-        return False  # 还没有到达
 
     def step(self, action):
         action = to_torch(action)

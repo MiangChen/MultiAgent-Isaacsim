@@ -88,7 +88,9 @@ class RobotCf2x(Robot):
         self.counter = 0
         self.pub_period = 50
         self.previous_pos = None
-        self.movement_threshold = 0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
+        self.movement_threshold = (
+            0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
+        )
 
         # —— 平滑导航配置（无人机专用）——
         self.nav_target_xy = None  # 目标点的 XY
@@ -370,62 +372,6 @@ class RobotCf2x(Robot):
         self.body.robot_articulation.set_linear_velocities(linear_velocity)
         self.velocity = linear_velocity
 
-    def move_to(self):
-
-        # 落地就先起飞到悬停高度（一次性瞬移到 hover 高度即可）
-        if self.flight_state == "landed":
-            self.takeoff()
-
-        # === 读取当前位姿（用仿真里的真实位姿，不再用 self.position 作为“真值”） ===
-        positions, orientations = self.body.get_world_poses()
-
-        if self.counter % self.pub_period == 0:
-            self._publish_feedback(
-                params=self._params_from_pose(positions, orientations),
-                progress=self._calc_dist(positions, self.nav_end) * 100 / self.nav_dist,
-            )
-
-        cur_pos = np.array(positions[0], dtype=np.float32)
-        pos_xy = cur_pos[:2]
-
-        target_xy = self.nav_target_xy.astype(np.float32)
-        delta = target_xy - pos_xy
-        dist = float(np.linalg.norm(delta))
-
-        # 到点判定
-        stop_r = float(self.nav_stop_radius)
-
-        if dist <= stop_r:
-            # 停车：把刚体速度清零
-            zero_velocity = torch.zeros((1, 3), dtype=torch.float32)
-            self.velocity = torch.zeros((3,), dtype=torch.float32)
-            self.nav_target_xy = None
-
-            self.body.robot_articulation.set_linear_velocities(zero_velocity)
-            self.body.robot_articulation.set_angular_velocities(zero_velocity)
-
-            self.flag_action_navigation = False
-            self.state_skill_complete = True
-            self._publish_feedback(
-                params=self._params_from_pose(positions, orientations), progress=100
-            )
-            return True
-
-        # 期望速度：指向目标，近处线性减速
-        vmax = float(self.nav_max_speed)
-        slow_r = float(self.nav_slow_radius)
-        dir_xy = delta / (dist + 1e-6)
-        spd = vmax * (dist / slow_r) if dist < slow_r else vmax
-        v_world = torch.tensor(
-            [dir_xy[0] * spd, dir_xy[1] * spd, 0.0], dtype=torch.float32
-        )
-
-        # === 把速度交给“根刚体” ===
-        self.body.robot_articulation.set_linear_velocities(v_world)
-        # 可选：如果希望机体绕 z 朝速度方向缓慢对齐，也可以给一个角速度：
-        # self.robot_entity.set_angular_velocity(np.array([0.0, 0.0, yaw_rate], dtype=np.float32))
-        self.velocity = v_world
-
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
 
@@ -473,56 +419,6 @@ class RobotCf2x(Robot):
                 self._keyboard_sub = None
             except Exception as e:
                 print(f"键盘事件清理失败: {e}")
-
-    # 以下方法保留用于兼容性，主要用于地面机器人
-
-    def move_along_path(self, path: list = None, flag_reset: bool = False):
-        """让机器人沿着路径点运动"""
-        return False
-
-    def navigate_to(
-        self, pos_target: np.ndarray = None, reset_flag: bool = False, **kwargs
-    ):
-        """
-        导航到目标位置。
-        - 无人机: 执行特殊的直线飞行逻辑。
-        - 地面车: 调用父类的 A* 路径规划实现。
-        """
-        if pos_target is None:
-            raise ValueError("no target position")
-
-        # 1. --- 处理子类的特殊情况：无人机 ---
-        if hasattr(self, "is_drone") and self.is_drone:
-            logger.info("Executing drone-specific navigation.")
-            # 支持传入 2D 或 3D；若含 Z 则忽略
-            self.nav_end = np.array(pos_target, dtype=np.float32)
-            self.nav_target_xy = self.nav_end[:2].copy()
-            self.nav_active = True
-
-            # 设置通用状态标志
-            self.flag_action_navigation = True
-            self.state_skill = "navigate_to"
-            self.state_skill_complete = False
-
-            if hasattr(self, "keyboard_control_enabled"):
-                self.keyboard_control_enabled = False
-
-            return True  # 子类方法返回一个状态
-
-        # 2. --- 对于所有其他情况（地面车），委托给父类 ---
-        else:
-            logger.info("Delegating to superclass for ground navigation.")
-            # 直接调用父类的同名方法，并将所有相关参数传递过去。
-            # 父类会处理 A* 规划、状态设置等所有事情。
-            super().navigate_to(
-                pos_target=self.nav_end,
-                reset_flag=reset_flag,
-                # 允许传递父类需要的额外参数，如 load_from_file
-                **kwargs,
-            )
-
-            # 保持与无人机分支一致的返回值
-            return True
 
     def pick_up(self):
         """拾取物品"""

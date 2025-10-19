@@ -1,8 +1,9 @@
 from typing import Tuple, Dict, Any, List
 
 from rclpy.action import ActionServer
+from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 
-import numpy as np
 from shapely.geometry import Polygon, LineString, MultiLineString
 from shapely.affinity import rotate
 import numpy as np
@@ -11,7 +12,7 @@ import torch
 from isaacsim.core.api.scenes import Scene
 from isaacsim.core.prims import RigidPrim
 import isaacsim.core.utils.prims as prims_utils
-from isaacsim.core.utils.prims import define_prim, get_prim_at_path
+
 from isaacsim.core.utils.viewports import (
     create_viewport_for_camera,
     set_camera_view,
@@ -19,6 +20,7 @@ from isaacsim.core.utils.viewports import (
 from pxr import Usd, UsdGeom
 
 from map.map_grid_map import GridMap
+
 # from path_planning.path_planning_astar import AStar
 from robot.sensor.camera import CfgCamera, CfgCameraThird, Camera
 from robot.cfg import CfgRobot
@@ -51,10 +53,12 @@ def _get_viewport_manager_from_container():
     """
     try:
         from containers import get_container
+
         container = get_container()
         return container.viewport_manager()
     except Exception as e:
         raise Exception("ViewportManager not found in container") from e
+
 
 class Robot:
     def __init__(
@@ -124,8 +128,9 @@ class Robot:
             node=self.node,
             action_type=SkillExecution,
             action_name=f"/skill_execution",
-            execute_callback=self.execute_skill_callback,
+            execute_callback=self.callback_execute_skill,
         )
+        self.node.callback_cmd_vel = self.callback_cmd_vel
 
         # 机器人的任务状态
         self.current_task_id = "0"
@@ -136,7 +141,7 @@ class Robot:
         self.nav_end = None
         self.nav_dist = 1.0
 
-        #机器人探索区域状态
+        # 机器人探索区域状态
         self.is_detecting = False
         self.target_prim = None
 
@@ -147,7 +152,7 @@ class Robot:
         self.track_waypoints_sub
 
     ########################## Skill Action Server ############################
-    def execute_skill_callback(self, goal_handle):
+    def callback_execute_skill(self, goal_handle):
         if self.state_skill_complete is False:
             logger.error(
                 f"Robot is busy with skill '{self.state_skill}'. Rejecting new goal."
@@ -187,6 +192,24 @@ class Robot:
         result.message = f"Skill '{skill_name}' executed successfully."
         return result
 
+    ########################## odom ############################
+    def publish_robot_state(self):
+        """发布机器人状态到/odom话题"""
+        pos, quat = self.body.get_world_poses()
+        lin_vel = self.body.robot_articulation.get_linear_velocities()
+        ang_vel = self.body.robot_articulation.get_angular_velocities()
+
+        odom_msg = Odometry()
+        # todo
+
+        self.node.publisher_odom.publish(odom_msg)
+
+    def callback_cmd_vel(self, msg):
+        """处理来自ROS的速度命令"""
+        linear_vel = torch.tensor([msg.linear.x, msg.linear.y, msg.linear.z])
+        angular_vel = torch.tensor([msg.angular.x, msg.angular.y, msg.angular.z])
+        self.controller_simplified(linear_vel, angular_vel)
+
     ########################## obs ############################
     def get_obs(self) -> dict:
         """
@@ -196,10 +219,14 @@ class Robot:
 
     def initialize(self) -> None:
         for camera_name, camera_cfg in self.cfg_robot.cfg_dict_camera.items():
-            camera_instance = Camera(path_prim_parent=self.cfg_robot.path_prim_robot, cfg_camera=camera_cfg)
+            camera_instance = Camera(
+                path_prim_parent=self.cfg_robot.path_prim_robot, cfg_camera=camera_cfg
+            )
             self.camera[camera_name] = camera_instance
         for cam_name, cam_cfg in self.cfg_robot.cfg_dict_camera_third.items():
-            camera_instance = Camera(path_prim_parent=self.cfg_robot.path_prim_robot, cfg_camera=cam_cfg)
+            camera_instance = Camera(
+                path_prim_parent=self.cfg_robot.path_prim_robot, cfg_camera=cam_cfg
+            )
             self.camera_third[cam_name] = camera_instance
         for camera in self.camera.values():
             camera.initialize()
@@ -208,124 +235,15 @@ class Robot:
         # if self.cfg_camera_third_person and self.cfg_camera_third_person.enabled:
         #     self._initialize_third_person_camera()
 
-    def move_to(
-        self, target_position: np.ndarray, target_orientation: np.ndarray
-    ) -> bool:
-        """
-        Args:
-            target_position: 目标位置 , shape (3,)
-            target_orientation: 目标朝向, shape (4,)
-        Returns:
-            bool: 是否到达了目标点附近
-        """
-        raise NotImplementedError()
-
-    def move_along_path(self, path: list = None, flag_reset: bool = False) -> bool:
-        """
-        让机器人沿着一个list的路径点运动
-        需求: 在while外面 能够记录已经到达的点, 每次到达某个目标点的 10cm附近,就认为到了, 然后准备下一个点
-
-        """
-        if flag_reset == True:
-            self.path_index = 0
-            self.path = path
-
-        if self.path_index < len(self.path):  # 当index==len的时候, 就已经到达目标了
-            flag_reach = self.move_to(self.path[self.path_index])
-            if flag_reach == True:
-                self.path_index += 1
-            return False
-        else:
-            self.flag_action_navigation = False
-            self.state_skill_complete = True
-            return True
-
-    def _calc_dist(self, pos1: torch.Tensor = None, pos2: torch.Tensor = None):
-        pos1 = to_torch(pos1)
-        pos2 = to_torch(pos2)
-        return torch.linalg.norm(pos1 - pos2)
-
-    def navigate_to(
-        self,
-        pos_target: np.ndarray = None,
-        orientation_target: np.ndarray = None,
-        reset_flag: bool = False,
-        load_from_file: bool = False,
-    ) -> None:
-        """
-        让机器人导航到某一个位置,
-        不需要输入机器人的起始位置, 因为机器人默认都是从当前位置出发的;
-        本质是使用A*等算法, 规划一系列的路径
-        Args:
-            target_pos: 机器人的目标位置
-            target_orientaton: 机器人的目标方向
-            reset_flag:
-
-        Returns:
-        """
-        # 小车/人形机器人的导航只能使用2d的
-        if pos_target == None:
-            raise ValueError("no target position")
-        elif pos_target[2] != 0:
-            raise ValueError("The z-axis height of the robot must be on the plane")
-        pos_robot = self.body.get_world_poses()[0]
-
-        self.nav_begin = np.array(pos_robot)
-        self.nav_end = np.array(pos_target)
-        self.nav_dist = self._calc_dist(self.nav_begin, self.nav_end)
-
-        pos_index_target = self.map_grid.compute_index(self.nav_end)
-        pos_index_robot = self.map_grid.compute_index(self.nav_begin)
-        pos_index_robot[-1] = 0  # todo : 这也是因为机器人限制导致的
-
-        # 用于把机器人对应位置的设置为空的, 不然会找不到路线
-        if load_from_file == True:
-            grid_map = np.load("./value_map.npy")
-            pos_map = np.load("./pos_map.npy")
-        else:
-            grid_map = self.map_grid.value_map
-            np.save("./value_map.npy", grid_map)
-            pos_map = self.map_grid.pos_map
-            np.save("./pos_map.npy", pos_map)
-
-        grid_map[pos_index_robot] = self.map_grid.empty_cell
-
-        planner = AStar(
-            grid_map,
-            obs_value=1.0,
-            free_value=0.0,
-            directions="eight",
-            penalty_factor=20,
-        )
-        path = planner.find_path(
-            tuple(pos_index_robot), tuple(pos_index_target), render=True
-        )
-
-        real_path = np.zeros_like(path, dtype=np.float32)
-        for i in range(path.shape[0]):  # 把index变成连续实际世界的坐标
-            real_path[i] = self.map_grid.pos_map[tuple(path[i])]
-            real_path[i][-1] = 0
-
-        logger.info(real_path)
-
-        self.move_along_path(real_path, flag_reset=True)
-
-        # 标记一下, 开始运动
-        self.flag_action_navigation = True # todo 删除
-
-        # 标记当前的动作
-        self.state_skill = "navigate_to" # todo 改为 skill_name = 'navigate'
-        self.state_skill_complete = False  # todo 改为 skill_state: str
-
-        return
-
     def on_physics_step(self, step_size) -> None:
         """
         Args:
             step_size:  dt 时间间隔
-        """  # --- 新增：在每一步物理更新后，更新相机位置 ---
+        """
         # 更新相机的视野
         self._update_camera_view()
+        # publish robot position
+        self.publish_robot_state()
         return
 
     def post_reset(self) -> None:
@@ -494,15 +412,19 @@ class Robot:
     def return_home(self):
         self.navigate_to(self.body.cfg_robot.base)
 
-    def detect(self, target_prim:str = None):
+    def detect(self, target_prim: str = None):
         pos, quat = self.body.get_world_poses()
         result = self.scene_manager.overlap_hits_target_ancestor(target_prim)
-        logger.info(f"[Skill] {self.body.cfg_robot.name} is detecting for {target_prim}. The result is {result}")
+        logger.info(
+            f"[Skill] {self.body.cfg_robot.name} is detecting for {target_prim}. The result is {result}"
+        )
         return result
 
     def broadcast(self, params: Dict[str, Any]):
         content = params.get("content")
-        logger.info(f"[Skill] {self.body.cfg_robot.name} executing broadcasting. The content is {content}")
+        logger.info(
+            f"[Skill] {self.body.cfg_robot.name} executing broadcasting. The content is {content}"
+        )
         return True
 
     def explore(
@@ -511,10 +433,15 @@ class Robot:
         holes: List[tuple] = None,
         target_prim: str = "/TARGET_PRIM_NOT_SPECIFIED",
     ):
-        waypoints = self.plan_exploration_waypoints(boundary, holes, lane_width = self.body.cfg_robot.detection_radius, robot_radius = self.body.cfg_robot.robot_radius)
-        self.is_detecting = True #TODO:detect的反馈机制
+        waypoints = self.plan_exploration_waypoints(
+            boundary,
+            holes,
+            lane_width=self.body.cfg_robot.detection_radius,
+            robot_radius=self.body.cfg_robot.robot_radius,
+        )
+        self.is_detecting = True  # TODO:detect的反馈机制
         self.target_prim = target_prim
-        self.move_along_path(waypoints, flag_reset= True)
+        self.move_along_path(waypoints, flag_reset=True)
         return True
 
     def plan_exploration_waypoints(
@@ -589,7 +516,7 @@ class Robot:
             raise ValueError("区域太窄或 robot_radius 过大，收缩后为空。")
 
         # ---- 2) 扫掠坐标系旋转 ----
-        rot = rotate(shrunk, -sweep_deg, origin='centroid', use_radians=False)
+        rot = rotate(shrunk, -sweep_deg, origin="centroid", use_radians=False)
         minx, miny, maxx, maxy = rot.bounds
 
         # ---- 3) 竖直切片 ----
@@ -631,24 +558,32 @@ class Robot:
             reverse = not reverse
 
         if not path_pts_2d:
-            raise ValueError("没有生成任何覆盖航点，请检查 lane_width/robot_radius/区域大小。")
+            raise ValueError(
+                "没有生成任何覆盖航点，请检查 lane_width/robot_radius/区域大小。"
+            )
 
         # ---- 5) 旋回原坐标系并转 3D ----
-        back = rotate(LineString(path_pts_2d), sweep_deg,
-                      origin=poly.centroid, use_radians=False)
+        back = rotate(
+            LineString(path_pts_2d), sweep_deg, origin=poly.centroid, use_radians=False
+        )
         waypoints_2d = list(back.coords)
 
         # 去抖
         simplified_2d = [waypoints_2d[0]]
         for p in waypoints_2d[1:]:
-            if np.hypot(p[0] - simplified_2d[-1][0], p[1] - simplified_2d[-1][1]) > 1e-3:
+            if (
+                np.hypot(p[0] - simplified_2d[-1][0], p[1] - simplified_2d[-1][1])
+                > 1e-3
+            ):
                 simplified_2d.append(p)
 
         # 输出 3D（z 固定为 z_out，默认 0）
         waypoints = [(x, y, float(z_out)) for (x, y) in simplified_2d]
         return waypoints
 
-    def controller_simplified(self, linear_velocity:torch.Tensor, angular_velocity:torch.Tensor) -> None:
+    def controller_simplified(
+        self, linear_velocity: torch.Tensor, angular_velocity: torch.Tensor
+    ) -> None:
         self.body.robot_articulation.set_linear_velocities(linear_velocity)
         self.body.robot_articulation.set_angular_velocities(angular_velocity)
         return None
@@ -661,7 +596,6 @@ class Robot:
         )
         self.track_waypoints.append(pos)
 
-
     def start_tracking(self, target_prim: str = None):
         self.is_tracking = True
         self.track_waypoints = self.node.create_subscription(
@@ -672,10 +606,12 @@ class Robot:
         )
 
     def track(self):
-        if self.track_waypoint_index < len(self.track_waypoints):  # 当index==len的时候, 就已经到达目标了
+        if self.track_waypoint_index < len(
+            self.track_waypoints
+        ):  # 当index==len的时候, 就已经到达目标了
             flag_reach = self.move_to(self.track_waypoints[self.track_waypoint_index])
             if flag_reach == True:
-                self.track_waypoint_index += 1 #TODO：Step里应用这个技能
+                self.track_waypoint_index += 1  # TODO：Step里应用这个技能
 
     def stop_tracking(self):
         self.is_tracking = False
@@ -683,17 +619,6 @@ class Robot:
         self.track_waypoint_index = 0
         self.node.destroy_subscription(self.track_waypoints)
         self.track_waypoints_sub = None
-
-    def step(self, action: np.ndarray) -> Tuple[np.ndarray]:
-        """
-        Args:
-            action: 使用np.ndarray存储的机器人速度
-
-        Returns:
-            obs: 机器人的观测量  但是似乎没有必要这样设计?
-            info:
-        """
-        raise NotImplementedError
 
     def _initialize_third_person_camera(self):
         """初始化第三人称相机并注册到ViewportManager"""

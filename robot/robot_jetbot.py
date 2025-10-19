@@ -54,7 +54,9 @@ class RobotJetbot(Robot):
         self.counter = 0
         self.pub_period = 50
         self.previous_pos = None
-        self.movement_threshold = 0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
+        self.movement_threshold = (
+            0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
+        )
 
         # self.node = node
         #
@@ -147,71 +149,6 @@ class RobotJetbot(Robot):
                 ],
             },
         )
-
-    def move_to(self, target_pos):
-        import numpy as np
-
-        """
-        让2轮差速小车在一个2D平面上运动到目标点
-        缺点：不适合3D，无法避障，地面要是平的
-        速度有两个分两，自转的分量 + 前进的分量
-        """
-        pos, quat = self.body.get_world_poses()  # type np.array
-        target_pos = to_torch(target_pos, device=pos.device)
-
-        if self.counter % self.pub_period == 0:
-            self._publish_feedback(
-                params=self._params_from_pose(pos, quat),
-                progress=self._calc_dist(pos, self.nav_end) * 100 / self.nav_dist,
-            )
-
-        # 获取2D方向的朝向，逆时针是正
-        yaw = quat_to_yaw(quat)
-        # 获取机器人和目标连线的XY平面上的偏移角度
-        robot_to_target_angle = np.arctan2(
-            target_pos[1] - pos[1], target_pos[0] - pos[0]
-        )
-        # 差速, 和偏移角度成正比，通过pi归一化
-        delta_angle = robot_to_target_angle - yaw
-        if abs(delta_angle) < 0.017:  # 角度控制死区
-            delta_angle = 0
-        elif delta_angle < -np.pi:  # 当差距abs超过pi后, 就代表从这个方向转弯不好, 要从另一个方向转弯
-            delta_angle += 2 * np.pi
-        elif delta_angle > np.pi:
-            delta_angle -= 2 * np.pi
-        if torch.linalg.norm(target_pos[0:2] - pos[0:2]) < 0.1:
-            self.action = [0, 0]
-            self._publish_feedback(
-                params=self._params_from_pose(pos, quat), progress=100
-            )
-            return True  # 已经到达目标点附近10cm, 停止运动
-
-        k_rotate = 1 / np.pi
-        v_rotation = self.pid_angle.compute(delta_angle, dt=1 / 60)
-        # 前进速度，和距离成正比
-        k_forward = 1
-        # 前进速度：更大常数
-        v_forward = 60.0  # 原来 30
-
-        # 合速度
-        v_left = v_forward + v_rotation
-        v_right = v_forward - v_rotation
-
-        v_max = 80.0  # 原来 40
-
-        # 限幅
-        v_left = np.clip(v_left, -v_max, v_max)
-        v_right = np.clip(v_right, -v_max, v_max)
-        if v_left > v_max:
-            v_left = v_max
-        elif v_left < -v_max:
-            v_left = -v_max
-        if v_right > v_max:
-            v_right = v_max
-        elif v_right < -v_max:
-            v_right = -v_max
-        self.action = [v_left, v_right]
-        return False  # 还没有到达
 
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)

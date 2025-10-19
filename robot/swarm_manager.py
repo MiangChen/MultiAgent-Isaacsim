@@ -114,9 +114,9 @@ class SwarmManager:
                     )
 
                 self.robot_warehouse[robot_class_name].append(robot)
-                self.map_semantic.map_semantic[
-                    robot.cfg_robot.namespace
-                ] = robot.cfg_robot.path_prim_robot
+                self.map_semantic.map_semantic[robot.cfg_robot.namespace] = (
+                    robot.cfg_robot.path_prim_robot
+                )
 
     def activate_robot(
         self, flag_file_path: str = None, flag_dict: Dict = None

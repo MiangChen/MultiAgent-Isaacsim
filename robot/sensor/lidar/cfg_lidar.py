@@ -10,7 +10,9 @@ class CfgLidar(CfgBase):
     """
 
     type: Optional[str] = Field(default="lidar", description="传感器类型")
-    prim_path: Optional[str] = Field(default=None, description="Lidar 在 USD 舞台中的路径")
+    prim_path: Optional[str] = Field(
+        default=None, description="Lidar 在 USD 舞台中的路径"
+    )
 
     # --- 位姿设置 ---
     position: Tuple[float, float, float] = Field(
@@ -33,4 +35,6 @@ class CfgLidar(CfgBase):
     frequency: Optional[int] = Field(default=10, description="Lidar 的扫描频率 (Hz)")
 
     # 是否在初始化时自动添加数据读取器 (Annotator)
-    attach_annotator: bool = Field(default=True, description="是否自动附加数据读取器以获取数据")
+    attach_annotator: bool = Field(
+        default=True, description="是否自动附加数据读取器以获取数据"
+    )

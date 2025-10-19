@@ -167,7 +167,3 @@ class RobotDroneAutel:
     def step(self, action: np.ndarray):
         # 无人机的动作控制逻辑 (例如，应用推力)
         pass  # raise NotImplementedError
-
-    def move_to(self, target_position: np.ndarray, target_orientation: np.ndarray):
-        # 无人机飞向目标点的逻辑
-        pass  # raise NotImplementedError
