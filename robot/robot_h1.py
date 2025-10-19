@@ -115,7 +115,7 @@ class RobotH1(Robot):
         if self.controller_policy:
             self.controller_policy.initialize(self.body.robot_articulation)
         else:
-            logger.error(f"[Warning] RobotH1 '{self.name}' has no controller_policy")
+            logger.error(f"[Warning] RobotH1 '{self.namespace}' has no controller_policy")
 
     def move_to(self, target_pos):
         """

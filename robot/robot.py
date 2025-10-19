@@ -82,8 +82,8 @@ class Robot:
             + f"/{self.cfg_robot.type}"
             + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
         )
-        self.cfg_robot.name = self.cfg_robot.type + f"_{self.cfg_robot.id}"
-        self.name = self.cfg_robot.name
+        self.cfg_robot.namespace = self.cfg_robot.type + f"_{self.cfg_robot.id}"
+        self.namespace = self.cfg_robot.namespace
 
         self.body: BodyRobot = None
 
@@ -119,11 +119,11 @@ class Robot:
         self.transform_camera_pos = np.array([0, 0, 0])
 
         # 机器人的ros node
-        self.node = NodeRobot(robot_name=self.name)
+        self.node = NodeRobot(namespace=self.namespace)
         self.action_server_skill = ActionServer(
             node=self.node,
             action_type=SkillExecution,
-            action_name=f"/skill/{self.name}",
+            action_name=f"/skill_execution",
             execute_callback=self.execute_skill_callback,
         )
 

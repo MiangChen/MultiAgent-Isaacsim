@@ -64,7 +64,7 @@ class BodyG1(BodyRobot):
 
         self.robot_articulation = Articulation(
             prim_paths_expr=self.cfg_robot.path_prim_robot,
-            name=self.cfg_robot.name,
+            name=self.cfg_robot.namespace,
             positions=to_torch(self.cfg_robot.position).reshape(1, 3),
             orientations=to_torch(self.cfg_robot.quat).reshape(1, 4),
         )

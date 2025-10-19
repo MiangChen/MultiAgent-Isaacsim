@@ -11,8 +11,8 @@ ASSET_PATH = config_manager.get("path_asset")
 class CfgRobot(CfgBase):
     # meta info
     type: str = "robot"
-    name: str = "robot"
     id: int = 0
+    namespace: str = f"{type}_{id}"
     path_prim_swarm: str = "/World/robot"
     path_prim_robot: str = None
     path_usd: str = None

@@ -115,7 +115,7 @@ class SwarmManager:
 
                 self.robot_warehouse[robot_class_name].append(robot)
                 self.map_semantic.map_semantic[
-                    robot.cfg_robot.name
+                    robot.cfg_robot.namespace
                 ] = robot.cfg_robot.path_prim_robot
 
     def activate_robot(
@@ -160,7 +160,7 @@ class SwarmManager:
                 if robot.cfg_robot.type == name:
                     return robot
         for robot in self.robot_warehouse.keys():
-            if robot.cfg_robot.name == name:
+            if robot.cfg_robot.namespace == name:
                 return robot
         return None
 

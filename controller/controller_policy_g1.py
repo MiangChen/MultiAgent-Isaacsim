@@ -40,7 +40,7 @@ class G1FlatTerrainPolicy(PolicyController):
         Args:
             prim_path (str) -- prim path of the robot on the stage
             root_path (Optional[str]): The path to the articulation root of the robot
-            name (str) -- name of the quadruped
+            name (str) -- namespace of the quadruped
             usd_path (str) -- robot usd filepath in the directory
             position (np.ndarray) -- position of the robot
             orientation (np.ndarray) -- orientation of the robot

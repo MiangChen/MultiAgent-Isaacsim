@@ -67,9 +67,9 @@ class PolicyController(BaseController):
 
     # # 初始化机器人关节树
     # if root_path == None:
-    #     self.robot = SingleArticulation(prim_path=prim_path, name=name, position=position, orientation=orientation)
+    #     self.robot = SingleArticulation(prim_path=prim_path, namespace=namespace, position=position, orientation=orientation)
     # else:
-    #     self.robot = SingleArticulation(prim_path=root_path, name=name, position=position, orientation=orientation)
+    #     self.robot = SingleArticulation(prim_path=root_path, namespace=namespace, position=position, orientation=orientation)
 
     async def load_policy(self, policy_file_path, policy_env_path) -> None:
         """
