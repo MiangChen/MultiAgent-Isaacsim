@@ -32,13 +32,22 @@ class BodyRobot:
         raise NotImplementedError
 
     def get_world_pose(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        quat: wxyz
+        """
         pos_IB, q_IB = self.robot_articulation.get_world_poses()
         pos_IB, q_IB = pos_IB[0], q_IB[0]
-        pos_IB = to_torch(pos_IB, device=pos_IB.device)
-        q_IB = to_torch(q_IB, device=q_IB.device)
+        pos_IB = to_torch(pos_IB)
+        q_IB = to_torch(q_IB)
         return pos_IB, q_IB
 
     def get_world_vel(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        lin_vel = to_torch(self.robot_articulation.get_linear_velocities())
-        ang_vel = to_torch(self.robot_articulation.get_angular_velocities())
-        return lin_vel, ang_vel
+        """
+        vel_linear:  shape [3,]
+        vel_angular: shape [3,]
+        """
+        vel_linear = self.robot_articulation.get_linear_velocities()[0]
+        vel_angular = self.robot_articulation.get_angular_velocities()[0]
+        vel_linear = to_torch(vel_linear)
+        vel_angular = to_torch(vel_angular)
+        return vel_linear, vel_angular

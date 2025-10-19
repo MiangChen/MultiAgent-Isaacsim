@@ -124,13 +124,8 @@ class Robot:
 
         # 机器人的ros node
         self.node = NodeRobot(namespace=self.namespace)
-        self.action_server_skill = ActionServer(
-            node=self.node,
-            action_type=SkillExecution,
-            action_name=f"/skill_execution",
-            execute_callback=self.callback_execute_skill,
-        )
         self.node.callback_cmd_vel = self.callback_cmd_vel
+        self.node.callback_execute_skill = self.callback_execute_skill
 
         # 机器人的任务状态
         self.current_task_id = "0"
@@ -192,30 +187,48 @@ class Robot:
         result.message = f"Skill '{skill_name}' executed successfully."
         return result
 
-    ########################## odom ############################
+    ########################## Publisher Odom  ############################
     def publish_robot_state(self):
         """发布机器人状态到/odom话题"""
-        pos, quat = self.body.get_world_pose()
-        lin_vel = self.body.robot_articulation.get_linear_velocities()
-        ang_vel = self.body.robot_articulation.get_angular_velocities()
+        pos, quat = self.body.get_world_pose()  # quat: wxyz
+        vel_linear, vel_angular = self.body.get_world_vel()
+
+
+        pos = pos.detach().cpu().numpy()
+        quat = quat.detach().cpu().numpy()
+        vel_linear = vel_linear.detach().cpu().numpy()
+        vel_angular = vel_angular.detach().cpu().numpy()
 
         odom_msg = Odometry()
-        # todo
+        odom_msg.header.stamp = self.node.get_clock().now().to_msg()
+        odom_msg.header.frame_id = "map"  # or "odom"
+        odom_msg.child_frame_id = self.namespace
+
+        odom_msg.pose.pose.position.x = float(pos[0])
+        odom_msg.pose.pose.position.y = float(pos[1])
+        odom_msg.pose.pose.position.z = float(pos[2])
+
+        odom_msg.pose.pose.orientation.x = float(quat[1])
+        odom_msg.pose.pose.orientation.y = float(quat[2])
+        odom_msg.pose.pose.orientation.z = float(quat[3])
+        odom_msg.pose.pose.orientation.w = float(quat[0])
+
+        odom_msg.twist.twist.linear.x = float(vel_linear[0])
+        odom_msg.twist.twist.linear.y = float(vel_linear[1])
+        odom_msg.twist.twist.linear.z = float(vel_linear[2])
+
+        odom_msg.twist.twist.angular.x = float(vel_angular[0])
+        odom_msg.twist.twist.angular.y = float(vel_angular[1])
+        odom_msg.twist.twist.angular.z = float(vel_angular[2])
 
         self.node.publisher_odom.publish(odom_msg)
 
+    ########################## Subscriber Velocity  ############################
     def callback_cmd_vel(self, msg):
         """处理来自ROS的速度命令"""
         linear_vel = torch.tensor([msg.linear.x, msg.linear.y, msg.linear.z])
         angular_vel = torch.tensor([msg.angular.x, msg.angular.y, msg.angular.z])
         self.controller_simplified(linear_vel, angular_vel)
-
-    ########################## obs ############################
-    def get_obs(self) -> dict:
-        """
-        Get observation of robot, including controllers, cameras, and world pose.
-        """
-        raise NotImplementedError()
 
     def initialize(self) -> None:
         for camera_name, camera_cfg in self.cfg_robot.cfg_dict_camera.items():

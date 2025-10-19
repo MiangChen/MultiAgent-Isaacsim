@@ -1,6 +1,9 @@
 from rclpy.node import Node
+from rclpy.action import ActionServer
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
+
+from gsi_msgs.gsi_msgs_helper import SkillExecution
 
 from log.log_manager import LogManager
 
@@ -17,7 +20,17 @@ class NodeRobot(Node):
         self.namespace = namespace
         self.publisher_odom = self.create_publisher(Odometry, 'odom', 10)
         self.subscriber_cmd_vel = self.create_subscription(Twist, 'cmd_vel', self.callback_cmd_vel, 10)
+        self.action_server_skill = ActionServer(
+            self,
+            action_type=SkillExecution,
+            action_name=f"skill_execution",
+            execute_callback=self.callback_execute_skill,
+        )
         logger.info(f"ROS2 Node for {self.namespace} has been created.")
 
+
     def callback_cmd_vel(self, msg):
+        pass
+
+    def callback_execute_skill(self, goal_handle):
         pass
