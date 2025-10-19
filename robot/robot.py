@@ -1,7 +1,7 @@
 from typing import Tuple, Dict, Any, List
 
-from rclpy.action import ActionServer
-from geometry_msgs.msg import Twist
+import threading
+from rclpy.executors import MultiThreadedExecutor
 from nav_msgs.msg import Odometry
 
 from shapely.geometry import Polygon, LineString, MultiLineString
@@ -124,7 +124,7 @@ class Robot:
 
         # 机器人的ros node
         self.node = NodeRobot(namespace=self.namespace)
-        self.node.callback_cmd_vel = self.callback_cmd_vel
+        self.node.set_robot_instance(self)
         self.node.callback_execute_skill = self.callback_execute_skill
 
         self.node_planner_ompl = NodePlannerOmpl(namespace=self.namespace)
@@ -132,6 +132,13 @@ class Robot:
             namespace=self.namespace
         )
         self.node_controller_mpc = NodeMpcController(namespace=self.namespace)
+
+        self.executor = MultiThreadedExecutor()
+        self.ros_thread = None
+        self.stop_event = threading.Event()
+        self._setup_executor()
+        self.start_ros()
+
         # 机器人的任务状态
         self.current_task_id = "0"
         self.current_task_name = "n"
@@ -232,8 +239,58 @@ class Robot:
         """处理来自ROS的速度命令"""
         linear_vel = torch.tensor([msg.linear.x, msg.linear.y, msg.linear.z])
         angular_vel = torch.tensor([msg.angular.x, msg.angular.y, msg.angular.z])
+        print("linear_vel", linear_vel)
         self.controller_simplified(linear_vel, angular_vel)
 
+    ########################## Start ROS  ############################
+
+    def _setup_executor(self):
+        self.executor.add_node(self.node)
+        self.executor.add_node(self.node_planner_ompl)
+        self.executor.add_node(self.node_trajectory_generator)
+        self.executor.add_node(self.node_controller_mpc)
+
+    def start_ros(self):
+        if self.ros_thread is None or not self.ros_thread.is_alive():
+            self.ros_thread = threading.Thread(
+                target=self._spin_ros,
+                daemon=True,
+                name=f"ROS_{self.namespace}"
+            )
+            self.ros_thread.start()
+            logger.info(f"Robot {self.namespace} ROS thread started")
+
+    def _spin_ros(self):
+        try:
+            while not self.stop_event.is_set():
+                self.executor.spin_once(timeout_sec=0.05)
+        except Exception as e:
+            logger.error(f"Robot {self.namespace} ROS thread error: {e}")
+        finally:
+            logger.info(f"Robot {self.namespace} ROS thread stopped")
+
+    def stop_ros(self):
+        if self.ros_thread and self.ros_thread.is_alive():
+            self.stop_event.set()
+            self.ros_thread.join(timeout=2.0)
+            if self.ros_thread.is_alive():
+                logger.warning(f"Robot {self.namespace} ROS thread did not stop gracefully")
+
+    def cleanup(self):
+        self.stop_ros()
+
+        try:
+            self.executor.remove_node(self.node)
+            self.executor.remove_node(self.node_planner_ompl)
+            self.executor.remove_node(self.node_trajectory_generator)
+            self.executor.remove_node(self.node_controller_mpc)
+
+            self.node.destroy_node()
+            self.node_planner_ompl.destroy_node()
+            self.node_trajectory_generator.destroy_node()
+            self.node_controller_mpc.destroy_node()
+        except Exception as e:
+            logger.error(f"Error cleaning up robot {self.name}: {e}")
     def initialize(self) -> None:
         for camera_name, camera_cfg in self.cfg_robot.cfg_dict_camera.items():
             camera_instance = Camera(
@@ -601,8 +658,9 @@ class Robot:
     def controller_simplified(
         self, linear_velocity: torch.Tensor, angular_velocity: torch.Tensor
     ) -> None:
-        self.body.robot_articulation.set_linear_velocities(linear_velocity)
-        self.body.robot_articulation.set_angular_velocities(angular_velocity)
+        if self.body.robot_articulation.is_physics_handle_valid():
+            self.body.robot_articulation.set_linear_velocities(linear_velocity)
+            self.body.robot_articulation.set_angular_velocities(angular_velocity)
         return None
 
     def track_callback(self, msg):

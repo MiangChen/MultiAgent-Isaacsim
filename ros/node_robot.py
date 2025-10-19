@@ -18,6 +18,8 @@ class NodeRobot(Node):
     def __init__(self, namespace: str):
         super().__init__(node_name=f"node_{namespace}", namespace=namespace)
         self.namespace = namespace
+        self.robot_instance = None
+
         self.publisher_odom = self.create_publisher(Odometry, "odom", 10)
         self.subscriber_cmd_vel = self.create_subscription(
             Twist, "cmd_vel", self.callback_cmd_vel, 10
@@ -31,7 +33,13 @@ class NodeRobot(Node):
         logger.info(f"ROS2 Node for {self.namespace} has been created.")
 
     def callback_cmd_vel(self, msg):
-        pass
+        if self.robot_instance and hasattr(self.robot_instance, 'callback_cmd_vel'):
+            self.robot_instance.callback_cmd_vel(msg)
+        else:
+            self.get_logger().warning("No robot instance connected for cmd_vel")
 
     def callback_execute_skill(self, goal_handle):
         pass
+
+    def set_robot_instance(self, robot):
+        self.robot_instance = robot

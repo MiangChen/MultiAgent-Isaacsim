@@ -35,7 +35,7 @@ class NodePlannerOmpl(Node):
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
             history=HistoryPolicy.KEEP_LAST,
-            depth=5,
+            depth=1,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
         )
         subscriber_map_info = message_filters.Subscriber(

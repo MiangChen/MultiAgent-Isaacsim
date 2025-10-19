@@ -1,6 +1,5 @@
 try:
     import pydevd_pycharm
-
     pydevd_pycharm.settrace('localhost', port=12345, stdoutToServer=True, stderrToServer=True)
 except:
     print("no pydevd found")
@@ -15,6 +14,7 @@ import asyncio
 
 from dependency_injector.wiring import inject, Provide
 import rclpy
+
 
 from isaacsim.core.api import World
 
@@ -32,6 +32,7 @@ from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
 from utils import euler_to_quat
 
+
 rclpy.init(args=None)
 logger = LogManager.get_logger(__name__)
 
@@ -41,10 +42,10 @@ PROJECT_ROOT = config_manager.get("project_root")
 
 @inject
 def setup_simulation(
-        swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
-        env: Env = Provide[AppContainer.env],
-        world: World = Provide[AppContainer.world],
-        loop: asyncio.AbstractEventLoop = Provide[AppContainer.loop],
+    swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
+    env: Env = Provide[AppContainer.env],
+    world: World = Provide[AppContainer.world],
+    loop: asyncio.AbstractEventLoop = Provide[AppContainer.loop],
 ) -> None:
     """
     Setup simulation environment with injected dependencies.
@@ -268,6 +269,7 @@ def main():
         camera_prim_path=semantic_camera_prim_path, viewport_name="Viewport"
     )
 
+
     count = 0
     logger.info("Starting main simulation loop...")
 
@@ -315,9 +317,37 @@ def main():
     # Build grid map for planning
     grid_map.generate()
 
+    # wait for node planner ompl to receive message
+    import time
+    time.sleep(2)
+
+    # path = ros_manager.node["node_planner_ompl"].compute_path(
+    #     start_pos=[6, 5,3],
+    #     goal_pos=[10.0, 10.0,0],
+    #     start_quat=[0.0, 0.0, 0.0, 1]
+    # )
+    #
+    # print("path", path)
+    # orientation = []
+    # for p in path:
+    #     orientation.append(p[1])
+    # print("orientation", orientation)
+    #
+    # from utils import quat_to_yaw
+    # yaw = quat_to_yaw(quat_xyzw=orientation)
+    # print(yaw)
+    #
+    # path_yaw = [path[i][0] + [yaw[i]] for i in range(len(path))]
+    # print(path_yaw)
+
+    result = False
     # Main simulation loop
     while simulation_app.is_running():
         env.step(action=None)
+        ##### navigation usage example###
+        ## 有时候会有些bug, 多运行几次main
+        if result == False:
+            result = swarm_manager.robot_active['jetbot'][0].node_planner_ompl.compute_path([5, 4, 0.035], goal_pos=[10, 10, 0])
 
         count += 1
 
