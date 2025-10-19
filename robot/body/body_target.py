@@ -68,10 +68,3 @@ class BodyTarget(BodyRobot):
             positions=to_torch(self.cfg_robot.position).reshape(1, 3),
             orientations=to_torch(self.cfg_robot.quat).reshape(1, 4),
         )
-
-    def get_world_poses(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        pos_IB, q_IB = self.robot_articulation.get_world_poses()
-        pos_IB, q_IB = pos_IB[0], q_IB[0]
-        pos_IB = to_torch(pos_IB, device=pos_IB.device)
-        q_IB = to_torch(q_IB, device=q_IB.device)
-        return pos_IB, q_IB

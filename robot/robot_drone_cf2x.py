@@ -187,7 +187,7 @@ class RobotCf2x(Robot):
         """起飞到预设高度并悬停"""
         if self.flight_state == "landed":
             # 获取当前位置，只改变高度
-            positions, orientations = self.body.get_world_poses()
+            positions, orientations = self.body.get_world_pose()
             current_pos = positions[0]
             # 上升
             self.hovering_height = self.takeoff_height
@@ -202,7 +202,7 @@ class RobotCf2x(Robot):
         """降落到地面"""
         if self.flight_state == "hovering":
             # 获取当前位置，只改变高度
-            positions, orientations = self.body.get_world_poses()
+            positions, orientations = self.body.get_world_pose()
             current_pos = positions[0]
             ground_z = self.get_ground_height_with_raycast(current_pos)
             # 下降
@@ -267,7 +267,7 @@ class RobotCf2x(Robot):
 
             # 应用新位置到无人机实体
             self.position = to_torch(self.position)
-            _, orientations = self.body.get_world_poses()
+            _, orientations = self.body.get_world_pose()
             orientation = orientations[0]
             self.body.robot_articulation.set_world_poses(self.position, orientation)
 
@@ -290,7 +290,7 @@ class RobotCf2x(Robot):
 
             # 瞬移
             self.position = to_torch(target)
-            _, orientations = self.body.get_world_poses()
+            _, orientations = self.body.get_world_pose()
             orientation = orientations[0]
             self.body.robot_articulation.set_world_poses(self.position, orientation)
 
@@ -321,7 +321,7 @@ class RobotCf2x(Robot):
         target_pos[2] = self.hovering_height
 
         self.position = target_pos
-        _, orientations = self.body.get_world_poses()
+        _, orientations = self.body.get_world_pose()
         orientation = orientations[0]
         self.body.robot_articulation.set_world_poses([self.position], [orientation])
         print(f"瞬移到位置: {target_pos}")
@@ -345,7 +345,7 @@ class RobotCf2x(Robot):
 
     def move_vertically(self, target_height, state):
 
-        pos, quat = self.body.get_world_poses()
+        pos, quat = self.body.get_world_pose()
         self.position = to_torch(pos)
         cur_pos = np.array(pos[0], dtype=np.float32)
         delta_z = target_height - cur_pos[2]

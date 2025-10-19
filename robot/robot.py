@@ -195,7 +195,7 @@ class Robot:
     ########################## odom ############################
     def publish_robot_state(self):
         """发布机器人状态到/odom话题"""
-        pos, quat = self.body.get_world_poses()
+        pos, quat = self.body.get_world_pose()
         lin_vel = self.body.robot_articulation.get_linear_velocities()
         ang_vel = self.body.robot_articulation.get_angular_velocities()
 
@@ -413,7 +413,7 @@ class Robot:
         self.navigate_to(self.body.cfg_robot.base)
 
     def detect(self, target_prim: str = None):
-        pos, quat = self.body.get_world_poses()
+        pos, quat = self.body.get_world_pose()
         result = self.scene_manager.overlap_hits_target_ancestor(target_prim)
         logger.info(
             f"[Skill] {self.body.cfg_robot.name} is detecting for {target_prim}. The result is {result}"
@@ -763,7 +763,7 @@ class Robot:
 
     def _publish_feedback(self, params, progress: int = 1, object_id: str = ""):
 
-        pos, quat = self.robot_entity.get_world_poses()
+        pos, quat = self.body.get_world_pose()
         params = self._params_from_pose(pos, quat)
 
         skill = SkillInfo(
@@ -787,7 +787,7 @@ class Robot:
 
         import numpy as np
 
-        pos, orn = self.body.get_world_poses()
+        pos, orn = self.body.get_world_pose()
 
         # 这些 API 返回 (N, 3) 的数组/张量；这里只取第 0 个
         lin_v = self.body.robot_articulation.get_linear_velocities(
