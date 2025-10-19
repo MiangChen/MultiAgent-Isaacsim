@@ -6,6 +6,11 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /Odometry1
+        - /Odometry2
+        - /Odometry3
+        - /Path1
+        - /Path1/Offset1
         - /Path2
       Splitter Ratio: 0.6137820482254028
     Tree Height: 4400
@@ -191,7 +196,7 @@ Visualization Manager:
           Value: true
         Value: true
       Enabled: true
-      Keep: 100
+      Keep: 10
       Name: Odometry
       Position Tolerance: 0.10000000149011612
       Shape:
@@ -431,7 +436,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 108.74657440185547
+      Distance: 69.01004791259766
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -446,10 +451,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8647969961166382
+      Pitch: 1.029796838760376
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.4653959274291992
+      Yaw: 1.0753962993621826
     Saved: ~
 Window Geometry:
   Displays:
