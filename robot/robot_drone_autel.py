@@ -16,8 +16,6 @@ from typing import Dict
 import numpy as np
 
 # Local project imports
-
-from map.map_grid_map import GridMap
 from physics_engine.pxr_utils import Gf, UsdGeom
 from physics_engine.isaacsim_utils import Scene
 from robot.cfg import CfgRobot, CfgDroneAutel
@@ -78,7 +76,6 @@ class RobotDroneAutel:
         # cfg_camera: CfgCamera = None,
         # cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
-        map_grid: GridMap = None,
         scene_manager: SceneManager = None,
         namespace: str = None,
         prim_path: str = None,

@@ -16,7 +16,6 @@ import numpy as np
 # Local project imports
 from robot.controller.controller_policy_h1 import H1FlatTerrainPolicy
 from log.log_manager import LogManager
-from map.map_grid_map import GridMap
 from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from robot.body.body_h1 import BodyH1
 from robot.cfg import CfgH1
@@ -41,7 +40,6 @@ class RobotH1(Robot):
     def __init__(
         self,
         cfg_robot: Dict = {},
-        map_grid: GridMap = None,
         scene: Scene = None,
         scene_manager=None,
     ) -> None:
@@ -49,7 +47,6 @@ class RobotH1(Robot):
         super().__init__(
             scene,
             scene_manager,
-            map_grid,
         )
         # self.create_robot_entity()
         self.control_mode = "joint_positions"
@@ -84,7 +81,6 @@ class RobotH1(Robot):
         cfg_robot: CfgH1,
         # cfg_camera: CfgCamera = None,
         # cfg_camera_third_person: CfgCameraThird = None,
-        map_grid: GridMap = None,
         scene: Scene = None,
         scene_manager=None,
     ) -> "RobotH1":
@@ -96,7 +92,6 @@ class RobotH1(Robot):
             cfg_robot=cfg_robot,
             # cfg_camera=cfg_camera,
             # cfg_camera_third_person=cfg_camera_third_person,
-            map_grid=map_grid,
             scene=scene,
             scene_manager=scene_manager,
         )

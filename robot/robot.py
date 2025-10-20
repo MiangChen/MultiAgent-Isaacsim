@@ -19,7 +19,6 @@ from shapely.affinity import rotate
 
 # Local project imports
 from log.log_manager import LogManager
-from map.map_grid_map import GridMap
 from navigation.node_path_planner_ompl import NodePlannerOmpl
 from navigation.node_trajectory_generator import NodeTrajectoryGenerator
 from navigation.node_controller_mpc import NodeMpcController

@@ -14,8 +14,6 @@ from typing import Dict
 import torch
 
 # Local project imports
-
-from map.map_grid_map import GridMap
 from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
@@ -41,7 +39,6 @@ class RobotG1(Robot):
         # cfg_camera: CfgCamera = None,
         # cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
-        map_grid: GridMap = None,
         scene_manager=None,
     ) -> None:
         self.cfg_robot = CfgG1(**cfg_robot)
@@ -49,7 +46,6 @@ class RobotG1(Robot):
             # cfg_camera,
             # cfg_camera_third_person,
             scene=scene,
-            map_grid=map_grid,
             scene_manager=None,
         )
         self.body = BodyG1(cfg_robot=self.cfg_robot, scene=scene)

@@ -19,7 +19,7 @@ import omni
 import torch
 
 # Local project imports
-from robot.controller import (
+from robot.controller.controller_cfg_loader import (
     get_articulation_props,
     get_physics_properties,
     get_robot_joint_properties,

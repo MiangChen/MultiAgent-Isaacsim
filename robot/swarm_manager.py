@@ -17,7 +17,6 @@ import yaml
 
 # Local project imports
 from log.log_manager import LogManager
-from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
 from physics_engine.isaacsim_utils import Scene
 from robot.sensor.camera import CfgCamera, CfgCameraThird
@@ -41,7 +40,6 @@ class SwarmManager:
 
     def __init__(
         self,
-        map_grid: GridMap = None,
         map_semantic: MapSemantic = None,
         ros_manager: RosManager = None,
         scene_manager: SceneManager = None,
