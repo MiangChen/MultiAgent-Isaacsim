@@ -14,7 +14,6 @@ import threading
 from log.log_manager import LogManager
 from ros.node_action_server_plan_execution import NodeActionServerPlanExecution
 from ros.node_scene_monitor import NodeSceneMonitor
-from ros.node_server_planner_nav2 import NodeServerNav2Planner
 
 # ROS2 imports
 import rclpy
@@ -45,9 +44,6 @@ class RosManager:
             node = NodeActionServerPlanExecution(loop=self.loop)
             self.node["node_action_server_plan_execution"] = node
             self.node["node_action_client_skill"] = node.action_client_skill
-        if config_node_enable.get("node_server_nav2_planner", False):
-            self.node["node_server_nav2_planner"] = NodeServerNav2Planner()
-        # if config_node_enable.get("navigation", False):
 
         logger.info("ROS nodes built successfully.")
 
