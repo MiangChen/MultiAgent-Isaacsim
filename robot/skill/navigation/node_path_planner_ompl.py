@@ -9,6 +9,7 @@
 
 # Standard library imports
 import json
+import time
 
 # Third-party library imports
 import numpy as np
@@ -19,6 +20,9 @@ import sensor_msgs_py.point_cloud2 as pc2
 
 # ROS2 imports
 from nav_msgs.msg import Path
+from nav2_msgs.action import ComputePathToPose
+from rclpy.action import ActionServer
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from geometry_msgs.msg import PoseStamped
@@ -74,19 +78,28 @@ class NodePlannerOmpl(Node):
 
         self.publisher_path = self.create_publisher(Path, "planned_path", qos_profile)
 
-    def callback(self, info_msg: DiagnosticArray, pc_msg: PointCloud2):
-        self.callback_info(info_msg=info_msg)
-        self.callback_point_cloud(pc_msg=pc_msg)
+        callback_group = ReentrantCallbackGroup()
+        self.server_action = ActionServer(
+            self,
+            ComputePathToPose,
+            "action_compute_path_to_pose",
+            execute_callback=self.callback_action,
+            callback_group=callback_group,
+        )
 
-    def callback_info(self, info_msg: DiagnosticArray):
+    def callback(self, msg_map_info: DiagnosticArray, msg_point_cloud: PointCloud2):
+        self.callback_map_info(msg_map_info=msg_map_info)
+        self.callback_point_cloud(msg_point_cloud=msg_point_cloud)
+
+    def callback_map_info(self, msg_map_info: DiagnosticArray):
         """
         store information in self.map_info
         """
         temp_map_info = {}
-        if not info_msg.status:
+        if not msg_map_info.status:
             return
 
-        key_values = info_msg.status[0].values
+        key_values = msg_map_info.status[0].values
         for kv in key_values:
             temp_map_info[kv.key] = json.loads(kv.value)
 
@@ -100,10 +113,10 @@ class NodePlannerOmpl(Node):
         self.free_value = self.map_info["free_value"]
         self.unknown_value = self.map_info["unknown_value"]
 
-    def callback_point_cloud(self, pc_msg: PointCloud2):
+    def callback_point_cloud(self, msg_point_cloud: PointCloud2):
 
         self.grid_map = np.full(self.shape, self.free_value, dtype=np.int8)
-        points = pc2.read_points_numpy(pc_msg, field_names=("x", "y", "z"))
+        points = pc2.read_points_numpy(msg_point_cloud, field_names=("x", "y", "z"))
         if points.size > 0:
             indices = ((points - self.min_bound) / self.cell_size).astype(int)
             valid_mask = np.all((indices >= 0) & (indices < self.shape), axis=1)
@@ -137,6 +150,83 @@ class NodePlannerOmpl(Node):
 
         return True
 
+    def callback_action(self, goal_handle):
+        start_time = time.time()
+        self.get_logger().info("Executing navigation goal...")
+        if self.si is None:
+            self.get_logger().error("Planner is not ready. Missing map or OMPL setup.")
+            goal_handle.abort()
+            return ComputePathToPose.Result()
+
+        start_pose = goal_handle.request.start.pose
+        start_position = [
+            start_pose.position.x,
+            start_pose.position.y,
+            start_pose.position.z,
+        ]
+        start_quat = [
+            start_pose.orientation.x,
+            start_pose.orientation.y,
+            start_pose.orientation.z,
+            start_pose.orientation.w,
+        ]  # xyzw
+
+        goal_pose = goal_handle.request.goal.pose
+        goal_position = [
+            goal_pose.position.x,
+            goal_pose.position.y,
+            goal_pose.position.z,
+        ]
+        goal_quat = [
+            goal_pose.orientation.x,
+            goal_pose.orientation.y,
+            goal_pose.orientation.z,
+            goal_pose.orientation.w,
+        ]  # xyzw
+
+        path = self.compute_path(start_position, goal_position, start_quat, goal_quat)
+
+        result = ComputePathToPose.Result()
+
+        def convert_ompl_path_to_ros_msg(path: list, frame_id: str) -> Path:
+
+            path_msg = Path()
+            path_msg.header.stamp = self.get_clock().now().to_msg()
+            path_msg.header.frame_id = frame_id
+
+            for point in path:
+                pose = PoseStamped()
+                pose.header.stamp = path_msg.header.stamp
+                pose.header.frame_id = frame_id
+
+                pos = point[0]
+                quat = point[1]
+
+                pose.pose.position.x = float(pos[0])
+                pose.pose.position.y = float(pos[1])
+                pose.pose.position.z = float(pos[2])
+                pose.pose.orientation.x = float(quat[0])
+                pose.pose.orientation.y = float(quat[1])
+                pose.pose.orientation.z = float(quat[2])
+                pose.pose.orientation.w = float(quat[3])
+
+                path_msg.poses.append(pose)
+
+            return path_msg
+
+        if path:
+            duration = time.time() - start_time
+            self.get_logger().info(
+                f"Path found with {len(path)} waypoints in {duration:.2f} seconds."
+            )
+            msg_path = convert_ompl_path_to_ros_msg(path, frame_id="map")
+            result.path = msg_path
+            goal_handle.succeed()
+        else:
+            goal_handle.abort()
+
+        return result
+
     def compute_path(
         self,
         start_pos: list,
@@ -144,8 +234,6 @@ class NodePlannerOmpl(Node):
         start_quat: list = [0.0, 0.0, 0.0, 1.0],
         goal_quat: list = [0.0, 0.0, 0.0, 1.0],
     ) -> list:
-        if self.si is None:
-            return False
 
         pdef = ob.ProblemDefinition(self.si)
 

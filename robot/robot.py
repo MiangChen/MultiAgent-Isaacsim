@@ -38,8 +38,11 @@ from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
 
 # ROS2 imports
+from rclpy.action import ActionClient
 from rclpy.executors import MultiThreadedExecutor
 from nav_msgs.msg import Odometry
+from nav2_msgs.action import ComputePathToPose
+from geometry_msgs.msg import PoseStamped, Quaternion
 
 # Custom ROS message imports
 from gsi_msgs.gsi_msgs_helper import (
@@ -74,9 +77,9 @@ def _get_viewport_manager_from_container():
 
 class Robot:
     def __init__(
-        self,
-        scene: Scene = None,
-        scene_manager: SceneManager = None,
+            self,
+            scene: Scene = None,
+            scene_manager: SceneManager = None,
     ):
 
         self.cfg_dict_camera = self.cfg_robot.cfg_dict_camera
@@ -92,9 +95,9 @@ class Robot:
 
         # 通用的机器人本体初始化代码
         self.cfg_robot.path_prim_robot = (
-            self.cfg_robot.path_prim_swarm
-            + f"/{self.cfg_robot.type}"
-            + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
+                self.cfg_robot.path_prim_swarm
+                + f"/{self.cfg_robot.type}"
+                + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
         )
         self.cfg_robot.namespace = self.cfg_robot.type + f"_{self.cfg_robot.id}"
         self.namespace = self.cfg_robot.namespace
@@ -140,6 +143,9 @@ class Robot:
             namespace=self.namespace
         )
         self.node_controller_mpc = NodeMpcController(namespace=self.namespace)
+        self.action_client_path_planner = ActionClient(
+            self.node, ComputePathToPose, "action_compute_path_to_pose"
+        )
 
         self.executor = MultiThreadedExecutor()
         self.ros_thread = None
@@ -164,6 +170,7 @@ class Robot:
         self.track_waypoint_index = 0
         self.is_tracking = False
         self.track_waypoints_sub = None
+        self.is_planning = False
 
         # robot physics state
         self.vel_linear = torch.tensor([0.0, 0.0, 0.0])
@@ -210,6 +217,55 @@ class Robot:
         result.message = f"Skill '{skill_name}' executed successfully."
         return result
 
+    ######################### Action Navigation ###########################
+    def navigate_to(self, goal_pos: list, goal_quat_wxyz: list = [1.0, 0.0, 0.0, 0.0]):
+        if self.is_planning:
+            self.node.get_logger().warn("Planning already in progress.")
+            return
+
+        if not self.action_client_path_planner.wait_for_server(timeout_sec=2.0):
+            self.node.get_logger().error("Path planner server is not available.")
+            return
+
+        self.is_planning = True
+        self.node.get_logger().info(f"Sending path request to goal: {goal_pos}")
+
+        goal_msg = ComputePathToPose.Goal()
+
+        start_pos_tensor, start_quat_tensor = self.body.get_world_pose()
+        start_pos = start_pos_tensor.cpu().numpy().tolist()
+        start_quat = start_quat_tensor.cpu().numpy().tolist()
+
+        goal_msg.start = self._create_pose_stamped(start_pos, start_quat)
+        goal_msg.goal = self._create_pose_stamped(goal_pos, goal_quat_wxyz)
+
+        send_goal_future = self.action_client_path_planner.send_goal_async(goal_msg)
+        send_goal_future.add_done_callback(self._goal_response_callback)
+
+    def _goal_response_callback(self, future):
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            self.node.get_logger().error("Goal was rejected by the planner server.")
+        else:
+            self.node.get_logger().info("Goal was accepted by the planner server.")
+
+        self.is_planning = False
+
+    def _create_pose_stamped(self, pos: list, quat_wxyz: list) -> PoseStamped:
+        pose_stamped = PoseStamped()
+        pose_stamped.header.stamp = self.node.get_clock().now().to_msg()
+        pose_stamped.header.frame_id = "map"
+
+        pose_stamped.pose.position.x = float(pos[0])
+        pose_stamped.pose.position.y = float(pos[1])
+        pose_stamped.pose.position.z = float(pos[2])
+
+        pose_stamped.pose.orientation.w = float(quat_wxyz[0])
+        pose_stamped.pose.orientation.x = float(quat_wxyz[1])
+        pose_stamped.pose.orientation.y = float(quat_wxyz[2])
+        pose_stamped.pose.orientation.z = float(quat_wxyz[3])
+        return pose_stamped
+
     ########################## Publisher Odom  ############################
     def publish_robot_state(self):
         """发布机器人状态到/odom话题"""
@@ -230,7 +286,7 @@ class Robot:
         odom_msg.pose.pose.position.y = float(pos[1])
         odom_msg.pose.pose.position.z = float(pos[2])
 
-        odom_msg.pose.pose.orientation.x = float(quat[1])
+        odom_msg.pose.pose.orientation.x = float(quat[1])  # xyzw <- wxyz
         odom_msg.pose.pose.orientation.y = float(quat[2])
         odom_msg.pose.pose.orientation.z = float(quat[3])
         odom_msg.pose.pose.orientation.w = float(quat[0])
@@ -394,10 +450,10 @@ class Robot:
         return {"status": "success", "message": "Object dropped successfully."}
 
     def pickup_object_if_close_unified(
-        self,
-        robot_hand_prim_path: str,
-        object_prim_path: str,
-        distance_threshold: float = 2.0,
+            self,
+            robot_hand_prim_path: str,
+            object_prim_path: str,
+            distance_threshold: float = 2.0,
     ) -> dict:
         """
         检查机器人手部与物体的距离，如果小于阈值，则执行抓取。
@@ -512,10 +568,10 @@ class Robot:
         return True
 
     def explore(
-        self,
-        boundary: List[tuple] = None,
-        holes: List[tuple] = None,
-        target_prim: str = "/TARGET_PRIM_NOT_SPECIFIED",
+            self,
+            boundary: List[tuple] = None,
+            holes: List[tuple] = None,
+            target_prim: str = "/TARGET_PRIM_NOT_SPECIFIED",
     ):
         waypoints = self.plan_exploration_waypoints(
             boundary,
@@ -529,14 +585,14 @@ class Robot:
         return True
 
     def plan_exploration_waypoints(
-        self,
-        polygon_coords,
-        holes=None,
-        lane_width=1.0,
-        robot_radius=0.2,
-        sweep_deg=0.0,
-        min_seg=0.5,
-        z_out=0.0,  # 输出航点的 z 值（默认 0.0）
+            self,
+            polygon_coords,
+            holes=None,
+            lane_width=1.0,
+            robot_radius=0.2,
+            sweep_deg=0.0,
+            min_seg=0.5,
+            z_out=0.0,  # 输出航点的 z 值（默认 0.0）
     ):
         """
         polygon_coords: [(x,y,z=0), ...] 或 [(x,y), ...]
@@ -656,8 +712,8 @@ class Robot:
         simplified_2d = [waypoints_2d[0]]
         for p in waypoints_2d[1:]:
             if (
-                np.hypot(p[0] - simplified_2d[-1][0], p[1] - simplified_2d[-1][1])
-                > 1e-3
+                    np.hypot(p[0] - simplified_2d[-1][0], p[1] - simplified_2d[-1][1])
+                    > 1e-3
             ):
                 simplified_2d.append(p)
 
@@ -666,7 +722,7 @@ class Robot:
         return waypoints
 
     def controller_simplified(
-        self,
+            self,
     ) -> None:
         """
         this function can only be used in on_physics_step
@@ -695,7 +751,7 @@ class Robot:
 
     def track(self):
         if self.track_waypoint_index < len(
-            self.track_waypoints
+                self.track_waypoints
         ):  # 当index==len的时候, 就已经到达目标了
             flag_reach = self.move_to(self.track_waypoints[self.track_waypoint_index])
             if flag_reach == True:
@@ -768,7 +824,7 @@ class Robot:
 
             # 2. 计算相机的位置 (eye) 和目标位置 (target)
             camera_eye_position = (
-                robot_position + self.relative_camera_pos + self.transform_camera_pos
+                    robot_position + self.relative_camera_pos + self.transform_camera_pos
             )
             camera_target_position = robot_position
 
@@ -831,12 +887,12 @@ class Robot:
 
         if self.previous_pos:
             if (
-                np.sqrt(
-                    (self.previous_pos[0] - px) ** 2
-                    + (self.previous_pos[1] - py) ** 2
-                    + (self.previous_pos[2] - pz) ** 2
-                )
-                < self.movement_threshold
+                    np.sqrt(
+                        (self.previous_pos[0] - px) ** 2
+                        + (self.previous_pos[1] - py) ** 2
+                        + (self.previous_pos[2] - pz) ** 2
+                    )
+                    < self.movement_threshold
             ):
                 self.previous_pos = [px, py, pz]
                 return abnormal_return

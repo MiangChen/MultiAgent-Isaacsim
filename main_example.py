@@ -360,8 +360,7 @@ def main():
         ##### navigation usage example###
         ## 有时候会有些bug, 多运行几次main
         if result == False:
-            result = swarm_manager.robot_active['jetbot'][0].node_planner_ompl.compute_path([5, 4, 0.035], goal_pos=[10, 10, 0])
-
+            swarm_manager.robot_active['jetbot'][0].navigate_to([10, 10, 0])
         count += 1
 
     ros_manager.stop()
