@@ -34,7 +34,7 @@ class MCPExtension(omni.ext.IExt):
         print("MCPExtension shutting down.")
 
         # Stop the server first
-        if hasattr(self, 'server'):
+        if hasattr(self, "server"):
             self.server.stop()
 
         # Clean up

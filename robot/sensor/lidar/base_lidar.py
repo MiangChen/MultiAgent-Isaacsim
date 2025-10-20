@@ -1,6 +1,5 @@
 import os
 import shutil
-from isaacsim.core.utils.extensions import get_extension_path_from_name
 import omni
 import carb
 
@@ -87,7 +86,7 @@ from typing import Optional, Tuple, Dict, Any
 import numpy as np
 from pxr import Gf
 
-from isaacsim.sensors.rtx import LidarRtx
+from physics_engine.isaacsim_utils import get_extension_path_from_name, LidarRtx
 
 from robot.sensor.lidar.cfg_lidar import CfgLidar
 from log.log_manager import LogManager

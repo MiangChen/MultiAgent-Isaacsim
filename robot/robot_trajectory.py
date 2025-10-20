@@ -1,6 +1,6 @@
 import numpy as np
 
-from isaacsim.core.api.scenes import Scene
+from physics_engine.isaacsim_utils import Scene, VisualSphere
 
 
 class Trajectory:
@@ -34,7 +34,6 @@ class Trajectory:
         self.scene = scene
         self.id = id
         # 先提前把历史轨迹的点都加载好, 但是颜色都不可见
-        from isaacsim.core.api.objects import VisualSphere
 
         self.visual_sphere = []
         # max_points = 1

@@ -33,10 +33,15 @@ if config_manager.get("namespace"):
 
 #############################################################
 
+
 def build_drone_ctx(namespace: str, idx: int, scene_manager):
     """Create prim, ROS node and sensor annotators for one UAV."""
 
-    prim_path = f"/{namespace}/drone" if namespace else "/drone" if idx == 0 else f"/drone_{idx}"
+    prim_path = (
+        f"/{namespace}/drone"
+        if namespace
+        else "/drone" if idx == 0 else f"/drone_{idx}"
+    )
 
     # LiDAR -------------------------------------------------------------
     # lidar_cfg = CfgLidar()
@@ -48,20 +53,22 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
     # lidar.lidar_sensor.add_point_cloud_data_to_frame()
     # lidar.initialize()
 
-
-
     from robot.sensor.lidar.base_lidar import add_drone_lidar, create_lidar_step_wrapper
+
     lidar_config = "autel_perception_120x352"
     lidar_annotators = add_drone_lidar(prim_path, lidar_config)
     lidar_step_wrapper = create_lidar_step_wrapper(lidar_annotators)
     print(f"Adding drone body to {prim_path} with color scheme {idx}")
 
-    partial_ctx = RobotDroneAutel(scene_manager=scene_manager, namespace=namespace, prim_path=prim_path,
-                                  color_scheme_id=idx)
+    partial_ctx = RobotDroneAutel(
+        scene_manager=scene_manager,
+        namespace=namespace,
+        prim_path=prim_path,
+        color_scheme_id=idx,
+    )
 
     # ROS ---------------------------------------------------------------
     node, pubs, subs, srvs = setup_ros(namespace, ctx=partial_ctx)
-
 
     # Complete the context with all the ROS and LiDAR information
     partial_ctx.ros_node = node
@@ -72,9 +79,12 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
     # partial_ctx.custom_step_fn = lidar.get_current_frame
 
     print(f"Drone {namespace} set up with callbacks for:")
-    print(f"  - EntityState entity names: {[namespace, f'{namespace}/quadrotor', f'{namespace}_quadrotor']}")
     print(
-        f"  - LinkState link names: {[f'{namespace}::base_link', f'{namespace}/quadrotor::base_link', f'{namespace}_quadrotor::base_link']}")
+        f"  - EntityState entity names: {[namespace, f'{namespace}/quadrotor', f'{namespace}_quadrotor']}"
+    )
+    print(
+        f"  - LinkState link names: {[f'{namespace}::base_link', f'{namespace}/quadrotor::base_link', f'{namespace}_quadrotor::base_link']}"
+    )
     return partial_ctx
 
 
@@ -97,7 +107,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "name": "car0_LKN1111_pink",
             "position": [11.6, 3.5, 0],
             "color": [255, 255, 255],
-            "entity_type": "visual"
+            "entity_type": "visual",
         },
         "car1": {
             "shape_type": "cuboid",
@@ -106,7 +116,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "name": "car1_ZN3J3W_blue",
             "position": [0.3, 3.5, 0],
             "color": [255, 255, 255],
-            "entity_type": "visual"
+            "entity_type": "visual",
         },
         "car2": {
             "shape_type": "cuboid",
@@ -115,7 +125,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "name": "car2_JN3839_yellow",
             "position": [-13.2, 3.5, 0],
             "color": [255, 255, 255],
-            "entity_type": "visual"
+            "entity_type": "visual",
         },
         "car3": {
             "shape_type": "cuboid",
@@ -124,7 +134,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "scale": scale,
             "position": [-7.1, 10, 0],
             "color": [255, 255, 255],
-            "entity_type": "visual"
+            "entity_type": "visual",
         },
         "car4": {
             "shape_type": "cuboid",
@@ -134,12 +144,14 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             "position": [-0.9, 30, 0],
             "orientation": [0.707, 0, 0, 0.707],
             "color": [255, 255, 255],
-            "entity_type": "visual"
+            "entity_type": "visual",
         },
     }
 
     created_prim_paths = []
-    logger.info(f"All semantics in scene:{scene_manager.count_semantics_in_scene().get('result')}")
+    logger.info(
+        f"All semantics in scene:{scene_manager.count_semantics_in_scene().get('result')}"
+    )
 
     for cube_name, config in cubes_config.items():
         creation_result = scene_manager.create_shape_unified(**config)
@@ -149,7 +161,9 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             created_prim_paths.append(prim_path)
 
             # Add semantic label
-            semantic_result = scene_manager.add_semantic(prim_path=prim_path, semantic_label="car")
+            semantic_result = scene_manager.add_semantic(
+                prim_path=prim_path, semantic_label="car"
+            )
             logger.info(semantic_result)
 
     return created_prim_paths
@@ -190,7 +204,7 @@ def main():  # Needed in build_drone_ctx
     print(scene_manager.count_semantics_in_scene().get("result"))
 
     # Create and initialize semantic camera
-    result = scene_manager.add_camera(translation=[1,4,2], orientation=[1,0,0,0])
+    result = scene_manager.add_camera(translation=[1, 4, 2], orientation=[1, 0, 0, 0])
     #
     semantic_map = MapSemantic()
     semantic_camera = result.get("result").get("camera_instance")
@@ -202,8 +216,11 @@ def main():  # Needed in build_drone_ctx
 
     # ---------------- Run simulation -----------------------------------
     run_simulation_loop_multi(
-        simulation_app, drone_ctxs, semantic_camera, semantic_camera_prim_path,
-        semantic_map
+        simulation_app,
+        drone_ctxs,
+        semantic_camera,
+        semantic_camera_prim_path,
+        semantic_map,
     )
 
     # Cleanup copied lidar config files ---------------------------------

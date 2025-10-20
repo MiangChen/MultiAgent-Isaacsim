@@ -2,7 +2,7 @@ from typing import List
 
 from typing import Dict, Any, Tuple, Optional
 
-from isaacsim.core.prims import XFormPrim
+from physics_engine.isaacsim_utils import XFormPrim
 from pxr import Usd
 
 

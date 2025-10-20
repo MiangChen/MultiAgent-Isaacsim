@@ -1,6 +1,6 @@
 import gymnasium as gym
 
-from isaacsim.core.api import World
+from physics_engine.isaacsim_utils import World
 
 from map.map_grid_map import GridMap
 from robot.swarm_manager import SwarmManager
@@ -8,13 +8,14 @@ from scene.scene_manager import SceneManager
 
 
 class Env(gym.Env):
-    def __init__(self,
-                 simulation_app,
-                 world: World,
-                 scene_manager: SceneManager = None,
-                 swarm_manager: SwarmManager = None,
-                 grid_map: GridMap = None,
-                 ) -> None:
+    def __init__(
+        self,
+        simulation_app,
+        world: World,
+        scene_manager: SceneManager = None,
+        swarm_manager: SwarmManager = None,
+        grid_map: GridMap = None,
+    ) -> None:
         # --- 存储参数和基本属性赋值 ---
         self._runner = simulation_app
 

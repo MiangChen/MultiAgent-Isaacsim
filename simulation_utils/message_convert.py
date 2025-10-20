@@ -2,7 +2,7 @@ import numpy as np
 
 import carb
 
-from isaacsim.core.utils import extensions, stage
+from physics_engine.isaacsim_utils import extensions, stage
 
 from sensor_msgs.msg import PointCloud2, PointField, Image
 

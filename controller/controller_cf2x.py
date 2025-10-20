@@ -1,7 +1,6 @@
 import numpy as np
 
-from isaacsim.core.api.controllers import BaseController
-from isaacsim.core.utils.types import ArticulationActions
+from physics_engine.isaacsim_utils import BaseController, ArticulationActions
 
 
 class ControllerCf2x(BaseController):

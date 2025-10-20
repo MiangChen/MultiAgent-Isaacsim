@@ -18,7 +18,7 @@ def quat_to_yaw(quat_xyzw: List[List[float]]) -> np.ndarray:
     quat_array = np.array(quat_xyzw)
 
     rotations = R.from_quat(quat_array)
-    euler_angles = rotations.as_euler('zyx', degrees=False)
+    euler_angles = rotations.as_euler("zyx", degrees=False)
     raw_yaw_angles = euler_angles[:, 0]
 
     yaw = np.unwrap(raw_yaw_angles)

@@ -2,9 +2,12 @@ from typing import Tuple
 
 import torch
 
-from isaacsim.core.api.scenes import Scene
-from isaacsim.core.prims import Articulation
-from isaacsim.core.utils.prims import define_prim, get_prim_at_path
+from physics_engine.isaacsim_utils import (
+    Scene,
+    Articulation,
+    define_prim,
+    get_prim_at_path,
+)
 from pxr import Usd, UsdGeom
 
 from robot.body import BodyRobot

@@ -1,5 +1,4 @@
-from isaacsim.core.api.controllers import BaseController
-from isaacsim.core.utils.types import ArticulationAction
+from physics_engine.isaacsim_utils import BaseController, ArticulationAction
 
 
 class ControllerJetbot(BaseController):

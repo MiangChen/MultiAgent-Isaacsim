@@ -58,7 +58,9 @@ class MCPNetworkServer:
             try:
                 client, address = self.socket.accept()
                 print(f"Connected to client: {address}")
-                client_thread = threading.Thread(target=self._handle_client, args=(client,))
+                client_thread = threading.Thread(
+                    target=self._handle_client, args=(client,)
+                )
                 client_thread.daemon = True
                 client_thread.start()
             except socket.timeout:

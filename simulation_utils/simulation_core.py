@@ -4,8 +4,7 @@ import math
 import numpy as np
 
 import carb
-from isaacsim.core.utils import extensions, stage
-from isaacsim.core.utils.viewports import set_camera_view
+from physics_engine.isaacsim_utils import extensions, stage, set_camera_view
 from pxr import Gf, UsdGeom
 
 # enable ROS2 bridge extension and then import ros modules
@@ -21,7 +20,11 @@ from sensor_msgs.msg import PointCloud2, PointField, Image
 
 from robot.robot_drone_autel import DronePose, RobotDroneAutel
 from containers import get_container
-from simulation_utils.perception import create_depth2pc_lut, depth2pointclouds, process_semantic_detection
+from simulation_utils.perception import (
+    create_depth2pc_lut,
+    depth2pointclouds,
+    process_semantic_detection,
+)
 from simulation_utils.message_convert import create_pc2_msg, create_image_msg
 from containers import get_container
 
@@ -70,7 +73,13 @@ def update_viewer_camera(curr_stage):
         # Extract yaw from quaternion for directional following
         try:
             from utils.quat_to_euler import quat_to_euler
-            quat = (drone_quat.real, drone_quat.imaginary[0], drone_quat.imaginary[1], drone_quat.imaginary[2])
+
+            quat = (
+                drone_quat.real,
+                drone_quat.imaginary[0],
+                drone_quat.imaginary[1],
+                drone_quat.imaginary[2],
+            )
             _, _, yaw = quat_to_euler(quat)
 
             # Calculate camera position relative to drone orientation
@@ -83,8 +92,12 @@ def update_viewer_camera(curr_stage):
 
             # Position camera behind the drone
             camera_pos = drone_pos_np.copy()
-            camera_pos[0] += forward_x * offset_distance  # Move camera back relative to drone heading
-            camera_pos[1] += forward_y * offset_distance  # Move camera back relative to drone heading
+            camera_pos[0] += (
+                forward_x * offset_distance
+            )  # Move camera back relative to drone heading
+            camera_pos[1] += (
+                forward_y * offset_distance
+            )  # Move camera back relative to drone heading
             camera_pos[2] += height_offset  # Move camera up in Z direction
 
         except:
@@ -103,8 +116,13 @@ def update_viewer_camera(curr_stage):
         pass
 
 
-def run_simulation_loop_multi(simulation_app, drone_ctxs: list[RobotDroneAutel], semantic_camera,
-                              semantic_camera_prim_path, semantic_map):
+def run_simulation_loop_multi(
+    simulation_app,
+    drone_ctxs: list[RobotDroneAutel],
+    semantic_camera,
+    semantic_camera_prim_path,
+    semantic_map,
+):
     """Simulation loop that handles *multiple* DroneSimCtx objects.
 
     The original single-drone function is left untouched for backward
@@ -128,6 +146,7 @@ def run_simulation_loop_multi(simulation_app, drone_ctxs: list[RobotDroneAutel],
 
     # Switch viewport to semantic camera
     from omni.kit.viewport.utility import get_viewport_from_window_name
+
     viewport_manager = container.viewport_manager()
     # isaacsim default viewport
     viewport_manager.register_viewport(
@@ -158,7 +177,9 @@ def run_simulation_loop_multi(simulation_app, drone_ctxs: list[RobotDroneAutel],
         y_pos = (row - grid_size // 2) * 4.0 + 5
         z_pos = 2.0
 
-        ctx.des_pose = DronePose(pos=Gf.Vec3d(x_pos, y_pos, z_pos), quat=Gf.Quatf.GetIdentity())
+        ctx.des_pose = DronePose(
+            pos=Gf.Vec3d(x_pos, y_pos, z_pos), quat=Gf.Quatf.GetIdentity()
+        )
         ctx.is_pose_dirty = True
 
     print(f"Starting multi-UAV simulation loop with {len(drone_ctxs)} drones")
@@ -185,7 +206,8 @@ def run_simulation_loop_multi(simulation_app, drone_ctxs: list[RobotDroneAutel],
                 ctx.drone_prim.GetAttribute("xformOp:orient").Set(ctx.des_pose.quat)
                 ctx.is_pose_dirty = False
                 print(
-                    f"🚁 Applied visual update for drone {ctx.namespace}: pos=({ctx.des_pose.pos[0]:.2f}, {ctx.des_pose.pos[1]:.2f}, {ctx.des_pose.pos[2]:.2f})")
+                    f"🚁 Applied visual update for drone {ctx.namespace}: pos=({ctx.des_pose.pos[0]:.2f}, {ctx.des_pose.pos[1]:.2f}, {ctx.des_pose.pos[2]:.2f})"
+                )
 
         # Run single simulation step
         world.step(render=True)
@@ -206,7 +228,9 @@ def run_simulation_loop_multi(simulation_app, drone_ctxs: list[RobotDroneAutel],
             header.frame_id = "world"
             msg = ContactsState(header=header)
             if scene_manager.check_prim_collision(prim_path=ctx.prim_path):
-                msg.states.append(ContactState(collision1_name=f"drone_{ctx.namespace}"))
+                msg.states.append(
+                    ContactState(collision1_name=f"drone_{ctx.namespace}")
+                )
                 print(f"Collision detected for drone {ctx.namespace}")
             ctx.pubs["collision"].publish(msg)
 
@@ -230,6 +254,7 @@ def run_simulation_loop_multi(simulation_app, drone_ctxs: list[RobotDroneAutel],
         # ------------------------------------------------------------------
         try:
             import omni.kit.viewport.utility
+
             viewport = omni.kit.viewport.utility.get_active_viewport()
             if viewport and viewport.updates_enabled:
                 update_viewer_camera(scene_manager.stage)

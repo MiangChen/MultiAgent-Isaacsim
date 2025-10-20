@@ -14,8 +14,7 @@ import numpy as np
 import omni
 import torch
 
-from isaacsim.core.api.controllers.base_controller import BaseController
-from isaacsim.core.utils.prims import define_prim, get_prim_at_path
+from physics_engine.isaacsim_utils import BaseController, define_prim, get_prim_at_path
 
 from log.log_manager import LogManager
 from controller.controller_cfg_loader import (

@@ -22,8 +22,8 @@ class NodeTrajectoryGenerator(Node):
     the result as a `trajectory_msgs/JointTrajectory`.
     """
 
-    def __init__(self,namespace:str):
-        super().__init__(node_name="node_trajectory_generator",namespace=namespace)
+    def __init__(self, namespace: str):
+        super().__init__(node_name="node_trajectory_generator", namespace=namespace)
 
         # Load robot dynamics and configuration from ROS 2 parameters
         self.declare_parameters(

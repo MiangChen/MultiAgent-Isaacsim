@@ -14,12 +14,13 @@ import math
 from typing import Callable, List, Optional, Sequence, Tuple
 
 import numpy as np
-from isaacsim.core.utils.prims import (
+from physics_engine.isaacsim_utils import (
     get_prim_at_path,
     get_prim_type_name,
     is_prim_path_valid,
 )
 from pxr import Sdf, Vt
+
 
 def point_to_theta(camera_matrix, x, y):
     """This helper function returns the theta angle of the point."""
@@ -28,6 +29,7 @@ def point_to_theta(camera_matrix, x, y):
     r2 = pt_x * pt_x + pt_y * pt_y
     theta = np.arctan2(np.sqrt(r2), 1.0)
     return theta
+
 
 def distort_point_kannala_brandt(camera_matrix, distortion_model, x, y):
     """This helper function distorts point(s) using Kannala Brandt fisheye model.
@@ -63,12 +65,8 @@ def distort_point_kannala_brandt(camera_matrix, distortion_model, x, y):
     return np.array([fx * r_x + cx, fy * r_y + cy])
 
 
-class MinimalCamera():
-    def __init__(
-        self,
-        prim_path: str,
-        resolution
-    ) -> None:
+class MinimalCamera:
+    def __init__(self, prim_path: str, resolution) -> None:
 
         if is_prim_path_valid(prim_path):
             self.prim = get_prim_at_path(prim_path)
@@ -80,7 +78,9 @@ class MinimalCamera():
         self._resolution = resolution
 
         if self.prim.GetAttribute("cameraProjectionType").Get() is None:
-            attr = self.prim.CreateAttribute("cameraProjectionType", Sdf.ValueTypeNames.Token)
+            attr = self.prim.CreateAttribute(
+                "cameraProjectionType", Sdf.ValueTypeNames.Token
+            )
             # The allowed tokens are not set in kit except with the first interaction with the dropdown menu
             # setting it here for now.
             if attr.GetMetadata("allowedTokens") is None:
@@ -175,7 +175,9 @@ class MinimalCamera():
         """
         self.prim.GetAttribute("horizontalAperture").Set(value * 10.0)
         (width, height) = self.get_resolution()
-        self.prim.GetAttribute("verticalAperture").Set((value * 10.0) * (float(height) / width))
+        self.prim.GetAttribute("verticalAperture").Set(
+            (value * 10.0) * (float(height) / width)
+        )
         return
 
     def get_vertical_aperture(self) -> float:
@@ -184,7 +186,9 @@ class MinimalCamera():
             float: Emulates sensor/film height on a camera.
         """
         (width, height) = self.get_resolution()
-        aperture = (self.prim.GetAttribute("horizontalAperture").Get() / 10.0) * (float(height) / width)
+        aperture = (self.prim.GetAttribute("horizontalAperture").Get() / 10.0) * (
+            float(height) / width
+        )
         return aperture
 
     def set_vertical_aperture(self, value: float) -> None:
@@ -194,7 +198,9 @@ class MinimalCamera():
         """
         self.prim.GetAttribute("verticalAperture").Set(value * 10.0)
         (width, height) = self.get_resolution()
-        self.prim.GetAttribute("horizontalAperture").Set((value * 10.0) * (float(width) / height))
+        self.prim.GetAttribute("horizontalAperture").Set(
+            (value * 10.0) * (float(width) / height)
+        )
         return
 
     def get_clipping_range(self) -> Tuple[float, float]:
@@ -205,7 +211,11 @@ class MinimalCamera():
         near, far = self.prim.GetAttribute("clippingRange").Get()
         return near, far
 
-    def set_clipping_range(self, near_distance: Optional[float] = None, far_distance: Optional[float] = None) -> None:
+    def set_clipping_range(
+        self,
+        near_distance: Optional[float] = None,
+        far_distance: Optional[float] = None,
+    ) -> None:
         """Clips the view outside of both near and far range values.
 
         Args:
@@ -291,16 +301,32 @@ class MinimalCamera():
         camera_matrix = np.array([[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]])
 
         # Fit the fTheta model for the points on the diagonals.
-        X = np.concatenate([np.linspace(0, nominal_width, nominal_width), np.linspace(0, nominal_width, nominal_width)])
+        X = np.concatenate(
+            [
+                np.linspace(0, nominal_width, nominal_width),
+                np.linspace(0, nominal_width, nominal_width),
+            ]
+        )
         Y = np.concatenate(
-            [np.linspace(0, nominal_height, nominal_width), np.linspace(nominal_height, 0, nominal_width)]
+            [
+                np.linspace(0, nominal_height, nominal_width),
+                np.linspace(nominal_height, 0, nominal_width),
+            ]
         )
         theta = point_to_theta(camera_matrix, X, Y)
-        r = np.linalg.norm(distortion_fn(camera_matrix, distortion_model, X, Y) - np.array([[cx], [cy]]), axis=0)
+        r = np.linalg.norm(
+            distortion_fn(camera_matrix, distortion_model, X, Y)
+            - np.array([[cx], [cy]]),
+            axis=0,
+        )
         fthetaPoly = np.polyfit(r, theta, deg=4)
 
-        for i, coefficient in enumerate(fthetaPoly[::-1]):  # Reverse the order of the coefficients
-            self.prim.GetAttribute("fthetaPoly" + (chr(ord("A") + i))).Set(float(coefficient))
+        for i, coefficient in enumerate(
+            fthetaPoly[::-1]
+        ):  # Reverse the order of the coefficients
+            self.prim.GetAttribute("fthetaPoly" + (chr(ord("A") + i))).Set(
+                float(coefficient)
+            )
 
         self.prim.GetAttribute("fthetaWidth").Set(nominal_width)
         self.prim.GetAttribute("fthetaHeight").Set(nominal_height)
@@ -341,11 +367,15 @@ class MinimalCamera():
         )
 
         # Store the original distortion model parameters
-        K, P = list(distortion_model[:2]) + list(distortion_model[4:]), list(distortion_model[2:4])
-        self.prim.CreateAttribute("physicalDistortionModel", Sdf.ValueTypeNames.String).Set("kannalaBrandt")
-        self.prim.CreateAttribute("physicalDistortionCoefficients", Sdf.ValueTypeNames.FloatArray, False).Set(
-            distortion_model
+        K, P = list(distortion_model[:2]) + list(distortion_model[4:]), list(
+            distortion_model[2:4]
         )
+        self.prim.CreateAttribute(
+            "physicalDistortionModel", Sdf.ValueTypeNames.String
+        ).Set("kannalaBrandt")
+        self.prim.CreateAttribute(
+            "physicalDistortionCoefficients", Sdf.ValueTypeNames.FloatArray, False
+        ).Set(distortion_model)
         return
 
     def get_intrinsics_matrix(self) -> np.ndarray:
@@ -354,7 +384,9 @@ class MinimalCamera():
             np.ndarray: the intrinsics of the camera (used for calibration)
         """
         if "pinhole" not in self.get_projection_type():
-            raise Exception("pinhole projection type is not set to be able to use get_intrinsics_matrix method.")
+            raise Exception(
+                "pinhole projection type is not set to be able to use get_intrinsics_matrix method."
+            )
         focal_length = self.get_focal_length()
         horizontal_aperture = self.get_horizontal_aperture()
         vertical_aperture = self.get_vertical_aperture()
@@ -364,7 +396,9 @@ class MinimalCamera():
         cx = width * 0.5
         cy = height * 0.5
         return self._backend_utils.create_tensor_from_list(
-            [[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]], dtype="float32", device=self._device
+            [[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]],
+            dtype="float32",
+            device=self._device,
         )
 
     def get_horizontal_fov(self) -> float:
@@ -372,7 +406,9 @@ class MinimalCamera():
         Returns:
             float: horizontal field of view in pixels
         """
-        return 2 * math.atan(self.get_horizontal_aperture() / (2 * self.get_focal_length()))
+        return 2 * math.atan(
+            self.get_horizontal_aperture() / (2 * self.get_focal_length())
+        )
 
     def get_vertical_fov(self) -> float:
         """

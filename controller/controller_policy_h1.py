@@ -4,8 +4,7 @@ from controller.controller_policy import PolicyController
 
 import numpy as np
 
-from isaacsim.core.utils.rotations import quat_to_rot_matrix
-from isaacsim.core.utils.types import ArticulationActions
+from physics_engine.isaacsim_utils import quat_to_rot_matrix, ArticulationActions
 from config.config_manager import config_manager
 
 ASSET_PATH = config_manager.get("path_asset")

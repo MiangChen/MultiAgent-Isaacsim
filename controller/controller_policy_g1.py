@@ -14,9 +14,11 @@ from typing import Optional
 import numpy as np
 import omni
 import omni.kit.commands
-from isaacsim.core.utils.nucleus import get_assets_root_path
-from isaacsim.core.utils.rotations import quat_to_rot_matrix
-from isaacsim.core.utils.types import ArticulationAction
+from physics_engine.isaacsim_utils import (
+    get_assets_root_path,
+    quat_to_rot_matrix,
+    ArticulationAction,
+)
 
 # from isaacsim.robot.policy.examples.controllers import PolicyController
 # from isaacsim.storage.native import get_assets_root_path  #  暂不清除和nuclues的区别

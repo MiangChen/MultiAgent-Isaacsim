@@ -179,7 +179,7 @@ class NodeMpcController(Node):
     - Publishes velocity commands to `/cmd_vel`.
     """
 
-    def __init__(self, namespace:str):
+    def __init__(self, namespace: str):
         super().__init__(node_name="node_mpc_controller", namespace=namespace)
 
         # Load parameters
@@ -337,6 +337,8 @@ class NodeMpcController(Node):
     def stop_robot(self):
         cmd_msg = Twist()
         self.cmd_vel_pub.publish(cmd_msg)
+
+
 def main(args=None):
     rclpy.init(args=args)
     node = NodeMpcController()

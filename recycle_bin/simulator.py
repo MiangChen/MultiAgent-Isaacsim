@@ -1,4 +1,3 @@
-
 class Simulator:
     """SimulatorRuntime"""
 
@@ -20,11 +19,15 @@ class Simulator:
 
         self.headless = headless
         self._simulation_app = SimulationApp(
-            {'headless': self.headless, 'anti_aliasing': 0, 'hide_ui': False, 'multi_gpu': False}
+            {
+                "headless": self.headless,
+                "anti_aliasing": 0,
+                "hide_ui": False,
+                "multi_gpu": False,
+            }
         )
         print("IsaacSim Init ")
 
 
 if __name__ == "__main__":
     simulator = Simulator()
-

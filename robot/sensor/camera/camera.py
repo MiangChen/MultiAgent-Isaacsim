@@ -4,9 +4,12 @@ import numpy as np
 import torch
 from torchvision.utils import save_image
 
-from isaacsim.sensors.camera import Camera as IsaacCamera
-from isaacsim.core.utils.numpy import rotations
-from isaacsim.core.utils.prims import define_prim, get_prim_at_path
+from physics_engine.isaacsim_utils import (
+    Camera as IsaacCamera,
+    rotations,
+    define_prim,
+    get_prim_at_path,
+)
 from pxr import Usd, UsdGeom, Gf
 
 from log.log_manager import LogManager

@@ -2,9 +2,7 @@ from typing import Tuple
 
 import torch
 
-from isaacsim.core.api.scenes import Scene
-from isaacsim.core.prims import Articulation
-from isaacsim.core.utils.rotations import quat_to_rot_matrix
+from physics_engine.isaacsim_utils import Scene, Articulation, quat_to_rot_matrix
 
 from log.log_manager import LogManager
 from robot.cfg import CfgRobot

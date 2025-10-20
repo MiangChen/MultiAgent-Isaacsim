@@ -75,7 +75,7 @@ class LogManager:
         console_handler.setFormatter(console_formatter)
 
         # 使用最终的绝对路径来创建 FileHandler
-        file_handler = logging.FileHandler(final_log_path, mode='a')
+        file_handler = logging.FileHandler(final_log_path, mode="a")
         file_handler.setLevel(level)
         file_handler.setFormatter(file_formatter)
 
@@ -87,7 +87,9 @@ class LogManager:
         root_logger.addHandler(console_handler)
         root_logger.addHandler(file_handler)
 
-        logging.info(f"LogManager: Logging automatically configured. Log file resolved to: {final_log_path}")
+        logging.info(
+            f"LogManager: Logging automatically configured. Log file resolved to: {final_log_path}"
+        )
 
     @staticmethod
     def get_logger(name: str) -> logging.Logger:

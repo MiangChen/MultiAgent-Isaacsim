@@ -2,7 +2,7 @@ import asyncio
 import sys
 from dependency_injector import containers, providers
 
-from isaacsim.core.api import World
+from physics_engine.isaacsim_utils import World
 from config.config_manager import config_manager
 from environment.env import Env
 from log.log_manager import LogManager
@@ -65,7 +65,6 @@ class AppContainer(containers.DeclarativeContainer):
         ros_manager=ros_manager,
         scene_manager=scene_manager,
     )
-
 
     env = providers.Factory(
         Env,

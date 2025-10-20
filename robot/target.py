@@ -14,8 +14,7 @@ from robot.cfg.cfg_target import CfgTarget
 from robot.body.body_target import BodyTarget
 from utils import to_torch, quat_to_yaw
 
-from isaacsim.core.api.scenes import Scene
-from isaacsim.core.utils.types import ArticulationActions
+from physics_engine.isaacsim_utils import Scene, ArticulationActions
 
 from gsi2isaacsim.gsi_msgs_helper import (
     Plan,

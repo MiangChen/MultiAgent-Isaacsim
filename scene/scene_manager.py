@@ -7,9 +7,23 @@ import torch
 
 import carb
 import omni
-from isaacsim.core.api.objects import cuboid, sphere
-from isaacsim.core.prims import XFormPrim
-from isaacsim.core.api.world import World
+from physics_engine.isaacsim_utils import (
+    cuboid,
+    sphere,
+    XFormPrim,
+    World,
+    add_update_semantics,
+    remove_all_semantics,
+    count_semantics_in_scene,
+    Camera,
+    define_prim,
+    get_prim_at_path,
+    add_reference_to_stage,
+    get_stage_units,
+    Articulation,
+    RigidPrim,
+    create_prim,
+)
 from omni.physx import get_physx_scene_query_interface
 from pxr import Gf, Sdf, UsdGeom, UsdPhysics, PhysxSchema, Usd
 
@@ -123,9 +137,7 @@ class SceneManager:
             Dict[str, Any]: 包含操作状态和消息的字典。
         """
         try:
-            from isaacsim.core.utils.semantics import (
-                add_update_semantics,
-            )  # isaacsim 4.5; will be deprecated in isaacsim 5.0
+            # isaacsim 4.5; will be deprecated in isaacsim 5.0
 
             prim = self.stage.GetPrimAtPath(prim_path)
             if not prim.IsValid():
@@ -162,7 +174,6 @@ class SceneManager:
         Returns:
         """
         try:
-            from isaacsim.core.utils.semantics import remove_all_semantics
 
             stage = omni.usd.get_context().get_stage()
             if not stage:
@@ -198,7 +209,6 @@ class SceneManager:
             Dict[str, Any]: 成功时，result 字段包含一个字典，映射标签到其数量。
         """
         try:
-            from isaacsim.core.utils.semantics import count_semantics_in_scene
 
             count_data = count_semantics_in_scene(prim_path=prim_path)
 
@@ -402,7 +412,9 @@ class SceneManager:
             "message": "No overlapping prims found at the specified position.",
         }
 
-    def overlap_hits_target_ancestor(self, radius_cm:float = 500.0, pos = None, target_prim: str = None) -> bool:
+    def overlap_hits_target_ancestor(
+        self, radius_cm: float = 500.0, pos=None, target_prim: str = None
+    ) -> bool:
         """
         用一个半径=radius_cm 的球做 Overlap 检测。
 
@@ -431,13 +443,17 @@ class SceneManager:
         def _report(hit) -> bool:
             # OverlapHit 暴露 rigid_body / collision 的 USD 路径（Python 绑定）
             rb = getattr(hit, "rigid_body", None) or getattr(hit, "rigidBody", None)
-            col = getattr(hit, "collision", None) or getattr(hit, "collision_path", None)
+            col = getattr(hit, "collision", None) or getattr(
+                hit, "collision_path", None
+            )
             if _is_ancestor(rb) or _is_ancestor(col):
                 found["v"] = True
                 return False  # 早停
             return True  # 继续收集其它命中
 
-        get_physx_scene_query_interface.overlap_sphere(float(radius_cm), origin, _report, False)
+        get_physx_scene_query_interface.overlap_sphere(
+            float(radius_cm), origin, _report, False
+        )
 
         return found["v"]
 
@@ -522,8 +538,6 @@ class SceneManager:
         """
         try:
             # 1. 使用 Isaac Sim 高层 API 创建或获取相机实例。
-            from isaacsim.sensors.camera import Camera
-            from isaacsim.core.utils.prims import define_prim, get_prim_at_path
 
             camera_instance = Camera(
                 prim_path=prim_path,
@@ -546,7 +560,6 @@ class SceneManager:
     def load_usd(
         self, usd_path: str, position: List[float], orientation: List[float]
     ) -> Dict[str, Any]:
-        from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
 
         # 检查重合
         #        if self.check_prim_overlapping(position):
@@ -589,9 +602,8 @@ class SceneManager:
     def create_robot(
         self, robot_type: str = "g1", position: List[float] = [0, 0, 0]
     ) -> Dict[str, Any]:
-        from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
+
         from config.variables import ASSET_PATH
-        from isaacsim.core.prims import Articulation
 
         ROBOT_CONFIGS = {
             "franka": {
@@ -844,7 +856,6 @@ class SceneManager:
 
         return {"status": "success", "result": prim_path, "usd_prim": xform.GetPrim()}
 
-
     def adjust_prim(
         self,
         prim_path: str = None,
@@ -884,8 +895,6 @@ class SceneManager:
             }
 
     def adjust_pose(self, prim_path: str, position: list, orientation: list) -> dict:
-        from isaacsim.core.prims import Articulation
-        from isaacsim.core.utils.stage import get_stage_units
 
         try:
             self.stage = omni.usd.get_context().get_stage()
@@ -1008,7 +1017,7 @@ class SceneManager:
 
     def set_collision_enabled(self, prim_path: str, collision_enabled: bool) -> dict:
         # 禁用碰撞属性
-        from isaacsim.core.prims import RigidPrim
+
         from pxr import UsdPhysics
 
         rigid_prim = RigidPrim(prim_paths_expr=prim_path)
@@ -1452,8 +1461,6 @@ class SceneManager:
             or usd_path.endswith("usda")
             or usd_path.endswith("usdc")
         ):
-
-            from isaacsim.core.utils.prims import create_prim
 
             root_prim = create_prim(
                 prim_path_root,

@@ -29,11 +29,23 @@ camera_colors = ["cyan", "magenta", "yellow", "lime", "orange", "purple", "pink"
 # Drone coordinate system: X=forward, Y=left, Z=up
 # pos and orientations set by looking at the cad drawings
 cameras = {}
-cameras["HD_LT"] = {"pos": np.array([0.09283, 0.03483, 0.00139]), "rot": Rz(45) * Ry(-20)}
-cameras["HD_RT"] = {"pos": np.array([0.09283, -0.03483, 0.00139]), "rot": Rz(-45) * Ry(-20)}
+cameras["HD_LT"] = {
+    "pos": np.array([0.09283, 0.03483, 0.00139]),
+    "rot": Rz(45) * Ry(-20),
+}
+cameras["HD_RT"] = {
+    "pos": np.array([0.09283, -0.03483, 0.00139]),
+    "rot": Rz(-45) * Ry(-20),
+}
 cameras["HD_UP"] = {"pos": np.array([0.05585, 0.0, 0.01905]), "rot": Ry(-90 + 12)}
-cameras["RR_LT"] = {"pos": np.array([-0.12283, -0.03083, 0.00739]), "rot": Rz(-135) * Ry(-20)}
-cameras["RR_RT"] = {"pos": np.array([-0.12283, 0.03083, 0.00739]), "rot": Rz(135) * Ry(-20)}
+cameras["RR_LT"] = {
+    "pos": np.array([-0.12283, -0.03083, 0.00739]),
+    "rot": Rz(-135) * Ry(-20),
+}
+cameras["RR_RT"] = {
+    "pos": np.array([-0.12283, 0.03083, 0.00739]),
+    "rot": Rz(135) * Ry(-20),
+}
 cameras["DN_LT"] = {"pos": np.array([-0.111, 0.0245, -0.08284]), "rot": Ry(90)}
 cameras["DN_RT"] = {"pos": np.array([-0.111, -0.0245, -0.08284]), "rot": Ry(90)}
 
@@ -76,9 +88,15 @@ ax = fig.add_subplot(111, projection="3d")
 
 # Plot drone body coordinate system at origin
 drone_axis_length = 0.1
-ax.quiver(0, 0, 0, 1, 0, 0, length=drone_axis_length, color="red", label="Drone X (forward)")
-ax.quiver(0, 0, 0, 0, 1, 0, length=drone_axis_length, color="green", label="Drone Y (left)")
-ax.quiver(0, 0, 0, 0, 0, 1, length=drone_axis_length, color="blue", label="Drone Z (up)")
+ax.quiver(
+    0, 0, 0, 1, 0, 0, length=drone_axis_length, color="red", label="Drone X (forward)"
+)
+ax.quiver(
+    0, 0, 0, 0, 1, 0, length=drone_axis_length, color="green", label="Drone Y (left)"
+)
+ax.quiver(
+    0, 0, 0, 0, 0, 1, length=drone_axis_length, color="blue", label="Drone Z (up)"
+)
 ax.text(drone_axis_length, 0, 0, " X_D")
 ax.text(0, drone_axis_length, 0, " Y_D")
 ax.text(0, 0, drone_axis_length, " Z_D")
@@ -92,11 +110,15 @@ cam_z_axis_local = np.array([0, 0, 1]) * axis_plot_length
 
 for idx, (name, cam_data) in enumerate(cameras.items()):
     pos = cam_data["pos"]
-    rot_matrix = cam_data["rot"].as_matrix()  # Transforms from camera frame to drone frame
+    rot_matrix = cam_data[
+        "rot"
+    ].as_matrix()  # Transforms from camera frame to drone frame
     color = camera_colors[idx]
 
     # Plot camera position
-    ax.scatter(pos[0], pos[1], pos[2], marker="o", s=60, color=color)  # Use camera-specific color
+    ax.scatter(
+        pos[0], pos[1], pos[2], marker="o", s=60, color=color
+    )  # Use camera-specific color
     ax.text(pos[0] + 0.01, pos[1] + 0.01, pos[2] + 0.01, name, fontsize=9)
 
     # Transform camera axes to drone frame and plot

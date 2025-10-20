@@ -9,13 +9,7 @@ from shapely.affinity import rotate
 import numpy as np
 import torch
 
-from isaacsim.core.api.scenes import Scene
-from isaacsim.core.prims import RigidPrim
-import isaacsim.core.utils.prims as prims_utils
-from isaacsim.core.utils.viewports import (
-    create_viewport_for_camera,
-    set_camera_view,
-)
+from physics_engine.isaacsim_utils import Scene, RigidPrim, prims_utils, create_viewport_for_camera, set_camera_view, Camera
 from pxr import Usd, UsdGeom
 
 from map.map_grid_map import GridMap
@@ -708,7 +702,7 @@ class Robot:
             prims_utils.delete_prim(self.camera_prim_path)
 
         # 2. 创建相机Prim
-        from isaacsim.sensors.camera import Camera
+
 
         camera = Camera(prim_path=self.camera_prim_path)
         camera.set_focal_length(2)

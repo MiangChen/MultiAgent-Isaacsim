@@ -3,7 +3,7 @@ from typing import List, Optional
 import json
 import numpy as np
 
-from isaacsim.asset.gen.omap.bindings import _omap
+from physics_engine.isaacsim_utils import _omap
 import omni
 
 from rclpy.node import Node

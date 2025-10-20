@@ -33,7 +33,7 @@ class NodeRobot(Node):
         logger.info(f"ROS2 Node for {self.namespace} has been created.")
 
     def callback_cmd_vel(self, msg):
-        if self.robot_instance and hasattr(self.robot_instance, 'callback_cmd_vel'):
+        if self.robot_instance and hasattr(self.robot_instance, "callback_cmd_vel"):
             self.robot_instance.callback_cmd_vel(msg)
         else:
             self.get_logger().warning("No robot instance connected for cmd_vel")

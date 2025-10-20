@@ -2,7 +2,7 @@ import inspect
 from typing import Dict, List, Type
 import yaml
 
-from isaacsim.core.api.scenes import Scene
+from physics_engine.isaacsim_utils import Scene
 
 from log.log_manager import LogManager
 from map.map_grid_map import GridMap

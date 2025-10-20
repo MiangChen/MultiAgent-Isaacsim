@@ -90,10 +90,13 @@ def setup_ros(namespace: str = "", ctx=None):
             quat = odom_msg.pose.pose.orientation
             ctx.des_pose = DronePose(
                 pos=Gf.Vec3d(pos.x, pos.y, pos.z),
-                quat=Gf.Quatf(quat.w, quat.x, quat.y, quat.z)
+                quat=Gf.Quatf(quat.w, quat.x, quat.y, quat.z),
             )
             ctx.is_pose_dirty = True
-            print(f"Updated pose from odometry for drone {ctx.namespace}: pos=({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})")
+            print(
+                f"Updated pose from odometry for drone {ctx.namespace}: pos=({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})"
+            )
+
     else:
         entity_pose_callback = callback_gazebo_entitystate_msg
         linkstate_pose_callback = None
@@ -112,6 +115,7 @@ def setup_ros(namespace: str = "", ctx=None):
     if ctx is not None and linkstate_pose_callback is not None:
         try:
             from gazebo_msgs.msg import LinkState
+
             subs["gazebo_linkstate"] = node.create_subscription(
                 LinkState,
                 "/gazebo/set_link_state",  # Absolute topic path as used by mission system
@@ -120,13 +124,16 @@ def setup_ros(namespace: str = "", ctx=None):
             )
             print(f"Subscribed to LinkState topic for drone {ctx.namespace}")
         except ImportError:
-            print("gazebo_msgs.msg.LinkState not available, skipping LinkState subscription")
+            print(
+                "gazebo_msgs.msg.LinkState not available, skipping LinkState subscription"
+            )
 
     # Add odometry subscription for multi-drone case
     if ctx is not None and odom_callback is not None:
         # Import nav_msgs locally to avoid global import issues
         try:
             from nav_msgs.msg import Odometry
+
             subs["odometry"] = node.create_subscription(
                 Odometry,
                 "odom",  # Standard odometry topic
@@ -150,9 +157,7 @@ def setup_ros(namespace: str = "", ctx=None):
         "spawn_entity": node.create_service(
             SpawnEntity, "spawn_entity", spawn_entity_fun
         ),
-        "pause_physics": node.create_service(
-            Empty, "pause_physics", pause_physics_fun
-        ),
+        "pause_physics": node.create_service(Empty, "pause_physics", pause_physics_fun),
         "unpause_physics": node.create_service(
             Empty, "unpause_physics", unpause_physics_fun
         ),
@@ -176,22 +181,32 @@ def create_drone_pose_callback(ctx: RobotDroneAutel):
         quat = entitystate_msg.pose.orientation
 
         # Expected entity names: "quadrotor" for legacy, or namespace-specific names
-        expected_names = ["quadrotor", ctx.namespace, f"{ctx.namespace}/quadrotor", f"{ctx.namespace}_quadrotor"]
+        expected_names = [
+            "quadrotor",
+            ctx.namespace,
+            f"{ctx.namespace}/quadrotor",
+            f"{ctx.namespace}_quadrotor",
+        ]
 
         # Debug: Print all received entity state messages for this drone's namespace
         print(
-            f"[{ctx.namespace}] Received EntityState for '{entitystate_msg.name}' (expecting one of {expected_names})")
+            f"[{ctx.namespace}] Received EntityState for '{entitystate_msg.name}' (expecting one of {expected_names})"
+        )
 
         if entitystate_msg.name in expected_names:
             # Update the drone context's desired pose
             ctx.des_pose = DronePose(
                 pos=Gf.Vec3d(pos.x, pos.y, pos.z),
-                quat=Gf.Quatf(quat.w, quat.x, quat.y, quat.z)
+                quat=Gf.Quatf(quat.w, quat.x, quat.y, quat.z),
             )
             ctx.is_pose_dirty = True
-            print(f"✓ Updated pose for drone {ctx.namespace}: pos=({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})")
+            print(
+                f"✓ Updated pose for drone {ctx.namespace}: pos=({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})"
+            )
         else:
-            print(f"✗ Ignoring entity '{entitystate_msg.name}' for drone {ctx.namespace}")
+            print(
+                f"✗ Ignoring entity '{entitystate_msg.name}' for drone {ctx.namespace}"
+            )
 
     return callback_drone_entitystate_msg
 
@@ -223,27 +238,33 @@ def create_drone_set_entity_state_callback(ctx: RobotDroneAutel):
         quat = req.state.pose.orientation
 
         # Expected entity names: "quadrotor" for legacy, or namespace-specific names
-        model_name = req.state.name.rsplit("::", 1)[0] if "::" in req.state.name else req.state.name
+        model_name = (
+            req.state.name.rsplit("::", 1)[0]
+            if "::" in req.state.name
+            else req.state.name
+        )
         expected_names = [
             "quadrotor",
             ctx.namespace,
             f"{ctx.namespace}/quadrotor",
-            f"{ctx.namespace}_quadrotor"
+            f"{ctx.namespace}_quadrotor",
         ]
 
         # Debug: Print all received entity state messages for this drone's namespace
         print(
-            f"[{ctx.namespace}] Received SetEntityState for '{req.state.name}' / model '{model_name}' (expecting one of {expected_names})")
+            f"[{ctx.namespace}] Received SetEntityState for '{req.state.name}' / model '{model_name}' (expecting one of {expected_names})"
+        )
 
         if model_name in expected_names:
             # Update the drone context's desired pose directly
             ctx.des_pose = DronePose(
                 pos=Gf.Vec3d(pos.x, pos.y, pos.z),
-                quat=Gf.Quatf(quat.w, quat.x, quat.y, quat.z)
+                quat=Gf.Quatf(quat.w, quat.x, quat.y, quat.z),
             )
             ctx.is_pose_dirty = True
             print(
-                f"✓ Updated pose from SetEntityState for drone {ctx.namespace}: pos=({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})")
+                f"✓ Updated pose from SetEntityState for drone {ctx.namespace}: pos=({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})"
+            )
             response.success = True
         else:
             print(f"✗ Ignoring entity '{req.state.name}' for drone {ctx.namespace}")
@@ -267,24 +288,28 @@ def create_drone_linkstate_callback(ctx: RobotDroneAutel):
             "quadrotor::base_link",
             f"{ctx.namespace}::base_link",
             f"{ctx.namespace}/quadrotor::base_link",
-            f"{ctx.namespace}_quadrotor::base_link"
+            f"{ctx.namespace}_quadrotor::base_link",
         ]
 
         # Debug: Print all received link state messages for this drone's namespace
         print(
-            f"[{ctx.namespace}] Received LinkState for '{linkstate_msg.link_name}' (expecting one of {expected_base_links})")
+            f"[{ctx.namespace}] Received LinkState for '{linkstate_msg.link_name}' (expecting one of {expected_base_links})"
+        )
 
         if linkstate_msg.link_name in expected_base_links:
             # Update the drone context's desired pose
             ctx.des_pose = DronePose(
                 pos=Gf.Vec3d(pos.x, pos.y, pos.z),
-                quat=Gf.Quatf(quat.w, quat.x, quat.y, quat.z)
+                quat=Gf.Quatf(quat.w, quat.x, quat.y, quat.z),
             )
             ctx.is_pose_dirty = True
             print(
-                f"✓ Updated pose from LinkState for drone {ctx.namespace}: pos=({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})")
+                f"✓ Updated pose from LinkState for drone {ctx.namespace}: pos=({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})"
+            )
         else:
-            print(f"✗ Ignoring link '{linkstate_msg.link_name}' for drone {ctx.namespace}")
+            print(
+                f"✗ Ignoring link '{linkstate_msg.link_name}' for drone {ctx.namespace}"
+            )
 
     return callback_drone_linkstate_msg
 
@@ -415,7 +440,12 @@ def unpause_physics_fun(req, response):
 def process_move_requests(curr_stage, pending_move_requests):
     """Process pending move requests and update object positions."""
     for data in pending_move_requests:
-        scene_manager.adjust_prim(prim_path=data["prim_path_absolute"], position=data["pos"], quat=data["quat"], scale=None)
+        scene_manager.adjust_prim(
+            prim_path=data["prim_path_absolute"],
+            position=data["pos"],
+            quat=data["quat"],
+            scale=None,
+        )
 
 
 @carb.profiler.profile

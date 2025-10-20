@@ -5,19 +5,20 @@ import carb
 import numpy as np
 
 import omni
-from isaacsim.asset.gen.omap.bindings import _omap
+from physics_engine.isaacsim_utils import _omap, VisualCuboid, stage_utils
 
 
-class GridMap():
-    def __init__(self,
-                 cell_size: float = 1,
-                 start_point: list = [0, 0, 0],
-                 min_bounds: list = [-20, -20, 0],
-                 max_bounds: list = [20, 20, 5],
-                 occupied_cell: int = 1,
-                 empty_cell: int = 0,
-                 invisible_cell: int = 2,
-                 ):
+class GridMap:
+    def __init__(
+        self,
+        cell_size: float = 1,
+        start_point: list = [0, 0, 0],
+        min_bounds: list = [-20, -20, 0],
+        max_bounds: list = [20, 20, 5],
+        occupied_cell: int = 1,
+        empty_cell: int = 0,
+        invisible_cell: int = 2,
+    ):
         """
         用于将一个xyz范围内的连续地图变成一个gridmap
         可以直接获取gridmap, / 快速获取障碍物的点位置
@@ -33,7 +34,9 @@ class GridMap():
             if min_bounds[-1] < cell_size / 2:
                 min_bounds[-1] = cell_size / 2
                 start_point[-1] = cell_size / 2
-                print("当地面的高度低于cell size的时候, 算法会把地面全部当成障碍物, 自动将z轴的最低范围设置为cell_size")
+                print(
+                    "当地面的高度低于cell size的时候, 算法会把地面全部当成障碍物, 自动将z轴的最低范围设置为cell_size"
+                )
             if max_bounds[-1] <= min_bounds[-1]:
                 max_bounds[-1] = min_bounds[-1] + cell_size / 2
                 print("z轴范围不足, 自动调高cell size")
@@ -46,7 +49,9 @@ class GridMap():
         self.occupied_cell = occupied_cell
         self.empty_cell = empty_cell
         self.invisible_cell = invisible_cell
-        self.path_robot = "/World/robot"  # 记录机器人的统一路径,后续要先deactivate再建立gridmap
+        self.path_robot = (
+            "/World/robot"  # 记录机器人的统一路径,后续要先deactivate再建立gridmap
+        )
         self.path_ground = "/World/GroundPlane"
         self.occupied_color = carb.Int4(128, 128, 128, 255)  # 灰色，表示障碍物
         self.unoccupied_color = carb.Int4(255, 255, 255, 255)  # 白色，表示可行走区域
@@ -59,29 +64,34 @@ class GridMap():
 
         """
         physx = omni.physx.acquire_physx_interface()
-        stage_id = omni.usd.get_context().get_stage_id()  # 这里要改进一下, 只对静态的场景进行grid world建模, 对于动态的机器人建立grid map是在别的地方来处理的
+        stage_id = (
+            omni.usd.get_context().get_stage_id()
+        )  # 这里要改进一下, 只对静态的场景进行grid world建模, 对于动态的机器人建立grid map是在别的地方来处理的
         self.generator = _omap.Generator(physx, stage_id)
         self.reset()
 
         # Set location to map from and the min and max bounds to map
-        self.generator.set_transform(self.start_point,
-                                     self.min_bounds,
-                                     self.max_bounds)
+        self.generator.set_transform(self.start_point, self.min_bounds, self.max_bounds)
 
-    def generate_grid_map(self, dimension: str = '2d'):
+    def generate_grid_map(self, dimension: str = "2d"):
         """
         首先重建地图, 2d和3d只能选择一个状态
         :param dimension:
         :return:
         """
-        if dimension == '2d' and self.flag_generate2d == False or dimension == '3d' and self.flag_generate3d == False:
+        if (
+            dimension == "2d"
+            and self.flag_generate2d == False
+            or dimension == "3d"
+            and self.flag_generate3d == False
+        ):
             # 给静态场景建图
-            if dimension == '2d':
+            if dimension == "2d":
                 self.generator.generate2d()
                 self.flag_generate2d = True
                 self.flag_generate3d = False
                 print("generate 2d")
-            elif dimension == '3d':
+            elif dimension == "3d":
                 self.generator.generate3d()
                 self.flag_generate3d = True
                 self.flag_generate2d = False
@@ -94,14 +104,26 @@ class GridMap():
         同时给出一个对应的2d矩阵, 用于表示上面的矩阵的点对应的现实坐标
         :return:
         """
-        obs_position = self.generator.get_occupied_positions()  # 只是一个list,表示obs的坐标
-        free_position = self.generator.get_free_positions()  # 只是一个list, 表示空地的坐标
+        obs_position = (
+            self.generator.get_occupied_positions()
+        )  # 只是一个list,表示obs的坐标
+        free_position = (
+            self.generator.get_free_positions()
+        )  # 只是一个list, 表示空地的坐标
         # value_map = self.generator.get_buffer()  # list, 表示各个点是障碍物还是空地, 但是没有坐标信息
-        print("len obs", len(obs_position), "len free ", len(free_position), "all",
-              len(obs_position) + len(free_position))
+        print(
+            "len obs",
+            len(obs_position),
+            "len free ",
+            len(free_position),
+            "all",
+            len(obs_position) + len(free_position),
+        )
         # print("len value map", len(value_map))
         x, y, z = self.generator.get_dimensions()
-        self.pos_map = np.empty((x, y, z, 3), dtype=np.float16)  # 2d map会自动z=1, 无关紧要
+        self.pos_map = np.empty(
+            (x, y, z, 3), dtype=np.float16
+        )  # 2d map会自动z=1, 无关紧要
         self.value_map = np.empty((x, y, z), dtype=np.uint8)
         # self.semantic_map = np.full((x, y, z), fill_value=-1, dtype=np.int32)   # 语义地图
         # self.value_map = np.array(value_map).reshape((x, y, z))
@@ -157,8 +179,14 @@ class GridMap():
 
         """
         # 先检测可行性
-        if any(continuous_pos[i] < self.min_bounds[i] or continuous_pos[i] > self.max_bounds[i] for i in range(3)):
-            print("输入的坐标范围超过了 min bounds和 max bounds, 没有实用意义, 需要重新设置")
+        if any(
+            continuous_pos[i] < self.min_bounds[i]
+            or continuous_pos[i] > self.max_bounds[i]
+            for i in range(3)
+        ):
+            print(
+                "输入的坐标范围超过了 min bounds和 max bounds, 没有实用意义, 需要重新设置"
+            )
 
     def reset(self):
         self.generator.update_settings(
@@ -171,26 +199,29 @@ class GridMap():
 
     def get_image(self):
         colored_buffer = self.generator.get_colored_byte_buffer(
-            self.occupied_color,
-            self.unoccupied_color,
-            self.unknown_color
+            self.occupied_color, self.unoccupied_color, self.unknown_color
         )
         import numpy as np
+
         # 将缓冲区转换为 numpy 数组
         buffer_np = np.array([ord(byte) for byte in colored_buffer], dtype=np.uint8)
         # 假设图像的宽度和高度由占据图的尺寸（dims）决定
         x, y, z = self.generator.get_dimensions()
 
         from PIL import Image
+
         # 将一维的缓冲区转换为二维图像
         buffer_np = buffer_np.reshape((x, y, 4))  # 每个像素有 RGBA 值
         image = Image.fromarray(buffer_np)
         return image
 
     def compute_index(self, position: List = None) -> np.ndarray:
-        if position is None or (isinstance(position, np.ndarray) and position.size == 0) or isinstance(position,
-                                                                                                       List) and len(
-            position) == 0:
+        if (
+            position is None
+            or (isinstance(position, np.ndarray) and position.size == 0)
+            or isinstance(position, List)
+            and len(position) == 0
+        ):
             logging.warning("compute index的输入position = None")
             return None
         # 获取角点
@@ -214,9 +245,11 @@ if __name__ == "__main__":
     记得 先 Play 运行环境, 才能跑起来
     """
     cell_size = 0.2
-    grid_map = GridMap(min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=cell_size)
+    grid_map = GridMap(
+        min_bounds=[-10, -10, 0], max_bounds=[10, 10, 10], cell_size=cell_size
+    )
 
-    grid_map.generate_grid_map('2d')
+    grid_map.generate_grid_map("2d")
     point = grid_map.generator.get_occupied_positions()
     point2 = grid_map.generator.get_free_positions()
     print(point[:10])
@@ -237,7 +270,6 @@ if __name__ == "__main__":
 
     index = 0
     # 检查一下是否匹配, 障碍物再value map中的index和pos map中的是否一致
-    from isaacsim.core.api.objects import VisualCuboid
 
     # 下面的这个比较耗时间 , 3d的0.25精度, 渲染时间2分钟
     k = 0.99
@@ -257,11 +289,9 @@ if __name__ == "__main__":
                         name=f"cube{index}",
                         position=pos,
                         size=cell_size,
-                        color=np.array([0.0, 0.5 * k, 0.0], dtype=np.float32)
+                        color=np.array([0.0, 0.5 * k, 0.0], dtype=np.float32),
                     )
                     k *= 0.99
-
-    import isaacsim.core.utils.stage as stage_utils
 
     stage = stage_utils.get_current_stage()
     prim_robot = stage.GetPrimAtPath(grid_map.path_robot)

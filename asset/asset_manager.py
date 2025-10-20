@@ -5,12 +5,12 @@ import yaml
 
 
 def process_asset_subdirectory(
-    scan_path: Path,
-    base_output_dir: Path,
-    is_user_folder: bool = False
+    scan_path: Path, base_output_dir: Path, is_user_folder: bool = False
 ):
     output_filename = base_output_dir / f"{scan_path.name}_assets.json"
-    print(f"--- 正在处理子目录: '{scan_path.name}' -> 输出到 '{output_filename.name}' ---")
+    print(
+        f"--- 正在处理子目录: '{scan_path.name}' -> 输出到 '{output_filename.name}' ---"
+    )
 
     usd_files = {}
 
@@ -28,10 +28,11 @@ def process_asset_subdirectory(
     else:
         print("未找到匹配的 .usd 文件。\n")
 
+
 def main():
     project_root = Path(__file__).parent.parent.resolve()
     config_file_path = project_root / "config" / "config_parameter.yaml"
-    with open(config_file_path, 'r', encoding='utf-8') as f:
+    with open(config_file_path, "r", encoding="utf-8") as f:
         config_data = yaml.safe_load(f)
     path_asset = config_data.get("path_asset")
 
@@ -41,8 +42,9 @@ def main():
     output_dir.mkdir(exist_ok=True)
     for entry in Path(path_asset).iterdir():
         if entry.is_dir():
-            is_user_dir = (entry.name == "User")
+            is_user_dir = entry.name == "User"
             process_asset_subdirectory(entry, output_dir, is_user_folder=is_user_dir)
+
 
 if __name__ == "__main__":
     main()

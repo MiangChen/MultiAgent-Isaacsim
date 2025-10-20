@@ -20,6 +20,10 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 files_parent_dir = os.path.abspath(os.path.join(current_dir, "../../../"))
 sys.path.append(files_parent_dir)  # 将项目根目录添加到 sys.path 中
 from config.variables import PATH_PROJECT, PATH_ISAACSIM_ASSETS, ASSET_PATH
+from physics_engine.isaacsim_utils import (
+    add_reference_to_stage, get_stage_units, Articulation, World, 
+    DynamicCuboid, DynamicSphere, create_prim
+)
 
 
 
@@ -575,9 +579,8 @@ class MCPExtension(omni.ext.IExt):
         return {"status": "success", "message": f"Prim '{prim_path}' focused in viewport"}
 
     def create_robot(self, robot_type: str = "g1", position: List[float] = [0, 0, 0]) -> Dict[str, Any]:
-        from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
+
         from config.variables import ASSET_PATH
-        from isaacsim.core.prims import Articulation
 
         ROBOT_CONFIGS = {
             "franka": {
@@ -646,7 +649,7 @@ class MCPExtension(omni.ext.IExt):
         return {"status": "success", "message": f"{robot_type} robot created at {new_prim_path}"}
 
     def create_object(self, usd_path: str, position: List[float], orientation: List[float]) -> Dict[str, Any]:
-        from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
+
 
         # 检查重合
 #        if self.check_prim_overlapping(position):
@@ -816,8 +819,7 @@ class MCPExtension(omni.ext.IExt):
             return {"status": "error", "message": f"Failed to set scale: {str(e)}"}
 
     def adjust_pose(self, prim_path: str, position: list, orientation: list) -> dict:
-        from isaacsim.core.prims import Articulation
-        from isaacsim.core.utils.stage import get_stage_units
+
 
         try:
             self._stage = omni.usd.get_context().get_stage()
@@ -1260,10 +1262,7 @@ class MCPExtension(omni.ext.IExt):
     ) -> Dict[str, Any]:
         """Create a physics scene with multiple objects."""
         try:
-            from isaacsim.core.api import World
-            from isaacsim.core.api.objects import (
-                DynamicCuboid,
-                DynamicSphere,
+
                 DynamicCone,
                 DynamicCylinder,
                 DynamicCapsule,
@@ -1389,7 +1388,7 @@ class MCPExtension(omni.ext.IExt):
                 or usd_path.endswith("usdc")
         ):
 
-            from isaacsim.core.utils.prims import create_prim
+
             create_prim(
                 prim_path_root,
                 usd_path=usd_path,

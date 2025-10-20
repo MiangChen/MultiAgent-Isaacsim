@@ -1,4 +1,3 @@
-
 """
 ViewportManager Enhanced - 简洁高效的viewport管理器
 负责管理viewport和camera之间的映射关系，专注于核心功能实现。
@@ -51,7 +50,9 @@ class ViewportManager:
 
         # 检查是否已存在，给出覆盖警告
         if name in self._viewports:
-            print(f"Warning: Viewport '{name}' already exists, overwriting previous registration")
+            print(
+                f"Warning: Viewport '{name}' already exists, overwriting previous registration"
+            )
 
         self._viewports[name] = viewport_obj
         return True
@@ -117,9 +118,11 @@ class ViewportManager:
             bool: 映射成功返回True，失败返回False
         """
         # 验证输入
-        if not self._is_valid_camera_path(camera_path) or \
-                not self._is_valid_viewport_name(viewport_name) or \
-                viewport_name not in self._viewports:
+        if (
+            not self._is_valid_camera_path(camera_path)
+            or not self._is_valid_viewport_name(viewport_name)
+            or viewport_name not in self._viewports
+        ):
             return False
 
         # 清理旧的映射关系
@@ -150,7 +153,10 @@ class ViewportManager:
         Returns:
             bool: 清理成功返回True，不存在映射返回False
         """
-        if not self._is_valid_viewport_name(viewport_name) or viewport_name not in self._mappings:
+        if (
+            not self._is_valid_viewport_name(viewport_name)
+            or viewport_name not in self._mappings
+        ):
             return False
 
         camera_path = self._mappings[viewport_name]
@@ -238,7 +244,11 @@ class ViewportManager:
             viewport_name, viewport_obj = self._extract_robot_viewport_info(robot)
 
             # 确保提取到有效信息，并进行注册
-            if viewport_name and viewport_obj and self.register_viewport(viewport_name, viewport_obj):
+            if (
+                viewport_name
+                and viewport_obj
+                and self.register_viewport(viewport_name, viewport_obj)
+            ):
                 self._viewport_sources[viewport_name] = "robot"
                 success_count += 1
 
@@ -253,32 +263,38 @@ class ViewportManager:
 
     def _is_valid_camera_path(self, camera_path: str) -> bool:
         """检查camera路径的有效性"""
-        return bool(camera_path and isinstance(camera_path, str) and camera_path.strip())
+        return bool(
+            camera_path and isinstance(camera_path, str) and camera_path.strip()
+        )
 
     def _is_valid_viewport_name(self, viewport_name: str) -> bool:
         """检查viewport名称的有效性"""
-        return bool(viewport_name and isinstance(viewport_name, str) and viewport_name.strip())
+        return bool(
+            viewport_name and isinstance(viewport_name, str) and viewport_name.strip()
+        )
 
-    def _extract_robot_viewport_info(self, robot: Any) -> Tuple[Optional[str], Optional[Any]]:
+    def _extract_robot_viewport_info(
+        self, robot: Any
+    ) -> Tuple[Optional[str], Optional[Any]]:
         """从robot对象中提取viewport信息"""
         viewport_name = None
         viewport_obj = None
 
         try:
-            if hasattr(robot, 'get_viewport_info'):
+            if hasattr(robot, "get_viewport_info"):
                 viewport_info = robot.get_viewport_info()
-                if viewport_info and viewport_info.get('enabled'):
-                    viewport_name = viewport_info.get('viewport_name')
+                if viewport_info and viewport_info.get("enabled"):
+                    viewport_name = viewport_info.get("viewport_name")
                     if viewport_name:
                         viewport_obj = self._get_viewport_by_name(viewport_name)
 
-            elif hasattr(robot, 'cfg_robot') and hasattr(robot.cfg_robot, 'id'):
+            elif hasattr(robot, "cfg_robot") and hasattr(robot.cfg_robot, "id"):
                 viewport_name = f"Viewport_Robot_{robot.cfg_robot.id}"
                 viewport_obj = self._get_viewport_by_name(viewport_name)
-            elif hasattr(robot, 'id'):
+            elif hasattr(robot, "id"):
                 viewport_name = f"Viewport_Robot_{robot.id}"
                 viewport_obj = self._get_viewport_by_name(viewport_name)
-            elif hasattr(robot, 'type') and hasattr(robot, 'id'):
+            elif hasattr(robot, "type") and hasattr(robot, "id"):
                 viewport_name = f"Viewport_{robot.type}_{robot.id}"
                 viewport_obj = self._get_viewport_by_name(viewport_name)
 
@@ -290,18 +306,20 @@ class ViewportManager:
     def _extract_robot_camera_path(self, robot: Any) -> Optional[str]:
         """从robot对象中提取camera路径信息"""
         try:
-            if hasattr(robot, 'get_viewport_info'):
+            if hasattr(robot, "get_viewport_info"):
                 viewport_info = robot.get_viewport_info()
-                if viewport_info and viewport_info.get('enabled'):
-                    camera_path = viewport_info.get('camera_path')
+                if viewport_info and viewport_info.get("enabled"):
+                    camera_path = viewport_info.get("camera_path")
                     if camera_path:
                         return camera_path
 
-            if hasattr(robot, 'camera_prim_path') and robot.camera_prim_path:
+            if hasattr(robot, "camera_prim_path") and robot.camera_prim_path:
                 return robot.camera_prim_path
-            elif hasattr(robot, 'cfg_robot') and hasattr(robot.cfg_robot, 'camera_path'):
+            elif hasattr(robot, "cfg_robot") and hasattr(
+                robot.cfg_robot, "camera_path"
+            ):
                 return robot.cfg_robot.camera_path
-            elif hasattr(robot, 'cfg_robot') and hasattr(robot.cfg_robot, 'id'):
+            elif hasattr(robot, "cfg_robot") and hasattr(robot.cfg_robot, "id"):
                 return f"/World/Robot_{robot.cfg_robot.id}_Camera"
 
         except (AttributeError, Exception):

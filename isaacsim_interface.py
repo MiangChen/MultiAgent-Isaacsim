@@ -9,7 +9,10 @@ print("isaacsim_interface args: ", sys.argv)
 # Parse arguments *before* SimulationApp initialization
 parser = argparse.ArgumentParser(description="Setup Isaac Sim environment for Planner.")
 parser.add_argument(
-    "--world", type=str, default="default_world", help="Name or path of the world/scene to load."
+    "--world",
+    type=str,
+    default="default_world",
+    help="Name or path of the world/scene to load.",
 )
 parser.add_argument("--gui", action="store_true", help="Run simulation in GUI mode.")
 parser.add_argument("--robot_model", type=str, default="modelx", help="robot model.")
@@ -17,7 +20,7 @@ parser.add_argument("--robot_model", type=str, default="modelx", help="robot mod
 args, unknown = parser.parse_known_args()
 
 # Initialize SimulationApp globally using parsed arguments
-from isaacsim import SimulationApp
+from physics_engine.isaacsim_utils import SimulationApp
 
 CONFIG = {"renderer": "RaytracedLighting", "headless": not args.gui}
 print(f"Initializing Isaac Sim with headless={not args.gui}")
@@ -40,6 +43,7 @@ g_simulation_app.set_setting("/persistent/physics/numThreads", 0)
 if not args.gui:
     # disable the viewport if not using any gui
     from omni.kit.viewport.utility import get_active_viewport
+
     get_active_viewport().set_updates_enabled(False)
 
 import carb
@@ -52,13 +56,20 @@ import omni
 import omni.graph.core as og
 import usdrt.Sdf
 
-from isaacsim.core.api import SimulationContext, World
-from isaacsim.core.api.objects import VisualCuboid, VisualCylinder, VisualSphere
-from isaacsim.core.utils import extensions, stage
+from physics_engine.isaacsim_utils import (
+    SimulationContext,
+    World,
+    VisualCuboid,
+    VisualCylinder,
+    VisualSphere,
+    extensions,
+    stage,
+    get_assets_root_path,
+)
 
-from minimal_camera import MinimalCamera  # a stripped down version of isaacsim.sensors.camera
-
-from isaacsim.storage.native import get_assets_root_path
+from minimal_camera import (
+    MinimalCamera,
+)  # a stripped down version of isaacsim.sensors.camera
 
 from pxr import Gf, UsdGeom, Sdf, Usd
 
@@ -96,11 +107,14 @@ wxyz_back = [0.5, 0.5, 0.5, 0.5]
 wxyz_top = [0.0, 0.707106781, -0.707106781, 0.0]
 wxyz_bottom = [0.707106781, 0.0, 0.0, -0.707106781]
 
-CamRigComponent = namedtuple("CamRigComponent", ["pos", "wxyz", "cam_type", "render_types"])
+CamRigComponent = namedtuple(
+    "CamRigComponent", ["pos", "wxyz", "cam_type", "render_types"]
+)
 
 
-def export_prim_to_layer(prim: Usd.Prim, flatten=True,
-                         include_session_layer=True) -> Optional[Sdf.Layer]:
+def export_prim_to_layer(
+    prim: Usd.Prim, flatten=True, include_session_layer=True
+) -> Optional[Sdf.Layer]:
     """
     Creates a temporary layer with only the given prim in it
 
@@ -148,14 +162,14 @@ def export_prim_to_layer(prim: Usd.Prim, flatten=True,
     solo_stage = Usd.Stage.CreateInMemory()
     solo_prim_path = Sdf.Path(f"/{prim.GetName()}")
     solo_prim = solo_stage.DefinePrim(solo_prim_path)
-    solo_prim.GetReferences().AddReference(copy_layer.identifier,
-                                           prim.GetPrimPath())
+    solo_prim.GetReferences().AddReference(copy_layer.identifier, prim.GetPrimPath())
     solo_stage.SetDefaultPrim(solo_prim)
 
     if flatten:
         return solo_stage.Flatten()
     else:
         return solo_stage.GetRootLayer()
+
 
 class DronePose:
     def __init__(self, pos=Gf.Vec3d(0, 0, 0), quat=Gf.Quatf.GetIdentity()):
@@ -173,12 +187,16 @@ def create_sim_environment(world_usd_path, rendering_hz):
         g_simulation_app.close()
         sys.exit()
 
-    world = World(physics_dt = 1.0 / rendering_hz,
-        rendering_dt = 1.0 / rendering_hz,
-        stage_units_in_meters=1.0)
+    world = World(
+        physics_dt=1.0 / rendering_hz,
+        rendering_dt=1.0 / rendering_hz,
+        stage_units_in_meters=1.0,
+    )
     curr_stage = stage.get_current_stage()
 
-    carb.log_info(f"World argument received: {world_usd_path} (currently unused for scene loading)")
+    carb.log_info(
+        f"World argument received: {world_usd_path} (currently unused for scene loading)"
+    )
 
     # Locate Isaac Sim assets folder
     assets_root_path = get_assets_root_path()
@@ -190,7 +208,9 @@ def create_sim_environment(world_usd_path, rendering_hz):
     # TODO(subhransu): Make assets available offline.
     if world_usd_path == "":
         if assets_root_path is None:
-            world.scene.add_ground_plane(size=1000, z_position=-0.5, color=np.array([1, 1, 1]))
+            world.scene.add_ground_plane(
+                size=1000, z_position=-0.5, color=np.array([1, 1, 1])
+            )
         else:
             world.scene.add_default_ground_plane()
     else:
@@ -211,7 +231,6 @@ def create_sim_environment(world_usd_path, rendering_hz):
             g_simulation_app.update()
         print("Loading Complete")
 
-
     return world, curr_stage
 
 
@@ -225,7 +244,9 @@ def add_drone_body(curr_stage):
     drone_prim = drone_xform.GetPrim()  # Usd.Prim(</drone>)
 
     # Setup Drone geometry (main body, arms, props)
-    MechComponent = namedtuple("MechComponent", ["pos", "scale", "wxyz", "geom_type", "color"])
+    MechComponent = namedtuple(
+        "MechComponent", ["pos", "scale", "wxyz", "geom_type", "color"]
+    )
 
     mech_comps = {}
     mech_comps["MainBody"] = MechComponent(
@@ -312,11 +333,16 @@ def create_camera_graph(cam_name, cam_prim_path, width, height, render_types):
     ]
 
     if "rgb" in render_types:
-        create_nodes_list.append(("CamHelpRGB", "isaacsim.ros1.bridge.ROS1CameraHelper"))
+        create_nodes_list.append(
+            ("CamHelpRGB", "isaacsim.ros1.bridge.ROS1CameraHelper")
+        )
         connect_list.extend(
             [
                 ("RendProd.outputs:execOut", "CamHelpRGB.inputs:execIn"),
-                ("RendProd.outputs:renderProductPath", "CamHelpRGB.inputs:renderProductPath"),
+                (
+                    "RendProd.outputs:renderProductPath",
+                    "CamHelpRGB.inputs:renderProductPath",
+                ),
             ]
         )
         set_values_list.extend(
@@ -339,14 +365,23 @@ def create_camera_graph(cam_name, cam_prim_path, width, height, render_types):
             [
                 ("RendProd.outputs:execOut", "CamHelpDepth.inputs:execIn"),
                 ("RendProd.outputs:execOut", "CamHelpDepthInfo.inputs:execIn"),
-                ("RendProd.outputs:renderProductPath", "CamHelpDepth.inputs:renderProductPath"),
-                ("RendProd.outputs:renderProductPath", "CamHelpDepthInfo.inputs:renderProductPath"),
+                (
+                    "RendProd.outputs:renderProductPath",
+                    "CamHelpDepth.inputs:renderProductPath",
+                ),
+                (
+                    "RendProd.outputs:renderProductPath",
+                    "CamHelpDepthInfo.inputs:renderProductPath",
+                ),
             ]
         )
         set_values_list.extend(
             [
                 ("CamHelpDepthInfo.inputs:frameId", cam_name),
-                ("CamHelpDepthInfo.inputs:topicName", "/" + cam_name + "/depth/camera_info"),
+                (
+                    "CamHelpDepthInfo.inputs:topicName",
+                    "/" + cam_name + "/depth/camera_info",
+                ),
                 ("CamHelpDepthInfo.inputs:type", "camera_info"),
                 ("CamHelpDepthInfo.inputs:useSystemTime", 1),
                 ("CamHelpDepth.inputs:frameId", cam_name),
@@ -376,19 +411,31 @@ def gen_cam_rig_components_mdx():
     """Generates the camera rig components for the drone."""
     rig_comps = {}
     rig_comps["st_front"] = CamRigComponent(
-        pos=[0.13, 0.0, 0.04], wxyz=wxyz_front, cam_type="ph_mdx", render_types=["rgb", "depth"]
+        pos=[0.13, 0.0, 0.04],
+        wxyz=wxyz_front,
+        cam_type="ph_mdx",
+        render_types=["rgb", "depth"],
     )
     rig_comps["st_back"] = CamRigComponent(
-        pos=[-0.13, 0.0, 0.04], wxyz=wxyz_back, cam_type="ph_mdx", render_types=["depth"]
+        pos=[-0.13, 0.0, 0.04],
+        wxyz=wxyz_back,
+        cam_type="ph_mdx",
+        render_types=["depth"],
     )
     rig_comps["st_top"] = CamRigComponent(
         pos=[0.0, 0.0, 0.06], wxyz=wxyz_top, cam_type="fe_mdx", render_types=["depth"]
     )
     rig_comps["st_bottom"] = CamRigComponent(
-        pos=[0.0, 0.0, -0.06], wxyz=wxyz_bottom, cam_type="fe_mdx", render_types=["depth"]
+        pos=[0.0, 0.0, -0.06],
+        wxyz=wxyz_bottom,
+        cam_type="fe_mdx",
+        render_types=["depth"],
     )
     rig_comps["gimbal"] = CamRigComponent(
-        pos=[0.16, 0.0, 0.00], wxyz=[1, 0, 0, 0], cam_type="gimbal", render_types=["rgb"]
+        pos=[0.16, 0.0, 0.00],
+        wxyz=[1, 0, 0, 0],
+        cam_type="gimbal",
+        render_types=["rgb"],
     )
 
     return rig_comps
@@ -448,7 +495,10 @@ def gen_cam_rig_components_mde():
     )  # Down Right
 
     rig_comps["gimbal"] = CamRigComponent(
-        pos=[0.16, 0.0, 0.00], wxyz=[1, 0, 0, 0], cam_type="gimbal", render_types=["rgb"]
+        pos=[0.16, 0.0, 0.00],
+        wxyz=[1, 0, 0, 0],
+        cam_type="gimbal",
+        render_types=["rgb"],
     )  # Gimbal
 
     return rig_comps
@@ -458,19 +508,34 @@ def gen_cam_rig_components_mdjjie():
     """Generates the camera rig components for the drone."""
     rig_comps = {}
     rig_comps["st_front"] = CamRigComponent(
-        pos=[0.13, 0.0, 0.04], wxyz=wxyz_front, cam_type="ph_mdjjie", render_types=["rgb", "depth"]
+        pos=[0.13, 0.0, 0.04],
+        wxyz=wxyz_front,
+        cam_type="ph_mdjjie",
+        render_types=["rgb", "depth"],
     )
     rig_comps["st_back"] = CamRigComponent(
-        pos=[-0.13, 0.0, 0.04], wxyz=wxyz_back, cam_type="ph_mdjjie", render_types=["depth"]
+        pos=[-0.13, 0.0, 0.04],
+        wxyz=wxyz_back,
+        cam_type="ph_mdjjie",
+        render_types=["depth"],
     )
     rig_comps["st_top"] = CamRigComponent(
-        pos=[0.0, 0.0, 0.06], wxyz=wxyz_top, cam_type="ph_mdjjie", render_types=["depth"]
+        pos=[0.0, 0.0, 0.06],
+        wxyz=wxyz_top,
+        cam_type="ph_mdjjie",
+        render_types=["depth"],
     )
     rig_comps["st_bottom"] = CamRigComponent(
-        pos=[0.0, 0.0, -0.06], wxyz=wxyz_bottom, cam_type="ph_mdjjie", render_types=["depth"]
+        pos=[0.0, 0.0, -0.06],
+        wxyz=wxyz_bottom,
+        cam_type="ph_mdjjie",
+        render_types=["depth"],
     )
     rig_comps["gimbal"] = CamRigComponent(
-        pos=[0.16, 0.0, 0.00], wxyz=[1, 0, 0, 0], cam_type="gimbal", render_types=["rgb"]
+        pos=[0.16, 0.0, 0.00],
+        wxyz=[1, 0, 0, 0],
+        cam_type="gimbal",
+        render_types=["rgb"],
     )
 
     return rig_comps
@@ -553,7 +618,9 @@ def add_drone_cameras(curr_stage, rig_comps: list[CamRigComponent]):
             # assumed parameters
             pixel_size_um = 3
             f_stop = 0.0  # a value of 0 disables the depth of field effect
-            focus_distance = 0.0  # in meters, the distance from the camera to the object plane
+            focus_distance = (
+                0.0  # in meters, the distance from the camera to the object plane
+            )
 
             # from eucm model
             width = 1024
@@ -566,7 +633,12 @@ def add_drone_cameras(curr_stage, rig_comps: list[CamRigComponent]):
             beta = 1.0335
 
             # Kannala Brandt Distortion Coefficients (obtained from EUCM model)
-            distortion_coefficients = [0.0169273, -0.00120855, -0.000609953, -5.50584e-05]
+            distortion_coefficients = [
+                0.0169273,
+                -0.00120855,
+                -0.000609953,
+                -5.50584e-05,
+            ]
 
             # camera parameters
             horizontal_aperture = pixel_size_um * 1e-3 * width
@@ -614,7 +686,9 @@ def add_drone_cameras(curr_stage, rig_comps: list[CamRigComponent]):
             cam_prim.GetProjectionAttr().Set("perspective")
             cam_prim.GetClippingRangeAttr().Set((0.1, 1.0e4))
 
-        create_camera_graph(cam_prim_name, cam_prim_path, width, height, comp.render_types)
+        create_camera_graph(
+            cam_prim_name, cam_prim_path, width, height, comp.render_types
+        )
 
     g_simulation_app.update()
 
@@ -727,7 +801,7 @@ def spawn_model_fun(req):
     orientation_np = np.array([quat.w, quat.x, quat.y, quat.z])
 
     # Check if req.model_xml is a .usd file path
-    if req.model_xml.endswith('.usd'):
+    if req.model_xml.endswith(".usd"):
         # Handle direct .usd file path
         if not os.path.isfile(req.model_xml):
             rospy.logerr(f"USD file not found: {req.model_xml}")
@@ -770,7 +844,9 @@ def spawn_model_fun(req):
 def move_model_fun(req):
     """callback for /gazebo/set_link_state service."""
     global g_pending_move_requests, move_lock
-    rospy.loginfo(f"move req for {req.link_state.link_name} with pose: {req.link_state.pose}")
+    rospy.loginfo(
+        f"move req for {req.link_state.link_name} with pose: {req.link_state.pose}"
+    )
 
     # Extract pose information
     pos = req.link_state.pose.position
@@ -835,7 +911,9 @@ def save_world_prim_fun(req):
         rospy.loginfo(f"Exporting prim: {world_prim.GetPath()}")
         # Assuming export_prim_to_layer is defined and accessible globally or in this class scope
         # And that g_simulation_app is accessible for getting the stage if needed by export_prim_to_layer
-        exported_layer = export_prim_to_layer(world_prim, flatten=True, include_session_layer=True)
+        exported_layer = export_prim_to_layer(
+            world_prim, flatten=True, include_session_layer=True
+        )
 
         if exported_layer:
             # Ensure the directory exists, if the filename includes a path
@@ -846,7 +924,9 @@ def save_world_prim_fun(req):
 
             exported_layer.Export(req.load_namespace)
             response.success = True
-            response.message = f"Successfully saved prim '{world_prim_path}' to '{req.load_namespace}'"
+            response.message = (
+                f"Successfully saved prim '{world_prim_path}' to '{req.load_namespace}'"
+            )
             rospy.loginfo(response.message)
         else:
             response.message = f"Error: Failed to export prim '{world_prim_path}'."
@@ -915,15 +995,26 @@ def run_simulation(world, curr_stage, drone_prim, gimbal_prim):
         log_level=rospy.INFO,  # Changed node name and log level
     )
     ros_sub = rospy.Subscriber(
-        "/gazebo/set_link_state", LinkState, callback_gazebo_linkstate_msg, queue_size=10
+        "/gazebo/set_link_state",
+        LinkState,
+        callback_gazebo_linkstate_msg,
+        queue_size=10,
     )
 
     # Advertise Gazebo-compatible services
-    move_model_srv = rospy.Service("/gazebo/set_link_state", SetLinkState, move_model_fun)
-    spawn_model_srv = rospy.Service("/gazebo/spawn_sdf_model", SpawnModel, spawn_model_fun)
+    move_model_srv = rospy.Service(
+        "/gazebo/set_link_state", SetLinkState, move_model_fun
+    )
+    spawn_model_srv = rospy.Service(
+        "/gazebo/spawn_sdf_model", SpawnModel, spawn_model_fun
+    )
     pause_physics_srv = rospy.Service("/gazebo/pause_physics", Empty, pause_physics_fun)
-    unpause_physics_srv = rospy.Service("/gazebo/unpause_physics", Empty, unpause_physics_fun)
-    save_world_prim_srv = rospy.Service("/isaacsim_interface/save_world", AddDiagnostics, save_world_prim_fun)
+    unpause_physics_srv = rospy.Service(
+        "/gazebo/unpause_physics", Empty, unpause_physics_fun
+    )
+    save_world_prim_srv = rospy.Service(
+        "/isaacsim_interface/save_world", AddDiagnostics, save_world_prim_fun
+    )
     rospy.loginfo("Gazebo compatible services advertised.")
 
     world.play()
@@ -978,27 +1069,45 @@ def run_simulation(world, curr_stage, drone_prim, gimbal_prim):
                 elif request_data["type"] == "usd_model":
                     # Spawn USD model using stage reference
                     try:
-                        stage.add_reference_to_stage(request_data["usd_path"], request_data["prim_path"])
+                        stage.add_reference_to_stage(
+                            request_data["usd_path"], request_data["prim_path"]
+                        )
                         # Set the position and orientation for the spawned model
-                        spawned_prim = curr_stage.GetPrimAtPath(request_data["prim_path"])
+                        spawned_prim = curr_stage.GetPrimAtPath(
+                            request_data["prim_path"]
+                        )
                         if spawned_prim.IsValid():
                             # Add transform operations if they don't exist
                             xformable = UsdGeom.Xformable(spawned_prim)
                             if not spawned_prim.HasAttribute("xformOp:translate"):
-                                xformable.AddTranslateOp().Set(Gf.Vec3d(*request_data["pos"]))
+                                xformable.AddTranslateOp().Set(
+                                    Gf.Vec3d(*request_data["pos"])
+                                )
                             else:
-                                spawned_prim.GetAttribute("xformOp:translate").Set(Gf.Vec3d(*request_data["pos"]))
+                                spawned_prim.GetAttribute("xformOp:translate").Set(
+                                    Gf.Vec3d(*request_data["pos"])
+                                )
 
                             if not spawned_prim.HasAttribute("xformOp:orient"):
-                                xformable.AddOrientOp().Set(Gf.Quatf(*request_data["quat"]))
+                                xformable.AddOrientOp().Set(
+                                    Gf.Quatf(*request_data["quat"])
+                                )
                             else:
-                                spawned_prim.GetAttribute("xformOp:orient").Set(Gf.Quatf(*request_data["quat"]))
+                                spawned_prim.GetAttribute("xformOp:orient").Set(
+                                    Gf.Quatf(*request_data["quat"])
+                                )
 
-                            rospy.loginfo(f"Successfully spawned USD model: {request_data['name']} from {request_data['usd_path']}")
+                            rospy.loginfo(
+                                f"Successfully spawned USD model: {request_data['name']} from {request_data['usd_path']}"
+                            )
                         else:
-                            rospy.logerr(f"Failed to find spawned prim at path: {request_data['prim_path']}")
+                            rospy.logerr(
+                                f"Failed to find spawned prim at path: {request_data['prim_path']}"
+                            )
                     except Exception as e:
-                        rospy.logerr(f"Failed to spawn USD model {request_data['name']}: {str(e)}")
+                        rospy.logerr(
+                            f"Failed to spawn USD model {request_data['name']}: {str(e)}"
+                        )
 
                 # Apply collision APIs so that we can detect collisions
                 # prim = GeometryPrim(request_data["prim_path"])

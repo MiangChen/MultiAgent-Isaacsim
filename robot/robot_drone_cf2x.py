@@ -8,8 +8,7 @@ import carb
 import omni
 import omni.appwindow
 import omni.physx
-from isaacsim.core.api.scenes import Scene
-from isaacsim.core.prims import Articulation
+from physics_engine.isaacsim_utils import Scene, Articulation
 
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from map.map_grid_map import GridMap

@@ -1,6 +1,9 @@
 try:
     import pydevd_pycharm
-    pydevd_pycharm.settrace('localhost', port=12345, stdoutToServer=True, stderrToServer=True)
+
+    pydevd_pycharm.settrace(
+        "localhost", port=12345, stdoutToServer=True, stderrToServer=True
+    )
 except:
     print("no pydevd found")
 ###################################################################################################################
@@ -14,7 +17,6 @@ import asyncio
 
 from dependency_injector.wiring import inject, Provide
 import rclpy
-
 
 
 # Local imports
@@ -269,7 +271,6 @@ def main():
         camera_prim_path=semantic_camera_prim_path, viewport_name="Viewport"
     )
 
-
     count = 0
     logger.info("Starting main simulation loop...")
 
@@ -319,6 +320,7 @@ def main():
 
     # wait for node planner ompl to receive message
     import time
+
     time.sleep(2)
 
     # path = ros_manager.node["node_planner_ompl"].compute_path(
@@ -347,7 +349,9 @@ def main():
         ##### navigation usage example###
         ## 有时候会有些bug, 多运行几次main
         if result == False:
-            result = swarm_manager.robot_active['jetbot'][0].node_planner_ompl.compute_path([5, 4, 0.035], goal_pos=[10, 10, 0])
+            result = swarm_manager.robot_active["jetbot"][
+                0
+            ].node_planner_ompl.compute_path([5, 4, 0.035], goal_pos=[10, 10, 0])
 
         count += 1
 
