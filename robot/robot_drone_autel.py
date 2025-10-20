@@ -4,7 +4,7 @@ from typing import Dict
 import numpy as np
 import threading
 
-from pxr import Gf, UsdGeom
+from physics_engine.pxr_utils import Gf, UsdGeom
 from physics_engine.isaacsim_utils import Scene
 
 from rclpy.node import Node

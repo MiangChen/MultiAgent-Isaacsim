@@ -17,6 +17,7 @@ from physics_engine.isaacsim_utils import (
     set_camera_view,
     Camera,
 )
+from physics_engine.pxr_utils import UsdPhysics
 
 
 from map.map_grid_map import GridMap
@@ -342,8 +343,6 @@ class Robot:
         stage = self.scene_manager._stage
         joint_prim = stage.GetPrimAtPath(joint_path)
 
-        from pxr import UsdPhysics
-
         if joint_prim.IsValid():
             joint = UsdPhysics.Joint(joint_prim)
             joint.GetJointEnabledAttr().Set(False)  # <-- 关键的状态切换！
@@ -449,8 +448,6 @@ class Robot:
                     axis=[0, 0, 1],
                 )
                 joint_prim = stage.GetPrimAtPath(joint_path)
-            from pxr import UsdPhysics
-
             joint = UsdPhysics.Joint(joint_prim)
             joint.GetJointEnabledAttr().Set(True)  # <-- 关键的状态切换！
 

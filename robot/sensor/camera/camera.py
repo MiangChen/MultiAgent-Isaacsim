@@ -10,7 +10,7 @@ from physics_engine.isaacsim_utils import (
     define_prim,
     get_prim_at_path,
 )
-from pxr import Usd, UsdGeom, Gf
+
 
 from log.log_manager import LogManager
 from robot.sensor.camera import CfgCamera

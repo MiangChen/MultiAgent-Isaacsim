@@ -3,7 +3,7 @@ from typing import List
 from typing import Dict, Any, Tuple, Optional
 
 from physics_engine.isaacsim_utils import XFormPrim
-from pxr import Usd
+from physics_engine.pxr_utils import Usd
 
 
 class MapSemantic:

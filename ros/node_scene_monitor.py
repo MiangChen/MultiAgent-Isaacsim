@@ -1,7 +1,7 @@
 from rclpy.node import Node
 
 import omni.usd
-from pxr import Tf, Gf
+from physics_engine.pxr_utils import Tf, Gf, Usd, UsdGeom, Sdf
 
 from geometry_msgs.msg import Transform as RosTransform
 from gsi_msgs.gsi_msgs_helper import (
@@ -28,8 +28,6 @@ class NodeSceneMonitor(Node):
 
         self._stage = omni.usd.get_context().get_stage()
 
-        from pxr import Usd  # 放到文件顶部的 imports
-
         root = self._stage.GetDefaultPrim()
         if not root or not root.IsValid():
             root = self._stage.GetPrimAtPath("/World")  # Isaac 常见 root
@@ -50,8 +48,6 @@ class NodeSceneMonitor(Node):
         )
 
     def _get_local_xform(self, prim_or_path) -> Gf.Matrix4d:
-        from pxr import UsdGeom, Gf, Usd
-
         # 统一成 Usd.Prim
         if isinstance(prim_or_path, Usd.Prim):
             prim = prim_or_path
@@ -80,8 +76,6 @@ class NodeSceneMonitor(Node):
         return Gf.Matrix4d(mat)
 
     def _mat_to_ros(self, mat):
-        from pxr import Gf
-
         ros_t = RosTransform()
         if mat is None:
             # 平移保持 0，旋转保持单位四元数(默认)
@@ -207,8 +201,6 @@ class NodeSceneMonitor(Node):
     def on_usd_objects_changed(self, notice, sender_stage):
 
         #    print("Changed!!")
-
-        from pxr import Usd, Sdf
 
         def _to_prim_path_str(p):
             # p 可能是 Sdf.Path 或字符串；属性路径需要转成 Prim 路径

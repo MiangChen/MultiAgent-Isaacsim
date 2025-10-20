@@ -7,7 +7,7 @@ import time
 import socket
 import json
 import traceback
-from pxr import UsdGeom, Gf, Usd
+from physics_engine.pxr_utils import UsdGeom, Gf, UsdPhysics, PhysxSchema, UsdShade
 from pathlib import Path
 import math
 import numpy as np
@@ -844,8 +844,6 @@ class MCPExtension(omni.ext.IExt):
             except Exception as e:
                 print(f"[DEBUG] Not an articulation or failed to init: {e}")
 
-            from pxr import UsdGeom, Gf
-
             xform = UsdGeom.Xformable(prim)
 
             # 设置旋转（四元数）
@@ -913,7 +911,6 @@ class MCPExtension(omni.ext.IExt):
                 return {"status": "error", "message": f"Prim '{prim_path}' not found."}
 
             # 导入并应用基础碰撞 API
-            from pxr import UsdPhysics, PhysxSchema
             UsdPhysics.CollisionAPI.Apply(prim)
 
             # 应用 PhysX 扩展碰撞 API，设置偏移
@@ -941,7 +938,6 @@ class MCPExtension(omni.ext.IExt):
             if not prim.IsValid():
                 return {"status": "error", "message": f"Prim {prim_path} not found."}
 
-            from pxr import UsdPhysics, PhysxSchema
             UsdPhysics.CollisionAPI.Apply(prim)
 
             # 设置 collision enabled 属性
@@ -969,8 +965,6 @@ class MCPExtension(omni.ext.IExt):
                 return {"status": "error", "message": f"Prim '{prim_path}' not found."}
 
             # 导入所需 API
-            from pxr import UsdPhysics, PhysxSchema, Gf
-
             # 1. 应用基础刚体 API 并设置初速度
             rigid_api = UsdPhysics.RigidBodyAPI.Apply(prim)
             rigid_api.CreateVelocityAttr().Set(Gf.Vec3f(*velocity))
@@ -1013,8 +1007,6 @@ class MCPExtension(omni.ext.IExt):
             prim = self._stage.GetPrimAtPath(prim_path)
             if not prim or not prim.IsValid():
                 return {"status": "error", "message": f"Prim '{prim_path}' not found."}
-
-            from pxr import UsdPhysics, PhysxSchema
 
             # 1. 应用基础 CollisionAPI
             UsdPhysics.CollisionAPI.Apply(prim)
@@ -1069,8 +1061,6 @@ class MCPExtension(omni.ext.IExt):
             if not prim or not prim.IsValid():
                 return {"status": "error", "message": f"Material '{material_path}' not found."}
 
-            from pxr import UsdPhysics, PhysxSchema
-
             # 1. 应用 MaterialAPI 设置摩擦与恢复系数
             mat_api = UsdPhysics.MaterialAPI.Apply(prim)
             mat_api.CreateStaticFrictionAttr().Set(static_friction)
@@ -1111,8 +1101,6 @@ class MCPExtension(omni.ext.IExt):
             self._stage = omni.usd.get_context().get_stage()
             if not self._stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
-
-            from pxr import UsdPhysics, Gf, UsdGeom, UsdShade, PhysxSchema
 
             stage = self._stage
             scene_path = "/physicsScene"
@@ -1161,8 +1149,6 @@ class MCPExtension(omni.ext.IExt):
             upper_limit: float = None
     ) -> dict:
         try:
-            from pxr import UsdPhysics, Gf
-
             self._stage = omni.usd.get_context().get_stage()
             if not self._stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
@@ -1222,8 +1208,6 @@ class MCPExtension(omni.ext.IExt):
             max_force: float
     ) -> dict:
         try:
-            from pxr import UsdPhysics
-
             self._stage = omni.usd.get_context().get_stage()
             if not self._stage:
                 return {"status": "error", "message": "No USD stage is currently open."}

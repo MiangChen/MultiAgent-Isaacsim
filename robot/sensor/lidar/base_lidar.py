@@ -84,7 +84,7 @@ def create_lidar_step_wrapper(lidar_annotators):
 
 from typing import Optional, Tuple, Dict, Any
 import numpy as np
-from pxr import Gf
+from physics_engine.pxr_utils import Gf
 
 from physics_engine.isaacsim_utils import get_extension_path_from_name, LidarRtx
 

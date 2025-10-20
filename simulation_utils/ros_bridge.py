@@ -8,7 +8,7 @@ import threading
 
 import carb
 
-from pxr import Gf, UsdGeom
+from physics_engine.pxr_utils import Gf
 
 import rclpy
 

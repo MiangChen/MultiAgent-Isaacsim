@@ -6,7 +6,7 @@ import sys
 
 # 尝试导入 USD 模块。如果失败，说明 USD 环境未设置或未安装。
 try:
-    from pxr import Usd
+    from physics_engine.pxr_utils import Usd
 except ImportError:
     print("Error: Failed to import 'pxr'.")
     print("Please ensure that the Pixar USD Python bindings are installed")

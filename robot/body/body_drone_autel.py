@@ -5,7 +5,6 @@ from physics_engine.isaacsim_utils import (
     define_prim,
     get_prim_at_path,
 )
-from pxr import Usd, UsdGeom, Gf, UsdGeom
 
 from robot.body import BodyRobot
 from robot.cfg import CfgRobot

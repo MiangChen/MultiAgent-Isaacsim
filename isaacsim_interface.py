@@ -71,7 +71,7 @@ from minimal_camera import (
     MinimalCamera,
 )  # a stripped down version of isaacsim.sensors.camera
 
-from pxr import Gf, UsdGeom, Sdf, Usd
+from physics_engine.pxr_utils import Gf, UsdGeom, Sdf, Usd
 
 import time
 import numpy as np

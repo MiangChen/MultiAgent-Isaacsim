@@ -6,6 +6,7 @@ import numpy as np
 
 import omni
 from physics_engine.isaacsim_utils import _omap, VisualCuboid, stage_utils
+from physics_engine.pxr_utils import UsdGeom
 
 
 class GridMap:
@@ -299,8 +300,6 @@ if __name__ == "__main__":
     # print(prim_robot.get_world_pose())
     # property = stage.GetProperty(grid_map.path_robot)
     # print(prim_robot.GetAttribute())
-
-    from pxr import UsdGeom
 
     # 获取 prim
     prim_robot = stage.GetPrimAtPath(grid_map.path_robot)

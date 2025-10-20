@@ -5,7 +5,7 @@ import numpy as np
 
 import carb
 from physics_engine.isaacsim_utils import extensions, stage, set_camera_view
-from pxr import Gf, UsdGeom
+from physics_engine.pxr_utils import Gf
 
 # enable ROS2 bridge extension and then import ros modules
 extensions.enable_extension("isaacsim.ros2.bridge")

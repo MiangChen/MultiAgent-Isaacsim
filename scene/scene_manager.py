@@ -25,7 +25,9 @@ from physics_engine.isaacsim_utils import (
     create_prim,
 )
 from omni.physx import get_physx_scene_query_interface
-from pxr import Gf, Sdf, UsdGeom, UsdPhysics, PhysxSchema, Usd
+from physics_engine.pxr_utils import (
+    Gf, Sdf, UsdGeom, UsdPhysics, PhysxSchema, Usd
+)
 
 from config.config_manager import config_manager
 
@@ -920,8 +922,6 @@ class SceneManager:
             except Exception as e:
                 print(f"[DEBUG] Not an articulation or failed to init: {e}")
 
-            from pxr import UsdGeom, Gf
-
             xform = UsdGeom.Xformable(prim)
 
             # 设置旋转（四元数）
@@ -993,9 +993,7 @@ class SceneManager:
             if not prim or not prim.IsValid():
                 return {"status": "error", "message": f"Prim '{prim_path}' not found."}
 
-            # 导入并应用基础碰撞 API
-            from pxr import UsdPhysics, PhysxSchema
-
+            # 应用基础碰撞 API
             UsdPhysics.CollisionAPI.Apply(prim)
 
             # 应用 PhysX 扩展碰撞 API，设置偏移
@@ -1017,9 +1015,6 @@ class SceneManager:
 
     def set_collision_enabled(self, prim_path: str, collision_enabled: bool) -> dict:
         # 禁用碰撞属性
-
-        from pxr import UsdPhysics
-
         rigid_prim = RigidPrim(prim_paths_expr=prim_path)
         collision_api = UsdPhysics.CollisionAPI.Apply(rigid_prim.prims[0])
         collision_api.GetCollisionEnabledAttr().Set(collision_enabled)
@@ -1037,9 +1032,6 @@ class SceneManager:
             prim = self.stage.GetPrimAtPath(prim_path)
             if not prim or not prim.IsValid():
                 return {"status": "error", "message": f"Prim '{prim_path}' not found."}
-
-            # 导入所需 API
-            from pxr import UsdPhysics, PhysxSchema, Gf
 
             # 1. 应用基础刚体 API 并设置初速度
             rigid_api = UsdPhysics.RigidBodyAPI.Apply(prim)
@@ -1086,8 +1078,6 @@ class SceneManager:
             prim = self.stage.GetPrimAtPath(prim_path)
             if not prim or not prim.IsValid():
                 return {"status": "error", "message": f"Prim '{prim_path}' not found."}
-
-            from pxr import UsdPhysics, PhysxSchema
 
             # 1. 应用基础 CollisionAPI
             UsdPhysics.CollisionAPI.Apply(prim)
@@ -1151,8 +1141,6 @@ class SceneManager:
                     "message": f"Material '{material_path}' not found.",
                 }
 
-            from pxr import UsdPhysics, PhysxSchema
-
             # 1. 应用 MaterialAPI 设置摩擦与恢复系数
             mat_api = UsdPhysics.MaterialAPI.Apply(prim)
             mat_api.CreateStaticFrictionAttr().Set(static_friction)
@@ -1192,8 +1180,6 @@ class SceneManager:
             self.stage = omni.usd.get_context().get_stage()
             if not self.stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
-
-            from pxr import UsdPhysics, Gf, UsdGeom, UsdShade, PhysxSchema
 
             stage = self.stage
             scene_path = "/physicsScene"
@@ -1248,8 +1234,6 @@ class SceneManager:
         upper_limit: float = None,
     ) -> dict:
         try:
-            from pxr import UsdPhysics, Gf
-
             self.stage = omni.usd.get_context().get_stage()
             if not self.stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
@@ -1312,8 +1296,6 @@ class SceneManager:
         max_force: float,
     ) -> dict:
         try:
-            from pxr import UsdPhysics
-
             self.stage = omni.usd.get_context().get_stage()
             if not self.stage:
                 return {"status": "error", "message": "No USD stage is currently open."}
@@ -1499,8 +1481,6 @@ class SceneManager:
         """
         try:
             import os
-            from pxr import Usd, Sdf
-
             # 确定保存目录
             if save_directory is None:
                 save_directory = self.scene_repository_path

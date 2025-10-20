@@ -1,7 +1,7 @@
 import omni
 import carb
 import numpy as np
-from pxr import Gf
+from physics_engine.pxr_utils import Gf
 
 
 def add_drone_lidar(drone_prim_path, lidar_config):

@@ -19,7 +19,7 @@ from physics_engine.isaacsim_utils import (
     get_prim_type_name,
     is_prim_path_valid,
 )
-from pxr import Sdf, Vt
+from physics_engine.pxr_utils import Sdf, Vt
 
 
 def point_to_theta(camera_matrix, x, y):
