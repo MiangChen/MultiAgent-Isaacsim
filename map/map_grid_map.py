@@ -21,11 +21,11 @@ import omni
 from physics_engine.isaacsim_utils import _omap
 
 # ROS2 imports
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from sensor_msgs.msg import PointCloud2, PointField
 from std_msgs.msg import Header
-from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 
 
 class GridMap(Node):
