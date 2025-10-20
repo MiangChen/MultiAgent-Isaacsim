@@ -80,7 +80,6 @@ class Robot:
         self,
         scene: Scene = None,
         scene_manager: SceneManager = None,
-        map_grid: GridMap = None,
     ):
 
         self.cfg_dict_camera = self.cfg_robot.cfg_dict_camera
@@ -90,7 +89,6 @@ class Robot:
 
         self.scene = scene
         self.scene_manager = scene_manager
-        self.map_grid = map_grid
         self.viewport_manager = (
             _get_viewport_manager_from_container()
         )  # 通过依赖注入获取viewport_manager
@@ -116,8 +114,6 @@ class Robot:
         self.action: np.ndarray = None
         # 机器人的技能
         self.skills: dict = {}  # 用于记录其技能: 'skill name': function
-        # 用于地图
-        self.map_grid: GridMap = map_grid  # 用于存储一个实例化的gridmap
         # 用于回调函数中
         self.flag_active = False
         self.flag_world_reset: bool = False  # 用来记录下世界是不是被初始化了

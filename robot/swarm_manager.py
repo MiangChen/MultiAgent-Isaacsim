@@ -58,7 +58,6 @@ class SwarmManager:
             # 'g1': G1,
             # 'go2': Go2
         }
-        self.map_grid = map_grid
         self.map_semantic = map_semantic
         self.ros_manager = ros_manager
 
@@ -113,7 +112,6 @@ class SwarmManager:
                     # 如果是，使用 await 调用异步工厂 create 方法
                     robot = await robot_cls.create(
                         cfg_robot=cfg_robot,
-                        map_grid=self.map_grid,
                         scene=self.scene,
                         scene_manager=self.scene_manager,
                     )
@@ -122,7 +120,6 @@ class SwarmManager:
                     robot = robot_cls(
                         cfg_robot=cfg_robot,
                         scene=self.scene,
-                        map_grid=self.map_grid,
                         scene_manager=self.scene_manager,
                     )
 

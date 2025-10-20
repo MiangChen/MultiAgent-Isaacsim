@@ -21,7 +21,6 @@ import omni.physx
 
 # Local project imports
 from log.log_manager import LogManager
-from map.map_grid_map import GridMap
 from physics_engine.isaacsim_utils import Scene, Articulation
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
@@ -50,19 +49,16 @@ class RobotCf2x(Robot):
         self,
         cfg_robot: Dict = {},
         scene: Scene = None,
-        map_grid: GridMap = None,
         scene_manager=None,
     ) -> None:
         self.cfg_robot = CfgDroneCf2X(**cfg_robot)
         super().__init__(
             scene=scene,
-            map_grid=map_grid,
             scene_manager=scene_manager,
         )
 
         self.body = BodyDroneCf2X(cfg_robot=self.cfg_robot, scene=self.scene)
         self.is_drone = True
-        self.map_grid = map_grid
 
         # 无人机基本属性
         self.position = np.array(
