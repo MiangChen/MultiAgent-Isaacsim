@@ -1,12 +1,26 @@
-import logging
+# =============================================================================
+# Map Grid Map Module - Grid-Based Mapping (Legacy Version)
+# =============================================================================
+#
+# This module provides legacy grid map functionality with visual debugging
+# capabilities for occupancy mapping and path planning.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import List
 
+# Third-party library imports
 import carb
 import numpy as np
-
 import omni
+
+# Local project imports
+from log.log_manager import LogManager
 from physics_engine.isaacsim_utils import _omap, VisualCuboid, stage_utils
 from physics_engine.pxr_utils import UsdGeom
+
+logger = LogManager.get_logger(__name__)
 
 
 class GridMap:
@@ -223,7 +237,7 @@ class GridMap:
             or isinstance(position, List)
             and len(position) == 0
         ):
-            logging.warning("compute index的输入position = None")
+            logger.warning("compute index的输入position = None")
             return None
         # 获取角点
         max_b = self.generator.get_max_bound()
