@@ -33,17 +33,6 @@ logger = LogManager.get_logger(__name__)
 
 
 class RobotCf2x(Robot):
-    """
-    CF2x无人机控制类
-
-     键盘控制说明:
-    - Q键: 起飞到预设高度并保持悬停
-    - E键: 降落到地面
-    - W键: 向前移动 (+X方向)
-    - S键: 向后移动 (-X方向)
-    - A键: 向左移动 (+Y方向)
-    - D键: 向右移动 (-Y方向)
-    """
 
     def __init__(
         self,
@@ -85,9 +74,6 @@ class RobotCf2x(Robot):
         self._keyboard_sub = None
 
         # ROS2初始化
-        self.ros2_initialized = False
-        self._ros2_lock = threading.Lock()  # ← 这里初始化了互斥锁
-
         self.counter = 0
         self.pub_period = 50
         self.previous_pos = None
@@ -100,75 +86,6 @@ class RobotCf2x(Robot):
         self.nav_max_speed = 0.5  # 导航最大水平速度
         self.nav_slow_radius = 3.0  # 减速起始半径（m）
         self.nav_stop_radius = 0.30  # 到点判定半径（m）
-
-        # self.node.register_feedback_publisher(
-        #     robot_class=self.cfg_robot.type,
-        #     robot_id=self.cfg_robot.id,
-        #     qos=50
-        # )
-        # self.node.register_motion_publisher(
-        #     robot_class=self.cfg_robot.type,
-        #     robot_id=self.cfg_robot.id,
-        #     qos=50
-        # )
-        # self.node.register_cmd_subscriber(
-        #     robot_class=self.cfg_robot.type,
-        #     robot_id=self.cfg_robot.id,
-        #     callback=self.cmd_vel_callback,
-        #     qos=50
-        # )
-
-        self.ros2_initialized = True
-
-        # 初始化键盘事件监听
-        self._setup_keyboard_events()
-
-    def _setup_keyboard_events(self):
-        """设置键盘事件监听"""
-
-        try:
-            appwindow = omni.appwindow.get_default_app_window()
-            input_iface = carb.input.acquire_input_interface()
-
-            self._keyboard_sub = input_iface.subscribe_to_keyboard_events(
-                appwindow.get_keyboard(), self._on_keyboard_event
-            )
-            print("无人机键盘控制设置成功")
-            print("控制说明: Q起飞, E降落, WASD移动")
-        except Exception as e:
-            print(f"键盘事件监听设置失败: {e}")
-            self._keyboard_sub = None
-
-    def _on_keyboard_event(self, event, *args, **kwargs):
-        """键盘事件回调函数"""
-
-        try:
-            # 按键按下事件
-            if event.type == carb.input.KeyboardEventType.KEY_PRESS:
-                if event.input.name == "Q":
-                    self.takeoff()
-                elif event.input.name == "E":
-                    self.land()
-                elif event.input.name == "W":
-                    self._movement_command[0] = self.default_speed  # 向前
-                elif event.input.name == "S":
-                    self._movement_command[0] = -self.default_speed  # 向后
-                elif event.input.name == "A":
-                    self._movement_command[1] = self.default_speed  # 向左
-                elif event.input.name == "D":
-                    self._movement_command[1] = -self.default_speed  # 向右
-
-            # 按键释放事件
-            elif event.type == carb.input.KeyboardEventType.KEY_RELEASE:
-                if event.input.name in ["W", "S"]:
-                    self._movement_command[0] = 0.0
-                elif event.input.name in ["A", "D"]:
-                    self._movement_command[1] = 0.0
-
-            return True
-        except Exception as e:
-            print(f"键盘事件处理错误: {e}")
-            return False
 
     def initialize(self):
         """初始化无人机"""
@@ -282,7 +199,7 @@ class RobotCf2x(Robot):
             # 瞬移
             self.position = to_torch(target)
             _, orientations = self.body.get_world_pose()
-            orientation = orientations[0]
+            orientation = orientations
             self.body.robot_articulation.set_world_poses(self.position, orientation)
 
             print(f"瞬移到路径点 {index + 1}/{len(self.waypoints)}: {target}")
@@ -317,23 +234,6 @@ class RobotCf2x(Robot):
         self.body.robot_articulation.set_world_poses([self.position], [orientation])
         print(f"瞬移到位置: {target_pos}")
 
-    def keyboard_control(self, dt):
-        """键盘控制处理"""
-        if self.flight_state == "hovering" and self.keyboard_control_enabled:
-            # 设置速度为键盘命令
-            self.velocity = self._movement_command.copy()
-            # 注意：位置更新在 on_physics_step 中统一处理
-        elif self.flight_state == "landed":
-            # 地面状态下确保速度为0
-            self.velocity = np.zeros(3, dtype=np.float32)
-
-    def cmd_vel_callback(self, msg):
-        # ROS2回调：接收目标速度，设置无人机移动命令
-        with self._ros2_lock:
-            self._movement_command[0] = float(msg.linear.x)
-            self._movement_command[1] = float(msg.linear.y)
-            self._movement_command[2] = float(msg.linear.z)
-
     def move_vertically(self, target_height, state):
 
         pos, quat = self.body.get_world_pose()
@@ -366,7 +266,6 @@ class RobotCf2x(Robot):
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
 
-        # self._publish_status_pose()
         self.counter += 1
 
         # 未激活或无目标：什么都不做
@@ -376,44 +275,15 @@ class RobotCf2x(Robot):
             and hasattr(self, "flag_world_reset")
             and self.flag_world_reset
         ):
-            self.move_to()
+            pass
         elif self.flight_state == "fluctuating":
             self.move_vertically()
         else:
-            if self.keyboard_control_enabled:
-                self.keyboard_control(step_size)
-            else:
-                if hasattr(self, "waypoints") and self.waypoints:
-                    self.execute_waypoint_sequence()
+
+            if hasattr(self, "waypoints") and self.waypoints:
+                self.execute_waypoint_sequence()
             if self.flight_state == "hovering":
                 self.update_position_with_velocity(step_size)
-
-    def enable_keyboard_control(self, enable=True):
-        """启用或禁用键盘控制"""
-        self.keyboard_control_enabled = enable
-        if not enable:
-            # 禁用键盘控制时清零移动命令
-            self._movement_command = np.zeros(3, dtype=np.float32)
-            self.velocity = np.zeros(3, dtype=np.float32)
-        print(f"键盘控制已{'启用' if enable else '禁用'}")
-
-    def __del__(self):
-        self._cleanup_keyboard_events()
-
-    def _cleanup_keyboard_events(self):
-        if self._keyboard_sub is not None:
-            try:
-                import carb
-
-                input_iface = carb.input.acquire_input_interface()
-                input_iface.unsubscribe_to_keyboard_events(self._keyboard_sub)
-                self._keyboard_sub = None
-            except Exception as e:
-                print(f"键盘事件清理失败: {e}")
-
-    def pick_up(self):
-        """拾取物品"""
-        pass
 
     def explore_zone(
         self,

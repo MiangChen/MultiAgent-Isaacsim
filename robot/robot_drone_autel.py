@@ -23,6 +23,7 @@ from robot.robot_trajectory import Trajectory
 from robot.body.body_drone_autel import BodyDroneAutel
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from scene.scene_manager import SceneManager
+
 # from robot.robot import Robot
 
 # ROS2 imports

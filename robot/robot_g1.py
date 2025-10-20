@@ -81,7 +81,6 @@ class RobotG1(Robot):
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
 
-        self._publish_status_pose()
         self.counter += 1
 
         if self.flag_world_reset:

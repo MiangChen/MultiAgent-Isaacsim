@@ -175,7 +175,3 @@ class SwarmManager:
     def _is_name_unique(self, name: str):
         """检查名称是否唯一"""
         return self._find_robot(name) is None
-
-
-if __name__ == "__main__":
-    pass

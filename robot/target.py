@@ -22,6 +22,7 @@ from robot.cfg.cfg_target import CfgTarget
 from robot.body.body_target import BodyTarget
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from utils import to_torch, quat_to_yaw
+
 # from path_planning.path_planning_astar import AStar
 
 # Custom ROS message imports
@@ -79,8 +80,6 @@ class Target(Robot):
 
     def step(self, action):
 
-        self.body.robot_articulation.set_linear_velocities(self.linear_velocity)
-        self.body.robot_articulation.set_angular_velocities(self.angular_velocity)
         # obs暂时未实现
         obs = None
         return obs
@@ -88,11 +87,8 @@ class Target(Robot):
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
 
-        self._publish_status_pose()
-
         if self.flag_world_reset:
             if self.flag_action_navigation:
-                self.move_along_path()  # 每一次都计算下速度
                 self.step(self.action)
             if self.is_detecting:
                 self.detect(self, target_prim=self.target_prim)

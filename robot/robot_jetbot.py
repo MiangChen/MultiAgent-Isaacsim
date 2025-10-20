@@ -84,37 +84,8 @@ class RobotJetbot(Robot):
             action = ArticulationActions(joint_efforts=action)
         else:
             raise NotImplementedError
-        self.robot_entity.apply_action(action)
+        self.body.robot_articulation.apply_action(action)
 
         # obs暂时未实现
         obs = None
         return obs
-
-
-if __name__ == "__main__":
-    explorer = Explorer()
-    zone_corners = [[1, 1], [1, 10], [10, 10], [10, 1]]
-    path = explorer.explore_zone(zone_corners)
-
-    print("生成的路径点:")
-    for point in path:
-        print(point)
-
-    # 可视化路径 (需要 matplotlib)
-    import matplotlib.pyplot as plt
-
-    x_coords = [point[0] for point in path]
-    y_coords = [point[1] for point in path]
-
-    plt.plot(x_coords, y_coords, marker="o", linestyle="-", color="blue")
-
-    # 绘制区域边界
-    zone_x = [corner[0] for corner in zone_corners] + [zone_corners[0][0]]
-    zone_y = [corner[1] for corner in zone_corners] + [zone_corners[0][1]]
-    plt.plot(zone_x, zone_y, color="red", linestyle="--")
-
-    plt.xlabel("X")
-    plt.ylabel("Y")
-    plt.title("探索路径")
-    plt.grid(True)
-    plt.show()

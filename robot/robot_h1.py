@@ -64,17 +64,6 @@ class RobotH1(Robot):
         )
         self.body = BodyH1(cfg_robot=self.cfg_robot, scene=self.scene)
 
-        # self.node.register_feedback_publisher(
-        #     robot_class=self.cfg_robot.type,
-        #     robot_id=self.cfg_robot.id,
-        #     qos=50
-        # )
-        # self.node.register_motion_publisher(
-        #     robot_class=self.cfg_robot.type,
-        #     robot_id=self.cfg_robot.id,
-        #     qos=50
-        # )
-
     @classmethod
     async def create(
         cls,
@@ -135,7 +124,6 @@ class RobotH1(Robot):
         super().on_physics_step(step_size)
 
         self.counter += 1
-        self._publish_status_pose()
 
         if self.flag_world_reset == True:
             if self.flag_action_navigation == True:
