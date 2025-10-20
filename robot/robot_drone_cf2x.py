@@ -24,7 +24,6 @@ from controller.controller_cf2x import ControllerCf2x
 from log.log_manager import LogManager
 from map.map_grid_map import GridMap
 from physics_engine.isaacsim_utils import Scene, Articulation
-from recycle_bin.path_planning_astar import AStar
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.cfg import CfgDroneCf2X

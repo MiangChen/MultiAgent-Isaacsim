@@ -16,7 +16,6 @@ import torch
 # Local project imports
 from map.map_grid_map import GridMap
 from physics_engine.isaacsim_utils import Scene, ArticulationActions
-from recycle_bin.path_planning_astar import AStar
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.cfg import CfgJetbot
@@ -63,97 +62,9 @@ class RobotJetbot(Robot):
             0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
         )
 
-        # self.node = node
-        #
-        # self.node.register_feedback_publisher(
-        #     robot_class=self.cfg_robot.type,
-        #     robot_id=self.cfg_robot.id,
-        #     qos=50
-        # )
-        # self.node.register_motion_publisher(
-        #     robot_class=self.cfg_robot.type,
-        #     robot_id=self.cfg_robot.id,
-        #     qos=50
-        # )
-
-        # self.init_ros2()
-
     def initialize(self) -> None:
         super().initialize()
         return
-
-    def init_ros2(self) -> object:
-        import omni.graph.core as og
-
-        og.Controller.edit(
-            {
-                "graph_path": f"/ActionGraph/{self.cfg_robot.type}_{self.cfg_robot.id}",
-                "evaluator_name": "execution",
-            },
-            {
-                og.Controller.Keys.CREATE_NODES: [
-                    ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
-                    ("PublishJointState", "isaacsim.ros2.bridge.ROS2PublishJointState"),
-                    (
-                        "SubscribeJointState",
-                        "isaacsim.ros2.bridge.ROS2SubscribeJointState",
-                    ),
-                    (
-                        "ArticulationController",
-                        "isaacsim.core.nodes.IsaacArticulationController",
-                    ),
-                    ("ReadSimTime", "isaacsim.core.nodes.IsaacReadSimulationTime"),
-                ],
-                og.Controller.Keys.CONNECT: [
-                    ("OnPlaybackTick.outputs:tick", "PublishJointState.inputs:execIn"),
-                    (
-                        "OnPlaybackTick.outputs:tick",
-                        "SubscribeJointState.inputs:execIn",
-                    ),
-                    (
-                        "OnPlaybackTick.outputs:tick",
-                        "ArticulationController.inputs:execIn",
-                    ),
-                    (
-                        "ReadSimTime.outputs:simulationTime",
-                        "PublishJointState.inputs:timeStamp",
-                    ),
-                    (
-                        "SubscribeJointState.outputs:jointNames",
-                        "ArticulationController.inputs:jointNames",
-                    ),
-                    (
-                        "SubscribeJointState.outputs:positionCommand",
-                        "ArticulationController.inputs:positionCommand",
-                    ),
-                    (
-                        "SubscribeJointState.outputs:velocityCommand",
-                        "ArticulationController.inputs:velocityCommand",
-                    ),
-                    (
-                        "SubscribeJointState.outputs:effortCommand",
-                        "ArticulationController.inputs:effortCommand",
-                    ),
-                ],
-                og.Controller.Keys.SET_VALUES: [
-                    # Providing path to /panda robot to Articulation Controller node
-                    # Providing the robot path is equivalent to setting the targetPrim in Articulation Controller node
-                    # ("ArticulationController.inputs:usePath", True),      # if you are using an older version of Isaac Sim, you may need to uncomment this line
-                    (
-                        "PublishJointState.inputs:topicName",
-                        f"joint_states_{self.cfg_robot.type}_{self.cfg_robot.id}",
-                    ),
-                    (
-                        "ArticulationController.inputs:robotPath",
-                        f"{self.cfg_robot.path_prim_swarm}",
-                    ),
-                    (
-                        "PublishJointState.inputs:targetPrim",
-                        f"{self.cfg_robot.path_prim_swarm}",
-                    ),
-                ],
-            },
-        )
 
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
