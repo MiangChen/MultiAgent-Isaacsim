@@ -164,7 +164,10 @@ class Robot:
         self.track_waypoint_index = 0
         self.is_tracking = False
         self.track_waypoints_sub = None
-        self.track_waypoints_sub
+
+        # robot physics state
+        self.vel_linear = torch.tensor([0.0, 0.0, 0.0])
+        self.vel_angular = torch.tensor([0.0, 0.0, 0.0])
 
     ########################## Skill Action Server ############################
     def callback_execute_skill(self, goal_handle):
@@ -245,10 +248,10 @@ class Robot:
     ########################## Subscriber Velocity  ############################
     def callback_cmd_vel(self, msg):
         """处理来自ROS的速度命令"""
-        linear_vel = torch.tensor([msg.linear.x, msg.linear.y, msg.linear.z])
+        linear_vel = torch.tensor([msg.linear.x, msg.linear.y, 0])
         angular_vel = torch.tensor([msg.angular.x, msg.angular.y, msg.angular.z])
-        print("linear_vel", linear_vel)
-        self.controller_simplified(linear_vel, angular_vel)
+        self.vel_linear = linear_vel
+        self.vel_angular = angular_vel
 
     ########################## Start ROS  ############################
 
@@ -323,6 +326,8 @@ class Robot:
         Args:
             step_size:  dt 时间间隔
         """
+        # update robot velocity
+        self.controller_simplified()
         # 更新相机的视野
         self._update_camera_view()
         # publish robot position
@@ -661,11 +666,14 @@ class Robot:
         return waypoints
 
     def controller_simplified(
-        self, linear_velocity: torch.Tensor, angular_velocity: torch.Tensor
+        self,
     ) -> None:
+        """
+        this function can only be used in on_physics_step
+        """
         if self.body.robot_articulation.is_physics_handle_valid():
-            self.body.robot_articulation.set_linear_velocities(linear_velocity)
-            self.body.robot_articulation.set_angular_velocities(angular_velocity)
+            self.body.robot_articulation.set_linear_velocities(self.vel_linear)
+            self.body.robot_articulation.set_angular_velocities(self.vel_angular)
         return None
 
     def track_callback(self, msg):
