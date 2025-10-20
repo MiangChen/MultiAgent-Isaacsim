@@ -9,7 +9,7 @@
 
 # Standard library imports
 import threading
-from typing import Tuple, Dict, Any, List
+from typing import Dict, Any, List
 
 # Third-party library imports
 import numpy as np
@@ -19,9 +19,6 @@ from shapely.affinity import rotate
 
 # Local project imports
 from log.log_manager import LogManager
-from navigation.node_path_planner_ompl import NodePlannerOmpl
-from navigation.node_trajectory_generator import NodeTrajectoryGenerator
-from navigation.node_controller_mpc import NodeMpcController
 from physics_engine.isaacsim_utils import (
     Scene,
     RigidPrim,
@@ -31,13 +28,14 @@ from physics_engine.isaacsim_utils import (
     Camera,
 )
 from physics_engine.pxr_utils import UsdPhysics
-from robot.sensor.camera import CfgCamera, CfgCameraThird, Camera
-from robot.cfg import CfgRobot
+from robot.sensor.camera import Camera
 from robot.body import BodyRobot
 from robot.robot_trajectory import Trajectory
+from robot.skill.navigation.node_path_planner_ompl import NodePlannerOmpl
+from robot.skill.navigation.node_trajectory_generator import NodeTrajectoryGenerator
+from robot.skill.navigation.node_controller_mpc import NodeMpcController
 from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
-from utils import to_torch
 
 # ROS2 imports
 from rclpy.executors import MultiThreadedExecutor
