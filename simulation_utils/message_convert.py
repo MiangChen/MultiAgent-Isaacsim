@@ -1,9 +1,20 @@
-import numpy as np
+# =============================================================================
+# Message Convert Module - ROS Message Conversion Utilities
+# =============================================================================
+#
+# This module provides utilities for converting between Isaac Sim data
+# formats and ROS2 message types, particularly for sensor data.
+#
+# =============================================================================
 
+# Third-party library imports
+import numpy as np
 import carb
 
+# Local project imports
 from physics_engine.isaacsim_utils import extensions, stage
 
+# ROS2 imports
 from sensor_msgs.msg import PointCloud2, PointField, Image
 
 

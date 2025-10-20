@@ -1,7 +1,20 @@
+# =============================================================================
+# Body G1 Module - G1 Humanoid Robot Body Implementation
+# =============================================================================
+#
+# This module provides the G1 humanoid robot body implementation with
+# advanced joint configurations, locomotion capabilities, and control.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import Tuple
 
+# Third-party library imports
 import torch
 
+# Local project imports
+from log.log_manager import LogManager
 from physics_engine.isaacsim_utils import (
     Scene,
     Articulation,
@@ -9,11 +22,9 @@ from physics_engine.isaacsim_utils import (
     get_prim_at_path,
 )
 from physics_engine.pxr_utils import Usd, UsdGeom
-
 from robot.body import BodyRobot
 from robot.cfg import CfgRobot
 from utils import to_torch
-from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
 

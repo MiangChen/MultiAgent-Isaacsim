@@ -1,5 +1,16 @@
+# =============================================================================
+# Controller CF2X Module - Crazyflie 2.X Drone Controller
+# =============================================================================
+#
+# This module provides controller implementation for the Crazyflie 2.X
+# drone with flight control, velocity commands, and position control.
+#
+# =============================================================================
+
+# Third-party library imports
 import numpy as np
 
+# Local project imports
 from physics_engine.isaacsim_utils import BaseController, ArticulationActions
 
 

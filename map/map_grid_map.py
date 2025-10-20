@@ -1,17 +1,31 @@
+# =============================================================================
+# Map Grid Map Module - Grid-Based Mapping for Path Planning
+# =============================================================================
+#
+# This module provides grid map generation for OMPL path planning, converting
+# continuous 3D space into discrete grid representation with height filtering
+# to remove ground obstacles.
+#
+# =============================================================================
+
+# Standard library imports
+import json
+import struct
 from typing import List, Optional
 
-import json
+# Third-party library imports
 import numpy as np
-
-from physics_engine.isaacsim_utils import _omap
 import omni
 
+# Local project imports
+from physics_engine.isaacsim_utils import _omap
+
+# ROS2 imports
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from sensor_msgs.msg import PointCloud2, PointField
 from std_msgs.msg import Header
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
-import struct
 
 
 class GridMap(Node):

@@ -1,5 +1,17 @@
+# =============================================================================
+# Base LiDAR Module - LiDAR Sensor Base Implementation
+# =============================================================================
+#
+# This module provides base LiDAR sensor functionality for drone platforms,
+# including sensor creation and configuration within Isaac Sim.
+#
+# =============================================================================
+
+# Standard library imports
 import os
 import shutil
+
+# Third-party library imports
 import omni
 import carb
 

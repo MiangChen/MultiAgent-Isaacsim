@@ -1,14 +1,33 @@
-import time
+# =============================================================================
+# Simulation Core Module - Core Simulation Loop and Management
+# =============================================================================
+#
+# This module provides core simulation functionality including the main
+# simulation loop, ROS2 integration, and multi-robot coordination.
+#
+# =============================================================================
+
+# Standard library imports
 import math
+import time
 
+# Third-party library imports
 import numpy as np
-
 import carb
+
+# Local project imports
+from containers import get_container
 from physics_engine.isaacsim_utils import extensions, stage, set_camera_view
 from physics_engine.pxr_utils import Gf
+from robot.robot_drone_autel import DronePose, RobotDroneAutel
+from simulation_utils.perception import (
+    create_depth2pc_lut,
+    depth2pointclouds,
 
 # enable ROS2 bridge extension and then import ros modules
 extensions.enable_extension("isaacsim.ros2.bridge")
+
+# ROS2 imports
 import rclpy
 from rclpy.node import Node
 from gazebo_msgs.msg import EntityState, ContactsState, ContactState
@@ -17,12 +36,6 @@ from gazebo_msgs.srv import SpawnEntity
 from std_msgs.msg import Header
 from std_srvs.srv import Empty
 from sensor_msgs.msg import PointCloud2, PointField, Image
-
-from robot.robot_drone_autel import DronePose, RobotDroneAutel
-from containers import get_container
-from simulation_utils.perception import (
-    create_depth2pc_lut,
-    depth2pointclouds,
     process_semantic_detection,
 )
 from simulation_utils.message_convert import create_pc2_msg, create_image_msg

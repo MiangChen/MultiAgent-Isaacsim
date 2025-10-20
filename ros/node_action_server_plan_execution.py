@@ -1,11 +1,27 @@
+# =============================================================================
+# Node Action Server Plan Execution Module - Plan Execution Action Server
+# =============================================================================
+#
+# This module provides ROS2 action server implementation for executing
+# robot plans and coordinating skill-based robot behaviors.
+#
+# =============================================================================
+
+# Standard library imports
 import asyncio
 import functools
 import threading
 import uuid
 
+# Local project imports
+from log.log_manager import LogManager
+from ros.node_action_client_skill import NodeActionClientSkill
+
+# ROS2 imports
 from rclpy.action import ActionServer
 from rclpy.node import Node
 
+# Custom ROS message imports
 from gsi_msgs.gsi_msgs_helper import (
     PrimTransform,
     SceneModifications,
@@ -16,8 +32,6 @@ from gsi_msgs.gsi_msgs_helper import (
     SkillExecution,
     SkillFeedback,
 )
-from ros.node_action_client_skill import NodeActionClientSkill
-from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
 

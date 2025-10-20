@@ -1,10 +1,21 @@
+# =============================================================================
+# Body Robot Module - Base Robot Body Implementation
+# =============================================================================
+#
+# This module provides the base robot body class with common functionality
+# for robot physical representation and control within Isaac Sim.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import Tuple
 
+# Third-party library imports
 import torch
 
-from physics_engine.isaacsim_utils import Scene, Articulation, quat_to_rot_matrix
-
+# Local project imports
 from log.log_manager import LogManager
+from physics_engine.isaacsim_utils import Scene, Articulation, quat_to_rot_matrix
 from robot.cfg import CfgRobot
 from utils import to_torch
 

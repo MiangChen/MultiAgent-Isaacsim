@@ -1,25 +1,36 @@
-from typing import Dict
-import threading
+# =============================================================================
+# Robot Drone CF2X Module - Crazyflie 2.X Drone Implementation
+# =============================================================================
+#
+# This module provides the Crazyflie 2.X drone robot implementation with
+# specialized flight control, camera sensors, and navigation capabilities.
+#
+# =============================================================================
 
+# Standard library imports
+import threading
+from typing import Dict
+
+# Third-party library imports
 import numpy as np
 import torch
-
 import carb
 import omni
 import omni.appwindow
 import omni.physx
-from physics_engine.isaacsim_utils import Scene, Articulation
 
-from robot.sensor.camera import CfgCamera, CfgCameraThird
-from map.map_grid_map import GridMap
-from recycle_bin.path_planning_astar import AStar
-from log.log_manager import LogManager
+# Local project imports
 from controller.controller_cf2x import ControllerCf2x
+from log.log_manager import LogManager
+from map.map_grid_map import GridMap
+from physics_engine.isaacsim_utils import Scene, Articulation
+from recycle_bin.path_planning_astar import AStar
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.cfg import CfgDroneCf2X
-from utils import to_torch
 from robot.body.body_drone_cf2x import BodyDroneCf2X
+from robot.sensor.camera import CfgCamera, CfgCameraThird
+from utils import to_torch
 
 logger = LogManager.get_logger(__name__)
 

@@ -1,7 +1,18 @@
+# =============================================================================
+# Log Manager Module - Centralized Logging Configuration
+# =============================================================================
+#
+# This module provides centralized logging configuration and management
+# for the entire application, handling log levels, file outputs, and
+# logger instances.
+#
+# =============================================================================
+
+# Standard library imports
 import logging
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 
 class LogManager:

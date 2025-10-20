@@ -1,3 +1,13 @@
+# =============================================================================
+# Controller PID Jetbot Module - Jetbot PID Controller Implementation
+# =============================================================================
+#
+# This module provides PID controller implementation specifically designed
+# for Jetbot robots using unicycle model for differential drive control.
+#
+# =============================================================================
+
+# Local project imports
 from physics_engine.isaacsim_utils import BaseController, ArticulationAction
 
 

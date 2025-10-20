@@ -1,7 +1,17 @@
-import numpy as np
+# =============================================================================
+# Perception Module - Perception Processing Utilities
+# =============================================================================
+#
+# This module provides perception processing utilities including depth to
+# point cloud conversion and semantic mapping integration.
+#
+# =============================================================================
 
+# Third-party library imports
+import numpy as np
 import carb
 
+# Local project imports
 from map.map_semantic_map import MapSemantic
 
 

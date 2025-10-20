@@ -1,12 +1,27 @@
+# =============================================================================
+# Scene Manager Module - USD Stage Management and Scene Operations
+# =============================================================================
+#
+# This module provides comprehensive scene management functionality for Isaac Sim,
+# handling USD stage operations, object creation, semantic labeling, and scene
+# manipulation within the simulation environment.
+#
+# =============================================================================
+
+# Standard library imports
 import traceback
 from pathlib import Path
 from typing import Dict, Any, List, Union, Optional, Sequence
 
+# Third-party library imports
 import numpy as np
 import torch
-
 import carb
 import omni
+from omni.physx import get_physx_scene_query_interface
+
+# Local project imports
+from config.config_manager import config_manager
 from physics_engine.isaacsim_utils import (
     cuboid,
     sphere,
@@ -24,12 +39,9 @@ from physics_engine.isaacsim_utils import (
     RigidPrim,
     create_prim,
 )
-from omni.physx import get_physx_scene_query_interface
 from physics_engine.pxr_utils import (
     Gf, Sdf, UsdGeom, UsdPhysics, PhysxSchema, Usd
 )
-
-from config.config_manager import config_manager
 
 ASSET_PATH = config_manager.get("path_asset")
 

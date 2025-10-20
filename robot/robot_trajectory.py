@@ -1,5 +1,17 @@
+# =============================================================================
+# Robot Trajectory Module - Robot Trajectory Tracking and Visualization
+# =============================================================================
+#
+# This module manages and displays the historical trajectory of robots,
+# providing efficient trajectory tracking with visual representation in
+# the Isaac Sim environment.
+#
+# =============================================================================
+
+# Third-party library imports
 import numpy as np
 
+# Local project imports
 from physics_engine.isaacsim_utils import Scene, VisualSphere
 
 

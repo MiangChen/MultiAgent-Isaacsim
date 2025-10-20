@@ -1,12 +1,25 @@
+# =============================================================================
+# Swarm Manager Module - Multi-Robot Swarm Management
+# =============================================================================
+#
+# This module provides enhanced robot swarm management system for managing
+# multiple robots of different types, handling their configurations, positions,
+# and coordination within the simulation environment.
+#
+# =============================================================================
+
+# Standard library imports
 import inspect
 from typing import Dict, List, Type
+
+# Third-party library imports
 import yaml
 
-from physics_engine.isaacsim_utils import Scene
-
+# Local project imports
 from log.log_manager import LogManager
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
+from physics_engine.isaacsim_utils import Scene
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from robot.robot import Robot
 from robot.cfg import CfgRobot

@@ -1,3 +1,13 @@
+# =============================================================================
+# Config Drone CF2X Module - Crazyflie 2.X Drone Configuration
+# =============================================================================
+#
+# This module provides configuration parameters specific to the Crazyflie 2.X
+# drone, including flight parameters and control settings.
+#
+# =============================================================================
+
+# Local project imports
 from .cfg_robot import CfgRobot, ASSET_PATH
 
 

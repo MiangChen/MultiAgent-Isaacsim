@@ -1,8 +1,19 @@
+# =============================================================================
+# Config Robot Module - Base Robot Configuration
+# =============================================================================
+#
+# This module provides the base robot configuration class with common
+# parameters and settings for all robot types in the simulation.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import Dict, Optional, Tuple
 
-from robot.sensor.camera import CfgCamera, CfgCameraThird
+# Local project imports
 from config.config_manager import config_manager
 from config.cfg_base import CfgBase
+from robot.sensor.camera import CfgCamera, CfgCameraThird
 from robot.sensor.lidar import CfgLidar
 
 ASSET_PATH = config_manager.get("path_asset")

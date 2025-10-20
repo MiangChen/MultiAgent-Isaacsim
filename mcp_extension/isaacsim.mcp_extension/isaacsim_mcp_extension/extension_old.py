@@ -1,17 +1,28 @@
-import os
-import sys
+# =============================================================================
+# MCP Extension - Model Context Protocol Extension for Isaac Sim
+# =============================================================================
+#
+# This module implements an Omniverse Kit extension that provides MCP (Model
+# Context Protocol) functionality for Isaac Sim, enabling external tools to
+# interact with the simulation environment through a standardized protocol.
+#
+# =============================================================================
+
+# Standard library imports
 import gc
-from typing import Dict, Any, List, Optional, Union
+import json
+import math
+import os
+import socket
+import sys
 import threading
 import time
-import socket
-import json
 import traceback
-from physics_engine.pxr_utils import UsdGeom, Gf, UsdPhysics, PhysxSchema, UsdShade
 from pathlib import Path
-import math
-import numpy as np
+from typing import Dict, Any, List, Optional, Union
 
+# Third-party library imports
+import numpy as np
 import carb
 import omni
 
@@ -19,11 +30,14 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 files_parent_dir = os.path.abspath(os.path.join(current_dir, "../../../"))
 sys.path.append(files_parent_dir)  # 将项目根目录添加到 sys.path 中
+
+# Local project imports
 from config.variables import PATH_PROJECT, PATH_ISAACSIM_ASSETS, ASSET_PATH
 from physics_engine.isaacsim_utils import (
     add_reference_to_stage, get_stage_units, Articulation, World, 
     DynamicCuboid, DynamicSphere, create_prim
 )
+from physics_engine.pxr_utils import UsdGeom, Gf, Usd, UsdPhysics, PhysxSchema, UsdShade
 
 
 

@@ -1,21 +1,32 @@
+# =============================================================================
+# Robot Target Module - Target Object Implementation
+# =============================================================================
+#
+# This module provides target object implementation for robot navigation
+# and interaction scenarios, including target tracking and manipulation.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import Dict, List, Tuple
 
+# Third-party library imports
 import torch
 import numpy as np
 
+# Local project imports
 from controller.controller_pid import ControllerPID
-from robot.sensor.camera import CfgCamera, CfgCameraThird
 from map.map_grid_map import GridMap
-
-# from path_planning.path_planning_astar import AStar
+from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.cfg.cfg_target import CfgTarget
 from robot.body.body_target import BodyTarget
+from robot.sensor.camera import CfgCamera, CfgCameraThird
 from utils import to_torch, quat_to_yaw
+# from path_planning.path_planning_astar import AStar
 
-from physics_engine.isaacsim_utils import Scene, ArticulationActions
-
+# Custom ROS message imports
 from gsi2isaacsim.gsi_msgs_helper import (
     Plan,
     RobotFeedback,

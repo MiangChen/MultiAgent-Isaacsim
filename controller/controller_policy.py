@@ -1,28 +1,33 @@
+# =============================================================================
+# Controller Policy Module - Policy-Based Robot Controller
+# =============================================================================
+#
 # Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 #
-# NVIDIA CORPORATION and its licensors retain all intellectual property
-# and proprietary rights in and to this software, related documentation
-# and any modifications thereto. Any use, reproduction, disclosure or
-# distribution of this software and related documentation without an express
-# license agreement from NVIDIA CORPORATION is strictly prohibited.
+# This module provides policy-based controller implementation for robots
+# using neural network policies for advanced locomotion and control.
 #
+# =============================================================================
 
+# Standard library imports
 import io
 from typing import Optional
 
+# Third-party library imports
 import numpy as np
 import omni
 import torch
 
-from physics_engine.isaacsim_utils import BaseController, define_prim, get_prim_at_path
-
-from log.log_manager import LogManager
+# Local project imports
 from controller.controller_cfg_loader import (
     get_articulation_props,
     get_physics_properties,
     get_robot_joint_properties,
     parse_env_config,
 )
+from log.log_manager import LogManager
+from physics_engine.isaacsim_utils import BaseController, define_prim, get_prim_at_path
+
 
 logger = LogManager.get_logger(__name__)
 

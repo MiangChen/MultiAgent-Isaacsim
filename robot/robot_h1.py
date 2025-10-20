@@ -1,21 +1,33 @@
+# =============================================================================
+# Robot H1 Module - H1 Humanoid Robot Implementation
+# =============================================================================
+#
+# This module provides the H1 humanoid robot implementation with policy-based
+# control, camera sensors, and advanced locomotion capabilities.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import Dict
 
+# Third-party library imports
 import numpy as np
 
+# Local project imports
 from controller.controller_pid import ControllerPID
+from controller.controller_policy_h1 import H1FlatTerrainPolicy
 from log.log_manager import LogManager
 from map.map_grid_map import GridMap
+from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from robot.body.body_h1 import BodyH1
 from robot.body import BodyRobot
 from robot.cfg import CfgH1
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.sensor.camera import CfgCamera, CfgCameraThird
-from controller.controller_policy_h1 import H1FlatTerrainPolicy
 from utils import to_torch, quat_to_yaw
 
-from physics_engine.isaacsim_utils import Scene, ArticulationActions
-
+# Custom ROS message imports
 from gsi_msgs.gsi_msgs_helper import (
     Plan,
     RobotFeedback,

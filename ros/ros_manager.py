@@ -1,12 +1,24 @@
+# =============================================================================
+# ROS Manager Module - ROS2 Node and Executor Management
+# =============================================================================
+#
+# This module provides centralized management of ROS2 nodes and executors,
+# handling the lifecycle and coordination of all ROS2 components.
+#
+# =============================================================================
+
+# Standard library imports
 import threading
 
-import rclpy
-from rclpy.executors import MultiThreadedExecutor
-
+# Local project imports
+from log.log_manager import LogManager
 from ros.node_action_server_plan_execution import NodeActionServerPlanExecution
 from ros.node_scene_monitor import NodeSceneMonitor
 from ros.node_server_planner_nav2 import NodeServerNav2Planner
-from log.log_manager import LogManager
+
+# ROS2 imports
+import rclpy
+from rclpy.executors import MultiThreadedExecutor
 
 logger = LogManager.get_logger(__name__)
 

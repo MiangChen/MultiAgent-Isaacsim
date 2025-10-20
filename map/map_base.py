@@ -1,4 +1,16 @@
+# =============================================================================
+# Map Base Module - Base Mapping Functionality
+# =============================================================================
+#
+# This module provides the base mapping class with fundamental grid-based
+# mapping operations and coordinate transformations.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import List
+
+# Third-party library imports
 import numpy as np
 
 

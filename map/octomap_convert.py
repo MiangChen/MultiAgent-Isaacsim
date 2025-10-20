@@ -1,8 +1,19 @@
+# =============================================================================
+# Octomap Convert Module - Grid Map to OctoMap Conversion
+# =============================================================================
+#
+# This module provides functionality to convert Isaac Sim's dense 3D GridMap
+# to ROS2 OctoMap messages for efficient spatial representation.
+#
+# =============================================================================
+
+# Third-party library imports
 import numpy as np
 import octomap
+
+# ROS2 imports
 from octomap_msgs.msg import Octomap
 from std_msgs.msg import Header
-
 
 # from map_grid_map import GridMap # 假设 GridMap 类已定义
 

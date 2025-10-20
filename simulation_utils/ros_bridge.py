@@ -1,27 +1,37 @@
-import os
-import time
+# =============================================================================
+# ROS Bridge Module - ROS2 Integration and Communication Bridge
+# =============================================================================
+#
+# This module provides ROS2 bridge functionality for connecting Isaac Sim
+# simulation with ROS2 ecosystem, handling message conversion and publishing.
+#
+# =============================================================================
+
+# Standard library imports
 import math
-import numpy as np
+import os
+import threading
+import time
 from collections import namedtuple
 
-import threading
-
+# Third-party library imports
+import numpy as np
 import carb
 
+# Local project imports
+from containers import get_container
+from map.map_semantic_map import MapSemantic
 from physics_engine.pxr_utils import Gf
+from robot.robot_drone_autel import DronePose, RobotDroneAutel
 
+# ROS2 imports
 import rclpy
-
 from gazebo_msgs.msg import EntityState, ContactsState, ContactState
 from gazebo_msgs.srv import SetEntityState
 from gazebo_msgs.srv import SpawnEntity
 from std_msgs.msg import Header
 from std_srvs.srv import Empty
 from sensor_msgs.msg import PointCloud2, PointField, Image
-
-from containers import get_container
-from map.map_semantic_map import MapSemantic
-from robot.robot_drone_autel import DronePose, RobotDroneAutel
 
 # -----------------------------------------------------------------------------
 # Global variables (legacy single-UAV path)

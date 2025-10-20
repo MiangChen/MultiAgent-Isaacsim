@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
+# =============================================================================
+# Convert NPY to PLY Module - Point Cloud Format Conversion
+# =============================================================================
+#
+# This module provides functionality to convert numpy array files to PLY
+# point cloud format for visualization and processing.
+#
+# =============================================================================
 
+# Standard library imports
 import argparse
+
+# Third-party library imports
 import numpy as np
 import pcl
 

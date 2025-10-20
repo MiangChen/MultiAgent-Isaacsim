@@ -1,13 +1,27 @@
+# =============================================================================
+# Containers Module - Dependency Injection Container Configuration
+# =============================================================================
+#
+# This module defines the dependency injection container using the
+# dependency-injector library, managing all service dependencies and
+# their lifecycle within the application.
+#
+# =============================================================================
+
+# Standard library imports
 import asyncio
 import sys
+
+# Third-party library imports
 from dependency_injector import containers, providers
 
-from physics_engine.isaacsim_utils import World
+# Local project imports
 from config.config_manager import config_manager
 from environment.env import Env
 from log.log_manager import LogManager
 from map.map_semantic_map import MapSemantic
 from map.map_grid_map import GridMap
+from physics_engine.isaacsim_utils import World
 from robot.swarm_manager import SwarmManager
 from ros.ros_manager import RosManager
 from scene.scene_manager import SceneManager

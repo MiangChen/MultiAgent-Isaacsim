@@ -1,11 +1,24 @@
+# =============================================================================
+# Node Robot Module - Individual Robot ROS2 Communication
+# =============================================================================
+#
+# This module provides ROS2 node implementation for managing all ROS2
+# communication for individual robot entities, including odometry publishing
+# and command velocity subscription.
+#
+# =============================================================================
+
+# Local project imports
+from log.log_manager import LogManager
+
+# ROS2 imports
 from rclpy.node import Node
 from rclpy.action import ActionServer
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 
+# Custom ROS message imports
 from gsi_msgs.gsi_msgs_helper import SkillExecution
-
-from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
 

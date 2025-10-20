@@ -1,8 +1,19 @@
+# =============================================================================
+# Environment Module - Simulation Environment Management
+# =============================================================================
+#
+# This module provides the main environment class for managing the Isaac Sim
+# simulation environment, integrating world, scene, robot swarm, and mapping
+# components.
+#
+# =============================================================================
+
+# Third-party library imports
 import gymnasium as gym
 
-from physics_engine.isaacsim_utils import World
-
+# Local project imports
 from map.map_grid_map import GridMap
+from physics_engine.isaacsim_utils import World
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
 

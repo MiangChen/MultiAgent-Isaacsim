@@ -1,27 +1,26 @@
+# =============================================================================
+# Controller Policy G1 Module - G1 Humanoid Policy Controller
+# =============================================================================
+#
 # Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
-
 #
-# NVIDIA CORPORATION and its licensors retain all intellectual property
-# and proprietary rights in and to this software, related documentation
-# and any modifications thereto. Any use, reproduction, disclosure or
-# distribution of this software and related documentation without an express
-# license agreement from NVIDIA CORPORATION is strictly prohibited.
+# This module provides policy-based controller implementation for the G1
+# humanoid robot with flat terrain locomotion capabilities.
 #
+# =============================================================================
 
+# Standard library imports
 from typing import Optional
 
-
+# Third-party library imports
 import numpy as np
-import omni
-import omni.kit.commands
+
+# Local project imports
 from physics_engine.isaacsim_utils import (
     get_assets_root_path,
     quat_to_rot_matrix,
     ArticulationAction,
 )
-
-# from isaacsim.robot.policy.examples.controllers import PolicyController
-# from isaacsim.storage.native import get_assets_root_path  #  暂不清除和nuclues的区别
 
 
 class G1FlatTerrainPolicy(PolicyController):

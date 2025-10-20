@@ -1,6 +1,17 @@
+# =============================================================================
+# MCP Extension Module - Model Context Protocol Extension Implementation
+# =============================================================================
+#
+# This module provides the main MCP extension implementation for Isaac Sim,
+# integrating scene management with network communication capabilities.
+#
+# =============================================================================
+
+# Third-party library imports
 import carb
 import omni.ext
 
+# Local project imports
 from .mcp_server import MCPNetworkServer  # Use relative imports
 from scene.scene_manager import SceneManager  # Import the new classes
 

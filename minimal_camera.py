@@ -1,19 +1,25 @@
-# Copyright (c) 2021-2024, NVIDIA CORPORATION. All rights reserved.
+# =============================================================================
+# Minimal Camera Module - Fisheye Camera Setup and Configuration
+# =============================================================================
 #
-# NVIDIA CORPORATION and its licensors retain all intellectual property
-# and proprietary rights in and to this software, related documentation
-# and any modifications thereto. Any use, reproduction, disclosure or
-# distribution of this software and related documentation without an express
-# license agreement from NVIDIA CORPORATION is strictly prohibited.
+# Copyright (c) 2021-2024, NVIDIA CORPORATION. All rights reserved.
 #
 # Modified by: Subhransu Mishra
 # Date: 2025-05-15
-# This script is used to set up the fisheye camera properties with kannala brandt distortion model.
+#
+# This script is used to set up the fisheye camera properties with
+# Kannala-Brandt distortion model for Isaac Sim simulations.
+#
+# =============================================================================
 
+# Standard library imports
 import math
 from typing import Callable, List, Optional, Sequence, Tuple
 
+# Third-party library imports
 import numpy as np
+
+# Local project imports
 from physics_engine.isaacsim_utils import (
     get_prim_at_path,
     get_prim_type_name,

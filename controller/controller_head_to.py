@@ -1,3 +1,13 @@
+# =============================================================================
+# Controller Head To Module - Target-Oriented Movement Controller
+# =============================================================================
+#
+# This module provides a simple controller for directing robots to move
+# towards target positions using basic differential drive mechanics.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import List
 
 

@@ -1,23 +1,34 @@
+# =============================================================================
+# Robot Drone Autel Module - Autel Drone Implementation
+# =============================================================================
+#
+# This module provides the Autel drone robot implementation with advanced
+# flight control, multi-camera systems, and autonomous navigation capabilities.
+#
+# =============================================================================
+
+# Standard library imports
+import threading
 from dataclasses import dataclass, field
 from typing import Dict
 
+# Third-party library imports
 import numpy as np
-import threading
 
+# Local project imports
+from controller.controller_pid import ControllerPID
+from map.map_grid_map import GridMap
 from physics_engine.pxr_utils import Gf, UsdGeom
 from physics_engine.isaacsim_utils import Scene
-
-from rclpy.node import Node
-
-from map.map_grid_map import GridMap
-from robot.sensor.camera import CfgCamera, CfgCameraThird
-from controller.controller_pid import ControllerPID
 from robot.cfg import CfgRobot, CfgDroneAutel
-
-# from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
-from scene.scene_manager import SceneManager
 from robot.body.body_drone_autel import BodyDroneAutel
+from robot.sensor.camera import CfgCamera, CfgCameraThird
+from scene.scene_manager import SceneManager
+# from robot.robot import Robot
+
+# ROS2 imports
+from rclpy.node import Node
 
 DRONE_COLOR_SCHEMES = {
     "Gray": {"main": [0.6, 0.6, 0.6], "nose": [0.3, 0.3, 0.3]},

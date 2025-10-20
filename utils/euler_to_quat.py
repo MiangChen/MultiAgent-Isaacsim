@@ -1,4 +1,16 @@
+# =============================================================================
+# Euler to Quaternion Module - Rotation Conversion Utilities
+# =============================================================================
+#
+# This module provides functions for converting Euler angles to quaternions
+# with support for different rotation orders and angle units.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import List
+
+# Third-party library imports
 from scipy.spatial.transform import Rotation as R
 
 

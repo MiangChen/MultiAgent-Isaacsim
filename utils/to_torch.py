@@ -1,3 +1,13 @@
+# =============================================================================
+# To Torch Module - Tensor Conversion Utilities
+# =============================================================================
+#
+# This module provides utility functions for converting various data types
+# to PyTorch tensors with specified device, dtype, and gradient requirements.
+#
+# =============================================================================
+
+# Third-party library imports
 import torch
 
 

@@ -1,6 +1,16 @@
+# =============================================================================
+# Config Camera Module - Camera Sensor Configuration
+# =============================================================================
+#
+# This module provides configuration parameters for camera sensors,
+# including positioning, resolution, and rendering settings.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import Optional, Tuple
 
-
+# Local project imports
 from config.cfg_base import CfgBase
 
 

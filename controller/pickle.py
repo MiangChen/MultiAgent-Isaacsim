@@ -1,3 +1,13 @@
+# =============================================================================
+# Pickle Module - Custom Pickle Utilities
+# =============================================================================
+#
+# This module provides custom pickle unpickler with class mapping
+# for handling legacy serialized objects and normalizers.
+#
+# =============================================================================
+
+# Standard library imports
 import pickle
 
 

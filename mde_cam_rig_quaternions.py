@@ -1,13 +1,19 @@
-"""
-Author: Subhransu Mishra
+# =============================================================================
+# MDE Camera Rig Quaternions Module - Camera Rig Configuration
+# =============================================================================
+#
+# Author: Subhransu Mishra
+#
+# This script generates the camera rig quaternions for the MDE camera rig,
+# providing spatial configuration and visualization for multi-camera setups.
+#
+# =============================================================================
 
-This script generates the camera rig quaternions for the MDE camera rig.
-
-"""
-
+# Standard library imports
 import matplotlib
-
 matplotlib.use("TkAgg")
+
+# Third-party library imports
 import numpy as np
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt

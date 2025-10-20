@@ -1,6 +1,18 @@
-import omni
-import carb
+# =============================================================================
+# LiDAR Module - LiDAR Sensor Integration Utilities
+# =============================================================================
+#
+# This module provides utilities for adding and configuring LiDAR sensors
+# to drone platforms within the Isaac Sim environment.
+#
+# =============================================================================
+
+# Third-party library imports
 import numpy as np
+import carb
+import omni
+
+# Local project imports
 from physics_engine.pxr_utils import Gf
 
 

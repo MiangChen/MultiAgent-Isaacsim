@@ -1,6 +1,19 @@
+# =============================================================================
+# Asset Manager Module - Asset Discovery and Management
+# =============================================================================
+#
+# This module provides functionality for discovering, cataloging, and managing
+# USD assets within the Isaac Sim environment, including automated asset
+# scanning and metadata generation.
+#
+# =============================================================================
+
+# Standard library imports
 import json
-from pathlib import Path
 import os
+from pathlib import Path
+
+# Third-party library imports
 import yaml
 
 

@@ -1,9 +1,14 @@
-"""
-ViewportManager Enhanced - 简洁高效的viewport管理器
-负责管理viewport和camera之间的映射关系，专注于核心功能实现。
-所有功能均通过ViewportManager类提供，通过 get_viewport_manager() 获取全局实例。
-"""
+# =============================================================================
+# Viewport Manager Module - Viewport and Camera Management
+# =============================================================================
+#
+# ViewportManager Enhanced - 简洁高效的viewport管理器
+# 负责管理viewport和camera之间的映射关系，专注于核心功能实现。
+# 所有功能均通过ViewportManager类提供，通过 get_viewport_manager() 获取全局实例。
+#
+# =============================================================================
 
+# Standard library imports
 from typing import Dict, List, Optional, Any, Tuple
 
 

@@ -1,5 +1,16 @@
+# =============================================================================
+# Config Camera View Module - Camera View Configuration
+# =============================================================================
+#
+# This module provides configuration parameters for camera view settings,
+# including positioning, orientation, and joint target configurations.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import Optional, Tuple
 
+# Local project imports
 from config.cfg_base import CfgBase
 
 

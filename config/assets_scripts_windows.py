@@ -1,3 +1,12 @@
+# =============================================================================
+# Assets Scripts Windows Module - Windows Path Configuration
+# =============================================================================
+#
+# This module defines Windows-specific paths and configurations for Isaac Sim
+# assets, project directories, and conda environments.
+#
+# =============================================================================
+
 # ubuntu的用户名字
 NAME_USR = "Administrator"
 # conda环境的位置

@@ -1,16 +1,28 @@
-import rclpy
-from rclpy.node import Node
+# =============================================================================
+# Node Trajectory Generator Module - Time-Optimal Trajectory Generation
+# =============================================================================
+#
+# This module provides ROS2 node implementation for generating time-optimal
+# trajectories from geometric paths using the TOPPRA library.
+#
+# =============================================================================
+
+# Standard library imports
+from typing import Dict, Any
+
+# Third-party library imports
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-
-from nav_msgs.msg import Path
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-from builtin_interfaces.msg import Duration
-
 import toppra as ta
 import toppra.constraint as constraint
 import toppra.algorithm as algo
-from typing import Dict, Any
+
+# ROS2 imports
+import rclpy
+from rclpy.node import Node
+from nav_msgs.msg import Path
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from builtin_interfaces.msg import Duration
 
 
 class NodeTrajectoryGenerator(Node):

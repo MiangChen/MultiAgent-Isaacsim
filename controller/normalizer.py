@@ -1,5 +1,16 @@
+# =============================================================================
+# Normalizer Module - Data Normalization Utilities
+# =============================================================================
+#
+# This module provides running mean and standard deviation calculation
+# utilities for data stream normalization in machine learning applications.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import Tuple
 
+# Third-party library imports
 import numpy as np
 import torch
 

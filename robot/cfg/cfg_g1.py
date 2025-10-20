@@ -1,3 +1,13 @@
+# =============================================================================
+# Config G1 Module - G1 Humanoid Robot Configuration
+# =============================================================================
+#
+# This module provides configuration parameters specific to the G1
+# humanoid robot, including physical properties and sensor configurations.
+#
+# =============================================================================
+
+# Local project imports
 from .cfg_robot import CfgRobot, ASSET_PATH
 
 

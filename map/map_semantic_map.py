@@ -1,7 +1,16 @@
-from typing import List
+# =============================================================================
+# Map Semantic Map Module - Semantic Mapping and Object Detection
+# =============================================================================
+#
+# This module provides semantic mapping functionality for object detection
+# and pose estimation within the Isaac Sim environment.
+#
+# =============================================================================
 
-from typing import Dict, Any, Tuple, Optional
+# Standard library imports
+from typing import List, Dict, Any, Tuple, Optional
 
+# Local project imports
 from physics_engine.isaacsim_utils import XFormPrim
 from physics_engine.pxr_utils import Usd
 

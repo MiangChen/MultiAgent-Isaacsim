@@ -1,19 +1,31 @@
+# =============================================================================
+# Robot G1 Module - G1 Humanoid Robot Implementation
+# =============================================================================
+#
+# This module provides the G1 humanoid robot implementation with advanced
+# locomotion control, sensor integration, and autonomous navigation.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import Dict
 
+# Third-party library imports
 import torch
 
+# Local project imports
 from controller.controller_pid import ControllerPID
-from robot.sensor.camera import CfgCamera, CfgCameraThird
 from map.map_grid_map import GridMap
+from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from recycle_bin.path_planning_astar import AStar
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.cfg import CfgG1
 from robot.body.body_g1 import BodyG1
+from robot.sensor.camera import CfgCamera, CfgCameraThird
 from utils import to_torch, quat_to_yaw
 
-from physics_engine.isaacsim_utils import Scene, ArticulationActions
-
+# Custom ROS message imports
 from gsi2isaacsim.gsi_msgs_helper import (
     Plan,
     RobotFeedback,

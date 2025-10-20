@@ -1,7 +1,19 @@
-# In a file like camera/camera_cfg.py
-from pydantic import Field
+# =============================================================================
+# Config Camera Third Module - Third Person Camera Configuration
+# =============================================================================
+#
+# This module provides configuration parameters for third-person camera
+# views, including positioning, viewport settings, and display options.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import List, Optional
 
+# Third-party library imports
+from pydantic import Field
+
+# Local project imports
 from config.cfg_base import CfgBase
 
 

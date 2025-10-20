@@ -1,3 +1,12 @@
+# =============================================================================
+# Controller PID Module - PID Controller Implementation
+# =============================================================================
+#
+# This module provides a simple PID (Proportional-Integral-Derivative)
+# controller implementation for robotic control applications.
+#
+# =============================================================================
+
 class ControllerPID:
     """
     一个简单的 PID 控制器。

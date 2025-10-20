@@ -1,14 +1,28 @@
+# =============================================================================
+# Robot Module - Core Robot Implementation
+# =============================================================================
+#
+# This module provides the base Robot class and related functionality for
+# robotic simulation and control within the Isaac Sim environment.
+#
+# =============================================================================
+
+# Standard library imports
+import threading
 from typing import Tuple, Dict, Any, List
 
-import threading
-from rclpy.executors import MultiThreadedExecutor
-from nav_msgs.msg import Odometry
-
-from shapely.geometry import Polygon, LineString, MultiLineString
-from shapely.affinity import rotate
+# Third-party library imports
 import numpy as np
 import torch
+from shapely.geometry import Polygon, LineString, MultiLineString
+from shapely.affinity import rotate
 
+# Local project imports
+from log.log_manager import LogManager
+from map.map_grid_map import GridMap
+from navigation.node_path_planner_ompl import NodePlannerOmpl
+from navigation.node_trajectory_generator import NodeTrajectoryGenerator
+from navigation.node_controller_mpc import NodeMpcController
 from physics_engine.isaacsim_utils import (
     Scene,
     RigidPrim,
@@ -18,20 +32,19 @@ from physics_engine.isaacsim_utils import (
     Camera,
 )
 from physics_engine.pxr_utils import UsdPhysics
-
-
-from map.map_grid_map import GridMap
-from navigation.node_path_planner_ompl import NodePlannerOmpl
-from navigation.node_trajectory_generator import NodeTrajectoryGenerator
-from navigation.node_controller_mpc import NodeMpcController
 from robot.sensor.camera import CfgCamera, CfgCameraThird, Camera
 from robot.cfg import CfgRobot
 from robot.body import BodyRobot
 from robot.robot_trajectory import Trajectory
 from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
-from log.log_manager import LogManager
 from utils import to_torch
+
+# ROS2 imports
+from rclpy.executors import MultiThreadedExecutor
+from nav_msgs.msg import Odometry
+
+# Custom ROS message imports
 from gsi_msgs.gsi_msgs_helper import (
     RobotFeedback,
     SkillExecution,
