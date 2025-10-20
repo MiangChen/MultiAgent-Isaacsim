@@ -1,21 +1,31 @@
+# =============================================================================
+# Robot Target Module - Target Object Implementation
+# =============================================================================
+#
+# This module provides target object implementation for robot navigation
+# and interaction scenarios, including target tracking and manipulation.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import Dict, List, Tuple
 
+# Third-party library imports
 import torch
 import numpy as np
 
-from controller.controller_pid import ControllerPID
-from robot.sensor.camera import CfgCamera, CfgCameraThird
-from map.map_grid_map import GridMap
-
-# from path_planning.path_planning_astar import AStar
+# Local project imports
+from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.cfg.cfg_target import CfgTarget
 from robot.body.body_target import BodyTarget
+from robot.sensor.camera import CfgCamera, CfgCameraThird
 from utils import to_torch, quat_to_yaw
 
-from physics_engine.isaacsim_utils import Scene, ArticulationActions
+# from path_planning.path_planning_astar import AStar
 
+# Custom ROS message imports
 from gsi2isaacsim.gsi_msgs_helper import (
     Plan,
     RobotFeedback,
@@ -32,7 +42,6 @@ class Target(Robot):
         # cfg_camera: CfgCamera = None,
         # cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
-        map_grid: GridMap = None,
         scene_manager=None,
     ) -> None:
 
@@ -45,14 +54,11 @@ class Target(Robot):
             # cfg_camera,
             # cfg_camera_third_person,
             scene=scene,
-            map_grid=map_grid,
             scene_manager=None,
         )
         self.body = BodyTarget(cfg_robot=self.cfg_robot, scene=scene)
         self.control_mode = "joint_velocities"
         # # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
-        self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
-        self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
 
         self.counter = 0
         self.pub_period = 50
@@ -74,8 +80,6 @@ class Target(Robot):
 
     def step(self, action):
 
-        self.body.robot_articulation.set_linear_velocities(self.linear_velocity)
-        self.body.robot_articulation.set_angular_velocities(self.angular_velocity)
         # obs暂时未实现
         obs = None
         return obs
@@ -83,11 +87,8 @@ class Target(Robot):
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
 
-        self._publish_status_pose()
-
         if self.flag_world_reset:
             if self.flag_action_navigation:
-                self.move_along_path()  # 每一次都计算下速度
                 self.step(self.action)
             if self.is_detecting:
                 self.detect(self, target_prim=self.target_prim)

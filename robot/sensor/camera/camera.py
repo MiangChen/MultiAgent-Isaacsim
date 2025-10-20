@@ -1,18 +1,28 @@
+# =============================================================================
+# Camera Module - Camera Sensor Implementation
+# =============================================================================
+#
+# This module provides camera sensor implementation with image capture,
+# processing, and integration with Isaac Sim's rendering pipeline.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import List, Optional, Tuple, Sequence
 
+# Third-party library imports
 import numpy as np
 import torch
 from torchvision.utils import save_image
 
+# Local project imports
+from log.log_manager import LogManager
 from physics_engine.isaacsim_utils import (
     Camera as IsaacCamera,
     rotations,
     define_prim,
     get_prim_at_path,
 )
-
-
-from log.log_manager import LogManager
 from robot.sensor.camera import CfgCamera
 from utils import to_torch
 

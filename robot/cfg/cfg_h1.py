@@ -1,3 +1,13 @@
+# =============================================================================
+# Config H1 Module - H1 Humanoid Robot Configuration
+# =============================================================================
+#
+# This module provides configuration parameters specific to the H1
+# humanoid robot, including locomotion and sensor settings.
+#
+# =============================================================================
+
+# Local project imports
 from .cfg_robot import CfgRobot, ASSET_PATH
 
 

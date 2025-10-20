@@ -1,8 +1,19 @@
+# =============================================================================
+# MCP Server Module - Model Context Protocol Network Server
+# =============================================================================
+#
+# This module provides TCP socket communication server for the MCP extension,
+# handling client connections, command delegation, and response management.
+#
+# =============================================================================
+
+# Standard library imports
 import json
 import socket
 import threading
 import traceback
 
+# Third-party library imports
 from omni.kit.async_engine import run_coroutine
 
 

@@ -1,12 +1,24 @@
+# =============================================================================
+# Swarm Manager Module - Multi-Robot Swarm Management
+# =============================================================================
+#
+# This module provides enhanced robot swarm management system for managing
+# multiple robots of different types, handling their configurations, positions,
+# and coordination within the simulation environment.
+#
+# =============================================================================
+
+# Standard library imports
 import inspect
 from typing import Dict, List, Type
+
+# Third-party library imports
 import yaml
 
-from physics_engine.isaacsim_utils import Scene
-
+# Local project imports
 from log.log_manager import LogManager
-from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
+from physics_engine.isaacsim_utils import Scene
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from robot.robot import Robot
 from robot.cfg import CfgRobot
@@ -28,7 +40,6 @@ class SwarmManager:
 
     def __init__(
         self,
-        map_grid: GridMap = None,
         map_semantic: MapSemantic = None,
         ros_manager: RosManager = None,
         scene_manager: SceneManager = None,
@@ -45,7 +56,6 @@ class SwarmManager:
             # 'g1': G1,
             # 'go2': Go2
         }
-        self.map_grid = map_grid
         self.map_semantic = map_semantic
         self.ros_manager = ros_manager
 
@@ -100,7 +110,6 @@ class SwarmManager:
                     # 如果是，使用 await 调用异步工厂 create 方法
                     robot = await robot_cls.create(
                         cfg_robot=cfg_robot,
-                        map_grid=self.map_grid,
                         scene=self.scene,
                         scene_manager=self.scene_manager,
                     )
@@ -109,7 +118,6 @@ class SwarmManager:
                     robot = robot_cls(
                         cfg_robot=cfg_robot,
                         scene=self.scene,
-                        map_grid=self.map_grid,
                         scene_manager=self.scene_manager,
                     )
 
@@ -167,7 +175,3 @@ class SwarmManager:
     def _is_name_unique(self, name: str):
         """检查名称是否唯一"""
         return self._find_robot(name) is None
-
-
-if __name__ == "__main__":
-    pass

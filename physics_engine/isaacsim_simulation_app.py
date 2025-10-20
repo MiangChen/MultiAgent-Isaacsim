@@ -1,6 +1,17 @@
-import os
-import yaml
+# =============================================================================
+# Isaac Sim Simulation App Module - Simulation Application Initialization
+# =============================================================================
+#
+# This module provides functionality for initializing and configuring the
+# Isaac Sim SimulationApp with proper settings and configuration management.
+#
+# =============================================================================
 
+# Standard library imports
+import os
+
+# Third-party library imports
+import yaml
 from isaacsim import SimulationApp
 import omni
 

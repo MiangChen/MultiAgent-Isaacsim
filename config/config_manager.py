@@ -1,8 +1,21 @@
+# =============================================================================
+# Config Manager Module - Unified Configuration Management
+# =============================================================================
+#
+# This module provides a centralized configuration management system that
+# integrates YAML file configurations with command-line arguments for
+# flexible application configuration.
+#
+# =============================================================================
+
+# Standard library imports
 import argparse
 import os
-from pathlib import Path
 import pprint
+from pathlib import Path
 from typing import Any, List, Dict
+
+# Third-party library imports
 import yaml
 
 

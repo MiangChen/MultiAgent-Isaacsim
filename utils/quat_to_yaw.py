@@ -1,5 +1,16 @@
+# =============================================================================
+# Quaternion to Yaw Module - Yaw Angle Extraction
+# =============================================================================
+#
+# This module provides functions for extracting yaw angles from quaternion
+# representations, useful for 2D navigation and orientation tracking.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import List
 
+# Third-party library imports
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 

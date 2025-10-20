@@ -1,14 +1,24 @@
-from typing import Tuple, Dict, Any, List
+# =============================================================================
+# Robot Module - Core Robot Implementation
+# =============================================================================
+#
+# This module provides the base Robot class and related functionality for
+# robotic simulation and control within the Isaac Sim environment.
+#
+# =============================================================================
 
+# Standard library imports
 import threading
-from rclpy.executors import MultiThreadedExecutor
-from nav_msgs.msg import Odometry
+from typing import Dict, Any, List
 
-from shapely.geometry import Polygon, LineString, MultiLineString
-from shapely.affinity import rotate
+# Third-party library imports
 import numpy as np
 import torch
+from shapely.geometry import Polygon, LineString, MultiLineString
+from shapely.affinity import rotate
 
+# Local project imports
+from log.log_manager import LogManager
 from physics_engine.isaacsim_utils import (
     Scene,
     RigidPrim,
@@ -18,20 +28,20 @@ from physics_engine.isaacsim_utils import (
     Camera,
 )
 from physics_engine.pxr_utils import UsdPhysics
-
-
-from map.map_grid_map import GridMap
-from navigation.node_path_planner_ompl import NodePlannerOmpl
-from navigation.node_trajectory_generator import NodeTrajectoryGenerator
-from navigation.node_controller_mpc import NodeMpcController
-from robot.sensor.camera import CfgCamera, CfgCameraThird, Camera
-from robot.cfg import CfgRobot
+from robot.sensor.camera import Camera
 from robot.body import BodyRobot
 from robot.robot_trajectory import Trajectory
+from robot.skill.navigation.node_path_planner_ompl import NodePlannerOmpl
+from robot.skill.navigation.node_trajectory_generator import NodeTrajectoryGenerator
+from robot.skill.navigation.node_controller_mpc import NodeMpcController
 from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
-from log.log_manager import LogManager
-from utils import to_torch
+
+# ROS2 imports
+from rclpy.executors import MultiThreadedExecutor
+from nav_msgs.msg import Odometry
+
+# Custom ROS message imports
 from gsi_msgs.gsi_msgs_helper import (
     RobotFeedback,
     SkillExecution,
@@ -67,7 +77,6 @@ class Robot:
         self,
         scene: Scene = None,
         scene_manager: SceneManager = None,
-        map_grid: GridMap = None,
     ):
 
         self.cfg_dict_camera = self.cfg_robot.cfg_dict_camera
@@ -77,7 +86,6 @@ class Robot:
 
         self.scene = scene
         self.scene_manager = scene_manager
-        self.map_grid = map_grid
         self.viewport_manager = (
             _get_viewport_manager_from_container()
         )  # 通过依赖注入获取viewport_manager
@@ -160,6 +168,10 @@ class Robot:
         self.track_waypoint_sub = None
         self.track_waypoint_sub
 
+        # robot physics state
+        self.vel_linear = torch.tensor([0.0, 0.0, 0.0])
+        self.vel_angular = torch.tensor([0.0, 0.0, 0.0])
+
     ########################## Skill Action Server ############################
     def callback_execute_skill(self, goal_handle):
         if self.state_skill_complete is False:
@@ -239,10 +251,10 @@ class Robot:
     ########################## Subscriber Velocity  ############################
     def callback_cmd_vel(self, msg):
         """处理来自ROS的速度命令"""
-        linear_vel = torch.tensor([msg.linear.x, msg.linear.y, msg.linear.z])
+        linear_vel = torch.tensor([msg.linear.x, msg.linear.y, 0])
         angular_vel = torch.tensor([msg.angular.x, msg.angular.y, msg.angular.z])
-        print("linear_vel", linear_vel)
-        self.controller_simplified(linear_vel, angular_vel)
+        self.vel_linear = linear_vel
+        self.vel_angular = angular_vel
 
     ########################## Start ROS  ############################
 
@@ -317,6 +329,8 @@ class Robot:
         Args:
             step_size:  dt 时间间隔
         """
+        # update robot velocity
+        self.controller_simplified()
         # 更新相机的视野
         self._update_camera_view()
         # publish robot position
@@ -655,11 +669,14 @@ class Robot:
         return waypoints
 
     def controller_simplified(
-        self, linear_velocity: torch.Tensor, angular_velocity: torch.Tensor
+        self,
     ) -> None:
+        """
+        this function can only be used in on_physics_step
+        """
         if self.body.robot_articulation.is_physics_handle_valid():
-            self.body.robot_articulation.set_linear_velocities(linear_velocity)
-            self.body.robot_articulation.set_angular_velocities(angular_velocity)
+            self.body.robot_articulation.set_linear_velocities(self.vel_linear)
+            self.body.robot_articulation.set_angular_velocities(self.vel_angular)
         return None
 
     def track_callback(self, msg):
@@ -853,63 +870,3 @@ class Robot:
             robot_id=f"{self.cfg_robot.type}_{self.cfg_robot.id}",
             skill_feedback=skill,
         )
-
-        # self.node.publish_feedback(self.cfg_robot.type, self.cfg_robot.id, msg)
-
-    def _publish_status_pose(self):
-
-        import numpy as np
-
-        pos, orn = self.body.get_world_pose()
-
-        # 这些 API 返回 (N, 3) 的数组/张量；这里只取第 0 个
-        lin_v = self.body.robot_articulation.get_linear_velocities(
-            indices=[0], clone=True
-        )
-        ang_v = self.body.robot_articulation.get_angular_velocities(
-            indices=[0], clone=True
-        )
-
-        # 统一成 numpy，做个健壮性兜底
-        lin_v0 = np.asarray(lin_v)[0] if np.size(lin_v) else np.zeros(3, dtype=float)
-        ang_v0 = np.asarray(ang_v)[0] if np.size(ang_v) else np.zeros(3, dtype=float)
-
-        msg = VelTwistPose()
-
-        # vel 字段：保持与你原逻辑一致，全部置 0
-        msg.vel.x, msg.vel.y, msg.vel.z = [0.0, 0.0, 0.0]
-
-        # twist：使用仿真里的实时速度
-        msg.twist.linear.x, msg.twist.linear.y, msg.twist.linear.z = (
-            float(v) for v in lin_v0
-        )
-        msg.twist.angular.x, msg.twist.angular.y, msg.twist.angular.z = (
-            float(v) for v in ang_v0
-        )
-        msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (
-            float(v) for v in pos
-        )
-
-        # 兼容 ndarray（常见返回）与带属性的四元数对象两种情况
-        if hasattr(orn, "x"):
-            quat_xyzw = orn.x, orn.y, orn.z, orn.w
-        else:
-            # 约定顺序为 [x, y, z, w]；若你的资源是 wxyz，请按需调整
-            quat_xyzw = float(orn[0]), float(orn[1]), float(orn[2]), float(orn[3])
-
-        (
-            msg.pose.orientation.x,
-            msg.pose.orientation.y,
-            msg.pose.orientation.z,
-            msg.pose.orientation.w,
-        ) = (float(v) for v in quat_xyzw)
-
-        # self.node.publish_motion(
-        #     robot_class=self.cfg_robot.type,
-        #     robot_id=self.cfg_robot.id,
-        #     msg=msg
-        # )
-
-
-if __name__ == "__main__":
-    pass

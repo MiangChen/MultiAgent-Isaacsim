@@ -1,10 +1,20 @@
 #!/usr/bin/env python
+# =============================================================================
+# Images to Depth TensorRT Module - GPU-Accelerated Depth Processing
+# =============================================================================
+#
+# This module provides TensorRT-accelerated processing for converting
+# fisheye camera images to depth maps using GPU optimization.
+#
+# =============================================================================
 
-import cv2
+# Standard library imports
 import logging
-import numpy as np
 import time
 
+# Third-party library imports
+import cv2
+import numpy as np
 import carb
 import tensorrt as trt
 import torch

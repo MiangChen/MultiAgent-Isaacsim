@@ -1,11 +1,22 @@
+# =============================================================================
+# Controller Policy H1 Module - H1 Humanoid Policy Controller
+# =============================================================================
+#
+# This module provides policy-based controller implementation for the H1
+# humanoid robot, including flat terrain locomotion policies.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import Optional
 
-from controller.controller_policy import PolicyController
-
+# Third-party library imports
 import numpy as np
 
-from physics_engine.isaacsim_utils import quat_to_rot_matrix, ArticulationActions
+# Local project imports
 from config.config_manager import config_manager
+from robot.controller.controller_policy import PolicyController
+from physics_engine.isaacsim_utils import quat_to_rot_matrix
 
 ASSET_PATH = config_manager.get("path_asset")
 

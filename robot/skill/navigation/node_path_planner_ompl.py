@@ -1,17 +1,30 @@
+# =============================================================================
+# Node Path Planner OMPL Module - OMPL-Based Path Planning
+# =============================================================================
+#
+# This module provides ROS2 node implementation for path planning using
+# the Open Motion Planning Library (OMPL) with 3D grid map integration.
+#
+# =============================================================================
+
+# Standard library imports
 import json
+
+# Third-party library imports
 import numpy as np
 from ompl import base as ob
 from ompl import geometric as og
+import message_filters
+import sensor_msgs_py.point_cloud2 as pc2
 
+# ROS2 imports
 from nav_msgs.msg import Path
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import PointCloud2, PointField
-import sensor_msgs_py.point_cloud2 as pc2
 from diagnostic_msgs.msg import DiagnosticArray
 from visualization_msgs.msg import Marker
-import message_filters
 
 
 class NodePlannerOmpl(Node):

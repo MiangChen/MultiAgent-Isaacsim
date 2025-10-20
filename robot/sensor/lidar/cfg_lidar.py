@@ -1,6 +1,19 @@
+# =============================================================================
+# Config LiDAR Module - LiDAR Sensor Configuration
+# =============================================================================
+#
+# This module provides configuration parameters for RTX LiDAR sensors,
+# including positioning, scanning parameters, and output settings.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import Optional, Tuple
+
+# Third-party library imports
 from pydantic import Field
 
+# Local project imports
 from config.cfg_base import CfgBase
 
 

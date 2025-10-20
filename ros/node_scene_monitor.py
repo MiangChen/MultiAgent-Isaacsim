@@ -1,9 +1,24 @@
-from rclpy.node import Node
+# =============================================================================
+# Node Scene Monitor Module - Scene State Monitoring and Publishing
+# =============================================================================
+#
+# This module provides ROS2 node implementation for monitoring scene state
+# changes and publishing scene modifications and robot feedback.
+#
+# =============================================================================
 
+# Third-party library imports
 import omni.usd
+
+# Local project imports
+from log.log_manager import LogManager
 from physics_engine.pxr_utils import Tf, Gf, Usd, UsdGeom, Sdf
 
+# ROS2 imports
+from rclpy.node import Node
 from geometry_msgs.msg import Transform as RosTransform
+
+# Custom ROS message imports
 from gsi_msgs.gsi_msgs_helper import (
     PrimTransform,
     SceneModifications,
@@ -14,7 +29,6 @@ from gsi_msgs.gsi_msgs_helper import (
     SkillExecution,
     SkillFeedback,
 )
-from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
 

@@ -3,6 +3,7 @@
 # Based on: https://docs.isaacsim.omniverse.nvidia.com/4.5.0/py/index.html
 # =============================================================================
 
+# Third-party library imports (Isaac Sim)
 # -----------------------------------------------------------------------------
 # 1. App - Main Application
 # -----------------------------------------------------------------------------
@@ -28,7 +29,7 @@ from isaacsim.core.api.controllers import BaseController
 from isaacsim.core.api.objects import cuboid, sphere
 from isaacsim.core.api.objects import (
     VisualCuboid,
-    VisualCylinder,
+    VisualCylinder, 
     VisualSphere,
     DynamicCuboid,
     DynamicSphere,

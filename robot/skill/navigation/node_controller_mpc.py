@@ -1,17 +1,28 @@
-import rclpy
-from rclpy.node import Node
+# =============================================================================
+# Node Controller MPC Module - Model Predictive Control for Robot Navigation
+# =============================================================================
+#
+# This module provides MPC-based trajectory tracking control for robot
+# navigation, using CasADi for optimization and trajectory interpolation.
+#
+# =============================================================================
+
+# Standard library imports
+from typing import Dict, Any, Tuple
+
+# Third-party library imports
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.spatial.transform import Rotation as R
-from typing import Dict, Any, Tuple
+import casadi as ca
 
-# ROS 2 Standard Messages
+# ROS2 imports
+import rclpy
+from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from geometry_msgs.msg import Twist
 from builtin_interfaces.msg import Duration
-
-import casadi as ca
 
 
 class TrajectoryManager:

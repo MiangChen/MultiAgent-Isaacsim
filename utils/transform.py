@@ -1,17 +1,25 @@
+# =============================================================================
+# Transform Module - Coordinate Transformation Utilities
+# =============================================================================
+#
+# This module provides coordinate transformation utilities for SLAM to
+# simulation to robot coordinate conversions. Handles quaternion to angle
+# conversions and rotation matrix operations with proper order handling.
+#
+# Note: Isaac Sim uses ZYX rotation order by default.
+#
+# =============================================================================
+
+# Standard library imports
+import math
 from typing import List
 
-from quat_to_euler import quat_to_euler  # 可以将quat变成角度, 能输入xyz/zxy等顺序
-import math
+# Third-party library imports
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-"""
-这个程序涉及到 slam到仿真 到具体机器人的角度信息; 
-没必要看懂怎么处理的, 主要知道几个点, 一个是从quat到angle是否, 建议用scipy计算
-第二个是, 角度的叠加要使用旋转矩阵, 并且要确认顺序, 是xyz, zyz还是别的
-isaacsim中默认的顺序是zyx
-
-"""
+# Local project imports
+from quat_to_euler import quat_to_euler  # 可以将quat变成角度, 能输入xyz/zxy等顺序
 
 
 def transform_object_rotate_then_translate(

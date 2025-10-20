@@ -1,9 +1,20 @@
 #!/usr/bin/env python
+# =============================================================================
+# Isaac Sim Interface Module - Simulation Environment Setup
+# =============================================================================
+#
 # Author: Subhransu Mishra
+#
+# This module provides the interface for setting up Isaac Sim environment
+# for the planner, handling command-line arguments and simulation app
+# initialization.
+#
+# =============================================================================
 
-import sys
+# Standard library imports
 import argparse
 import os
+import sys
 
 print("isaacsim_interface args: ", sys.argv)
 # Parse arguments *before* SimulationApp initialization
@@ -19,7 +30,7 @@ parser.add_argument("--robot_model", type=str, default="modelx", help="robot mod
 # Use parse_known_args to ignore extra args potentially passed by ROS launch
 args, unknown = parser.parse_known_args()
 
-# Initialize SimulationApp globally using parsed arguments
+# Local project imports
 from physics_engine.isaacsim_utils import SimulationApp
 
 CONFIG = {"renderer": "RaytracedLighting", "headless": not args.gui}

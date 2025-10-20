@@ -1,16 +1,21 @@
+# =============================================================================
+# Controller Config Loader Module - Configuration Loading Utilities
+# =============================================================================
+#
 # Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 #
-# NVIDIA CORPORATION and its licensors retain all intellectual property
-# and proprietary rights in and to this software, related documentation
-# and any modifications thereto. Any use, reproduction, disclosure or
-# distribution of this software and related documentation without an express
-# license agreement from NVIDIA CORPORATION is strictly prohibited.
+# This module provides utilities for loading and parsing controller
+# configuration files, particularly for environment and policy settings.
 #
+# =============================================================================
+
+# Standard library imports
 import fnmatch
 import io
 import sys
 from typing import Dict, List, Tuple
 
+# Third-party library imports
 import carb
 import omni
 import yaml

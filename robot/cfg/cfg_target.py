@@ -1,3 +1,13 @@
+# =============================================================================
+# Config Target Module - Target Object Configuration
+# =============================================================================
+#
+# This module provides configuration parameters for target objects used
+# in robot interaction and tracking scenarios.
+#
+# =============================================================================
+
+# Local project imports
 from .cfg_robot import CfgRobot, ASSET_PATH
 
 

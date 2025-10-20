@@ -1,3 +1,13 @@
+# =============================================================================
+# Config Jetbot Module - Jetbot Robot Configuration
+# =============================================================================
+#
+# This module provides configuration parameters specific to the Jetbot
+# robot, including physical properties and sensor configurations.
+#
+# =============================================================================
+
+# Local project imports
 from .cfg_robot import CfgRobot, ASSET_PATH
 
 

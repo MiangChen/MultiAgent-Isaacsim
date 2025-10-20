@@ -1,7 +1,16 @@
 # -*- coding: utf-8 -*-
+# =============================================================================
+# USDC to USD Module - USD Format Conversion Utility
+# =============================================================================
+#
+# This module provides functionality to convert USDC (USD Crate) files to
+# USD (Universal Scene Description) text format using Pixar USD libraries.
+#
+# =============================================================================
 
-import os
+# Standard library imports
 import argparse
+import os
 import sys
 
 # 尝试导入 USD 模块。如果失败，说明 USD 环境未设置或未安装。

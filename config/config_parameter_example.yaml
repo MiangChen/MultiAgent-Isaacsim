@@ -74,5 +74,3 @@ ros:
   node_enable:
     node_scene_monitor: False
     node_action_server_plan_execution: True
-    node_server_planner_nav2: False
-    node_planner_ompl: True

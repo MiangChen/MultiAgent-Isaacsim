@@ -1,19 +1,28 @@
+# =============================================================================
+# Robot G1 Module - G1 Humanoid Robot Implementation
+# =============================================================================
+#
+# This module provides the G1 humanoid robot implementation with advanced
+# locomotion control, sensor integration, and autonomous navigation.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import Dict
 
+# Third-party library imports
 import torch
 
-from controller.controller_pid import ControllerPID
-from robot.sensor.camera import CfgCamera, CfgCameraThird
-from map.map_grid_map import GridMap
-from recycle_bin.path_planning_astar import AStar
+# Local project imports
+from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.cfg import CfgG1
 from robot.body.body_g1 import BodyG1
+from robot.sensor.camera import CfgCamera, CfgCameraThird
 from utils import to_torch, quat_to_yaw
 
-from physics_engine.isaacsim_utils import Scene, ArticulationActions
-
+# Custom ROS message imports
 from gsi2isaacsim.gsi_msgs_helper import (
     Plan,
     RobotFeedback,
@@ -30,7 +39,6 @@ class RobotG1(Robot):
         # cfg_camera: CfgCamera = None,
         # cfg_camera_third_person: CfgCameraThird = None,
         scene: Scene = None,
-        map_grid: GridMap = None,
         scene_manager=None,
     ) -> None:
         self.cfg_robot = CfgG1(**cfg_robot)
@@ -38,14 +46,11 @@ class RobotG1(Robot):
             # cfg_camera,
             # cfg_camera_third_person,
             scene=scene,
-            map_grid=map_grid,
             scene_manager=None,
         )
         self.body = BodyG1(cfg_robot=self.cfg_robot, scene=scene)
         self.control_mode = "joint_velocities"
         # # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
-        self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
-        self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
 
         self.counter = 0
         self.pub_period = 50
@@ -76,7 +81,6 @@ class RobotG1(Robot):
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
 
-        self._publish_status_pose()
         self.counter += 1
 
         if self.flag_world_reset:

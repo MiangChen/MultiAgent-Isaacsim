@@ -1,3 +1,13 @@
+# =============================================================================
+# Isaac Sim LiDAR Module - LiDAR Simulation and ROS Integration
+# =============================================================================
+#
+# This module provides LiDAR simulation capabilities within Isaac Sim,
+# integrating with ROS2 for sensor data publishing and multi-robot
+# coordination.
+#
+# =============================================================================
+
 ##########################################################################################################################
 from physics_engine.isaacsim_simulation_app import start_isaacsim_simulation_app
 
@@ -5,15 +15,7 @@ simulation_app = start_isaacsim_simulation_app()
 
 ##########################################################################################################################
 
-#
-# import omni
-# import carb
-# import numpy as np
-# from pxr import Gf
-import rclpy
-
-rclpy.init()
-
+# Local project imports
 from config.config_manager import config_manager
 from log.log_manager import LogManager
 from map.map_semantic_map import MapSemantic
@@ -22,6 +24,11 @@ from scene.scene_manager import SceneManager
 from simulation_utils.ros_bridge import setup_ros
 from simulation_utils.simulation_core import run_simulation_loop_multi
 from utils import euler_to_quat
+
+# ROS2 imports
+import rclpy
+
+rclpy.init()
 
 logger = LogManager.get_logger(__name__)
 

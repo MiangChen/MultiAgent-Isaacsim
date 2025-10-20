@@ -1,3 +1,12 @@
+# =============================================================================
+# Assets Scripts Linux Module - Linux Path Configuration
+# =============================================================================
+#
+# This module defines Linux-specific paths and configurations for Isaac Sim
+# assets, project directories, and conda environments.
+#
+# =============================================================================
+
 # ubuntu的用户名字
 NAME_USR = "ubuntu"
 # conda环境的名字

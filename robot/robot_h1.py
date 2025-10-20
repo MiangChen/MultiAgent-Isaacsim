@@ -1,28 +1,30 @@
+# =============================================================================
+# Robot H1 Module - H1 Humanoid Robot Implementation
+# =============================================================================
+#
+# This module provides the H1 humanoid robot implementation with policy-based
+# control, camera sensors, and advanced locomotion capabilities.
+#
+# =============================================================================
+
+# Standard library imports
 from typing import Dict
 
+# Third-party library imports
 import numpy as np
 
-from controller.controller_pid import ControllerPID
+# Local project imports
+from robot.controller.controller_policy_h1 import H1FlatTerrainPolicy
 from log.log_manager import LogManager
-from map.map_grid_map import GridMap
+from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from robot.body.body_h1 import BodyH1
-from robot.body import BodyRobot
 from robot.cfg import CfgH1
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.sensor.camera import CfgCamera, CfgCameraThird
-from controller.controller_policy_h1 import H1FlatTerrainPolicy
 from utils import to_torch, quat_to_yaw
 
-from physics_engine.isaacsim_utils import Scene, ArticulationActions
-
-from gsi_msgs.gsi_msgs_helper import (
-    Plan,
-    RobotFeedback,
-    SkillInfo,
-    Parameter,
-    VelTwistPose,
-)
+# Custom ROS message imports
 
 logger = LogManager.get_logger(__name__)
 
@@ -38,7 +40,6 @@ class RobotH1(Robot):
     def __init__(
         self,
         cfg_robot: Dict = {},
-        map_grid: GridMap = None,
         scene: Scene = None,
         scene_manager=None,
     ) -> None:
@@ -46,14 +47,10 @@ class RobotH1(Robot):
         super().__init__(
             scene,
             scene_manager,
-            map_grid,
         )
         # self.create_robot_entity()
         self.control_mode = "joint_positions"
         self.scene_manager = scene_manager
-        # 初始化PID控制器等同步组件
-        self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
-        self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
 
         # 将控制器先初始化为 None，它将在异步工厂中被正确创建
         self.controller_policy: H1FlatTerrainPolicy | None = None
@@ -67,24 +64,12 @@ class RobotH1(Robot):
         )
         self.body = BodyH1(cfg_robot=self.cfg_robot, scene=self.scene)
 
-        # self.node.register_feedback_publisher(
-        #     robot_class=self.cfg_robot.type,
-        #     robot_id=self.cfg_robot.id,
-        #     qos=50
-        # )
-        # self.node.register_motion_publisher(
-        #     robot_class=self.cfg_robot.type,
-        #     robot_id=self.cfg_robot.id,
-        #     qos=50
-        # )
-
     @classmethod
     async def create(
         cls,
         cfg_robot: CfgH1,
         # cfg_camera: CfgCamera = None,
         # cfg_camera_third_person: CfgCameraThird = None,
-        map_grid: GridMap = None,
         scene: Scene = None,
         scene_manager=None,
     ) -> "RobotH1":
@@ -96,7 +81,6 @@ class RobotH1(Robot):
             cfg_robot=cfg_robot,
             # cfg_camera=cfg_camera,
             # cfg_camera_third_person=cfg_camera_third_person,
-            map_grid=map_grid,
             scene=scene,
             scene_manager=scene_manager,
         )
@@ -140,7 +124,6 @@ class RobotH1(Robot):
         super().on_physics_step(step_size)
 
         self.counter += 1
-        self._publish_status_pose()
 
         if self.flag_world_reset == True:
             if self.flag_action_navigation == True:
