@@ -19,15 +19,14 @@ import omni
 import torch
 
 # Local project imports
-from controller.controller_cfg_loader import (
+from robot.controller import (
     get_articulation_props,
     get_physics_properties,
     get_robot_joint_properties,
     parse_env_config,
 )
 from log.log_manager import LogManager
-from physics_engine.isaacsim_utils import BaseController, define_prim, get_prim_at_path
-
+from physics_engine.isaacsim_utils import BaseController
 
 logger = LogManager.get_logger(__name__)
 

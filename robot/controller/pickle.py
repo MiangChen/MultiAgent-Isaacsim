@@ -14,7 +14,7 @@ import pickle
 class Unpickler(pickle.Unpickler):
     def find_class(self, module, name):
         if name == "Normalizer" and module == "rsl_rl.utils.utils":
-            from controller.normalizer import Normalizer
+            from robot.controller.normalizer import Normalizer
 
             return Normalizer
         return super().find_class(module, name)

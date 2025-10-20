@@ -15,8 +15,8 @@ import numpy as np
 
 # Local project imports
 from config.config_manager import config_manager
-from controller.controller_policy import PolicyController
-from physics_engine.isaacsim_utils import quat_to_rot_matrix, ArticulationActions
+from robot.controller.controller_policy import PolicyController
+from physics_engine.isaacsim_utils import quat_to_rot_matrix
 
 ASSET_PATH = config_manager.get("path_asset")
 
