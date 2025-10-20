@@ -237,6 +237,7 @@ class Robot:
         goal_msg = ComputePathToPose.Goal()
 
         start_pos_tensor, start_quat_tensor = self.body.get_world_pose()
+        start_pos_tensor[2] = 1
         start_pos = start_pos_tensor.cpu().numpy().tolist()
         start_quat = start_quat_tensor.cpu().numpy().tolist()
 

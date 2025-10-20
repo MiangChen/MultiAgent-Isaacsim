@@ -359,8 +359,13 @@ def main():
         env.step(action=None)
         ##### navigation usage example###
         ## 有时候会有些bug, 多运行几次main
-        if result == False:
-            swarm_manager.robot_active['jetbot'][0].navigate_to([10, 10, 0])
+        if result == False and count %100==0:
+            # swarm_manager.robot_active['jetbot'][0].navigate_to([10, 10, 0])  #  回报错 invalid initial state
+            start_pos_tensor, start_quat_tensor =  swarm_manager.robot_active['jetbot'][0].body.get_world_pose()
+            start_pos_tensor[2] = 1
+            start_pos = start_pos_tensor.cpu().numpy().tolist()
+            swarm_manager.robot_active['jetbot'][0].node_planner_ompl.compute_path(start_pos, [10, 10, 0])
+            result = True
         count += 1
 
     ros_manager.stop()

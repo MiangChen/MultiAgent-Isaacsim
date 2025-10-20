@@ -346,7 +346,7 @@ class NodePlannerOmpl(Node):
                 and 0 <= grid_z < self.grid_map.shape[2]
             ):
                 return self.grid_map[grid_x, grid_y, grid_z] == 0
-
+        print(x, y , z)
         return False
 
     def is_valid_state_rigid_body(self, state):
