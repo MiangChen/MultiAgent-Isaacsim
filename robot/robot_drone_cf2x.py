@@ -20,7 +20,6 @@ import omni.appwindow
 import omni.physx
 
 # Local project imports
-from controller.controller_cf2x import ControllerCf2x
 from log.log_manager import LogManager
 from map.map_grid_map import GridMap
 from physics_engine.isaacsim_utils import Scene, Articulation
@@ -63,7 +62,6 @@ class RobotCf2x(Robot):
 
         self.body = BodyDroneCf2X(cfg_robot=self.cfg_robot, scene=self.scene)
         self.is_drone = True
-        self.controller = ControllerCf2x()
         self.map_grid = map_grid
 
         # 无人机基本属性
