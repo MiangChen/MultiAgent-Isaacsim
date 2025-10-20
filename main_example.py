@@ -243,7 +243,6 @@ def main():
             env.world.add_physics_callback(
                 callback_name, callback_fn=robot.on_physics_step
             )
-            ros_manager.executor.add_node(robot.node)
 
     # Create and initialize semantic camera
     create_car_objects(scene_manager)

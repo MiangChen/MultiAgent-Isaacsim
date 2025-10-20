@@ -9,8 +9,15 @@ from shapely.affinity import rotate
 import numpy as np
 import torch
 
-from physics_engine.isaacsim_utils import Scene, RigidPrim, prims_utils, create_viewport_for_camera, set_camera_view, Camera
-from pxr import Usd, UsdGeom
+from physics_engine.isaacsim_utils import (
+    Scene,
+    RigidPrim,
+    prims_utils,
+    create_viewport_for_camera,
+    set_camera_view,
+    Camera,
+)
+
 
 from map.map_grid_map import GridMap
 from navigation.node_path_planner_ompl import NodePlannerOmpl
@@ -247,9 +254,7 @@ class Robot:
     def start_ros(self):
         if self.ros_thread is None or not self.ros_thread.is_alive():
             self.ros_thread = threading.Thread(
-                target=self._spin_ros,
-                daemon=True,
-                name=f"ROS_{self.namespace}"
+                target=self._spin_ros, daemon=True, name=f"ROS_{self.namespace}"
             )
             self.ros_thread.start()
             logger.info(f"Robot {self.namespace} ROS thread started")
@@ -268,7 +273,9 @@ class Robot:
             self.stop_event.set()
             self.ros_thread.join(timeout=2.0)
             if self.ros_thread.is_alive():
-                logger.warning(f"Robot {self.namespace} ROS thread did not stop gracefully")
+                logger.warning(
+                    f"Robot {self.namespace} ROS thread did not stop gracefully"
+                )
 
     def cleanup(self):
         self.stop_ros()
@@ -285,6 +292,7 @@ class Robot:
             self.node_controller_mpc.destroy_node()
         except Exception as e:
             logger.error(f"Error cleaning up robot {self.name}: {e}")
+
     def initialize(self) -> None:
         for camera_name, camera_cfg in self.cfg_robot.cfg_dict_camera.items():
             camera_instance = Camera(
@@ -702,7 +710,6 @@ class Robot:
             prims_utils.delete_prim(self.camera_prim_path)
 
         # 2. 创建相机Prim
-
 
         camera = Camera(prim_path=self.camera_prim_path)
         camera.set_focal_length(2)

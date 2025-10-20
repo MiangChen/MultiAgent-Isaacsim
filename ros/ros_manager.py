@@ -56,6 +56,8 @@ class RosManager:
             for n in self.node.values():
                 if n:
                     self.executor.add_node(n)
+                    logger.debug(f"Added node {n.get_name()} to ROS manager executor")
+
             while not self.stop_event.is_set():
                 self.executor.spin_once(timeout_sec=0.05)
         finally:
