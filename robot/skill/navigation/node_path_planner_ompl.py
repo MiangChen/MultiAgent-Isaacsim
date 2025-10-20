@@ -10,6 +10,7 @@
 # Standard library imports
 import json
 import time
+import threading
 
 # Third-party library imports
 import numpy as np
@@ -23,6 +24,7 @@ from nav_msgs.msg import Path
 from nav2_msgs.action import ComputePathToPose
 from rclpy.action import ActionServer
 from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from geometry_msgs.msg import PoseStamped
@@ -49,6 +51,11 @@ class NodePlannerOmpl(Node):
 
         self.space = None
         self.si = None
+
+
+        self.executor = MultiThreadedExecutor()
+        self.thread = threading.Thread(target=self._spin, daemon=True)
+
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
             history=HistoryPolicy.KEEP_LAST,
@@ -86,6 +93,19 @@ class NodePlannerOmpl(Node):
             execute_callback=self.callback_action,
             callback_group=callback_group,
         )
+
+    def start_spinning(self):
+        if self.executor is None:
+            self.executor = MultiThreadedExecutor()
+        self.executor.add_node(self)
+        self.thread.start()
+        self.get_logger().info("Planner node spinning started in its own thread.")
+
+    def _spin(self):
+        try:
+            self.executor.spin()
+        except Exception as e:
+            self.get_logger().error(f"Spin failed in node {self.namespace}: {e}")
 
     def callback(self, msg_map_info: DiagnosticArray, msg_point_cloud: PointCloud2):
         self.callback_map_info(msg_map_info=msg_map_info)

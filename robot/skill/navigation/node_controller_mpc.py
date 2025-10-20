@@ -8,6 +8,7 @@
 # =============================================================================
 
 # Standard library imports
+import threading
 from typing import Dict, Any, Tuple
 
 # Third-party library imports
@@ -19,6 +20,7 @@ import casadi as ca
 # ROS2 imports
 import rclpy
 from rclpy.node import Node
+from rclpy.executors import MultiThreadedExecutor
 from nav_msgs.msg import Odometry
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from geometry_msgs.msg import Twist
@@ -193,6 +195,10 @@ class NodeMpcController(Node):
     def __init__(self, namespace: str):
         super().__init__(node_name="node_mpc_controller", namespace=namespace)
 
+
+        self.executor = MultiThreadedExecutor()
+        self.thread = threading.Thread(target=self._spin, daemon=True)
+
         # Load parameters
         self.declare_parameters(
             namespace="",
@@ -242,6 +248,18 @@ class NodeMpcController(Node):
 
         self.get_logger().info("MPC Controller Node has started.")
 
+    def start_spinning(self):
+        if self.executor is None:
+            self.executor = MultiThreadedExecutor()
+        self.executor.add_node(self)
+        self.thread.start()
+        self.get_logger().info("Planner node spinning started in its own thread.")
+
+    def _spin(self):
+        try:
+            self.executor.spin()
+        except Exception as e:
+            self.get_logger().error(f"Spin failed in node {self.namespace}: {e}")
     def trajectory_callback(self, msg: JointTrajectory):
         """Handles incoming trajectory messages."""
         self.get_logger().info(

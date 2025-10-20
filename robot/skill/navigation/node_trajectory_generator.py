@@ -8,6 +8,7 @@
 # =============================================================================
 
 # Standard library imports
+import threading
 from typing import Dict, Any
 
 # Third-party library imports
@@ -19,6 +20,7 @@ import toppra.algorithm as algo
 
 # ROS2 imports
 import rclpy
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from nav_msgs.msg import Path
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
@@ -37,7 +39,9 @@ class NodeTrajectoryGenerator(Node):
     def __init__(self, namespace: str):
         super().__init__(node_name="node_trajectory_generator", namespace=namespace)
 
-        # Load robot dynamics and configuration from ROS 2 parameters
+
+        self.executor = MultiThreadedExecutor()
+        self.thread = threading.Thread(target=self._spin, daemon=True)
         self.declare_parameters(
             namespace="",
             parameters=[
@@ -68,6 +72,18 @@ class NodeTrajectoryGenerator(Node):
         )
         self.get_logger().info("Trajectory Generator Node has started.")
 
+    def start_spinning(self):
+        if self.executor is None:
+            self.executor = MultiThreadedExecutor()
+        self.executor.add_node(self)
+        self.thread.start()
+        self.get_logger().info("Planner node spinning started in its own thread.")
+
+    def _spin(self):
+        try:
+            self.executor.spin()
+        except Exception as e:
+            self.get_logger().error(f"Spin failed in node {self.namespace}: {e}")
     def path_callback(self, msg: Path):
         """Callback function for the /planned_path topic."""
         # 1. Extract the 4D path (x, y, z, yaw) from the Path message

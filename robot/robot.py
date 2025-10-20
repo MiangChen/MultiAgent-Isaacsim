@@ -152,6 +152,10 @@ class Robot:
         self.stop_event = threading.Event()
         self._setup_executor()
         self.start_ros()
+        # self.node.start_spinning()
+        # self.node_planner_ompl.start_spinning()
+        # self.node_trajectory_generator.start_spinning()
+        # self.node_controller_mpc.start_spinning()
 
         # 机器人的任务状态
         self.current_task_id = "0"

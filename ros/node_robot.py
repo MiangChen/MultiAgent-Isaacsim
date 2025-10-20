@@ -8,12 +8,16 @@
 #
 # =============================================================================
 
+# Standard library imports
+import threading
+
 # Local project imports
 from log.log_manager import LogManager
 
 # ROS2 imports
-from rclpy.node import Node
 from rclpy.action import ActionServer
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 
@@ -32,6 +36,10 @@ class NodeRobot(Node):
         super().__init__(node_name=f"node_{namespace}", namespace=namespace)
         self.namespace = namespace
         self.robot_instance = None
+
+
+        self.executor = MultiThreadedExecutor()
+        self.thread = threading.Thread(target=self._spin, daemon=True)
 
         self.publisher_odom = self.create_publisher(Odometry, "odom", 10)
         self.subscriber_cmd_vel = self.create_subscription(
@@ -56,3 +64,16 @@ class NodeRobot(Node):
 
     def set_robot_instance(self, robot):
         self.robot_instance = robot
+
+    def start_spinning(self):
+        if self.executor is None:
+            self.executor = MultiThreadedExecutor()
+        self.executor.add_node(self)
+        self.thread.start()
+        self.get_logger().info("Planner node spinning started in its own thread.")
+
+    def _spin(self):
+        try:
+            self.executor.spin()
+        except Exception as e:
+            self.get_logger().error(f"Spin failed in node {self.namespace}: {e}")
