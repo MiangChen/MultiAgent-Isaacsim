@@ -2,7 +2,7 @@
 # Robot Jetbot Module - Jetbot Robot Implementation
 # =============================================================================
 #
-# This module provides the Jetbot robot implementation with PID control,
+# This module provides the Jetbot robot implementation with
 # camera sensors, and navigation capabilities within the Isaac Sim environment.
 #
 # =============================================================================
@@ -14,8 +14,6 @@ from typing import Dict
 import torch
 
 # Local project imports
-from controller.controller_pid import ControllerPID
-from controller.controller_pid_jetbot import ControllerJetbot
 from map.map_grid_map import GridMap
 from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from recycle_bin.path_planning_astar import AStar
@@ -55,11 +53,8 @@ class RobotJetbot(Robot):
             scene_manager=scene_manager,
         )
         self.body = BodyJetbot(cfg_robot=self.cfg_robot, scene=scene)
-        self.controller = ControllerJetbot()
         self.control_mode = "joint_velocities"
         # # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
-        self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
-        self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
 
         self.counter = 0
         self.pub_period = 50
@@ -87,7 +82,7 @@ class RobotJetbot(Robot):
         super().initialize()
         return
 
-    def init_ros2(self):
+    def init_ros2(self) -> object:
         import omni.graph.core as og
 
         og.Controller.edit(
@@ -163,15 +158,11 @@ class RobotJetbot(Robot):
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
 
-        # self._publish_status_pose()
         self.counter += 1
 
         if self.flag_world_reset:
             if self.flag_action_navigation:
-                self.move_along_path()  # 每一次都计算下速度
                 self.step(self.action)
-                # if self.counter % self.pub_period == 0:
-                #     self._publish_feedback_pose()
 
         return
 

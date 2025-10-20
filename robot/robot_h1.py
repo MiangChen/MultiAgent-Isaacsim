@@ -14,7 +14,7 @@ from typing import Dict
 import numpy as np
 
 # Local project imports
-from controller.controller_pid import ControllerPID
+
 from controller.controller_policy_h1 import H1FlatTerrainPolicy
 from log.log_manager import LogManager
 from map.map_grid_map import GridMap
@@ -63,9 +63,6 @@ class RobotH1(Robot):
         # self.create_robot_entity()
         self.control_mode = "joint_positions"
         self.scene_manager = scene_manager
-        # 初始化PID控制器等同步组件
-        self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
-        self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
 
         # 将控制器先初始化为 None，它将在异步工厂中被正确创建
         self.controller_policy: H1FlatTerrainPolicy | None = None

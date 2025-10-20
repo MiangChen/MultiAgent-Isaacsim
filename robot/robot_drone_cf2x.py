@@ -181,18 +181,6 @@ class RobotCf2x(Robot):
         """初始化无人机"""
         return
 
-    def apply_action(self, action=None):
-        """应用动作"""
-        if action is not None:
-            self.body.robot_articulation.apply_action(self.controller.velocity(action))
-        return
-
-    def forward(self, velocity=None):
-        """前进动作"""
-        if velocity is not None:
-            self.body.robot_articulation.apply_action(self.controller.forward(velocity))
-        return
-
     def takeoff(self):
         """起飞到预设高度并悬停"""
         if self.flight_state == "landed":

@@ -14,7 +14,7 @@ from typing import Dict
 import torch
 
 # Local project imports
-from controller.controller_pid import ControllerPID
+
 from map.map_grid_map import GridMap
 from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from recycle_bin.path_planning_astar import AStar
@@ -56,8 +56,6 @@ class RobotG1(Robot):
         self.body = BodyG1(cfg_robot=self.cfg_robot, scene=scene)
         self.control_mode = "joint_velocities"
         # # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
-        self.pid_distance = ControllerPID(1, 0.1, 0.01, target=0)
-        self.pid_angle = ControllerPID(10, 0, 0.1, target=0)
 
         self.counter = 0
         self.pub_period = 50

@@ -16,7 +16,7 @@ from typing import Dict
 import numpy as np
 
 # Local project imports
-from controller.controller_pid import ControllerPID
+
 from map.map_grid_map import GridMap
 from physics_engine.pxr_utils import Gf, UsdGeom
 from physics_engine.isaacsim_utils import Scene
