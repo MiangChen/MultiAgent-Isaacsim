@@ -16,7 +16,6 @@ from dependency_injector.wiring import inject, Provide
 import rclpy
 
 
-from isaacsim.core.api import World
 
 # Local imports
 from config.config_manager import config_manager
@@ -25,6 +24,7 @@ from environment.env import Env
 from log.log_manager import LogManager
 from map.map_grid_map import GridMap
 from map.map_semantic_map import MapSemantic
+from physics_engine.isaacsim_utils import World
 from robot.robot_drone_cf2x import RobotCf2x, CfgDroneCf2X
 from robot.robot_h1 import RobotH1, CfgH1
 from robot.robot_jetbot import CfgJetbot, RobotJetbot
