@@ -154,11 +154,11 @@ class Robot:
         self.is_detecting = False
         self.target_prim = None
 
-        self.track_waypoints = []
+        self.track_waypoint_list = []
         self.track_waypoint_index = 0
         self.is_tracking = False
-        self.track_waypoints_sub = None
-        self.track_waypoints_sub
+        self.track_waypoint_sub = None
+        self.track_waypoint_sub
 
     ########################## Skill Action Server ############################
     def callback_execute_skill(self, goal_handle):
@@ -668,11 +668,11 @@ class Robot:
             msg.pos.position.y,
             msg.pos.position.z,
         )
-        self.track_waypoints.append(pos)
+        self.track_waypoint_list.append(pos)
 
     def start_tracking(self, target_prim: str = None):
         self.is_tracking = True
-        self.track_waypoints = self.node.create_subscription(
+        self.track_waypoint_list = self.node.create_subscription(
             VelTwistPose,
             "/target/motion",
             self.track_callback,
@@ -681,18 +681,18 @@ class Robot:
 
     def track(self):
         if self.track_waypoint_index < len(
-            self.track_waypoints
+            self.track_waypoint_list
         ):  # 当index==len的时候, 就已经到达目标了
-            flag_reach = self.move_to(self.track_waypoints[self.track_waypoint_index])
+            flag_reach = self.move_to(self.track_waypoint_list[self.track_waypoint_index])
             if flag_reach == True:
                 self.track_waypoint_index += 1  # TODO：Step里应用这个技能
 
     def stop_tracking(self):
         self.is_tracking = False
-        self.track_waypoints = []
+        self.track_waypoint_list = []
         self.track_waypoint_index = 0
-        self.node.destroy_subscription(self.track_waypoints)
-        self.track_waypoints_sub = None
+        self.node.destroy_subscription(self.track_waypoint_sub)
+        self.track_waypoint_sub = None
 
     def _initialize_third_person_camera(self):
         """初始化第三人称相机并注册到ViewportManager"""
