@@ -179,7 +179,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
     return created_prim_paths
 
 
-def process_semantic_detection(semantic_camera, map_semantic: MapSemantic) -> None:
+def process_semantic_detection(semantic_camera, map_semantic: MapSemantic, target_semantic_class:str) -> None:
     """
     Process semantic detection and car pose extraction using injected dependencies.
 
@@ -193,11 +193,11 @@ def process_semantic_detection(semantic_camera, map_semantic: MapSemantic) -> No
             result = current_frame["bounding_box_2d_loose"]
             print("get bounding box 2d loose", result)
             if result:
-                car_prim, car_pose = map_semantic.get_prim_and_pose_by_semantic(
-                    result, "car"
+                prim_target, target_pose = map_semantic.get_prim_and_pose_by_semantic(
+                    result, target_semantic_class=target_semantic_class,
                 )
-                if car_prim is not None and car_pose is not None:
-                    print("get car prim and pose\n", car_prim, "\n", car_pose)
+                if prim_target is not None and target_pose is not None:
+                    print("get car prim and pose\n", prim_target, "\n", target_pose)
                 else:
                     print("No car detected in current frame")
             else:
@@ -334,26 +334,8 @@ def main():
     import time
     time.sleep(2)
 
-    # path = ros_manager.node["node_planner_ompl"].compute_path(
-    #     start_pos=[6, 5,3],
-    #     goal_pos=[10.0, 10.0,0],
-    #     start_quat=[0.0, 0.0, 0.0, 1]
-    # )
-    #
-    # print("path", path)
-    # orientation = []
-    # for p in path:
-    #     orientation.append(p[1])
-    # print("orientation", orientation)
-    #
-    # from utils import quat_to_yaw
-    # yaw = quat_to_yaw(quat_xyzw=orientation)
-    # print(yaw)
-    #
-    # path_yaw = [path[i][0] + [yaw[i]] for i in range(len(path))]
-    # print(path_yaw)
 
-    result = False
+    result = True
     # Main simulation loop
     while simulation_app.is_running():
         env.step(action=None)
@@ -366,6 +348,12 @@ def main():
             start_pos = start_pos_tensor.cpu().numpy().tolist()
             swarm_manager.robot_active['jetbot'][0].node_planner_ompl.compute_path(start_pos, [10, 10, 0])
             result = True
+        if count % 120 == 0 and count > 0:
+            result = process_semantic_detection(semantic_camera, semantic_map, "robot")
+            print(result)
+            result = process_semantic_detection(semantic_camera, semantic_map, "car")
+            print(result)
+
         count += 1
 
     ros_manager.stop()
