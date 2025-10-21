@@ -13,6 +13,10 @@ from physics_engine.isaacsim_simulation_app import start_isaacsim_simulation_app
 
 simulation_app = start_isaacsim_simulation_app()
 
+# ROS2 imports
+import rclpy
+
+rclpy.init(args=None)
 ##########################################################################################################################
 
 # Local project imports
@@ -25,10 +29,7 @@ from simulation_utils.ros_bridge import setup_ros
 from simulation_utils.simulation_core import run_simulation_loop_multi
 from utils import euler_to_quat
 
-# ROS2 imports
-import rclpy
 
-rclpy.init()
 
 logger = LogManager.get_logger(__name__)
 

@@ -20,12 +20,12 @@ from containers import get_container
 from physics_engine.isaacsim_utils import extensions, stage, set_camera_view
 from physics_engine.pxr_utils import Gf
 from robot.robot_drone_autel import DronePose, RobotDroneAutel
+from simulation_utils.message_convert import create_pc2_msg, create_image_msg
 from simulation_utils.perception import (
     create_depth2pc_lut,
     depth2pointclouds,
-
-# enable ROS2 bridge extension and then import ros modules
-extensions.enable_extension("isaacsim.ros2.bridge")
+    process_semantic_detection,
+)
 
 # ROS2 imports
 import rclpy
@@ -36,10 +36,6 @@ from gazebo_msgs.srv import SpawnEntity
 from std_msgs.msg import Header
 from std_srvs.srv import Empty
 from sensor_msgs.msg import PointCloud2, PointField, Image
-    process_semantic_detection,
-)
-from simulation_utils.message_convert import create_pc2_msg, create_image_msg
-from containers import get_container
 
 
 class Rate:
@@ -106,10 +102,10 @@ def update_viewer_camera(curr_stage):
             # Position camera behind the drone
             camera_pos = drone_pos_np.copy()
             camera_pos[0] += (
-                forward_x * offset_distance
+                    forward_x * offset_distance
             )  # Move camera back relative to drone heading
             camera_pos[1] += (
-                forward_y * offset_distance
+                    forward_y * offset_distance
             )  # Move camera back relative to drone heading
             camera_pos[2] += height_offset  # Move camera up in Z direction
 
@@ -130,11 +126,11 @@ def update_viewer_camera(curr_stage):
 
 
 def run_simulation_loop_multi(
-    simulation_app,
-    drone_ctxs: list[RobotDroneAutel],
-    semantic_camera,
-    semantic_camera_prim_path,
-    semantic_map,
+        simulation_app,
+        drone_ctxs: list[RobotDroneAutel],
+        semantic_camera,
+        semantic_camera_prim_path,
+        semantic_map,
 ):
     """Simulation loop that handles *multiple* DroneSimCtx objects.
 
