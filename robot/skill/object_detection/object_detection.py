@@ -1,30 +1,18 @@
+def object_detection_skill(semantic_camera, map_semantic, target_class: str):
+    result = {"success": False, "message": "", "data": None}
 
-
-
-def process_semantic_detection(semantic_camera, map_semantic: MapSemantic, target_semantic_class:str) -> None:
-    """
-    Process semantic detection and car pose extraction using injected dependencies.
-
-    Args:
-        semantic_camera: Semantic camera instance
-        map_semantic: Injected semantic map instance
-    """
-    try:
-        current_frame = semantic_camera.get_current_frame()
-        if current_frame and "bounding_box_2d_loose" in current_frame:
-            result = current_frame["bounding_box_2d_loose"]
-            if result:
-                prim_target, target_pose = map_semantic.get_prim_and_pose_by_semantic(
-                    result, target_semantic_class=target_semantic_class,
-                )
-                if prim_target is not None and target_pose is not None:
-                    print("get car prim and pose\n", prim_target, "\n", target_pose)
-                else:
-                    print("No car detected in current frame")
-            else:
-                print("No bounding box data available")
-        else:
-            print("No frame data or bounding box key available")
-    except Exception as e:
-        print(f"Error getting semantic camera data: {e}")
-
+    
+    current_frame = semantic_camera.get_current_frame()
+    bounding_box_result = current_frame["bounding_box_2d_loose"]
+    prim_target, target_pose = map_semantic.get_prim_and_pose_by_semantic(
+        bounding_box_result, target_semantic_class=target_class
+    )
+    
+    if prim_target and target_pose:
+        result["success"] = True
+        result["message"] = f"Detected {target_class}"
+        result["data"] = {"prim_path": prim_target, "pose": target_pose}
+    else:
+        result["message"] = "No detection"
+    
+    return result
