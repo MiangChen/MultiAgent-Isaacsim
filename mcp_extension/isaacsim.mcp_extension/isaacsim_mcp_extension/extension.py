@@ -9,11 +9,11 @@
 
 # Third-party library imports
 import carb
-import omni.ext
 
 # Local project imports
 from .mcp_server import MCPNetworkServer  # Use relative imports
 from scene.scene_manager import SceneManager  # Import the new classes
+from physics_engine.omni_utils import omni
 
 
 class MCPExtension(omni.ext.IExt):

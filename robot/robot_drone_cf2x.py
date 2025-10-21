@@ -15,13 +15,12 @@ from typing import Dict
 import numpy as np
 import torch
 import carb
-import omni
-import omni.appwindow
-import omni.physx
 
 # Local project imports
 from log.log_manager import LogManager
 from physics_engine.isaacsim_utils import Scene, Articulation
+from physics_engine.omni_utils import omni
+
 from robot.robot import Robot
 from robot.robot_trajectory import Trajectory
 from robot.cfg import CfgDroneCf2X

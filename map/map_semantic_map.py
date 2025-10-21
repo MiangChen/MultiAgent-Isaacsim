@@ -12,13 +12,15 @@ from typing import List, Dict, Any, Tuple, Optional
 
 # Local project imports
 from config.config_manager import config_manager
-import omni
+
+# Local project imports
 from physics_engine.isaacsim_utils import (
     XFormPrim,
     add_update_semantics,
     remove_all_semantics,
     count_semantics_in_scene,
 )
+from physics_engine.omni_utils import omni
 from physics_engine.pxr_utils import Usd
 
 

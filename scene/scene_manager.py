@@ -17,8 +17,6 @@ from typing import Dict, Any, List, Union, Optional, Sequence
 import numpy as np
 import torch
 import carb
-import omni
-from omni.physx import get_physx_scene_query_interface
 
 # Local project imports
 from config.config_manager import config_manager
@@ -39,6 +37,7 @@ from physics_engine.isaacsim_utils import (
     RigidPrim,
     create_prim,
 )
+from physics_engine.omni_utils import omni, get_physx_query_interface
 from physics_engine.pxr_utils import (
     Gf, Sdf, UsdGeom, UsdPhysics, PhysxSchema, Usd
 )

@@ -17,8 +17,10 @@ from typing import Dict, List, Tuple
 
 # Third-party library imports
 import carb
-import omni
 import yaml
+
+# Local project imports
+from physics_engine.omni_utils import omni
 
 
 def parse_env_config(env_config_path: str = "env.yaml") -> dict:

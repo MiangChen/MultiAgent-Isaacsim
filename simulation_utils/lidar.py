@@ -10,9 +10,9 @@
 # Third-party library imports
 import numpy as np
 import carb
-import omni
 
 # Local project imports
+from physics_engine.omni_utils import omni
 from physics_engine.pxr_utils import Gf
 
 

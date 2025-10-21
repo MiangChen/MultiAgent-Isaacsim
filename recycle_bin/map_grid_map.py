@@ -13,11 +13,11 @@ from typing import List
 # Third-party library imports
 import carb
 import numpy as np
-import omni
 
 # Local project imports
 from log.log_manager import LogManager
 from physics_engine.isaacsim_utils import _omap, VisualCuboid, stage_utils
+from physics_engine.omni_utils import omni
 from physics_engine.pxr_utils import UsdGeom
 
 logger = LogManager.get_logger(__name__)

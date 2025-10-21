@@ -7,11 +7,9 @@
 #
 # =============================================================================
 
-# Third-party library imports
-import omni.usd
-
 # Local project imports
 from log.log_manager import LogManager
+from physics_engine.omni_utils import omni
 from physics_engine.pxr_utils import Tf, Gf, Usd, UsdGeom, Sdf
 
 # ROS2 imports

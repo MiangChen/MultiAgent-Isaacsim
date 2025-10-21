@@ -24,7 +24,6 @@ from typing import Dict, Any, List, Optional, Union
 # Third-party library imports
 import numpy as np
 import carb
-import omni
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -37,6 +36,7 @@ from physics_engine.isaacsim_utils import (
     add_reference_to_stage, get_stage_units, Articulation, World, 
     DynamicCuboid, DynamicSphere, create_prim
 )
+from physics_engine.omni_utils import omni
 from physics_engine.pxr_utils import UsdGeom, Gf, Usd, UsdPhysics, PhysxSchema, UsdShade
 
 

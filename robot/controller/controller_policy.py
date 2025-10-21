@@ -15,8 +15,10 @@ from typing import Optional
 
 # Third-party library imports
 import numpy as np
-import omni
 import torch
+
+# Local project imports
+from physics_engine.omni_utils import omni
 
 # Local project imports
 from robot.controller.controller_cfg_loader import (

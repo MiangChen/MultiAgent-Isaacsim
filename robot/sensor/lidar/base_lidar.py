@@ -11,9 +11,9 @@
 import os
 import shutil
 
-# Third-party library imports
-import omni
+# Local project imports
 import carb
+from physics_engine.omni_utils import omni
 
 
 def add_drone_lidar(drone_prim_path, lidar_config):

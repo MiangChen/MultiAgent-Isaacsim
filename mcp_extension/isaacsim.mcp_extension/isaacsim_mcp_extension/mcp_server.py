@@ -13,8 +13,8 @@ import socket
 import threading
 import traceback
 
-# Third-party library imports
-from omni.kit.async_engine import run_coroutine
+# Local project imports
+from physics_engine.omni_utils import run_coroutine
 
 
 class MCPNetworkServer:

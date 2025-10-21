@@ -63,8 +63,8 @@ import math
 
 from typing import Optional
 
-import omni
-import omni.graph.core as og
+# Local project imports
+from physics_engine.omni_utils import omni, og_core as og
 import usdrt.Sdf
 
 from physics_engine.isaacsim_utils import (

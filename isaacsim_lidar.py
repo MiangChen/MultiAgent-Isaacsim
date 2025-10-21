@@ -207,7 +207,7 @@ def main():  # Needed in build_drone_ctx
     WORLD_USD_PATH = config_manager.get("world_usd_path")
     scene_manager.load_scene(usd_path=WORLD_USD_PATH, prim_path_root="/World/Scene")
 
-    # created_prim_paths = create_car_objects(scene_manager, semantic_map)
+    created_prim_paths = create_car_objects(scene_manager, semantic_map)
     # print("All prims with 'car' label:", created_prim_paths)
     print(semantic_map.count_semantics_in_scene().get("result"))
 

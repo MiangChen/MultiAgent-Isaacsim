@@ -15,9 +15,9 @@ from typing import List, Optional
 
 # Third-party library imports
 import numpy as np
-import omni
 
 # Local project imports
+from physics_engine.omni_utils import omni
 from physics_engine.isaacsim_utils import _omap
 
 # ROS2 imports
