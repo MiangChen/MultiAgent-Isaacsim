@@ -50,7 +50,6 @@ class RobotJetbot(Robot):
         )
         self.body = BodyJetbot(cfg_robot=self.cfg_robot, scene=scene)
         self.control_mode = "joint_velocities"
-        # # self.scene.add(self.robot)  # 需要再考虑下, scene加入robot要放在哪一个class中, 可能放在scene好一些
 
         self.counter = 0
         self.pub_period = 50

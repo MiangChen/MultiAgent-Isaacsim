@@ -67,7 +67,6 @@ class Trajectory:
             )
 
             # print(self.visual_sphere[i].prim_path)
-            # self.scene.add(self.visual_sphere[i])
             self.scene.add(self.visual_sphere[i])
 
     def add_trajectory(self, point: list = None):

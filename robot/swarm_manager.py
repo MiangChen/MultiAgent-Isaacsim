@@ -41,12 +41,14 @@ class SwarmManager:
     def __init__(
         self,
         map_semantic: MapSemantic = None,
-        ros_manager: RosManager = None,
         scene_manager: SceneManager = None,
     ):
         self.scene: Scene = None
         self.scene_manager = scene_manager
-        self.robot_warehouse: Dict[str, List[Robot]] = {}
+        self.map_semantic = map_semantic
+        self.robot_warehouse: Dict[str, List[Robot]] = {
+            # 'jetbot': Jetbot cls instance,
+        }
         self.flag_active: Dict[str, List[int]] = {}
         self.robot_active: Dict[str, List[Robot]] = {
             # 'jetbot': Jetbot cls instance,
@@ -56,8 +58,6 @@ class SwarmManager:
             # 'g1': G1,
             # 'go2': Go2
         }
-        self.map_semantic = map_semantic
-        self.ros_manager = ros_manager
 
     def register_robot_class(
         self,
@@ -124,6 +124,9 @@ class SwarmManager:
                 self.robot_warehouse[robot_class_name].append(robot)
                 self.map_semantic.map_semantic[robot.cfg_robot.namespace] = (
                     robot.cfg_robot.path_prim_robot
+                )
+                self.scene_manager.add_semantic(
+                    prim_path=robot.cfg_robot.path_prim_robot, semantic_label="car"
                 )
 
     def activate_robot(
