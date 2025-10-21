@@ -65,10 +65,6 @@ class SceneManager:
             # "get_object_info": self.get_object_info,
             # "execute_script": self.execute_script,
             "get_scene_info": self.get_scene_info,
-            ## semantic ##
-            "add_semantic": self.add_semantic,
-            "count_semantics_in_scene": self.count_semantics_in_scene,
-            "remove_all_semantics": self.remove_all_semantics,
             ## create ##
             "add_camera": self.add_camera,
             "create_robot": self.create_robot,
@@ -129,113 +125,8 @@ class SceneManager:
                 "message": f"Unknown command type: {command_type}",
             }
 
-    def add_semantic(
-        self,
-        prim_path: str,
-        semantic_label: str,
-        type_label: str = "class",
-        suffix: str = "",
-    ) -> Dict[str, Any]:
-        """
-        [已弃用 API] 为一个 prim 添加或更新一个语义标签。
 
-        使用了 isaacsim.core.utils.semantics.add_update_semantics API。
 
-        Args:
-            prim_path (str): 要添加标签的 prim 的路径。
-            semantic_label (str): 要应用的语义标签，例如 "car" 或 "robot"。
-            type_label (str, optional): 语义信息的类型。默认为 'class'。
-            suffix (str, optional): 用于指定多个语义属性的后缀。
-
-        Returns:
-            Dict[str, Any]: 包含操作状态和消息的字典。
-        """
-        try:
-            # isaacsim 4.5; will be deprecated in isaacsim 5.0
-
-            prim = self.stage.GetPrimAtPath(prim_path)
-            if not prim.IsValid():
-                return {
-                    "status": "error",
-                    "message": f"Prim not found at path: {prim_path}",
-                }
-
-            # 调用官方 API
-            add_update_semantics(
-                prim=prim,
-                semantic_label=semantic_label,
-                type_label=type_label,
-                suffix=suffix,
-            )
-
-            return {
-                "status": "success",
-                "message": f"Successfully applied semantic '{semantic_label}' to prim <{prim_path}>",
-            }
-
-        except Exception as e:
-            import traceback
-
-            traceback.print_exc()
-            return {"status": "error", "message": str(e)}
-
-    def remove_all_semantics(self, prim_path: str = "/") -> Dict[str, Any]:
-        """
-        Removes all semantic tags from a given prim and its children
-        Args:
-            prim_path:  str, optional: Prim to remove any applied semantic APIs on
-
-        Returns:
-        """
-        try:
-
-            stage = omni.usd.get_context().get_stage()
-            if not stage:
-                return {"status": "error", "message": "No active USD stage."}
-
-            prim = stage.GetPrimAtPath(prim_path)
-            if not prim.IsValid():
-                return {
-                    "status": "error",
-                    "message": f"Prim not found at path: {prim_path}",
-                }
-
-            remove_all_semantics(prim=prim, recursive=True)
-
-            return {
-                "status": "success",
-                "message": f"Successfully removed all semantics from prim <{prim_path}>",
-            }
-        except Exception as e:
-            import traceback
-
-            traceback.print_exc()
-            return {"status": "error", "message": str(e)}
-
-    def count_semantics_in_scene(self, prim_path: str = "/") -> Dict[str, Any]:
-        """
-        [已弃用 API in isaacsim 5.0] 统计场景中（或指定路径下）所有语义标签的数量。
-
-        Args:
-            prim_path (str, optional): 检查的根路径。如果为 None，则检查整个场景。
-
-        Returns:
-            Dict[str, Any]: 成功时，result 字段包含一个字典，映射标签到其数量。
-        """
-        try:
-
-            count_data = count_semantics_in_scene(prim_path=prim_path)
-
-            return {
-                "status": "success",
-                "message": f"Counted semantics for path: {'Entire Scene' if prim_path is None else prim_path}",
-                "result": count_data,
-            }
-        except Exception as e:
-            import traceback
-
-            traceback.print_exc()
-            return {"status": "error", "message": str(e)}
 
     def delete_prim(self, prim_path):
         """
@@ -274,11 +165,6 @@ class SceneManager:
 
     def get_scene_info(self, max_depth: int = 2) -> Dict[str, Any]:
         try:
-            self.stage = omni.usd.get_context().get_stage()
-            if not self.stage:
-                print("[Scene Info] No USD stage is open.")
-                return {"status": "error", "message": "No USD stage is open."}
-
             # 清空之前的信息
             self.prim_info = []
 
@@ -911,10 +797,6 @@ class SceneManager:
     def adjust_pose(self, prim_path: str, position: list, orientation: list) -> dict:
 
         try:
-            self.stage = omni.usd.get_context().get_stage()
-            if not self.stage:
-                return {"status": "error", "message": "No USD stage is currently open."}
-
             prim = self.stage.GetPrimAtPath(prim_path)
             if not prim or not prim.IsValid():
                 return {"status": "error", "message": f"Prim {prim_path} not found."}
@@ -969,11 +851,6 @@ class SceneManager:
     def set_prim_activate_state(self, prim_path: str, activate: bool = True) -> dict:
         """Set the active state of a prim."""
         try:
-            # 获取当前 USD Stage
-            self.stage = omni.usd.get_context().get_stage()
-            if not self.stage:
-                return {"status": "error", "message": "No USD stage is currently open."}
-
             # 获取指定 prim
             prim = self.stage.GetPrimAtPath(prim_path)
             if not prim.IsValid():
@@ -995,11 +872,6 @@ class SceneManager:
         self, prim_path: str, contact_offset: float, rest_offset: float
     ) -> dict:
         try:
-            # 获取并缓存 Stage
-            self.stage = omni.usd.get_context().get_stage()
-            if not self.stage:
-                return {"status": "error", "message": "No USD stage is currently open."}
-
             # 查找 prim
             prim = self.stage.GetPrimAtPath(prim_path)
             if not prim or not prim.IsValid():
@@ -1035,11 +907,6 @@ class SceneManager:
         self, prim_path: str, mass: float, velocity: list, gravity_enabled: bool
     ) -> dict:
         try:
-            # 获取并缓存 Stage
-            self.stage = omni.usd.get_context().get_stage()
-            if not self.stage:
-                return {"status": "error", "message": "No USD stage is currently open."}
-
             # 查找 prim
             prim = self.stage.GetPrimAtPath(prim_path)
             if not prim or not prim.IsValid():
@@ -1081,11 +948,6 @@ class SceneManager:
         }
         """
         try:
-            # 获取并缓存 Stage
-            self.stage = omni.usd.get_context().get_stage()
-            if not self.stage:
-                return {"status": "error", "message": "No USD stage is currently open."}
-
             # 查找 prim
             prim = self.stage.GetPrimAtPath(prim_path)
             if not prim or not prim.IsValid():
@@ -1140,11 +1002,6 @@ class SceneManager:
         - restitutionCombineMode: 恢复系数合并方式
         """
         try:
-            # 获取并缓存 Stage
-            self.stage = omni.usd.get_context().get_stage()
-            if not self.stage:
-                return {"status": "error", "message": "No USD stage is currently open."}
-
             # 查找 material prim
             prim = self.stage.GetPrimAtPath(material_path)
             if not prim or not prim.IsValid():
@@ -1188,16 +1045,10 @@ class SceneManager:
         - default_material: 默认物理材质 prim 路径（可选）
         """
         try:
-            # 获取并缓存 Stage
-            self.stage = omni.usd.get_context().get_stage()
-            if not self.stage:
-                return {"status": "error", "message": "No USD stage is currently open."}
-
-            stage = self.stage
             scene_path = "/physicsScene"
-            scene_prim = stage.GetPrimAtPath(scene_path)
+            scene_prim = self.stage.GetPrimAtPath(scene_path)
             if not scene_prim or not scene_prim.IsValid():
-                scene_prim = stage.DefinePrim(scene_path, "PhysicsScene")
+                scene_prim = self.stage.DefinePrim(scene_path, "PhysicsScene")
             scene = UsdPhysics.Scene(scene_prim)
 
             # 设置重力
@@ -1206,13 +1057,13 @@ class SceneManager:
             scene.CreateGravityMagnitudeAttr().Set(vec.GetLength())
 
             # 设置舞台线性单位
-            UsdGeom.SetStageMetersPerUnit(stage, scale)
+            UsdGeom.SetStageMetersPerUnit(self.stage, scale)
 
             # 绑定默认物理材质（可选）
             if default_material:
                 PhysxSchema.PhysxSceneAPI.Apply(scene_prim)
                 mat_binding = UsdShade.MaterialBindingAPI.Apply(scene_prim)
-                mat_prim = stage.GetPrimAtPath(default_material)
+                mat_prim = self.stage.GetPrimAtPath(default_material)
                 if not mat_prim or not mat_prim.IsValid():
                     return {
                         "status": "error",
@@ -1246,10 +1097,6 @@ class SceneManager:
         upper_limit: float = None,
     ) -> dict:
         try:
-            self.stage = omni.usd.get_context().get_stage()
-            if not self.stage:
-                return {"status": "error", "message": "No USD stage is currently open."}
-
             # 校验两个刚体 prim 是否有效
             if not self.stage.GetPrimAtPath(body0).IsValid():
                 return {"status": "error", "message": f"Body0 '{body0}' not found."}
@@ -1308,10 +1155,6 @@ class SceneManager:
         max_force: float,
     ) -> dict:
         try:
-            self.stage = omni.usd.get_context().get_stage()
-            if not self.stage:
-                return {"status": "error", "message": "No USD stage is currently open."}
-
             joint = self.stage.GetPrimAtPath(joint_path)
             if not joint.IsValid():
                 return {
