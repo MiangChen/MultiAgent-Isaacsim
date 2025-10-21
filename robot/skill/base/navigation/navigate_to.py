@@ -3,20 +3,19 @@ def navigate_to_skill(**kwargs):
     goal_pos = kwargs.get("goal_pos")
     goal_quat_wxyz = kwargs.get("goal_quat_wxyz", [1.0, 0.0, 0.0, 0.0])
 
-    result = {"success": False, "message": "", "data": None}
+    from nav2_msgs.action import ComputePathToPose
 
     if robot.is_planning:
-        result["message"] = "Planning already in progress"
-        return result
+        robot.node.get_logger().warn("Planning already in progress.")
+        return robot.form_feedback("failed", "Planning already in progress.")
 
     if not robot.action_client_path_planner.wait_for_server(timeout_sec=2.0):
-        result["message"] = "Path planner server is not available"
-        return result
+        robot.node.get_logger().error("Path planner server is not available.")
+        return robot.form_feedback("failed", "Path planner server is not available.")
 
     robot.is_planning = True
+    robot.node_controller_mpc.move_event.clear()
     robot.node.get_logger().info(f"Sending path request to goal: {goal_pos}")
-
-    from nav2_msgs.action import ComputePathToPose
 
     goal_msg = ComputePathToPose.Goal()
 
@@ -25,17 +24,20 @@ def navigate_to_skill(**kwargs):
     start_pos = start_pos_tensor.cpu().numpy().tolist()
     start_quat = start_quat_tensor.cpu().numpy().tolist()
 
-    goal_msg.start = _create_pose_stamped(robot, start_pos, start_quat)
-    goal_msg.goal = _create_pose_stamped(robot, goal_pos, goal_quat_wxyz)
+    goal_msg.start = _create_pose_stamped(start_pos, start_quat)
+    goal_msg.goal = _create_pose_stamped(goal_pos, goal_quat_wxyz)
 
     send_goal_future = robot.action_client_path_planner.send_goal_async(goal_msg)
-    send_goal_future.add_done_callback(
-        lambda future: _goal_response_callback(robot, future)
-    )
+    send_goal_future.add_done_callback(robot._goal_response_callback)
 
-    result["success"] = True
-    result["message"] = "Navigation started"
-    return result
+    yield robot.form_feedback("processing", "Path Planning processing", 30)
+
+    result = robot.node_controller_mpc.move_event.wait(timeout=100)
+
+    if result:
+        return robot.form_feedback("finished", "Navigation completed.", 100)
+    else:
+        return robot.form_feedback("failed", "Navigation failed. / Time exceeded.", 100)
 
 
 def _goal_response_callback(robot, future):

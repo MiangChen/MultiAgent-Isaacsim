@@ -186,36 +186,41 @@ class Robot:
             return SkillExecution.Result(success=False, message="Robot is busy.")
 
         skill_name = goal_handle.request.skill_request.skill_list[0].skill
+        skill_args = goal_handle.request.skill_request.skill_list[0].skill_args #TODO:找到args的位置
         self.state_skill_complete = False
         feedback_msg = SkillExecution.Feedback()
 
-        # 模拟一个需要10个步骤的任务
-        for i in range(10):
-            # 检查是否收到了取消请求
-            if goal_handle.is_cancel_requested:
-                goal_handle.canceled()
-                self.state_skill_complete = True  # 重置状态
-                logger.info(f"Skill '{skill_name}' was canceled.")
-                return SkillExecution.Result(
-                    success=False, message="Skill execution was canceled by client."
-                )
-            # 模拟工作
-            import time
+        try:
+            gen = self.skill_manager.execute_skill(skill_name, skill_args, goal_handle.request)
+            final_value = None
+            while True:
+                if goal_handle.is_cancel_requested:
+                    goal_handle.canceled()
+                    self.state_skill_complete = True  # 重置状态
+                    logger.info(f"Skill '{skill_name}' was canceled.")
+                    return SkillExecution.Result(
+                        success=False, message="Skill execution was canceled by client."
+                    )
+                #TODO: Skill manager中的停止逻辑
+                try:
+                    step_feedback = next(gen)
+                except StopIteration as e:
+                    final_value = e.value  # 取到 return 的最终结果（可能为 None）
+                    break
 
-            time.sleep(2)
-            # 发送反馈
-            feedback_msg.status = (
-                f"Executing step {i + 1} of 10 for skill '{skill_name}'."
-            )
-            goal_handle.publish_feedback(feedback_msg)
-            logger.info(f"Feedback: {feedback_msg.status}")
+                fb = SkillExecution.Feedback()
+                fb.status = str(step_feedback.get("status", "processing"))
+                fb.reason = str(step_feedback.get("reason", "none"))
+                fb.progress = int(step_feedback.get("progress", 0))
+                goal_handle.publish_feedback(fb)
+                logger.info(f"[{skill_name}] feedback: status={fb.status}, reason={fb.reason}, progress={fb.progress}")
 
-        self.state_skill_complete = True
-        goal_handle.succeed()
-        result = SkillExecution.Result()
-        result.success = True
-        result.message = f"Skill '{skill_name}' executed successfully."
-        return result
+            self.state_skill_complete = True
+            goal_handle.succeed()
+            result = SkillExecution.Result()
+            result.success = bool(final_value.get("success", True))
+            result.message = str(final_value.get("message", f"Skill '{skill_name}' executed successfully."))
+            return result
 
     ########################## Publisher Odom  ############################
     def publish_robot_state(self):
@@ -328,11 +333,18 @@ class Robot:
         # if self.cfg_camera_third_person and self.cfg_camera_third_person.enabled:
         #     self._initialize_third_person_camera()
 
+    def form_feedback(self, status: str = "processing", reason: str = "none", progress: int = 100) -> Dict[str, Any]:
+        return dict(
+            status=status,
+            reason=reason,
+            progress=progress, )
+
     def on_physics_step(self, step_size) -> None:
         """
         Args:
             step_size:  dt 时间间隔
         """
+        self.execute_frame_skill()
         # update robot velocity
         self.controller_simplified()
         # 更新相机的视野
@@ -359,32 +371,40 @@ class Robot:
             self.body.robot_articulation.set_angular_velocities(self.vel_angular)
         return None
 
+    def execute_frame_skill(
+            self,
+    ) -> None:
+        """
+        需要周期性执行的技能，如拍照，检测，喊话
+        """
+        if self.is_detecting:
+            self.detect(self.target_prim)
+        if (self.is_tracking
+                and self.node_controller_mpc.has_reached_goal
+                and self.track_waypoint_index < len(self.track_waypoint_list)
+        ):
+            self.navigate_to(self.track_waypoint_list[self.track_waypoint_index])
+            self.track_waypoint_index += 1
+
     def track_callback(self, msg):
         pos = (
-            msg.pos.position.x,
-            msg.pos.position.y,
-            msg.pos.position.z,
+            msg.pose.pose.position.x,
+            msg.pose.pose.position.y,
+            msg.pose.pose.position.z,
         )
-        self.track_waypoint_list.append(pos)
+        self.track_counter += 1
+        if self.track_counter % self.track_period == 0:
+            self.track_waypoint_list.append(pos)
 
     def start_tracking(self, target_prim: str = None):
         self.is_tracking = True
         self.track_waypoint_list = self.node.create_subscription(
             VelTwistPose,
-            "/target/motion",
+            "/target/odom",
             self.track_callback,
             50,
         )
-
-    def track(self):
-        if self.track_waypoint_index < len(
-            self.track_waypoint_list
-        ):  # 当index==len的时候, 就已经到达目标了
-            flag_reach = self.move_to(
-                self.track_waypoint_list[self.track_waypoint_index]
-            )
-            if flag_reach == True:
-                self.track_waypoint_index += 1  # TODO：Step里应用这个技能
+        return self.form_feedback(status="normal")
 
     def stop_tracking(self):
         self.is_tracking = False
@@ -392,6 +412,7 @@ class Robot:
         self.track_waypoint_index = 0
         self.node.destroy_subscription(self.track_waypoint_sub)
         self.track_waypoint_sub = None
+        return self.form_feedback(status="finished")
 
     def _initialize_third_person_camera(self):
         """初始化第三人称相机并注册到ViewportManager"""

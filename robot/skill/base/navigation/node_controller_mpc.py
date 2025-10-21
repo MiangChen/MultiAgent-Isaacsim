@@ -17,6 +17,8 @@ from scipy.interpolate import interp1d
 from scipy.spatial.transform import Rotation as R
 import casadi as ca
 
+from utils.threading_event import FeedbackEvent
+
 # ROS2 imports
 import rclpy
 from rclpy.node import Node
@@ -234,6 +236,9 @@ class NodeMpcController(Node):
         self.trajectory_start_time = None
         self.current_state = None
         self.is_active = False
+        self.has_reached_goal = True
+
+        self.move_event = FeedbackEvent() #在主线程中通知, 目前还没有添加内容反馈
 
         # ROS 2 Communications
         self.trajectory_sub = self.create_subscription(
@@ -269,6 +274,7 @@ class NodeMpcController(Node):
             trajectory_data = self._convert_traj_msg_to_dict(msg)
             self.trajectory_manager = TrajectoryManager(trajectory_data)
             self.trajectory_start_time = self.get_clock().now()
+            self.has_reached_goal = False
             self.is_active = True
         except ValueError as e:
             self.get_logger().error(f"Failed to process trajectory: {e}")
@@ -332,6 +338,8 @@ class NodeMpcController(Node):
                 self.get_logger().info(
                     "Goal reached within tolerance. Mission successful!"
                 )
+                self.has_reached_goal = True
+                self.move_event.set(value = True)
                 self.stop_robot()
                 return
 
@@ -344,6 +352,8 @@ class NodeMpcController(Node):
                     f"Goal not reached within timeout ({self.completion_timeout}s extra time). "
                     f"Stopping at final distance of {position_error:.2f}m."
                 )
+                self.has_reached_goal = True
+                self.move_event.set(value = False)
                 self.stop_robot()
                 return
 

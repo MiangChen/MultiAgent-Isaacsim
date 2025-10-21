@@ -4,20 +4,23 @@ def explore_skill(**kwargs):
     holes = kwargs.get("holes")
     target_prim = kwargs.get("target_prim", "/TARGET_PRIM_NOT_SPECIFIED")
 
-    result = {"success": False, "message": "", "data": None}
-
     waypoints = robot.plan_exploration_waypoints(
         boundary,
         holes,
         lane_width=robot.body.cfg_robot.detection_radius,
         robot_radius=robot.body.cfg_robot.robot_radius,
     )
+    yield robot.form_feedback("processing", "Exploration waypoints planned.", 30)
+
     robot.is_detecting = True
     robot.target_prim = target_prim
-    robot.move_along_path(waypoints, flag_reset=True)
+    robot.node_controller_mpc.move_event.clear()
+    robot.node_planner_ompl.publisher_path.publish(waypoints)
 
-    result["success"] = True
-    result["message"] = "Exploration started"
-    result["data"] = {"waypoints": waypoints, "target_prim": target_prim}
+    result = robot.node_controller_mpc.move_event.wait(timeout=100)
 
-    return result
+    if result:
+        return robot.form_feedback("finished", "Exploration completed.", 100)
+    else:
+        return robot.form_feedback("failed", "Exploration failed. / Time exceeded", 0)
+

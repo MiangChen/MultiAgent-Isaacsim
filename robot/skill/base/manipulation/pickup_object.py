@@ -10,6 +10,9 @@ def pickup_object_skill(**kwargs):
     from physics_engine.pxr_utils import UsdPhysics
     from gsi_msgs.gsi_msgs_helper import Parameter
     import numpy as np
+    from log.log_manager import LogManager
+
+    logger = LogManager.get_logger(__name__)
 
     hand_prim = RigidPrim(prim_paths_expr=robot_hand_prim_path)
     object_prim = RigidPrim(prim_paths_expr=object_prim_path)
@@ -21,13 +24,7 @@ def pickup_object_skill(**kwargs):
 
     if distance <= distance_threshold:
 
-        robot._publish_feedback(
-            params=[
-                Parameter(key="status", value="normal"),
-                Parameter(key="reason", value=""),
-            ],
-            progress=30,
-        )
+        yield robot.form_feedback("processing", "", 40)
         # 停止物体当前的任何运动，清除惯性
         object_prim.set_linear_velocities(np.zeros(3))
         object_prim.set_angular_velocities(np.zeros(3))
@@ -42,22 +39,13 @@ def pickup_object_skill(**kwargs):
 
         # 创建物理连接 (关节)
         joint_path = f"/World/grasp_joint_{object_prim.name}"
-        stage = robot.scene_manager._stage
+        stage = robot.scene_manager._stage  # 假设可以从SceneManager获取stage
         joint_prim = stage.GetPrimAtPath(joint_path)
 
-        robot._publish_feedback(
-            params=[
-                Parameter(key="status", value="normal"),
-                Parameter(key="reason", value=""),
-            ],
-            progress=60,
-        )
+        yield robot.form_feedback("processing", "", 60)
 
         # 如果关节不存在，就创建一个。这通常只在第一次抓取时发生。
         if not joint_prim.IsValid():
-            from log.log_manager import LogManager
-
-            logger = LogManager.get_logger(__name__)
             logger.info(
                 f"INFO: Joint '{joint_path}' not found, creating it for the first time."
             )
@@ -72,30 +60,9 @@ def pickup_object_skill(**kwargs):
             )
             joint_prim = stage.GetPrimAtPath(joint_path)
         joint = UsdPhysics.Joint(joint_prim)
-        joint.GetJointEnabledAttr().Set(True)
+        joint.GetJointEnabledAttr().Set(True)  # <-- 关键的状态切换！
 
-        robot._publish_feedback(
-            params=[
-                Parameter(key="status", value="normal"),
-                Parameter(key="reason", value=""),
-            ],
-            progress=100,
-        )
-
-        result["success"] = True
-        result["message"] = "Object picked up successfully"
-        result["data"] = {"status": "success"}
+        return robot.form_feedback("success", "Object picked successfully!", 100)
     else:
-        robot._publish_feedback(
-            params=[
-                Parameter(key="status", value="failed"),
-                Parameter(key="reason", value="Object is too far to pick up"),
-            ],
-            progress=0,
-        )
-        result["message"] = (
-            f"Object is too far to pick up ({distance:.2f}m > {distance_threshold}m)"
-        )
-        result["data"] = {"status": "skipped"}
-
-    return result
+        return robot.form_feedback("failed", f"Object is too far to pick up ({distance:.2f}m > {distance_threshold}m).",
+                                  0)

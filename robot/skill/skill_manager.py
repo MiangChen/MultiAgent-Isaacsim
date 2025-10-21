@@ -6,15 +6,17 @@
 # It focuses on core functionality with minimal complexity.
 #
 # =============================================================================
-
+import inspect
 # Standard library imports
 import threading
 import time
 from enum import Enum
-from typing import Dict, Any, Optional
+from types import GeneratorType
+from typing import Dict, Any, Optional, Union, Generator
 
 # Local project imports
 from log.log_manager import LogManager
+from utils.form_feedback import form_feedback
 
 logger = LogManager.get_logger(__name__)
 
@@ -66,13 +68,18 @@ class SkillManager:
             f"SkillManager initialized for robot: {robot_instance.namespace if robot_instance else 'Unknown'}"
         )
 
-    def execute_skill(self, skill_name: str, skill_args: Dict[str, Any] = None) -> bool:
+    def execute_skill(
+        self,
+        skill_name: str,
+        skill_args: Dict[str, Any] = None, request = None
+    ) -> Generator[dict[str, Any], Any, Union[bool, GeneratorType[Any, Any, Any]]]:
         """
         Execute a skill
 
         Args:
             skill_name: Name of the skill
             skill_args: Skill parameters dictionary
+            request: goal_handle.request
 
         Returns:
             bool: Whether execution started successfully
@@ -99,18 +106,18 @@ class SkillManager:
             self.stop_flag.clear()
             self.result_data = {}
 
-            # Execute skill in new thread
-            self.current_thread = threading.Thread(
-                target=self._execute_skill_wrapper,
-                name=f"Skill_{skill_name}",
-                daemon=True,
-            )
-            self.current_thread.start()
+        skill_function = self.skill_function[skill_name]
+        result = skill_function(**self.current_skill_args)
 
+        if inspect.isgenerator(result):
+            return result
+        else:
+            yield form_feedback(status="processing", reason="start", progress=1)
             logger.info(
                 f"Skill '{skill_name}' started with args: {self.current_skill_args}"
             )
-            return True
+            return result
+
 
     def _execute_skill_wrapper(self):
         """
@@ -190,3 +197,5 @@ class SkillManager:
                     self.current_skill_name = ""
                     self.current_skill_args = {}
                 self.current_thread = None
+
+    def
