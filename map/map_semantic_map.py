@@ -11,23 +11,22 @@
 from typing import List, Dict, Any, Tuple, Optional
 
 # Local project imports
-from physics_engine.isaacsim_utils import XFormPrim
+from config.config_manager import config_manager
+import omni
+from physics_engine.isaacsim_utils import (
+    XFormPrim,
+    add_update_semantics,
+    remove_all_semantics,
+    count_semantics_in_scene,
+)
 from physics_engine.pxr_utils import Usd
 
 
 class MapSemantic:
     def __init__(self):
-        """
-        Initializes the MapSemantic class by loading a semantic mapping from a config file.
-        """
-        try:
-            from config.config_manager import config_manager
+        self.dict_map_semantic = config_manager.get("dict_map_semantic")
 
-            self.map_semantic = config_manager.get("map_semantic")
-        except Exception as e:
-            raise RuntimeError(
-                f"An unexpected error occurred while loading or parsing the config file: {e}"
-            ) from e
+        self.stage = omni.usd.get_context().get_stage()
 
     def get_prim_and_pose_by_semantic(
         self, sensor_result: Dict[str, Any], target_semantic_class: str
@@ -113,3 +112,107 @@ class MapSemantic:
             f"Warning: Found the semantic class '{target_semantic_class}' in the label map, but no instance of it was detected."
         )
         return None, None
+
+    def add_semantic(
+        self,
+        prim_path: str,
+        semantic_label: str,
+        type_label: str = "class",
+        suffix: str = "",
+    ) -> Dict[str, Any]:
+        """
+        [已弃用 API] 为一个 prim 添加或更新一个语义标签。
+        Args:
+            prim_path (str): 要添加标签的 prim 的路径。
+            semantic_label (str): 要应用的语义标签，例如 "car" 或 "robot"。
+            type_label (str, optional): 语义信息的类型。默认为 'class'。
+            suffix (str, optional): 用于指定多个语义属性的后缀。
+
+        Returns:
+            Dict[str, Any]: 包含操作状态和消息的字典。
+        """
+        try:
+            # isaacsim 4.5; will be deprecated in isaacsim 5.0
+
+            prim = self.stage.GetPrimAtPath(prim_path)
+            if not prim.IsValid():
+                return {
+                    "status": "error",
+                    "message": f"Prim not found at path: {prim_path}",
+                }
+
+            add_update_semantics(
+                prim=prim,
+                semantic_label=semantic_label,
+                type_label=type_label,
+                suffix=suffix,
+            )
+
+            return {
+                "status": "success",
+                "message": f"Successfully applied semantic '{semantic_label}' to prim <{prim_path}>",
+            }
+
+        except Exception as e:
+            import traceback
+
+            traceback.print_exc()
+            return {"status": "error", "message": str(e)}
+
+    def remove_all_semantics(self, prim_path: str = "/") -> Dict[str, Any]:
+        """
+        Removes all semantic tags from a given prim and its children
+        Args:
+            prim_path:  str, optional: Prim to remove any applied semantic APIs on
+
+        Returns:
+        """
+        try:
+
+            stage = omni.usd.get_context().get_stage()
+            if not stage:
+                return {"status": "error", "message": "No active USD stage."}
+
+            prim = stage.GetPrimAtPath(prim_path)
+            if not prim.IsValid():
+                return {
+                    "status": "error",
+                    "message": f"Prim not found at path: {prim_path}",
+                }
+
+            remove_all_semantics(prim=prim, recursive=True)
+
+            return {
+                "status": "success",
+                "message": f"Successfully removed all semantics from prim <{prim_path}>",
+            }
+        except Exception as e:
+            import traceback
+
+            traceback.print_exc()
+            return {"status": "error", "message": str(e)}
+
+    def count_semantics_in_scene(self, prim_path: str = "/") -> Dict[str, Any]:
+        """
+        [已弃用 API in isaacsim 5.0] 统计场景中（或指定路径下）所有语义标签的数量。
+
+        Args:
+            prim_path (str, optional): 检查的根路径。如果为 None，则检查整个场景。
+
+        Returns:
+            Dict[str, Any]: 成功时，result 字段包含一个字典，映射标签到其数量。
+        """
+        try:
+
+            count_data = count_semantics_in_scene(prim_path=prim_path)
+
+            return {
+                "status": "success",
+                "message": f"Counted semantics for path: {'Entire Scene' if prim_path is None else prim_path}",
+                "result": count_data,
+            }
+        except Exception as e:
+            import traceback
+
+            traceback.print_exc()
+            return {"status": "error", "message": str(e)}

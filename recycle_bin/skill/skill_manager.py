@@ -145,8 +145,8 @@
 #             params: Skill parameters (unused for pick-up)
 #         """
 #         logger.info(f"[Skill] {rc}-{rid} executing pick-up")
-#         object_prim_path = self.semantic_map.map_semantic.get(params.get("object_name"))
-#         robot_prim_path = self.semantic_map.map_semantic.get(f"{rc}_{rid}")
+#         object_prim_path = self.semantic_map.dict_map_semantic.get(params.get("object_name"))
+#         robot_prim_path = self.semantic_map.dict_map_semantic.get(f"{rc}_{rid}")
 #         return self.swarm_manager.robot_active[rc][rid].pickup_object_if_close_unified(
 #             robot_hand_prim_path=robot_prim_path, object_prim_path=object_prim_path
 #         )

@@ -96,7 +96,7 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
     return partial_ctx
 
 
-def create_car_objects(scene_manager: SceneManager) -> list:
+def create_car_objects(scene_manager: SceneManager, map_semantic: MapSemantic) -> list:
     """
     Create car objects in the scene with semantic labels using injected dependencies.
 
@@ -158,7 +158,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
 
     created_prim_paths = []
     logger.info(
-        f"All semantics in scene:{scene_manager.count_semantics_in_scene().get('result')}"
+        f"All semantics in scene:{map_semantic.count_semantics_in_scene().get('result')}"
     )
 
     for cube_name, config in cubes_config.items():
@@ -169,7 +169,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             created_prim_paths.append(prim_path)
 
             # Add semantic label
-            semantic_result = scene_manager.add_semantic(
+            semantic_result = map_semantic.add_semantic(
                 prim_path=prim_path, semantic_label="car"
             )
             logger.info(semantic_result)
@@ -207,14 +207,13 @@ def main():  # Needed in build_drone_ctx
     WORLD_USD_PATH = config_manager.get("world_usd_path")
     scene_manager.load_scene(usd_path=WORLD_USD_PATH, prim_path_root="/World/Scene")
 
-    # created_prim_paths = create_car_objects(scene_manager)
+    # created_prim_paths = create_car_objects(scene_manager, semantic_map)
     # print("All prims with 'car' label:", created_prim_paths)
-    print(scene_manager.count_semantics_in_scene().get("result"))
+    print(semantic_map.count_semantics_in_scene().get("result"))
 
     # Create and initialize semantic camera
     result = scene_manager.add_camera(translation=[1, 4, 2], orientation=[1, 0, 0, 0])
-    #
-    semantic_map = MapSemantic()
+
     semantic_camera = result.get("result").get("camera_instance")
     semantic_camera_prim_path = result.get("result").get("prim_path")
 

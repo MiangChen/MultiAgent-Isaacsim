@@ -98,7 +98,7 @@ def setup_simulation(
             logger.warning("Warning: Async initialization may still be running")
 
 
-def create_car_objects(scene_manager: SceneManager) -> list:
+def create_car_objects(scene_manager: SceneManager, map_semantic: MapSemantic) -> list:
     """
     Create car objects in the scene with semantic labels using injected dependencies.
 
@@ -160,7 +160,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
 
     created_prim_paths = []
     logger.info(
-        f"All semantics in scene:{scene_manager.count_semantics_in_scene().get('result')}"
+        f"All semantics in scene:{map_semantic.count_semantics_in_scene().get('result')}"
     )
 
     for cube_name, config in cubes_config.items():
@@ -171,7 +171,7 @@ def create_car_objects(scene_manager: SceneManager) -> list:
             created_prim_paths.append(prim_path)
 
             # Add semantic label
-            semantic_result = scene_manager.add_semantic(
+            semantic_result = map_semantic.add_semantic(
                 prim_path=prim_path, semantic_label="car"
             )
             logger.info(semantic_result)
@@ -239,7 +239,7 @@ def main():
     # scene_manager.enable_raycasting_for_prim(prim_path="/World/Scene")
 
     # Create car objects using scene manager
-    # created_prim_paths = create_car_objects(scene_manager)
+    # created_prim_paths = create_car_objects(scene_manager, semantic_map)
     # print("All prims with 'car' label:", created_prim_paths)
     # print(scene_manager.count_semantics_in_scene().get("result"))
 
@@ -257,7 +257,7 @@ def main():
             # Do not add them to ros_manager.executor to avoid conflicts
 
     # Create and initialize semantic camera
-    create_car_objects(scene_manager)
+    create_car_objects(scene_manager, semantic_map)
     result = scene_manager.add_camera(
         translation=[1, 4, 2], orientation=euler_to_quat(roll=90)
     )
@@ -301,7 +301,7 @@ def main():
         "entity_type": "rigid",
     }
     # 在semantic map中添加这个物体的prim path
-    semantic_map.map_semantic[object_name] = object_prim_path
+    semantic_map.dict_map_semantic[object_name] = object_prim_path
     scene_manager.create_shape_unified(**object)
 
     # flag = 0

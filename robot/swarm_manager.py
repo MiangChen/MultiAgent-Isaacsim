@@ -122,10 +122,10 @@ class SwarmManager:
                     )
 
                 self.robot_warehouse[robot_class_name].append(robot)
-                self.map_semantic.map_semantic[robot.cfg_robot.namespace] = (
+                self.map_semantic.dict_map_semantic[robot.cfg_robot.namespace] = (
                     robot.cfg_robot.path_prim_robot
                 )
-                self.scene_manager.add_semantic(
+                self.map_semantic.add_semantic(
                     prim_path=robot.cfg_robot.path_prim_robot, semantic_label="car"
                 )
 

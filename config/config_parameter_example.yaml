@@ -52,7 +52,7 @@ map:
   unknown_cell: -1
 
 # 语义地图
-map_semantic:
+dict_map_semantic:
   depot0: [ 5, 4, 0 ]
   depot1: [ 5, 3, 0 ]  # 这里的坐标可根据实际情况调整
   depot2: [ 5, 2, 0 ]  # 这里的坐标可根据实际情况调整
