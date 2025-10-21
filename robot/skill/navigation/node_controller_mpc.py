@@ -195,7 +195,6 @@ class NodeMpcController(Node):
     def __init__(self, namespace: str):
         super().__init__(node_name="node_mpc_controller", namespace=namespace)
 
-
         self.executor = MultiThreadedExecutor()
         self.thread = threading.Thread(target=self._spin, daemon=True)
 
@@ -260,6 +259,7 @@ class NodeMpcController(Node):
             self.executor.spin()
         except Exception as e:
             self.get_logger().error(f"Spin failed in node {self.namespace}: {e}")
+
     def trajectory_callback(self, msg: JointTrajectory):
         """Handles incoming trajectory messages."""
         self.get_logger().info(

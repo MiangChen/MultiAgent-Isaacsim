@@ -39,7 +39,6 @@ class NodeTrajectoryGenerator(Node):
     def __init__(self, namespace: str):
         super().__init__(node_name="node_trajectory_generator", namespace=namespace)
 
-
         self.executor = MultiThreadedExecutor()
         self.thread = threading.Thread(target=self._spin, daemon=True)
         self.declare_parameters(
@@ -84,6 +83,7 @@ class NodeTrajectoryGenerator(Node):
             self.executor.spin()
         except Exception as e:
             self.get_logger().error(f"Spin failed in node {self.namespace}: {e}")
+
     def path_callback(self, msg: Path):
         """Callback function for the /planned_path topic."""
         # 1. Extract the 4D path (x, y, z, yaw) from the Path message

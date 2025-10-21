@@ -52,7 +52,6 @@ class NodePlannerOmpl(Node):
         self.space = None
         self.si = None
 
-
         self.executor = MultiThreadedExecutor()
         self.thread = threading.Thread(target=self._spin, daemon=True)
 
@@ -346,7 +345,7 @@ class NodePlannerOmpl(Node):
                 and 0 <= grid_z < self.grid_map.shape[2]
             ):
                 return self.grid_map[grid_x, grid_y, grid_z] == 0
-        print(x, y , z)
+        print(x, y, z)
         return False
 
     def is_valid_state_rigid_body(self, state):
