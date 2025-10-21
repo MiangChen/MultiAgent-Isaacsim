@@ -77,9 +77,9 @@ def _get_viewport_manager_from_container():
 
 class Robot:
     def __init__(
-            self,
-            scene: Scene = None,
-            scene_manager: SceneManager = None,
+        self,
+        scene: Scene = None,
+        scene_manager: SceneManager = None,
     ):
 
         self.cfg_dict_camera = self.cfg_robot.cfg_dict_camera
@@ -95,9 +95,9 @@ class Robot:
 
         # 通用的机器人本体初始化代码
         self.cfg_robot.path_prim_robot = (
-                self.cfg_robot.path_prim_swarm
-                + f"/{self.cfg_robot.type}"
-                + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
+            self.cfg_robot.path_prim_swarm
+            + f"/{self.cfg_robot.type}"
+            + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
         )
         self.cfg_robot.namespace = self.cfg_robot.type + f"_{self.cfg_robot.id}"
         self.namespace = self.cfg_robot.namespace
@@ -309,7 +309,7 @@ class Robot:
     ########################## Subscriber Velocity  ############################
     def callback_cmd_vel(self, msg):
         """处理来自ROS的速度命令"""
-        linear_vel = torch.tensor([msg.linear.x, msg.linear.y, 0])
+        linear_vel = torch.tensor([msg.linear.x, msg.linear.y, msg.linear.z])
         angular_vel = torch.tensor([msg.angular.x, msg.angular.y, msg.angular.z])
         self.vel_linear = linear_vel
         self.vel_angular = angular_vel
@@ -455,10 +455,10 @@ class Robot:
         return {"status": "success", "message": "Object dropped successfully."}
 
     def pickup_object_if_close_unified(
-            self,
-            robot_hand_prim_path: str,
-            object_prim_path: str,
-            distance_threshold: float = 2.0,
+        self,
+        robot_hand_prim_path: str,
+        object_prim_path: str,
+        distance_threshold: float = 2.0,
     ) -> dict:
         """
         检查机器人手部与物体的距离，如果小于阈值，则执行抓取。
@@ -573,10 +573,10 @@ class Robot:
         return True
 
     def explore(
-            self,
-            boundary: List[tuple] = None,
-            holes: List[tuple] = None,
-            target_prim: str = "/TARGET_PRIM_NOT_SPECIFIED",
+        self,
+        boundary: List[tuple] = None,
+        holes: List[tuple] = None,
+        target_prim: str = "/TARGET_PRIM_NOT_SPECIFIED",
     ):
         waypoints = self.plan_exploration_waypoints(
             boundary,
@@ -590,14 +590,14 @@ class Robot:
         return True
 
     def plan_exploration_waypoints(
-            self,
-            polygon_coords,
-            holes=None,
-            lane_width=1.0,
-            robot_radius=0.2,
-            sweep_deg=0.0,
-            min_seg=0.5,
-            z_out=0.0,  # 输出航点的 z 值（默认 0.0）
+        self,
+        polygon_coords,
+        holes=None,
+        lane_width=1.0,
+        robot_radius=0.2,
+        sweep_deg=0.0,
+        min_seg=0.5,
+        z_out=0.0,  # 输出航点的 z 值（默认 0.0）
     ):
         """
         polygon_coords: [(x,y,z=0), ...] 或 [(x,y), ...]
@@ -717,8 +717,8 @@ class Robot:
         simplified_2d = [waypoints_2d[0]]
         for p in waypoints_2d[1:]:
             if (
-                    np.hypot(p[0] - simplified_2d[-1][0], p[1] - simplified_2d[-1][1])
-                    > 1e-3
+                np.hypot(p[0] - simplified_2d[-1][0], p[1] - simplified_2d[-1][1])
+                > 1e-3
             ):
                 simplified_2d.append(p)
 
@@ -727,7 +727,7 @@ class Robot:
         return waypoints
 
     def controller_simplified(
-            self,
+        self,
     ) -> None:
         """
         this function can only be used in on_physics_step
@@ -758,7 +758,9 @@ class Robot:
         if self.track_waypoint_index < len(
             self.track_waypoint_list
         ):  # 当index==len的时候, 就已经到达目标了
-            flag_reach = self.move_to(self.track_waypoint_list[self.track_waypoint_index])
+            flag_reach = self.move_to(
+                self.track_waypoint_list[self.track_waypoint_index]
+            )
             if flag_reach == True:
                 self.track_waypoint_index += 1  # TODO：Step里应用这个技能
 
@@ -829,7 +831,7 @@ class Robot:
 
             # 2. 计算相机的位置 (eye) 和目标位置 (target)
             camera_eye_position = (
-                    robot_position + self.relative_camera_pos + self.transform_camera_pos
+                robot_position + self.relative_camera_pos + self.transform_camera_pos
             )
             camera_target_position = robot_position
 
@@ -892,12 +894,12 @@ class Robot:
 
         if self.previous_pos:
             if (
-                    np.sqrt(
-                        (self.previous_pos[0] - px) ** 2
-                        + (self.previous_pos[1] - py) ** 2
-                        + (self.previous_pos[2] - pz) ** 2
-                    )
-                    < self.movement_threshold
+                np.sqrt(
+                    (self.previous_pos[0] - px) ** 2
+                    + (self.previous_pos[1] - py) ** 2
+                    + (self.previous_pos[2] - pz) ** 2
+                )
+                < self.movement_threshold
             ):
                 self.previous_pos = [px, py, pz]
                 return abnormal_return
