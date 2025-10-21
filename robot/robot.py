@@ -34,6 +34,7 @@ from robot.robot_trajectory import Trajectory
 from robot.skill.navigation.node_path_planner_ompl import NodePlannerOmpl
 from robot.skill.navigation.node_trajectory_generator import NodeTrajectoryGenerator
 from robot.skill.navigation.node_controller_mpc import NodeMpcController
+from robot.skill.skill_manager import SkillManager
 from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
 
@@ -114,6 +115,7 @@ class Robot:
         self.action: np.ndarray = None
         # 机器人的技能
         self.skills: dict = {}  # 用于记录其技能: 'skill name': function
+        self.skill_manager = SkillManager(self)
         # 用于回调函数中
         self.flag_active = False
         self.flag_world_reset: bool = False  # 用来记录下世界是不是被初始化了
