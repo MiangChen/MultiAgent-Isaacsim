@@ -23,6 +23,7 @@ jetbot:
         id: 0
         frequency: 30
         resolution: [1280, 720]
+        enable_semantic_detection: True
 
   - id: 1
     name: Bob
@@ -35,6 +36,7 @@ jetbot:
         id: 0
         frequency: 30
         resolution: [ 1280, 720 ]
+        enable_semantic_detection: True
 
   - id: 2
     name: Candy
@@ -47,6 +49,7 @@ jetbot:
         id: 0
         frequency: 30
         resolution: [ 1280, 720 ]
+        enable_semantic_detection: True
 
   - id: 3
     name: David
@@ -59,6 +62,7 @@ jetbot:
         id: 0
         frequency: 30
         resolution: [ 1280, 720 ]
+        enable_semantic_detection: True
 
 #h1:
 #  - id: 0
@@ -74,3 +78,4 @@ jetbot:
 #        focal_length: 2
 #        orientation: [0.3827, -0.9239, 0.0000, 0.0000]
 #        resolution: [1280, 720]
+#        enable_semantic_detection: True
