@@ -23,14 +23,14 @@ from robot.sensor.camera import CfgCamera, CfgCameraThird
 from utils import to_torch, quat_to_yaw
 
 # Custom ROS message imports
-from gsi2isaacsim.gsi_msgs_helper import (
+
+from gsi_msgs.gsi_msgs_helper import (
     Plan,
     RobotFeedback,
     SkillInfo,
     Parameter,
     VelTwistPose,
 )
-
 
 class RobotG1(Robot):
     def __init__(

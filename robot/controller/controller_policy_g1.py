@@ -21,6 +21,7 @@ from physics_engine.isaacsim_utils import (
     quat_to_rot_matrix,
     ArticulationAction,
 )
+from robot.controller.controller_policy import PolicyController
 
 
 class G1FlatTerrainPolicy(PolicyController):

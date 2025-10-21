@@ -26,7 +26,7 @@ from utils import to_torch, quat_to_yaw
 # from path_planning.path_planning_astar import AStar
 
 # Custom ROS message imports
-from gsi2isaacsim.gsi_msgs_helper import (
+from gsi_msgs.gsi_msgs_helper import (
     Plan,
     RobotFeedback,
     SkillInfo,

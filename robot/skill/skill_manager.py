@@ -11,7 +11,7 @@
 import threading
 import time
 from enum import Enum
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, Optional
 
 # Local project imports
 from log.log_manager import LogManager
@@ -42,16 +42,14 @@ class SkillManager:
         self._lock = threading.Lock()
 
         # Import and setup skills directly
-        from robot.skill.object_detection.object_detection import object_detection_skill
-        from robot.skill.navigation.navigate_to import navigate_to_skill
-        from robot.skill.navigation.return_home import return_home_skill
-        from robot.skill.manipulation.pickup_object import pickup_object_skill
-        from robot.skill.manipulation.put_down import put_down_skill
-        from robot.skill.detection.detect import detect_skill
-        from robot.skill.exploration.explore import explore_skill
-        from robot.skill.exploration.plan_exploration_waypoints import (
-            plan_exploration_waypoints_skill,
-        )
+        from robot.skill.base.object_detection import object_detection_skill
+        from robot.skill.base.navigation import navigate_to_skill
+        from robot.skill.base.navigation import return_home_skill
+        from robot.skill.base.manipulation.pickup_object import pickup_object_skill
+        from robot.skill.base.manipulation.put_down import put_down_skill
+        from robot.skill.base.detection import detect_skill
+        from robot.skill.base.exploration import explore_skill
+        from robot.skill.base.exploration import plan_exploration_waypoints_skill
 
         self.skill_function = {
             "object_detection": object_detection_skill,
