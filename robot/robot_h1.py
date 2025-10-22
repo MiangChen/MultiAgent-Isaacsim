@@ -126,14 +126,14 @@ class RobotH1(Robot):
         self.counter += 1
 
         if self.flag_world_reset == True:
-            if self.flag_action_navigation == True:
-                self.move_along_path()  # 每一次都计算下速度
-                self.action = self.controller_policy.forward(
-                    step_size, self.base_command, self.body.robot_articulation
-                )
-            else:
-                self.action = self.controller_policy.forward(
-                    step_size, [0, 0, 0], self.body.robot_articulation
-                )
+            # if self.flag_action_navigation == True:
+            #     self.move_along_path()  # 每一次都计算下速度
+            #     self.action = self.controller_policy.forward(
+            #         step_size, self.base_command, self.body.robot_articulation
+            #     )
+
+            self.action = self.controller_policy.forward(
+                step_size, [0, 0, 0], self.body.robot_articulation
+            )
             self.step(self.action)
         return

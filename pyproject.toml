@@ -1,0 +1,18 @@
+# file: pyproject.toml
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "multi_robot_isaacsim"
+version = "2025.10.22"
+
+[project.entry-points."multi_robot_isaacsim.task"]
+# "插件名" = "包含构建函数的模块路径:构建函数名"
+"navigate_and_return" = "robot.skill.py_trees_tasks.navigation_tasks:build_navigate_and_return_tree"
+
+[tool.setuptools]
+packages = [
+    "robot",
+]

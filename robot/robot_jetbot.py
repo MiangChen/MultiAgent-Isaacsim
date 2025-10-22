@@ -67,9 +67,9 @@ class RobotJetbot(Robot):
 
         self.counter += 1
 
-        if self.flag_world_reset:
-            if self.flag_action_navigation:
-                self.step(self.action)
+        # if self.flag_world_reset:
+            # if self.flag_action_navigation:
+            #     self.step(self.action)
 
         return
 

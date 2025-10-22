@@ -13,6 +13,7 @@ from typing import Any, Dict
 
 # Third-party library imports
 import numpy as np
+import py_trees
 import torch
 
 # Local project imports
@@ -30,6 +31,7 @@ from robot.robot_trajectory import Trajectory
 from robot.skill.base.navigation import NodePlannerOmpl
 from robot.skill.base.navigation import NodeTrajectoryGenerator
 from robot.skill.base.navigation import NodeMpcController
+from robot.skill.behavior_tree_manager import BehaviorTreeManager
 from robot.skill.skill_manager import SkillManager
 from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
@@ -108,16 +110,26 @@ class Robot:
             ""  # 'joint_efforts', 'joint_velocities', 'joint_positions', 'joint_indices', 'joint_names'
         )
         self.action: np.ndarray = None
+
+        # robot physics state
+        self.vel_linear = torch.tensor([0.0, 0.0, 0.0])
+        self.vel_angular = torch.tensor([0.0, 0.0, 0.0])
+
         # 机器人的技能
-        self.skills: dict = {}  # 用于记录其技能: 'skill name': function
-        self.skill_manager = SkillManager(self)
+        # self.skills: dict = {}  # 用于记录其技能: 'skill name': function
+        # self.skill_manager = SkillManager(self)
+        self.behaviour_tree = None       # 存储当前执行的行为树
+        self.behavior_tree_manager = BehaviorTreeManager(self)
+        self.active_goal_handle = None   # 存储当前活动的Action Goal句柄
+        self.action_timer = None         # 用于周期性 tick 行为树的定时器
+
         # 用于回调函数中
         self.flag_active = False
         self.flag_world_reset: bool = False  # 用来记录下世界是不是被初始化了
-        self.flag_action_navigation: bool = False  # 用来记录是不是启动导航了
+        # self.flag_action_navigation: bool = False  # 用来记录是不是启动导航了
         # 用于PDDL, 记录当前用的 skill, 之所以用skill, 是为了和action区分, action一般是底层的关节动作
-        self.state_skill: str = ""
-        self.state_skill_complete: bool = True  # 默认状态, 没有skill要做, 所以是True
+        # self.state_skill: str = ""
+        # self.state_skill_complete: bool = True  # 默认状态, 没有skill要做, 所以是True
 
         # 布置机器人的相机传感器, 可以有多个相机
         self.cameras: dict = {}
@@ -133,7 +145,7 @@ class Robot:
         # 机器人的ros node
         self.node = NodeRobot(namespace=self.namespace)
         self.node.set_robot_instance(self)
-        self.node.callback_execute_skill = self.callback_execute_skill
+        self.node.callback_execute_skill = self.callback_task_execution
 
         self.node_planner_ompl = NodePlannerOmpl(namespace=self.namespace)
         self.node_trajectory_generator = NodeTrajectoryGenerator(
@@ -173,55 +185,131 @@ class Robot:
         self.track_waypoint_sub = None
         self.is_planning = False
 
-        # robot physics state
-        self.vel_linear = torch.tensor([0.0, 0.0, 0.0])
-        self.vel_angular = torch.tensor([0.0, 0.0, 0.0])
-
     ########################## Skill Action Server ############################
-    def callback_execute_skill(self, goal_handle):
-        if self.state_skill_complete is False:
-            logger.error(
-                f"Robot is busy with skill '{self.state_skill}'. Rejecting new goal."
-            )
+    # def callback_execute_skill(self, goal_handle):
+    #     if self.state_skill_complete is False:
+    #         logger.error(
+    #             f"Robot is busy with skill '{self.state_skill}'. Rejecting new goal."
+    #         )
+    #         goal_handle.abort()
+    #         return SkillExecution.Result(success=False, message="Robot is busy.")
+    #
+    #     skill_name = goal_handle.request.skill_request.skill_list[0].skill
+    #     skill_args = goal_handle.request.skill_request.skill_list[0].skill_args #TODO:找到args的位置
+    #     self.state_skill_complete = False
+    #     feedback_msg = SkillExecution.Feedback()
+    #
+    #
+    #     gen = self.skill_manager.execute_skill(skill_name, skill_args, goal_handle.request)
+    #     final_value = None
+    #     while True:
+    #         if goal_handle.is_cancel_requested:
+    #             goal_handle.canceled()
+    #             self.state_skill_complete = True  # 重置状态
+    #             logger.info(f"Skill '{skill_name}' was canceled.")
+    #             return SkillExecution.Result(
+    #                 success=False, message="Skill execution was canceled by client."
+    #             )
+    #         #TODO: Skill manager中的停止逻辑
+    #         try:
+    #             step_feedback = next(gen)
+    #         except StopIteration as e:
+    #             final_value = e.value  # 取到 return 的最终结果（可能为 None）
+    #             break
+    #
+    #         fb = SkillExecution.Feedback()
+    #         fb.status = str(step_feedback.get("status", "processing"))
+    #         fb.reason = str(step_feedback.get("reason", "none"))
+    #         fb.progress = int(step_feedback.get("progress", 0))
+    #         goal_handle.publish_feedback(fb)
+    #         logger.info(f"[{skill_name}] feedback: status={fb.status}, reason={fb.reason}, progress={fb.progress}")
+    #
+    #     self.state_skill_complete = True
+    #     goal_handle.succeed()
+    #     result = SkillExecution.Result()
+    #     result.success = bool(final_value.get("success", True))
+    #     result.message = str(final_value.get("message", f"Skill '{skill_name}' executed successfully."))
+    #     return result
+    def callback_task_execution(self, goal_handle):
+        """
+        新的非阻塞式 Action Server 回调。
+        当接收到新的 Action Goal 时被调用。
+        """
+        self.node.get_logger().info('接收到新的任务目标...')
+
+        if self.active_goal_handle and self.active_goal_handle.is_active:
+            self.node.get_logger().error('机器人正忙，拒绝新任务！')
             goal_handle.abort()
-            return SkillExecution.Result(success=False, message="Robot is busy.")
+            return SkillExecution.Result(success=False, message="机器人正忙")
 
-        skill_name = goal_handle.request.skill_request.skill_list[0].skill
-        skill_args = goal_handle.request.skill_request.skill_list[0].skill_args #TODO:找到args的位置
-        self.state_skill_complete = False
-        feedback_msg = SkillExecution.Feedback()
+        request = goal_handle.request.skill_request
+        task_name = request.skill_list[0].skill  # todo 返回的是一个技能列表, 目前我们先处理第一个
+        params = {p.key: p.value for p in request.skill_list[0].skill_args}
 
+        try:
+            self.behaviour_tree = self.behavior_tree_manager.create_tree_for_task(task_name, params)
+            if self.behaviour_tree is None:
+                raise ValueError(f"无法为任务 '{task_name}' 创建行为树")
+        except Exception as e:
+            self.node.get_logger().error(f"构建行为树失败: {e}")
+            goal_handle.abort()
+            return SkillExecution.Result(success=False, message=f"构建行为树失败: {e}")
 
-        gen = self.skill_manager.execute_skill(skill_name, skill_args, goal_handle.request)
-        final_value = None
-        while True:
-            if goal_handle.is_cancel_requested:
-                goal_handle.canceled()
-                self.state_skill_complete = True  # 重置状态
-                logger.info(f"Skill '{skill_name}' was canceled.")
-                return SkillExecution.Result(
-                    success=False, message="Skill execution was canceled by client."
-                )
-            #TODO: Skill manager中的停止逻辑
-            try:
-                step_feedback = next(gen)
-            except StopIteration as e:
-                final_value = e.value  # 取到 return 的最终结果（可能为 None）
-                break
+        self.active_goal_handle = goal_handle
+        goal_handle.accept()
 
-            fb = SkillExecution.Feedback()
-            fb.status = str(step_feedback.get("status", "processing"))
-            fb.reason = str(step_feedback.get("reason", "none"))
-            fb.progress = int(step_feedback.get("progress", 0))
-            goal_handle.publish_feedback(fb)
-            logger.info(f"[{skill_name}] feedback: status={fb.status}, reason={fb.reason}, progress={fb.progress}")
+        tick_frequency = 10.0
+        self.action_timer = self.node.create_timer(1.0 / tick_frequency, self.tick_the_tree)
+        self.node.get_logger().info(f"任务 '{task_name}' 已接受并开始执行。")
 
-        self.state_skill_complete = True
-        goal_handle.succeed()
-        result = SkillExecution.Result()
-        result.success = bool(final_value.get("success", True))
-        result.message = str(final_value.get("message", f"Skill '{skill_name}' executed successfully."))
-        return result
+        return SkillExecution.Result()
+
+    def tick_the_tree(self):
+        """
+        定时器回调函数，这是您的新“主执行循环”。
+        它会周期性地驱动行为树并发送反馈。
+        """
+        if not self.active_goal_handle or not self.active_goal_handle.is_active:
+            self.node.get_logger().warn("当前任务句柄无效或非活动，停止执行。")
+            self.cleanup_action()
+            return
+
+        try:
+            self.behaviour_tree.tick()
+
+            feedback_msg = SkillExecution.Feedback()
+            feedback_msg.status = self.behaviour_tree.root.status.value # RUNNING, SUCCESS, FAILURE
+            active_node = next((node for node in self.behaviour_tree.root.iterate() if node.status == py_trees.common.Status.RUNNING), None)
+            feedback_msg.reason = active_node.name if active_node else "任务完成中"
+            progress = self.behaviour_tree.blackboard_client.get("progress")
+            feedback_msg.progress = int(progress) if progress is not None else 0
+            self.active_goal_handle.publish_feedback(feedback_msg)
+
+            tree_status = self.behaviour_tree.root.status
+            if tree_status == py_trees.common.Status.SUCCESS:
+                self.node.get_logger().info('任务成功完成！')
+                result = SkillExecution.Result(success=True, message="任务成功")
+                self.active_goal_handle.succeed()
+                self.cleanup_action()
+            elif tree_status == py_trees.common.Status.FAILURE:
+                self.node.get_logger().warn('任务失败！')
+                result = SkillExecution.Result(success=False, message="任务执行失败")
+                self.active_goal_handle.abort()
+                self.cleanup_action()
+        except Exception as e:
+            self.node.get_logger().error(f"行为树 tick 期间发生异常: {e}", exc_info=True)
+            result = SkillExecution.Result(success=False, message=f"执行异常: {e}")
+            self.active_goal_handle.abort()
+            self.cleanup_action()
+
+    def cleanup_action(self):
+        """任务结束后（成功、失败或取消），清理所有相关资源。"""
+        if self.action_timer:
+            self.action_timer.cancel()
+            self.action_timer = None
+        self.behaviour_tree = None
+        self.node.get_logger().info("任务已清理。")
+        self.active_goal_handle = None # 在最后重置，允许新任务进入
 
     ########################## Publisher Odom  ############################
     def publish_robot_state(self):
