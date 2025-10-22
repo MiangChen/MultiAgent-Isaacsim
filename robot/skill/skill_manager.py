@@ -6,12 +6,11 @@
 # It focuses on core functionality with minimal complexity.
 #
 # =============================================================================
-import inspect
 # Standard library imports
+import inspect
 import threading
 import time
 from enum import Enum
-from types import GeneratorType
 from typing import Dict, Any, Optional, Union, Generator
 
 # Local project imports
