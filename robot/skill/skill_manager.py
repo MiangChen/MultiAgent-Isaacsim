@@ -72,7 +72,7 @@ class SkillManager:
         self,
         skill_name: str,
         skill_args: Dict[str, Any] = None, request = None
-    ) -> Generator[dict[str, Any], Any, Union[bool, GeneratorType[Any, Any, Any]]]:
+    ) -> Generator[dict[str, Any], Any, Union[bool, Generator[Any, Any, Any]]]:
         """
         Execute a skill
 

@@ -9,6 +9,7 @@
 
 # Standard library imports
 import threading
+from typing import Any, Dict
 
 # Third-party library imports
 import numpy as np
@@ -190,37 +191,37 @@ class Robot:
         self.state_skill_complete = False
         feedback_msg = SkillExecution.Feedback()
 
-        try:
-            gen = self.skill_manager.execute_skill(skill_name, skill_args, goal_handle.request)
-            final_value = None
-            while True:
-                if goal_handle.is_cancel_requested:
-                    goal_handle.canceled()
-                    self.state_skill_complete = True  # 重置状态
-                    logger.info(f"Skill '{skill_name}' was canceled.")
-                    return SkillExecution.Result(
-                        success=False, message="Skill execution was canceled by client."
-                    )
-                #TODO: Skill manager中的停止逻辑
-                try:
-                    step_feedback = next(gen)
-                except StopIteration as e:
-                    final_value = e.value  # 取到 return 的最终结果（可能为 None）
-                    break
 
-                fb = SkillExecution.Feedback()
-                fb.status = str(step_feedback.get("status", "processing"))
-                fb.reason = str(step_feedback.get("reason", "none"))
-                fb.progress = int(step_feedback.get("progress", 0))
-                goal_handle.publish_feedback(fb)
-                logger.info(f"[{skill_name}] feedback: status={fb.status}, reason={fb.reason}, progress={fb.progress}")
+        gen = self.skill_manager.execute_skill(skill_name, skill_args, goal_handle.request)
+        final_value = None
+        while True:
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                self.state_skill_complete = True  # 重置状态
+                logger.info(f"Skill '{skill_name}' was canceled.")
+                return SkillExecution.Result(
+                    success=False, message="Skill execution was canceled by client."
+                )
+            #TODO: Skill manager中的停止逻辑
+            try:
+                step_feedback = next(gen)
+            except StopIteration as e:
+                final_value = e.value  # 取到 return 的最终结果（可能为 None）
+                break
 
-            self.state_skill_complete = True
-            goal_handle.succeed()
-            result = SkillExecution.Result()
-            result.success = bool(final_value.get("success", True))
-            result.message = str(final_value.get("message", f"Skill '{skill_name}' executed successfully."))
-            return result
+            fb = SkillExecution.Feedback()
+            fb.status = str(step_feedback.get("status", "processing"))
+            fb.reason = str(step_feedback.get("reason", "none"))
+            fb.progress = int(step_feedback.get("progress", 0))
+            goal_handle.publish_feedback(fb)
+            logger.info(f"[{skill_name}] feedback: status={fb.status}, reason={fb.reason}, progress={fb.progress}")
+
+        self.state_skill_complete = True
+        goal_handle.succeed()
+        result = SkillExecution.Result()
+        result.success = bool(final_value.get("success", True))
+        result.message = str(final_value.get("message", f"Skill '{skill_name}' executed successfully."))
+        return result
 
     ########################## Publisher Odom  ############################
     def publish_robot_state(self):
