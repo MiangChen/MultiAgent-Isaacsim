@@ -12,6 +12,7 @@ from typing import List, Dict, Any, Tuple, Optional
 
 # Local project imports
 from config.config_manager import config_manager
+from log.log_manager import LogManager
 
 # Local project imports
 from physics_engine.isaacsim_utils import (
@@ -23,6 +24,7 @@ from physics_engine.isaacsim_utils import (
 from physics_engine.omni_utils import omni
 from physics_engine.pxr_utils import Usd
 
+logger = LogManager.get_logger(__name__)
 
 class MapSemantic:
     def __init__(self):
@@ -66,8 +68,8 @@ class MapSemantic:
                 break
 
         if target_semantic_id is None:
-            print(
-                f"Warning: The semantic class '{target_semantic_class}' was not found in the sensor result's label map."
+            logger.warning(
+                f"The semantic class '{target_semantic_class}' was not found in the sensor result's label map."
             )
             return None, None
 
@@ -77,8 +79,8 @@ class MapSemantic:
                 try:
                     prim_path = prim_paths[i]
                 except IndexError:
-                    print(
-                        f"Error: Found object with semantic class '{target_semantic_class}', but its index {i} is out of bounds for the prim_paths list."
+                    logger.error(
+                        f"Found object with semantic class '{target_semantic_class}', but its index {i} is out of bounds for the prim_paths list."
                     )
                     return None, None
 
@@ -90,8 +92,8 @@ class MapSemantic:
                     # Get the underlying Usd.Prim from the high-level wrapper
                     usd_prim = xform_prim.prims[0]
                     if not usd_prim.IsValid():
-                        print(
-                            f"Error: Successfully created an XFormPrim, but could not retrieve a valid underlying Usd.Prim."
+                        logger.error(
+                            "Successfully created an XFormPrim, but could not retrieve a valid underlying Usd.Prim."
                         )
                         return None, None
 
@@ -104,14 +106,14 @@ class MapSemantic:
 
                 except Exception as e:
                     # Handle any exception that occurs during pose retrieval
-                    print(
-                        f"Error: Successfully found Prim '{prim_path}', but failed to retrieve its pose: {e}"
+                    logger.error(
+                        f"Successfully found Prim '{prim_path}', but failed to retrieve its pose: {e}"
                     )
                     return None, None
 
         # If the loop completes without finding any matching instance
-        print(
-            f"Warning: Found the semantic class '{target_semantic_class}' in the label map, but no instance of it was detected."
+        logger.warning(
+            f"Found the semantic class '{target_semantic_class}' in the label map, but no instance of it was detected."
         )
         return None, None
 
