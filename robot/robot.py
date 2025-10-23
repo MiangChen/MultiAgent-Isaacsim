@@ -32,7 +32,6 @@ from robot.skill.base.navigation import NodePlannerOmpl
 from robot.skill.base.navigation import NodeTrajectoryGenerator
 from robot.skill.base.navigation import NodeMpcController
 from robot.skill.behavior_tree_manager import BehaviorTreeManager
-from robot.skill.skill_manager import SkillManager
 from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
 
@@ -185,51 +184,6 @@ class Robot:
         self.track_waypoint_sub = None
         self.is_planning = False
 
-    ########################## Skill Action Server ############################
-    # def callback_execute_skill(self, goal_handle):
-    #     if self.state_skill_complete is False:
-    #         logger.error(
-    #             f"Robot is busy with skill '{self.state_skill}'. Rejecting new goal."
-    #         )
-    #         goal_handle.abort()
-    #         return SkillExecution.Result(success=False, message="Robot is busy.")
-    #
-    #     skill_name = goal_handle.request.skill_request.skill_list[0].skill
-    #     skill_args = goal_handle.request.skill_request.skill_list[0].skill_args #TODO:找到args的位置
-    #     self.state_skill_complete = False
-    #     feedback_msg = SkillExecution.Feedback()
-    #
-    #
-    #     gen = self.skill_manager.execute_skill(skill_name, skill_args, goal_handle.request)
-    #     final_value = None
-    #     while True:
-    #         if goal_handle.is_cancel_requested:
-    #             goal_handle.canceled()
-    #             self.state_skill_complete = True  # 重置状态
-    #             logger.info(f"Skill '{skill_name}' was canceled.")
-    #             return SkillExecution.Result(
-    #                 success=False, message="Skill execution was canceled by client."
-    #             )
-    #         #TODO: Skill manager中的停止逻辑
-    #         try:
-    #             step_feedback = next(gen)
-    #         except StopIteration as e:
-    #             final_value = e.value  # 取到 return 的最终结果（可能为 None）
-    #             break
-    #
-    #         fb = SkillExecution.Feedback()
-    #         fb.status = str(step_feedback.get("status", "processing"))
-    #         fb.reason = str(step_feedback.get("reason", "none"))
-    #         fb.progress = int(step_feedback.get("progress", 0))
-    #         goal_handle.publish_feedback(fb)
-    #         logger.info(f"[{skill_name}] feedback: status={fb.status}, reason={fb.reason}, progress={fb.progress}")
-    #
-    #     self.state_skill_complete = True
-    #     goal_handle.succeed()
-    #     result = SkillExecution.Result()
-    #     result.success = bool(final_value.get("success", True))
-    #     result.message = str(final_value.get("message", f"Skill '{skill_name}' executed successfully."))
-    #     return result
     def callback_task_execution(self, goal_handle):
         """
         新的非阻塞式 Action Server 回调。

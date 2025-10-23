@@ -49,7 +49,7 @@ class NodeRobot(Node):
             action_type=SkillExecution,
             action_name=f"skill_execution",
             execute_callback=self.callback_execute_skill,
-        ) # 这里action_server每次收到新的请求都会在新线程里callback，因此Skill_manager里面执行的时候不需要再创建新线程
+        )
         logger.info(f"ROS2 Node for {self.namespace} has been created.")
 
     def callback_cmd_vel(self, msg):
