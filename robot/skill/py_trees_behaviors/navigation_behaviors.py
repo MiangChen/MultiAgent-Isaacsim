@@ -38,7 +38,7 @@ class NavigateToBehaviour(py_trees.behaviour.Behaviour):
             self.logger.error(f"  行为节点 ({self.name}): 未找到目标位置")
             return
             
-        # 启动导航技能
+        # 直接调用导航技能
         from robot.skill.base.navigation.navigate_to import navigate_to_skill
         self._navigation_generator = navigate_to_skill(
             robot=self.robot,
