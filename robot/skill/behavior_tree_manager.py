@@ -118,7 +118,7 @@ class BehaviorTreeManager:
             self._logger.info(f"创建任务 '{task_name}' 的行为树...")
             root_node = builder(self.robot, params)
             tree = py_trees.trees.BehaviourTree(root=root_node)
-            tree.setup_with_descendants()
+            tree.setup(timeout=20)
             
             self._current_tree = tree
             self._logger.info(f"成功创建任务 '{task_name}' 的行为树")

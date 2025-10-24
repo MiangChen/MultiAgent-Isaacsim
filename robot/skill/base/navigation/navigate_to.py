@@ -50,7 +50,7 @@ def _goal_response_callback(robot, future):
     robot.is_planning = False
 
 
-def _create_pose_stamped(robot, pos: list, quat_wxyz: list):
+def _create_pose_stamped(robot, pos: list, quat_wxyz: list = [0.0, 0.0, 0.0, 0.0]):
     from geometry_msgs.msg import PoseStamped
 
     pose_stamped = PoseStamped()
