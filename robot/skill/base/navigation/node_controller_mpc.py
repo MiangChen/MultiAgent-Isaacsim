@@ -212,7 +212,7 @@ class NodeMpcController(Node):
                 ("robot.max_alpha", 1.5),
                 ("goal.position_tolerance", 0.1),
                 ("goal.velocity_tolerance", 0.05),
-                ("goal.completion_timeout", 2.0),
+                ("goal.completion_timeout", 20.0),
             ],
         )
 

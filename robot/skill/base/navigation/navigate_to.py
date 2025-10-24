@@ -4,6 +4,7 @@ def navigate_to_skill(**kwargs):
     goal_quat_wxyz = kwargs.get("goal_quat_wxyz", [1.0, 0.0, 0.0, 0.0])
 
     from nav2_msgs.action import ComputePathToPose
+    from functools import partial
 
     if robot.is_planning:
         robot.node.get_logger().warn("Planning already in progress.")
@@ -24,11 +25,11 @@ def navigate_to_skill(**kwargs):
     start_pos = start_pos_tensor.cpu().numpy().tolist()
     start_quat = start_quat_tensor.cpu().numpy().tolist()
 
-    goal_msg.start = _create_pose_stamped(start_pos, start_quat)
-    goal_msg.goal = _create_pose_stamped(goal_pos, goal_quat_wxyz)
+    goal_msg.start = _create_pose_stamped(robot, start_pos, start_quat)
+    goal_msg.goal = _create_pose_stamped(robot, goal_pos, goal_quat_wxyz)
 
     send_goal_future = robot.action_client_path_planner.send_goal_async(goal_msg)
-    send_goal_future.add_done_callback(robot._goal_response_callback)
+    send_goal_future.add_done_callback(partial(_goal_response_callback, robot))
 
     yield robot.form_feedback("processing", "Path Planning processing", 30)
 

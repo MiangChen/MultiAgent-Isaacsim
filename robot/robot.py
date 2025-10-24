@@ -10,6 +10,7 @@
 # Standard library imports
 import threading
 from typing import Any, Dict
+import time
 
 # Third-party library imports
 import numpy as np
@@ -184,6 +185,9 @@ class Robot:
         self.track_waypoint_sub = None
         self.is_planning = False
 
+        #测试锁
+        self._test_lock = threading.Lock()
+
     def callback_task_execution(self, goal_handle):
         """
         新的非阻塞式 Action Server 回调。
@@ -201,7 +205,7 @@ class Robot:
         params = {p.key: p.value for p in request.skill_list[0].skill_args}
 
         try:
-            self.behaviour_tree = self.behavior_tree_manager.create_tree_for_task(task_name, params)
+            self.behaviour_tree = self.behavior_tree_manager.create_tree_for_task(task_name, )
             if self.behaviour_tree is None:
                 raise ValueError(f"无法为任务 '{task_name}' 创建行为树")
         except Exception as e:
@@ -264,6 +268,160 @@ class Robot:
         self.behaviour_tree = None
         self.node.get_logger().info("任务已清理。")
         self.active_goal_handle = None # 在最后重置，允许新任务进入
+
+    def run_skill_for_test(
+            self,
+            task_name: str,
+            params: Dict[str, str] = None,
+            *,
+            tick_hz: float = 10.0,
+            timeout_sec: float = None,
+            progress_cb = None,
+            verbose: bool = True,
+    ) -> Dict[str, object]:
+        """
+        从外部直接调用以测试一个技能(任务)：
+        - 创建相应的行为树并以固定频率tick直至完成/失败/超时。
+        - 不依赖Action Server，不发布ROS Action反馈，仅通过返回值/回调暴露进度与结果。
+
+        参数:
+            task_name: 技能/任务名
+            params: 任务参数字典，如 {"target": "kitchen"}
+            tick_hz: tick频率(Hz)
+            timeout_sec: 超时时间(秒)。None表示不限时。
+            progress_cb: 进度回调，签名为 `callback(dict)`；见下方结构说明。
+            verbose: 是否打印基本日志到 self.node.get_logger()
+
+        调用示例：
+            res = swarm_manager.robot_active['jetbot'][0].run_skill_for_test(
+                task_name="simple_navigation",
+                params={"goal_pos":[10.0, 5.0, 1.0], "goal_quat_wxyz":[0.0, 0.0, 0.0, 1.0]},
+                tick_hz=10.0,
+                timeout_sec=60.0,
+                progress_cb=lambda fb: print(f"[progress] {fb}"),
+            )
+            print(res)
+
+        返回:
+            dict: {
+                "success": bool,
+                "message": str,
+                "status": "SUCCESS"|"FAILURE"|"TIMEOUT"|"EXCEPTION",
+                "elapsed_sec": float
+            }
+        """
+        with self._test_lock:
+            # 如果你的Action正在执行，保护性地拒绝测试，避免同一份self.behaviour_tree被并发修改
+            if getattr(self, "active_goal_handle", None) and self.active_goal_handle.is_active:
+                msg = "机器人正忙（存在活动的Action任务），测试被拒绝"
+                if verbose:
+                    self.node.get_logger().error(msg)
+                return {"success": False, "message": msg, "status": "BUSY", "elapsed_sec": 0.0}
+
+            start_t = time.time()
+            dt = 1.0 / max(tick_hz, 1e-3)
+            result = {"success": False, "message": "", "status": "UNKNOWN", "elapsed_sec": 0.0}
+
+            # 构建行为树
+            try:
+                if verbose:
+                    self.node.get_logger().info(f"[TEST] 创建行为树: task='{task_name}', params={params or {} }")
+                self.behaviour_tree = self.behavior_tree_manager.create_tree_for_task(task_name, params or {})
+                if self.behaviour_tree is None:
+                    raise ValueError(f"无法为任务 '{task_name}' 创建行为树")
+            except Exception as e:
+                msg = f"[TEST] 构建行为树失败: {e}"
+                if verbose:
+                    self.node.get_logger().error(msg)
+                return {"success": False, "message": msg, "status": "EXCEPTION", "elapsed_sec": 0.0}
+
+            try:
+                # 主测试循环：直至SUCCESS/FAILURE/超时
+                while True:
+                    # 执行一个tick
+                    self.behaviour_tree.tick()
+
+                    root = self.behaviour_tree.root
+                    tree_status = root.status  # py_trees.common.Status
+                    # 找到第一个RUNNING的活动节点，用于“reason”
+                    active_node = next(
+                        (node for node in root.iterate() if node.status == py_trees.common.Status.RUNNING),
+                        None
+                    )
+
+                    # 从黑板(如果有)拿一个通用的整数型进度
+                    progress = 0
+                    bb_client = getattr(self.behaviour_tree, "blackboard_client", None)
+                    if bb_client is not None:
+                        p = bb_client.get("progress")
+                        if p is not None:
+                            try:
+                                progress = int(p)
+                            except Exception:
+                                progress = 0
+
+                    # 进度回调（可选）
+                    if progress_cb:
+                        progress_cb({
+                            "status": tree_status.value,  # "RUNNING"|"SUCCESS"|"FAILURE"
+                            "reason": active_node.name if active_node else (
+                                "完成中" if tree_status == py_trees.common.Status.RUNNING else ""),
+                            "progress": progress,
+                            "timestamp": time.time()
+                        })
+
+                    # 结束条件判断
+                    if tree_status == py_trees.common.Status.SUCCESS:
+                        result.update({
+                            "success": True,
+                            "message": "任务成功",
+                            "status": "SUCCESS",
+                        })
+                        if verbose:
+                            self.node.get_logger().info("[TEST] 任务成功完成")
+                        break
+                    elif tree_status == py_trees.common.Status.FAILURE:
+                        result.update({
+                            "success": False,
+                            "message": "任务执行失败",
+                            "status": "FAILURE",
+                        })
+                        if verbose:
+                            self.node.get_logger().warn("[TEST] 任务失败")
+                        break
+
+                    # 超时判断
+                    if timeout_sec is not None and (time.time() - start_t) > timeout_sec:
+                        result.update({
+                            "success": False,
+                            "message": f"测试执行超时({timeout_sec}s)",
+                            "status": "TIMEOUT",
+                        })
+                        if verbose:
+                            self.node.get_logger().warn(f"[TEST] 任务超时({timeout_sec}s)")
+                        break
+
+                    # 简单sleep控制tick频率（测试场景，不用ROS定时器）
+                    time.sleep(dt)
+
+            except Exception as e:
+                msg = f"[TEST] 执行异常: {e}"
+                if verbose:
+                    self.node.get_logger().error(msg, exc_info=True)
+                result.update({
+                    "success": False,
+                    "message": msg,
+                    "status": "EXCEPTION",
+                })
+            finally:
+                # 与Action通道复用相同的清理逻辑
+                try:
+                    self.cleanup_action()
+                except Exception as _:
+                    pass
+                result["elapsed_sec"] = round(time.time() - start_t, 3)
+
+            return result
 
     ########################## Publisher Odom  ############################
     def publish_robot_state(self):

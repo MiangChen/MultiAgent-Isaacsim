@@ -65,7 +65,7 @@ class NavigateToBehaviour(py_trees.behaviour.Behaviour):
                 self.logger.info(f"  行为节点 ({self.name}): 导航完成")
                 return py_trees.common.Status.SUCCESS
             else:
-                self.logger.error(f"  行为节点 ({self.name}): 导航失败 - {feedback.get('message', '')}")
+                self.logger.error(f" 行为节点 ({self.name}): 导航失败 - {feedback.get('message', '')}")
                 return py_trees.common.Status.FAILURE
                 
         except StopIteration as e:
@@ -78,14 +78,14 @@ class NavigateToBehaviour(py_trees.behaviour.Behaviour):
                     return py_trees.common.Status.FAILURE
             return py_trees.common.Status.FAILURE
         except Exception as e:
-            self.logger.error(f"  行为节点 ({self.name}): 导航异常 - {str(e)}")
+            self.logger.error(f" 行为节点 ({self.name}): 导航异常 - {str(e)}")
             return py_trees.common.Status.FAILURE
 
     def terminate(self, new_status):
         """行为结束时的清理"""
         self._is_running = False
         self._navigation_generator = None
-        self.logger.debug(f"  行为节点 ({self.name}): 导航结束，状态: {new_status}")
+        self.logger.debug(f" 行为节点 ({self.name}): 导航结束，状态: {new_status}")
 
 
 class ReturnHomeBehaviour(py_trees.behaviour.Behaviour):

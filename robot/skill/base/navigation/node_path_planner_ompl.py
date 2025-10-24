@@ -132,6 +132,9 @@ class NodePlannerOmpl(Node):
         self.free_value = self.map_info["free_value"]
         self.unknown_value = self.map_info["unknown_value"]
 
+        print("Checking map~~~~")
+        print(self.map_info["min_bound"], self.map_info["max_bound"])
+
     def callback_point_cloud(self, msg_point_cloud: PointCloud2):
 
         self.grid_map = np.full(self.shape, self.free_value, dtype=np.int8)
@@ -204,7 +207,6 @@ class NodePlannerOmpl(Node):
         ]  # xyzw
 
         path = self.compute_path(start_position, goal_position, start_quat, goal_quat)
-
         result = ComputePathToPose.Result()
 
         def convert_ompl_path_to_ros_msg(path: list, frame_id: str) -> Path:
@@ -258,22 +260,32 @@ class NodePlannerOmpl(Node):
 
         start_state = ob.State(self.space)  # type(start_state)=ompl.base._base.State
         # start_state = self.space
-        start_state[0] = start_pos[0]  # X
-        start_state[1] = start_pos[1]  # Y
-        start_state[2] = start_pos[2]  # Z
-        start_state[3] = start_quat[0]
-        start_state[4] = start_quat[1]
-        start_state[5] = start_quat[2]
-        start_state[6] = start_quat[3]
+        s3 = start_state()
+        s3.setXYZ(start_pos[0], start_pos[1], start_pos[2])
+        s3.rotation().x = float(start_quat[0])
+        s3.rotation().y = float(start_quat[1])
+        s3.rotation().z = float(start_quat[2])
+        s3.rotation().w = float(start_quat[3])
 
         goal_state = ob.State(self.space)
-        goal_state[0] = goal_pos[0]
-        goal_state[1] = goal_pos[1]
-        goal_state[2] = goal_pos[2]
-        goal_state[3] = goal_quat[0]
-        goal_state[4] = goal_quat[1]
-        goal_state[5] = goal_quat[2]
-        goal_state[6] = goal_quat[3]
+        g3 = goal_state()
+        g3.setXYZ(goal_pos[0], goal_pos[1], goal_pos[2])
+        g3.rotation().x = float(goal_quat[0])
+        g3.rotation().y = float(goal_quat[1])
+        g3.rotation().z = float(goal_quat[2])
+        g3.rotation().w = float(goal_quat[3])
+
+        def normalize_quat(st):
+            """Normalize quaternion inside OMPL SE3 state."""
+            r = st().rotation()
+            n = (r.x ** 2 + r.y ** 2 + r.z ** 2 + r.w ** 2) ** 0.5
+            if n < 1e-12:
+                r.x = r.y = r.z = 0.0; r.w = 1.0
+            else:
+                r.x, r.y, r.z, r.w = r.x / n, r.y / n, r.z / n, r.w / n
+
+        normalize_quat(start_state)
+        normalize_quat(goal_state)
 
         pdef.setStartAndGoalStates(start_state, goal_state)
 
@@ -282,6 +294,7 @@ class NodePlannerOmpl(Node):
         planner.setup()
 
         solved = planner.solve(5.0)
+
         path = []
         if solved:
             solution_path = pdef.getSolutionPath()
