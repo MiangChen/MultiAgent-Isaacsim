@@ -142,25 +142,9 @@ class Robot:
         self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
         self.transform_camera_pos = np.array([0, 0, 0])
 
-        # 机器人的ros node
-        self.node = NodeRobot(namespace=self.namespace)
-        self.node.set_robot_instance(self)
-        self.node.callback_execute_skill = self.callback_task_execution
+        # 初始化基础设施组件
+        self._init_ros()
 
-        self.node_planner_ompl = NodePlannerOmpl(namespace=self.namespace)
-        self.node_trajectory_generator = NodeTrajectoryGenerator(
-            namespace=self.namespace
-        )
-        self.node_controller_mpc = NodeMpcController(namespace=self.namespace)
-        self.action_client_path_planner = ActionClient(
-            self.node, ComputePathToPose, "action_compute_path_to_pose"
-        )
-
-        self.executor = MultiThreadedExecutor()
-        self.ros_thread = None
-        self.stop_event = threading.Event()
-        self._setup_executor()
-        self.start_ros()
         # self.node.start_spinning()
         # self.node_planner_ompl.start_spinning()
         # self.node_trajectory_generator.start_spinning()
@@ -466,13 +450,39 @@ class Robot:
         self.vel_linear = linear_vel
         self.vel_angular = angular_vel
 
-    ########################## Start ROS  ############################
+    ########################## Infrastructure Initialization ############################
+    
+    def _init_ros(self):
+        """初始化机器人的基础设施组件"""
+        # ROS节点基础设施
+        self.node = NodeRobot(namespace=self.namespace)
+        self.node.set_robot_instance(self)
+        self.node.callback_execute_skill = self.callback_task_execution
 
-    def _setup_executor(self):
+        # 导航基础设施节点
+        self.node_planner_ompl = NodePlannerOmpl(namespace=self.namespace)
+        self.node_trajectory_generator = NodeTrajectoryGenerator(namespace=self.namespace)
+        self.node_controller_mpc = NodeMpcController(namespace=self.namespace)
+        
+        # Action客户端
+        self.action_client_path_planner = ActionClient(
+            self.node, ComputePathToPose, "action_compute_path_to_pose"
+        )
+
+        # 执行器和线程管理
+        self.executor = MultiThreadedExecutor()
+        self.ros_thread = None
+        self.stop_event = threading.Event()
+        
+        # 设置执行器并启动ROS
         self.executor.add_node(self.node)
         self.executor.add_node(self.node_planner_ompl)
         self.executor.add_node(self.node_trajectory_generator)
         self.executor.add_node(self.node_controller_mpc)
+
+        self.start_ros()
+
+    ########################## Start ROS  ############################
 
     def start_ros(self):
         if self.ros_thread is None or not self.ros_thread.is_alive():
@@ -514,7 +524,7 @@ class Robot:
             self.node_trajectory_generator.destroy_node()
             self.node_controller_mpc.destroy_node()
         except Exception as e:
-            logger.error(f"Error cleaning up robot {self.name}: {e}")
+            logger.error(f"Error cleaning up robot {self.namespace}: {e}")
 
     def initialize(self) -> None:
         for camera_name, camera_cfg in self.cfg_robot.cfg_dict_camera.items():
