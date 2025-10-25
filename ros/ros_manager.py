@@ -73,9 +73,10 @@ class RosManager:
                 if n and self.executor:
                     self.executor.remove_node(n)
                     n.destroy_node()
-            if rclpy.ok():
-                rclpy.shutdown()
-            logger.info("ROS executor shutdown complete.")
+            # 不在这里调用 rclpy.shutdown()，由main统一管理, 因为每个机器人有独立的executor/rclpy要运行
+            # if rclpy.ok():
+            #     rclpy.shutdown()
+            logger.info("ROS manager executor stopped (rclpy context preserved for robots).")
 
     def stop(self):
         """停止ROS线程"""

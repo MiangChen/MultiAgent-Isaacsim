@@ -357,6 +357,11 @@ def main():
         count += 1
 
     ros_manager.stop()
+    
+    # 统一关闭rclpy上下文
+    if rclpy.ok():
+        rclpy.shutdown()
+        logger.info("ROS context shutdown completed")
 
     container.unwire()
     loop.close()
