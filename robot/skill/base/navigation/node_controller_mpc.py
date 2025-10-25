@@ -197,8 +197,9 @@ class NodeMpcController(Node):
     def __init__(self, namespace: str):
         super().__init__(node_name="node_mpc_controller", namespace=namespace)
 
-        self.executor = MultiThreadedExecutor()
-        self.thread = threading.Thread(target=self._spin, daemon=True)
+        # 移除独立的executor，由robot.py统一管理
+        # self.executor = MultiThreadedExecutor()
+        # self.thread = threading.Thread(target=self._spin, daemon=True)
 
         # Load parameters
         self.declare_parameters(
@@ -252,18 +253,19 @@ class NodeMpcController(Node):
 
         self.get_logger().info("MPC Controller Node has started.")
 
-    def start_spinning(self):
-        if self.executor is None:
-            self.executor = MultiThreadedExecutor()
-        self.executor.add_node(self)
-        self.thread.start()
-        self.get_logger().info("Planner node spinning started in its own thread.")
+    # 移除独立的spinning方法，由robot.py的统一executor管理
+    # def start_spinning(self):
+    #     if self.executor is None:
+    #         self.executor = MultiThreadedExecutor()
+    #     self.executor.add_node(self)
+    #     self.thread.start()
+    #     self.get_logger().info("Planner node spinning started in its own thread.")
 
-    def _spin(self):
-        try:
-            self.executor.spin()
-        except Exception as e:
-            self.get_logger().error(f"Spin failed in node {self.namespace}: {e}")
+    # def _spin(self):
+    #     try:
+    #         self.executor.spin()
+    #     except Exception as e:
+    #         self.get_logger().error(f"Spin failed in node {self.namespace}: {e}")
 
     def trajectory_callback(self, msg: JointTrajectory):
         """Handles incoming trajectory messages."""

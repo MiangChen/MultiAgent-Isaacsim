@@ -52,8 +52,9 @@ class NodePlannerOmpl(Node):
         self.space = None
         self.si = None
 
-        self.executor = MultiThreadedExecutor()
-        self.thread = threading.Thread(target=self._spin, daemon=True)
+        # 移除独立的executor，由robot.py统一管理
+        # self.executor = MultiThreadedExecutor()
+        # self.thread = threading.Thread(target=self._spin, daemon=True)
 
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
@@ -93,18 +94,19 @@ class NodePlannerOmpl(Node):
             callback_group=callback_group,
         )
 
-    def start_spinning(self):
-        if self.executor is None:
-            self.executor = MultiThreadedExecutor()
-        self.executor.add_node(self)
-        self.thread.start()
-        self.get_logger().info("Planner node spinning started in its own thread.")
+    # 移除独立的spinning方法，由robot.py的统一executor管理
+    # def start_spinning(self):
+    #     if self.executor is None:
+    #         self.executor = MultiThreadedExecutor()
+    #     self.executor.add_node(self)
+    #     self.thread.start()
+    #     self.get_logger().info("Planner node spinning started in its own thread.")
 
-    def _spin(self):
-        try:
-            self.executor.spin()
-        except Exception as e:
-            self.get_logger().error(f"Spin failed in node {self.namespace}: {e}")
+    # def _spin(self):
+    #     try:
+    #         self.executor.spin()
+    #     except Exception as e:
+    #         self.get_logger().error(f"Spin failed in node {self.namespace}: {e}")
 
     def callback(self, msg_map_info: DiagnosticArray, msg_point_cloud: PointCloud2):
         self.callback_map_info(msg_map_info=msg_map_info)
