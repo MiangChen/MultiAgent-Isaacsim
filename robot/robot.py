@@ -216,7 +216,7 @@ class Robot:
         """
         self.node.get_logger().info("tick_the_tree() 被调用")
         
-        if not self.active_goal_handle or not self.active_goal_handle.is_active:
+        if not self.active_goal_handle :#  or not self.active_goal_handle.is_active:
             self.node.get_logger().warn("当前任务句柄无效或非活动，停止执行。")
             self.cleanup_action()
             return
