@@ -198,7 +198,7 @@ class Robot:
             return SkillExecution.Result(success=False, message=f"构建行为树失败: {e}")
 
         self.active_goal_handle = goal_handle
-        goal_handle.accept()
+        # goal_handle.accept()
 
 
         tick_frequency = 10.0
