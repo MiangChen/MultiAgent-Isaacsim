@@ -142,7 +142,7 @@ class Robot:
         self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
         self.transform_camera_pos = np.array([0, 0, 0])
 
-        # 初始化基础设施组件
+        # 初始化基础ROS组件
         self._init_ros()
 
         # self.node.start_spinning()
@@ -186,10 +186,10 @@ class Robot:
 
         request = goal_handle.request.skill_request
         task_name = request.skill_list[0].skill  # todo 返回的是一个技能列表, 目前我们先处理第一个
-        params = {p.key: p.value for p in request.skill_list[0].skill_args}
+        params = {p.key: p.value for p in request.skill_list[0].params}
 
         try:
-            self.behaviour_tree = self.behavior_tree_manager.create_tree_for_task(task_name, )
+            self.behaviour_tree = self.behavior_tree_manager.create_tree_for_task(task_name, params)
             if self.behaviour_tree is None:
                 raise ValueError(f"无法为任务 '{task_name}' 创建行为树")
         except Exception as e:
@@ -200,8 +200,11 @@ class Robot:
         self.active_goal_handle = goal_handle
         goal_handle.accept()
 
+
         tick_frequency = 10.0
+        self.node.get_logger().info(f"创建定时器，频率: {tick_frequency} Hz")
         self.action_timer = self.node.create_timer(1.0 / tick_frequency, self.tick_the_tree)
+        self.node.get_logger().info(f"定时器创建成功: {self.action_timer is not None}")
         self.node.get_logger().info(f"任务 '{task_name}' 已接受并开始执行。")
 
         return SkillExecution.Result()
@@ -211,12 +214,15 @@ class Robot:
         定时器回调函数，这是您的新“主执行循环”。
         它会周期性地驱动行为树并发送反馈。
         """
+        self.node.get_logger().info("tick_the_tree() 被调用")
+        
         if not self.active_goal_handle or not self.active_goal_handle.is_active:
             self.node.get_logger().warn("当前任务句柄无效或非活动，停止执行。")
             self.cleanup_action()
             return
 
         try:
+            self.node.get_logger().info("开始执行 behaviour_tree.tick()")
             self.behaviour_tree.tick()
 
             feedback_msg = SkillExecution.Feedback()
@@ -453,11 +459,10 @@ class Robot:
     ########################## Infrastructure Initialization ############################
     
     def _init_ros(self):
-        """初始化机器人的基础设施组件"""
         # ROS节点基础设施
         self.node = NodeRobot(namespace=self.namespace)
         self.node.set_robot_instance(self)
-        self.node.callback_execute_skill = self.callback_task_execution
+        # self.node.callback_execute_skill = self.callback_task_execution  # 不可以用这个方法, 回调函数无法在后期修改
 
         # 导航基础设施节点
         self.node_planner_ompl = NodePlannerOmpl(namespace=self.namespace)
@@ -491,11 +496,21 @@ class Robot:
             )
             self.ros_thread.start()
             logger.info(f"Robot {self.namespace} ROS thread started")
+            # 等待一小段时间确保线程启动
+            import time
+            time.sleep(0.1)
+            logger.info(f"Robot {self.namespace} ROS thread is_alive: {self.ros_thread.is_alive()}")
 
     def _spin_ros(self):
+        logger.info(f"Robot {self.namespace} ROS thread started spinning")
         try:
+            spin_count = 0
             while not self.stop_event.is_set():
                 self.executor.spin_once(timeout_sec=0.05)
+                spin_count += 1
+                # 每1000次spin记录一次，避免日志过多
+                if spin_count % 1000 == 0:
+                    logger.debug(f"Robot {self.namespace} ROS thread spinning... count: {spin_count}")
         except Exception as e:
             logger.error(f"Robot {self.namespace} ROS thread error: {e}")
         finally:
