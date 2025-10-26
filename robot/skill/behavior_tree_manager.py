@@ -118,7 +118,8 @@ class BehaviorTreeManager:
             self._logger.info(f"创建任务 '{task_name}' 的行为树...")
             root_node = builder(self.robot, params)
             tree = py_trees.trees.BehaviourTree(root=root_node)
-            tree.setup(timeout=20)
+            # 跳过 tree.setup() 调用，因为它使用 signal 模块，只能在主线程中工作
+            # tree.setup(timeout=20)
             
             self._current_tree = tree
             self._logger.info(f"成功创建任务 '{task_name}' 的行为树")
