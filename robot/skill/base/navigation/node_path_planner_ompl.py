@@ -291,11 +291,11 @@ class NodePlannerOmpl(Node):
 
         pdef.setStartAndGoalStates(start_state, goal_state)
 
-        planner = og.RRTstar(self.si)
+        planner = og.RRT(self.si)
         planner.setProblemDefinition(pdef)
         planner.setup()
 
-        solved = planner.solve(5.0)
+        solved = planner.solve(10)
 
         path = []
         if solved:
@@ -360,7 +360,6 @@ class NodePlannerOmpl(Node):
                 and 0 <= grid_z < self.grid_map.shape[2]
             ):
                 return self.grid_map[grid_x, grid_y, grid_z] == 0
-        print(x, y, z)
         return False
 
     def is_valid_state_rigid_body(self, state):
