@@ -9,6 +9,7 @@
 
 # Standard library imports
 import threading
+from threading import Thread
 from typing import Any, Dict
 import time
 
@@ -187,26 +188,58 @@ class Robot:
         request = goal_handle.request.skill_request
         task_name = request.skill_list[0].skill  # todo 返回的是一个技能列表, 目前我们先处理第一个
         params = {p.key: p.value for p in request.skill_list[0].params}
+        params['robot'] = self
 
-        try:
-            self.behaviour_tree = self.behavior_tree_manager.create_tree_for_task(task_name, params)
-            if self.behaviour_tree is None:
-                raise ValueError(f"无法为任务 '{task_name}' 创建行为树")
-        except Exception as e:
-            logger.error(f"构建行为树失败: {e}")
-            goal_handle.abort()
-            return SkillExecution.Result(success=False, message=f"构建行为树失败: {e}")
-
-        self.active_goal_handle = goal_handle
-        # goal_handle.accept()
-
-        tick_frequency = 10.0
-        logger.info(f"创建定时器，频率: {tick_frequency} Hz")
-        self.action_timer = self.node.create_timer(1.0 / tick_frequency, self.tick_the_tree)
-        logger.info(f"定时器创建成功: {self.action_timer is not None}")
-        logger.info(f"任务 '{task_name}' 已接受并开始执行。")
+        skill_thread = Thread(
+            target=self.execute_skill_async,
+            args=(goal_handle, task_name, params)
+        )
+        skill_thread.start()
+        # self.active_goal_handle = goal_handle
+        # try:
+        #     self.behaviour_tree = self.behavior_tree_manager.create_tree_for_task(task_name, params)
+        #     if self.behaviour_tree is None:
+        #         raise ValueError(f"无法为任务 '{task_name}' 创建行为树")
+        # except Exception as e:
+        #     logger.error(f"构建行为树失败: {e}")
+        #     goal_handle.abort()
+        #     return SkillExecution.Result(success=False, message=f"构建行为树失败: {e}")
+        #
+        # self.active_goal_handle = goal_handle
+        # # goal_handle.accept()
+        #
+        # tick_frequency = 10.0
+        # logger.info(f"创建定时器，频率: {tick_frequency} Hz")
+        # self.action_timer = self.node.create_timer(1.0 / tick_frequency, self.tick_the_tree)
+        # logger.info(f"定时器创建成功: {self.action_timer is not None}")
+        # logger.info(f"任务 '{task_name}' 已接受并开始执行。")
 
         return SkillExecution.Result()
+
+    def execute_skill_async(self, goal_handle, task_name, params):
+        """在单独线程中执行技能"""
+        from robot.skill.base.navigation.navigate_to import navigate_to_skill
+        SKILL_TABLE = {'navigation': navigate_to_skill}
+
+        try:
+            skill_generator = SKILL_TABLE[task_name](**params)
+            self.active_goal_handle = goal_handle
+
+            for feedback in skill_generator:
+                if goal_handle.is_cancel_requested:
+                    goal_handle.canceled()
+                    return
+                feedback_msg = SkillExecution.Feedback()
+                feedback_msg.status = feedback['status']
+                goal_handle.publish_feedback(feedback_msg)
+
+            # 技能完成
+            goal_handle.succeed()
+
+        except Exception as e:
+            goal_handle.abort()
+        finally:
+            self.active_goal_handle = None
 
     def tick_the_tree(self):
         """
