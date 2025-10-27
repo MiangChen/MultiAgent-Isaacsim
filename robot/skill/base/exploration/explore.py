@@ -1,12 +1,13 @@
+from .plan_exploration_waypoints import plan_exploration_waypoints_skill
 def explore_skill(**kwargs):
     robot = kwargs.get("robot")
     boundary = kwargs.get("boundary")
-    holes = kwargs.get("holes")
+    holes = kwargs.get("holes", [])
     target_prim = kwargs.get("target_prim", "/TARGET_PRIM_NOT_SPECIFIED")
-
-    waypoints = robot.plan_exploration_waypoints(
-        boundary,
-        holes,
+    waypoints = plan_exploration_waypoints_skill(
+        robot=robot,
+        polygon_coords=boundary,
+        holes=holes,
         lane_width=robot.body.cfg_robot.detection_radius,
         robot_radius=robot.body.cfg_robot.robot_radius,
     )

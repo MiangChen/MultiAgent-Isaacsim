@@ -1,7 +1,7 @@
 def plan_exploration_waypoints_skill(**kwargs):
     robot = kwargs.get("robot")
     polygon_coords = kwargs.get("polygon_coords")
-    holes = kwargs.get("holes")
+    holes = kwargs.get("holes", [])
     lane_width = kwargs.get("lane_width", 1.0)
     robot_radius = kwargs.get("robot_radius", 0.2)
     sweep_deg = kwargs.get("sweep_deg", 0.0)
