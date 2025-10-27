@@ -1,5 +1,8 @@
 import json
+from functools import partial
 
+# ROS2
+from nav2_msgs.action import ComputePathToPose
 
 def navigate_to_skill(**kwargs):
     robot = kwargs.get("robot")
@@ -10,8 +13,6 @@ def navigate_to_skill(**kwargs):
     if type(goal_quat_wxyz) is str:
         goal_quat_wxyz = json.loads(goal_quat_wxyz)
 
-    from nav2_msgs.action import ComputePathToPose
-    from functools import partial
 
     if robot.is_planning:
         robot.node.get_logger().warn("Planning already in progress.")
@@ -40,13 +41,10 @@ def navigate_to_skill(**kwargs):
 
     yield robot.form_feedback("processing", "Path Planning processing", 30)
 
-    result = robot.node_controller_mpc.move_event.wait(timeout=100)
-
-    if result:
+    if robot.node_controller_mpc.move_event.is_set():
         return robot.form_feedback("finished", "Navigation completed.", 100)
     else:
-        return robot.form_feedback("failed", "Navigation failed. / Time exceeded.", 100)
-
+        return robot.form_feedback("processing", "Navigation in progress...", 50)
 
 def _goal_response_callback(robot, future):
     goal_handle = future.result()
