@@ -6,13 +6,19 @@ from nav2_msgs.action import ComputePathToPose
 
 
 def navigate_to_skill(**kwargs):
+
     robot = kwargs.get("robot")
     goal_pos = kwargs.get("goal_pos")
-    if type(goal_pos) is str:
-        goal_pos = json.loads(goal_pos)
     goal_quat_wxyz = kwargs.get("goal_quat_wxyz", [1.0, 0.0, 0.0, 0.0])
-    if type(goal_quat_wxyz) is str:
+
+    if isinstance(goal_pos, str):
+        goal_pos = json.loads(goal_pos)
+    elif isinstance(goal_pos, tuple):
+        goal_pos = list(goal_pos)
+    if isinstance(goal_quat_wxyz, str):
         goal_quat_wxyz = json.loads(goal_quat_wxyz)
+    elif isinstance(goal_quat_wxyz, tuple):
+        goal_quat_wxyz = list(goal_quat_wxyz)
 
     if robot.is_planning:
         robot.node.get_logger().warn("Planning already in progress.")
