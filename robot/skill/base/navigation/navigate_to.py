@@ -41,10 +41,14 @@ def navigate_to_skill(**kwargs):
 
     yield robot.form_feedback("processing", "Path Planning processing", 30)
 
-    if robot.node_controller_mpc.move_event.is_set():
-        return robot.form_feedback("finished", "Navigation completed.", 100)
-    else:
-        return robot.form_feedback("processing", "Navigation in progress...", 50)
+    while True:
+        if robot.node_controller_mpc.move_event.is_set():
+            return robot.form_feedback("finished", "Navigation completed.", 100)
+        else:
+            yield robot.form_feedback("processing", "Navigation in progress...", 50)
+            # 短暂休眠，避免过度占用CPU
+            import time
+            time.sleep(0.1)
 
 def _goal_response_callback(robot, future):
     goal_handle = future.result()
