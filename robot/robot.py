@@ -511,6 +511,8 @@ class Robot:
                 # 每1000次spin记录一次，避免日志过多
                 if spin_count % 1000 == 0:
                     logger.debug(f"Robot {self.namespace} ROS thread spinning... count: {spin_count}")
+                    # print(f"Robot {self.namespace} ROS thread spinning... count: {spin_count}")
+                spin_count += 1
         except Exception as e:
             logger.error(f"Robot {self.namespace} ROS thread error: {e}")
         finally:

@@ -65,7 +65,7 @@ dict_map_semantic:
 
 # --- 日志配置 ---
 logging:
-  level: "INFO" # 可选: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "DEBUG" # 层级关系: DEBUG (all message) > INFO > WARNING > ERROR > CRITICAL (breaking errors)
   file: "logs/app.log" # 相对于项目根目录，或使用绝对路径
 
 # ROS相关
