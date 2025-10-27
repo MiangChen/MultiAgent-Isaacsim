@@ -52,6 +52,8 @@ class Target(Robot):
             self.cfg_robot.target_pos,
         ]
         self.path_index = 0
+        self.debug_counter = 0
+        self.debug_period = 100
 
     def start_moving(self) -> None:
         self.is_moving = True
@@ -69,11 +71,15 @@ class Target(Robot):
     def execute_frame_skill(
         self,
     ) -> None:
+
+        self.debug_counter += 1
+
         if self.is_moving:
             if self.node_controller_mpc.has_reached_goal:
                 navigate_to_skill(robot=self, goal_pos=self.path[self.path_index], goal_quat_wxyz=[1.0, 0.0, 0.0, 0.0])
                 self.path_index += 1
                 self.path_index %= len(self.path)
+
 
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
