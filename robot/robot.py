@@ -220,7 +220,7 @@ class Robot:
         """在单独线程中执行技能"""
         from robot.skill.base.navigation.navigate_to import navigate_to_skill
         SKILL_TABLE = {'navigation': navigate_to_skill}
-
+        feedback_msg = SkillExecution.Feedback()
         try:
             skill_generator = SKILL_TABLE[task_name](**params)
             self.active_goal_handle = goal_handle
@@ -229,7 +229,7 @@ class Robot:
                 if goal_handle.is_cancel_requested:
                     goal_handle.canceled()
                     return
-                feedback_msg = SkillExecution.Feedback()
+
                 feedback_msg.status = feedback['status']
                 goal_handle.publish_feedback(feedback_msg)
 
@@ -237,6 +237,8 @@ class Robot:
             goal_handle.succeed()
 
         except Exception as e:
+            feedback_msg.status = 'fail'
+            goal_handle.publish_feedback(feedback_msg)
             goal_handle.abort()
         finally:
             self.active_goal_handle = None
