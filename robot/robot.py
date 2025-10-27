@@ -633,14 +633,10 @@ class Robot:
         if (
             self.is_tracking
             and self.node_controller_mpc.has_reached_goal
+            and self.track_waypoint_index < len(self.track_waypoint_list)
         ):
-            if self.track_waypoint_index >= len(self.track_waypoint_list):
-                navigate_to_skill(robot = self, goal_pos = self.track_waypoint_list[self.track_waypoint_index])
-                self.track_waypoint_index += 1
-            else:
-                self.track_waypoint_index %= 3
-                navigate_to_skill(robot = self, goal_pos = self.track_waypoint_list[self.track_waypoint_index])
-                self.track_waypoint_index += 1
+            navigate_to_skill(robot = self, goal_pos = self.track_waypoint_list[self.track_waypoint_index])
+            self.track_waypoint_index += 1
 
     def track_callback(self, msg):
         pos = (
