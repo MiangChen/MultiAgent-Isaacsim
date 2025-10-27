@@ -346,6 +346,7 @@ class NodeMpcController(Node):
                 return
 
             # Condition 2: Have we run out of extra time?
+            self.has_reached_goal = True
             if (
                 elapsed_time
                 > self.trajectory_manager.duration + self.completion_timeout

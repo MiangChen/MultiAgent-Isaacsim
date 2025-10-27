@@ -12,18 +12,13 @@ from typing import Dict, List, Tuple
 
 # Third-party library imports
 import torch
-import numpy as np
 
 # Local project imports
 from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from robot.robot import Robot
-from robot.robot_trajectory import Trajectory
 from robot.cfg.cfg_target import CfgTarget
 from robot.body.body_target import BodyTarget
-from robot.sensor.camera import CfgCamera, CfgCameraThird
-from utils import to_torch, quat_to_yaw
-
-# from path_planning.path_planning_astar import AStar
+from robot.skill.base.navigation.navigate_to import navigate_to_skill
 
 # Custom ROS message imports
 from gsi_msgs.gsi_msgs_helper import (
@@ -65,6 +60,8 @@ class Target(Robot):
         self.path = []
         self.path_index = 0
         zero_velocity = torch.zeros((1, 3), dtype=torch.float32)
+        self.vel_linear = zero_velocity
+        self.vel_angular = zero_velocity
         self.body.robot_articulation.set_linear_velocities(zero_velocity)
         self.body.robot_articulation.set_angular_velocities(zero_velocity)
 
@@ -73,7 +70,7 @@ class Target(Robot):
     ) -> None:
         if self.is_moving:
             if self.node_controller_mpc.has_reached_goal:
-                self.navigate_to(list(self.path[self.path_index]))
+                navigate_to_skill(robot=self, goal_pos=self.path[self.path_index], goal_quat_wxyz=[1.0, 0.0, 0.0, 0.0])
                 self.path_index += 1
                 self.path_index %= len(self.path)
 

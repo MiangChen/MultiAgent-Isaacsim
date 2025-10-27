@@ -155,6 +155,8 @@ class Robot:
         self.is_tracking = False
         self.track_waypoint_sub = None
         self.is_planning = False
+        self.track_counter = 0
+        self.track_period = 300
 
         # 测试锁
         self._test_lock = threading.Lock()
@@ -643,16 +645,6 @@ class Robot:
         self.track_counter += 1
         if self.track_counter % self.track_period == 0:
             self.track_waypoint_list.append(pos)
-
-    def start_tracking(self, target_prim: str = None):
-        self.is_tracking = True
-        self.track_waypoint_list = self.node.create_subscription(
-            VelTwistPose,
-            "/target/odom",
-            self.track_callback,
-            50,
-        )
-        return self.form_feedback(status="normal")
 
     def stop_tracking(self):
         self.is_tracking = False
