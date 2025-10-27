@@ -177,10 +177,10 @@ class Robot:
         新的非阻塞式 Action Server 回调。
         当接收到新的 Action Goal 时被调用。
         """
-        self.node.get_logger().info('接收到新的任务目标...')
+        logger.info('接收到新的任务目标...')
 
-        if self.active_goal_handle and self.active_goal_handle.is_active:
-            self.node.get_logger().error('机器人正忙，拒绝新任务！')
+        if self.active_goal_handle:
+            logger.error('机器人正忙，拒绝新任务！')
             goal_handle.abort()
             return SkillExecution.Result(success=False, message="机器人正忙")
 
@@ -193,19 +193,18 @@ class Robot:
             if self.behaviour_tree is None:
                 raise ValueError(f"无法为任务 '{task_name}' 创建行为树")
         except Exception as e:
-            self.node.get_logger().error(f"构建行为树失败: {e}")
+            logger.error(f"构建行为树失败: {e}")
             goal_handle.abort()
             return SkillExecution.Result(success=False, message=f"构建行为树失败: {e}")
 
         self.active_goal_handle = goal_handle
         # goal_handle.accept()
 
-
         tick_frequency = 10.0
-        self.node.get_logger().info(f"创建定时器，频率: {tick_frequency} Hz")
+        logger.info(f"创建定时器，频率: {tick_frequency} Hz")
         self.action_timer = self.node.create_timer(1.0 / tick_frequency, self.tick_the_tree)
-        self.node.get_logger().info(f"定时器创建成功: {self.action_timer is not None}")
-        self.node.get_logger().info(f"任务 '{task_name}' 已接受并开始执行。")
+        logger.info(f"定时器创建成功: {self.action_timer is not None}")
+        logger.info(f"任务 '{task_name}' 已接受并开始执行。")
 
         return SkillExecution.Result()
 
@@ -214,15 +213,15 @@ class Robot:
         定时器回调函数，这是您的新“主执行循环”。
         它会周期性地驱动行为树并发送反馈。
         """
-        self.node.get_logger().info("tick_the_tree() 被调用")
+        logger.info("tick_the_tree() 被调用")
         
         if not self.active_goal_handle :#  or not self.active_goal_handle.is_active:
-            self.node.get_logger().warn("当前任务句柄无效或非活动，停止执行。")
+            logger.warn("当前任务句柄无效或非活动，停止执行。")
             self.cleanup_action()
             return
 
         try:
-            self.node.get_logger().info("开始执行 behaviour_tree.tick()")
+            logger.info("开始执行 behaviour_tree.tick()")
             self.behaviour_tree.tick()
 
             feedback_msg = SkillExecution.Feedback()
@@ -235,12 +234,12 @@ class Robot:
 
             tree_status = self.behaviour_tree.root.status
             if tree_status == py_trees.common.Status.SUCCESS:
-                self.node.get_logger().info('任务成功完成！')
+                logger.info('任务成功完成！')
                 result = SkillExecution.Result(success=True, message="任务成功")
                 self.active_goal_handle.succeed()
                 self.cleanup_action()
             elif tree_status == py_trees.common.Status.FAILURE:
-                self.node.get_logger().warn('任务失败！')
+                logger.warn('任务失败！')
                 result = SkillExecution.Result(success=False, message="任务执行失败")
                 self.active_goal_handle.abort()
                 self.cleanup_action()
@@ -256,7 +255,7 @@ class Robot:
             self.action_timer.cancel()
             self.action_timer = None
         self.behaviour_tree = None
-        self.node.get_logger().info("任务已清理。")
+        logger.info("任务已清理。")
         self.active_goal_handle = None # 在最后重置，允许新任务进入
 
     def run_skill_for_test(
@@ -280,7 +279,7 @@ class Robot:
             tick_hz: tick频率(Hz)
             timeout_sec: 超时时间(秒)。None表示不限时。
             progress_cb: 进度回调，签名为 `callback(dict)`；见下方结构说明。
-            verbose: 是否打印基本日志到 self.node.get_logger()
+            verbose: 是否打印基本日志到 logger
 
         调用示例：
             res = swarm_manager.robot_active['jetbot'][0].run_skill_for_test(
@@ -305,7 +304,7 @@ class Robot:
             if getattr(self, "active_goal_handle", None) and self.active_goal_handle.is_active:
                 msg = "机器人正忙（存在活动的Action任务），测试被拒绝"
                 if verbose:
-                    self.node.get_logger().error(msg)
+                    logger.error(msg)
                 return {"success": False, "message": msg, "status": "BUSY", "elapsed_sec": 0.0}
 
             start_t = time.time()
@@ -315,14 +314,14 @@ class Robot:
             # 构建行为树
             try:
                 if verbose:
-                    self.node.get_logger().info(f"[TEST] 创建行为树: task='{task_name}', params={params or {} }")
+                    logger.info(f"[TEST] 创建行为树: task='{task_name}', params={params or {} }")
                 self.behaviour_tree = self.behavior_tree_manager.create_tree_for_task(task_name, params or {})
                 if self.behaviour_tree is None:
                     raise ValueError(f"无法为任务 '{task_name}' 创建行为树")
             except Exception as e:
                 msg = f"[TEST] 构建行为树失败: {e}"
                 if verbose:
-                    self.node.get_logger().error(msg)
+                    logger.error(msg)
                 return {"success": False, "message": msg, "status": "EXCEPTION", "elapsed_sec": 0.0}
 
             try:
@@ -368,7 +367,7 @@ class Robot:
                             "status": "SUCCESS",
                         })
                         if verbose:
-                            self.node.get_logger().info("[TEST] 任务成功完成")
+                            logger.info("[TEST] 任务成功完成")
                         break
                     elif tree_status == py_trees.common.Status.FAILURE:
                         result.update({
@@ -377,7 +376,7 @@ class Robot:
                             "status": "FAILURE",
                         })
                         if verbose:
-                            self.node.get_logger().warn("[TEST] 任务失败")
+                            logger.warn("[TEST] 任务失败")
                         break
 
                     # 超时判断
@@ -388,7 +387,7 @@ class Robot:
                             "status": "TIMEOUT",
                         })
                         if verbose:
-                            self.node.get_logger().warn(f"[TEST] 任务超时({timeout_sec}s)")
+                            logger.warn(f"[TEST] 任务超时({timeout_sec}s)")
                         break
 
                     # 简单sleep控制tick频率（测试场景，不用ROS定时器）
@@ -397,7 +396,7 @@ class Robot:
             except Exception as e:
                 msg = f"[TEST] 执行异常: {e}"
                 if verbose:
-                    self.node.get_logger().error(msg, exc_info=True)
+                    logger.error(msg, exc_info=True)
                 result.update({
                     "success": False,
                     "message": msg,
@@ -455,6 +454,7 @@ class Robot:
         angular_vel = torch.tensor([msg.angular.x, msg.angular.y, msg.angular.z])
         self.vel_linear = linear_vel
         self.vel_angular = angular_vel
+        logger.debug(f"get linear vel: {linear_vel}, angular vel: {angular_vel}")
 
     ########################## Infrastructure Initialization ############################
     
@@ -596,6 +596,7 @@ class Robot:
         if self.body.robot_articulation.is_physics_handle_valid():
             self.body.robot_articulation.set_linear_velocities(self.vel_linear)
             self.body.robot_articulation.set_angular_velocities(self.vel_angular)
+            logger.debug(f"Robot Articulation vel, {self.vel_linear}")
         return None
 
     def execute_frame_skill(
