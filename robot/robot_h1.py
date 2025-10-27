@@ -86,9 +86,9 @@ class RobotH1(Robot):
         )
 
         # 异步地创建并加载 H1FlatTerrainPolicy 控制器
-        instance.controller_policy = await H1FlatTerrainPolicy.create(
-            prim_path=instance.cfg_robot.path_prim_swarm
-        )
+        # instance.controller_policy = await H1FlatTerrainPolicy.create(
+        #     prim_path=instance.cfg_robot.path_prim_swarm
+        # )
         return instance
 
     def initialize(self):
@@ -121,19 +121,22 @@ class RobotH1(Robot):
         return obs
 
     def on_physics_step(self, step_size):
+        self.vel_linear[2] = 0
+        self.vel_angular[0] = 0
+        self.vel_angular[1] = 0
         super().on_physics_step(step_size)
 
         self.counter += 1
 
-        if self.flag_world_reset == True:
+        # if self.flag_world_reset == True:
             # if self.flag_action_navigation == True:
             #     self.move_along_path()  # 每一次都计算下速度
             #     self.action = self.controller_policy.forward(
             #         step_size, self.base_command, self.body.robot_articulation
             #     )
 
-            self.action = self.controller_policy.forward(
-                step_size, [0, 0, 0], self.body.robot_articulation
-            )
-            self.step(self.action)
+            # self.action = self.controller_policy.forward(
+            #     step_size, [0, 0, 0], self.body.robot_articulation
+            # )
+            # self.step(self.action)
         return
