@@ -33,7 +33,6 @@ from robot.robot_trajectory import Trajectory
 from robot.skill.base.navigation import NodePlannerOmpl
 from robot.skill.base.navigation import NodeTrajectoryGenerator
 from robot.skill.base.navigation import NodeMpcController
-from robot.skill.behavior_tree_manager import BehaviorTreeManager
 from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
 
@@ -117,20 +116,12 @@ class Robot:
         self.vel_angular = torch.tensor([0.0, 0.0, 0.0])
 
         # 机器人的技能
-        # self.skills: dict = {}  # 用于记录其技能: 'skill name': function
-        # self.skill_manager = SkillManager(self)
-        self.behaviour_tree = None       # 存储当前执行的行为树
-        self.behavior_tree_manager = BehaviorTreeManager(self)
-        self.active_goal_handle = None   # 存储当前活动的Action Goal句柄
-        self.action_timer = None         # 用于周期性 tick 行为树的定时器
+        self.active_goal_handle = None  # 存储当前活动的Action Goal句柄
+        self.action_timer = None  # 用于周期性 tick 行为树的定时器
 
         # 用于回调函数中
         self.flag_active = False
         self.flag_world_reset: bool = False  # 用来记录下世界是不是被初始化了
-        # self.flag_action_navigation: bool = False  # 用来记录是不是启动导航了
-        # 用于PDDL, 记录当前用的 skill, 之所以用skill, 是为了和action区分, action一般是底层的关节动作
-        # self.state_skill: str = ""
-        # self.state_skill_complete: bool = True  # 默认状态, 没有skill要做, 所以是True
 
         # 布置机器人的相机传感器, 可以有多个相机
         self.cameras: dict = {}
@@ -145,11 +136,6 @@ class Robot:
 
         # 初始化基础ROS组件
         self._init_ros()
-
-        # self.node.start_spinning()
-        # self.node_planner_ompl.start_spinning()
-        # self.node_trajectory_generator.start_spinning()
-        # self.node_controller_mpc.start_spinning()
 
         # 机器人的任务状态
         self.current_task_id = "0"
@@ -170,7 +156,7 @@ class Robot:
         self.track_waypoint_sub = None
         self.is_planning = False
 
-        #测试锁
+        # 测试锁
         self._test_lock = threading.Lock()
 
     def callback_task_execution(self, goal_handle):
@@ -178,48 +164,31 @@ class Robot:
         新的非阻塞式 Action Server 回调。
         当接收到新的 Action Goal 时被调用。
         """
-        logger.info('接收到新的任务目标...')
+        logger.info("接收到新的任务目标...")
 
         if self.active_goal_handle:
-            logger.error('机器人正忙，拒绝新任务！')
+            logger.error("机器人正忙，拒绝新任务！")
             goal_handle.abort()
             return SkillExecution.Result(success=False, message="机器人正忙")
 
         request = goal_handle.request.skill_request
-        task_name = request.skill_list[0].skill  # todo 返回的是一个技能列表, 目前我们先处理第一个
+        task_name = request.skill_list[
+            0
+        ].skill  # todo 返回的是一个技能列表, 目前我们先处理第一个
         params = {p.key: p.value for p in request.skill_list[0].params}
-        params['robot'] = self
+        params["robot"] = self
 
         skill_thread = Thread(
-            target=self.execute_skill_async,
-            args=(goal_handle, task_name, params)
+            target=self.execute_skill_async, args=(goal_handle, task_name, params)
         )
         skill_thread.start()
-        # self.active_goal_handle = goal_handle
-        # try:
-        #     self.behaviour_tree = self.behavior_tree_manager.create_tree_for_task(task_name, params)
-        #     if self.behaviour_tree is None:
-        #         raise ValueError(f"无法为任务 '{task_name}' 创建行为树")
-        # except Exception as e:
-        #     logger.error(f"构建行为树失败: {e}")
-        #     goal_handle.abort()
-        #     return SkillExecution.Result(success=False, message=f"构建行为树失败: {e}")
-        #
-        # self.active_goal_handle = goal_handle
-        # # goal_handle.accept()
-        #
-        # tick_frequency = 10.0
-        # logger.info(f"创建定时器，频率: {tick_frequency} Hz")
-        # self.action_timer = self.node.create_timer(1.0 / tick_frequency, self.tick_the_tree)
-        # logger.info(f"定时器创建成功: {self.action_timer is not None}")
-        # logger.info(f"任务 '{task_name}' 已接受并开始执行。")
-
         return SkillExecution.Result()
 
     def execute_skill_async(self, goal_handle, task_name, params):
         """在单独线程中执行技能"""
         from robot.skill.base.navigation.navigate_to import navigate_to_skill
-        SKILL_TABLE = {'navigation': navigate_to_skill}
+
+        SKILL_TABLE = {"navigation": navigate_to_skill}
         feedback_msg = SkillExecution.Feedback()
         try:
             skill_generator = SKILL_TABLE[task_name](**params)
@@ -230,59 +199,18 @@ class Robot:
                     goal_handle.canceled()
                     return
 
-                feedback_msg.status = feedback['status']
+                feedback_msg.status = feedback["status"]
                 goal_handle.publish_feedback(feedback_msg)
 
             # 技能完成
             goal_handle.succeed()
 
         except Exception as e:
-            feedback_msg.status = 'fail'
+            feedback_msg.status = "fail"
             goal_handle.publish_feedback(feedback_msg)
             goal_handle.abort()
         finally:
             self.active_goal_handle = None
-
-    def tick_the_tree(self):
-        """
-        定时器回调函数，这是您的新“主执行循环”。
-        它会周期性地驱动行为树并发送反馈。
-        """
-        logger.info("tick_the_tree() 被调用")
-        
-        if not self.active_goal_handle :#  or not self.active_goal_handle.is_active:
-            logger.warn("当前任务句柄无效或非活动，停止执行。")
-            self.cleanup_action()
-            return
-
-        try:
-            logger.info("开始执行 behaviour_tree.tick()")
-            self.behaviour_tree.tick()
-
-            feedback_msg = SkillExecution.Feedback()
-            feedback_msg.status = self.behaviour_tree.root.status.value # RUNNING, SUCCESS, FAILURE
-            active_node = next((node for node in self.behaviour_tree.root.iterate() if node.status == py_trees.common.Status.RUNNING), None)
-            # feedback_msg.reason = active_node.name if active_node else "任务完成中"  # 没有这个reason
-            # progress = self.behaviour_tree.blackboard_client.get("progress")  # behavior没有blackboard client
-            # feedback_msg.progress = int(progress) if progress is not None else 0  # 没有progress
-            self.active_goal_handle.publish_feedback(feedback_msg)
-
-            tree_status = self.behaviour_tree.root.status
-            if tree_status == py_trees.common.Status.SUCCESS:
-                logger.info('任务成功完成！')
-                result = SkillExecution.Result(success=True, message="任务成功")
-                self.active_goal_handle.succeed()
-                self.cleanup_action()
-            elif tree_status == py_trees.common.Status.FAILURE:
-                logger.warn('任务失败！')
-                result = SkillExecution.Result(success=False, message="任务执行失败")
-                self.active_goal_handle.abort()
-                self.cleanup_action()
-        except Exception as e:
-            raise(f"行为树 tick 期间发生异常: {e}")
-            result = SkillExecution.Result(success=False, message=f"执行异常: {e}")
-            self.active_goal_handle.abort()
-            self.cleanup_action()
 
     def cleanup_action(self):
         """任务结束后（成功、失败或取消），清理所有相关资源。"""
@@ -290,18 +218,18 @@ class Robot:
             self.action_timer.cancel()
             self.action_timer = None
         self.behaviour_tree = None
+        self.active_goal_handle = None  # 在最后重置，允许新任务进入
         logger.info("任务已清理。")
-        self.active_goal_handle = None # 在最后重置，允许新任务进入
 
     def run_skill_for_test(
-            self,
-            task_name: str,
-            params: Dict[str, str] = None,
-            *,
-            tick_hz: float = 10.0,
-            timeout_sec: float = None,
-            progress_cb = None,
-            verbose: bool = True,
+        self,
+        task_name: str,
+        params: Dict[str, str] = None,
+        *,
+        tick_hz: float = 10.0,
+        timeout_sec: float = None,
+        progress_cb=None,
+        verbose: bool = True,
     ) -> Dict[str, object]:
         """
         从外部直接调用以测试一个技能(任务)：
@@ -336,28 +264,50 @@ class Robot:
         """
         with self._test_lock:
             # 如果你的Action正在执行，保护性地拒绝测试，避免同一份self.behaviour_tree被并发修改
-            if getattr(self, "active_goal_handle", None) and self.active_goal_handle.is_active:
+            if (
+                getattr(self, "active_goal_handle", None)
+                and self.active_goal_handle.is_active
+            ):
                 msg = "机器人正忙（存在活动的Action任务），测试被拒绝"
                 if verbose:
                     logger.error(msg)
-                return {"success": False, "message": msg, "status": "BUSY", "elapsed_sec": 0.0}
+                return {
+                    "success": False,
+                    "message": msg,
+                    "status": "BUSY",
+                    "elapsed_sec": 0.0,
+                }
 
             start_t = time.time()
             dt = 1.0 / max(tick_hz, 1e-3)
-            result = {"success": False, "message": "", "status": "UNKNOWN", "elapsed_sec": 0.0}
+            result = {
+                "success": False,
+                "message": "",
+                "status": "UNKNOWN",
+                "elapsed_sec": 0.0,
+            }
 
             # 构建行为树
             try:
                 if verbose:
-                    logger.info(f"[TEST] 创建行为树: task='{task_name}', params={params or {} }")
-                self.behaviour_tree = self.behavior_tree_manager.create_tree_for_task(task_name, params or {})
+                    logger.info(
+                        f"[TEST] 创建行为树: task='{task_name}', params={params or {} }"
+                    )
+                self.behaviour_tree = self.behavior_tree_manager.create_tree_for_task(
+                    task_name, params or {}
+                )
                 if self.behaviour_tree is None:
                     raise ValueError(f"无法为任务 '{task_name}' 创建行为树")
             except Exception as e:
                 msg = f"[TEST] 构建行为树失败: {e}"
                 if verbose:
                     logger.error(msg)
-                return {"success": False, "message": msg, "status": "EXCEPTION", "elapsed_sec": 0.0}
+                return {
+                    "success": False,
+                    "message": msg,
+                    "status": "EXCEPTION",
+                    "elapsed_sec": 0.0,
+                }
 
             try:
                 # 主测试循环：直至SUCCESS/FAILURE/超时
@@ -369,8 +319,12 @@ class Robot:
                     tree_status = root.status  # py_trees.common.Status
                     # 找到第一个RUNNING的活动节点，用于“reason”
                     active_node = next(
-                        (node for node in root.iterate() if node.status == py_trees.common.Status.RUNNING),
-                        None
+                        (
+                            node
+                            for node in root.iterate()
+                            if node.status == py_trees.common.Status.RUNNING
+                        ),
+                        None,
                     )
 
                     # 从黑板(如果有)拿一个通用的整数型进度
@@ -386,41 +340,59 @@ class Robot:
 
                     # 进度回调（可选）
                     if progress_cb:
-                        progress_cb({
-                            "status": tree_status.value,  # "RUNNING"|"SUCCESS"|"FAILURE"
-                            "reason": active_node.name if active_node else (
-                                "完成中" if tree_status == py_trees.common.Status.RUNNING else ""),
-                            "progress": progress,
-                            "timestamp": time.time()
-                        })
+                        progress_cb(
+                            {
+                                "status": tree_status.value,  # "RUNNING"|"SUCCESS"|"FAILURE"
+                                "reason": (
+                                    active_node.name
+                                    if active_node
+                                    else (
+                                        "完成中"
+                                        if tree_status == py_trees.common.Status.RUNNING
+                                        else ""
+                                    )
+                                ),
+                                "progress": progress,
+                                "timestamp": time.time(),
+                            }
+                        )
 
                     # 结束条件判断
                     if tree_status == py_trees.common.Status.SUCCESS:
-                        result.update({
-                            "success": True,
-                            "message": "任务成功",
-                            "status": "SUCCESS",
-                        })
+                        result.update(
+                            {
+                                "success": True,
+                                "message": "任务成功",
+                                "status": "SUCCESS",
+                            }
+                        )
                         if verbose:
                             logger.info("[TEST] 任务成功完成")
                         break
                     elif tree_status == py_trees.common.Status.FAILURE:
-                        result.update({
-                            "success": False,
-                            "message": "任务执行失败",
-                            "status": "FAILURE",
-                        })
+                        result.update(
+                            {
+                                "success": False,
+                                "message": "任务执行失败",
+                                "status": "FAILURE",
+                            }
+                        )
                         if verbose:
                             logger.warn("[TEST] 任务失败")
                         break
 
                     # 超时判断
-                    if timeout_sec is not None and (time.time() - start_t) > timeout_sec:
-                        result.update({
-                            "success": False,
-                            "message": f"测试执行超时({timeout_sec}s)",
-                            "status": "TIMEOUT",
-                        })
+                    if (
+                        timeout_sec is not None
+                        and (time.time() - start_t) > timeout_sec
+                    ):
+                        result.update(
+                            {
+                                "success": False,
+                                "message": f"测试执行超时({timeout_sec}s)",
+                                "status": "TIMEOUT",
+                            }
+                        )
                         if verbose:
                             logger.warn(f"[TEST] 任务超时({timeout_sec}s)")
                         break
@@ -432,11 +404,13 @@ class Robot:
                 msg = f"[TEST] 执行异常: {e}"
                 if verbose:
                     logger.error(msg, exc_info=True)
-                result.update({
-                    "success": False,
-                    "message": msg,
-                    "status": "EXCEPTION",
-                })
+                result.update(
+                    {
+                        "success": False,
+                        "message": msg,
+                        "status": "EXCEPTION",
+                    }
+                )
             finally:
                 # 与Action通道复用相同的清理逻辑
                 try:
@@ -492,7 +466,7 @@ class Robot:
         logger.debug(f"get linear vel: {linear_vel}, angular vel: {angular_vel}")
 
     ########################## Infrastructure Initialization ############################
-    
+
     def _init_ros(self):
         # ROS节点基础设施
         self.node = NodeRobot(namespace=self.namespace)
@@ -501,9 +475,11 @@ class Robot:
 
         # 导航基础设施节点
         self.node_planner_ompl = NodePlannerOmpl(namespace=self.namespace)
-        self.node_trajectory_generator = NodeTrajectoryGenerator(namespace=self.namespace)
+        self.node_trajectory_generator = NodeTrajectoryGenerator(
+            namespace=self.namespace
+        )
         self.node_controller_mpc = NodeMpcController(namespace=self.namespace)
-        
+
         # Action客户端
         self.action_client_path_planner = ActionClient(
             self.node, ComputePathToPose, "action_compute_path_to_pose"
@@ -513,7 +489,7 @@ class Robot:
         self.executor = MultiThreadedExecutor()
         self.ros_thread = None
         self.stop_event = threading.Event()
-        
+
         # 设置执行器并启动ROS
         self.executor.add_node(self.node)
         self.executor.add_node(self.node_planner_ompl)
@@ -533,8 +509,11 @@ class Robot:
             logger.info(f"Robot {self.namespace} ROS thread started")
             # 等待一小段时间确保线程启动
             import time
+
             time.sleep(0.1)
-            logger.info(f"Robot {self.namespace} ROS thread is_alive: {self.ros_thread.is_alive()}")
+            logger.info(
+                f"Robot {self.namespace} ROS thread is_alive: {self.ros_thread.is_alive()}"
+            )
 
     def _spin_ros(self):
         logger.info(f"Robot {self.namespace} ROS thread started spinning")
@@ -545,7 +524,9 @@ class Robot:
                 spin_count += 1
                 # 每1000次spin记录一次，避免日志过多
                 if spin_count % 20 == 0:
-                    logger.debug(f"Robot {self.namespace} ROS thread spinning... count: {spin_count}")
+                    logger.debug(
+                        f"Robot {self.namespace} ROS thread spinning... count: {spin_count}"
+                    )
                 spin_count += 1
         except Exception as e:
             logger.error(f"Robot {self.namespace} ROS thread error: {e}")
@@ -595,11 +576,14 @@ class Robot:
         # if self.cfg_camera_third_person and self.cfg_camera_third_person.enabled:
         #     self._initialize_third_person_camera()
 
-    def form_feedback(self, status: str = "processing", reason: str = "none", progress: int = 100) -> Dict[str, Any]:
+    def form_feedback(
+        self, status: str = "processing", reason: str = "none", progress: int = 100
+    ) -> Dict[str, Any]:
         return dict(
             status=status,
             reason=reason,
-            progress=progress, )
+            progress=progress,
+        )
 
     def on_physics_step(self, step_size) -> None:
         """
@@ -635,16 +619,17 @@ class Robot:
         return None
 
     def execute_frame_skill(
-            self,
+        self,
     ) -> None:
         """
         需要周期性执行的技能，如拍照，检测，喊话
         """
         if self.is_detecting:
             self.detect(self.target_prim)
-        if (self.is_tracking
-                and self.node_controller_mpc.has_reached_goal
-                and self.track_waypoint_index < len(self.track_waypoint_list)
+        if (
+            self.is_tracking
+            and self.node_controller_mpc.has_reached_goal
+            and self.track_waypoint_index < len(self.track_waypoint_list)
         ):
             self.navigate_to(self.track_waypoint_list[self.track_waypoint_index])
             self.track_waypoint_index += 1

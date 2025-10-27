@@ -32,6 +32,7 @@ from gsi_msgs.gsi_msgs_helper import (
     VelTwistPose,
 )
 
+
 class RobotG1(Robot):
     def __init__(
         self,

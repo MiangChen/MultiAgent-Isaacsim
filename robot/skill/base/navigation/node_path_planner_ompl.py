@@ -280,9 +280,10 @@ class NodePlannerOmpl(Node):
         def normalize_quat(st):
             """Normalize quaternion inside OMPL SE3 state."""
             r = st().rotation()
-            n = (r.x ** 2 + r.y ** 2 + r.z ** 2 + r.w ** 2) ** 0.5
+            n = (r.x**2 + r.y**2 + r.z**2 + r.w**2) ** 0.5
             if n < 1e-12:
-                r.x = r.y = r.z = 0.0; r.w = 1.0
+                r.x = r.y = r.z = 0.0
+                r.w = 1.0
             else:
                 r.x, r.y, r.z, r.w = r.x / n, r.y / n, r.z / n, r.w / n
 

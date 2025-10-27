@@ -11,10 +11,10 @@ from .node_trajectory_generator import NodeTrajectoryGenerator
 
 __all__ = [
     "navigate_to_skill",
-    "return_home_skill", 
+    "return_home_skill",
     "TrajectoryManager",
     "NodeMpcController",
     "NodeNavigation",
     "NodePlannerOmpl",
-    "NodeTrajectoryGenerator"
+    "NodeTrajectoryGenerator",
 ]

@@ -5,7 +5,7 @@ Robot skill base module - Unified interface for all robot skills.
 # Detection skills
 from .detection import detect_skill
 
-# Exploration skills  
+# Exploration skills
 from .exploration import explore_skill, plan_exploration_waypoints_skill
 
 # Manipulation skills
@@ -13,12 +13,12 @@ from .manipulation import pickup_object_skill, put_down_skill
 
 # Navigation skills
 from .navigation import (
-    navigate_to_skill, 
+    navigate_to_skill,
     return_home_skill,
     TrajectoryManager,
-    NodeNavigation, 
+    NodeNavigation,
     NodePlannerOmpl,
-    NodeTrajectoryGenerator
+    NodeTrajectoryGenerator,
 )
 
 # Object detection skills
@@ -33,29 +33,23 @@ from .broadcast import broadcast
 __all__ = [
     # Detection
     "detect_skill",
-    
     # Exploration
     "explore_skill",
     "plan_exploration_waypoints_skill",
-    
     # Manipulation
-    "pickup_object_skill", 
+    "pickup_object_skill",
     "put_down_skill",
-    
     # Navigation
     "navigate_to_skill",
     "return_home_skill",
     "TrajectoryManager",
     "NodeNavigation",
-    "NodePlannerOmpl", 
+    "NodePlannerOmpl",
     "NodeTrajectoryGenerator",
-    
     # Object Detection
     "object_detection_skill",
-    
     # Photo
     "take_photo",
-    
     # Communication
-    "broadcast"
+    "broadcast",
 ]

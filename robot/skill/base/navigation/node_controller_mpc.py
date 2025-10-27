@@ -239,7 +239,7 @@ class NodeMpcController(Node):
         self.is_active = False
         self.has_reached_goal = True
 
-        self.move_event = FeedbackEvent() #在主线程中通知, 目前还没有添加内容反馈
+        self.move_event = FeedbackEvent()  # 在主线程中通知, 目前还没有添加内容反馈
 
         # ROS 2 Communications
         self.trajectory_sub = self.create_subscription(
@@ -341,7 +341,7 @@ class NodeMpcController(Node):
                     "Goal reached within tolerance. Mission successful!"
                 )
                 self.has_reached_goal = True
-                self.move_event.set(value = True)
+                self.move_event.set(value=True)
                 self.stop_robot()
                 return
 
@@ -355,7 +355,7 @@ class NodeMpcController(Node):
                     f"Stopping at final distance of {position_error:.2f}m."
                 )
                 self.has_reached_goal = True
-                self.move_event.set(value = False)
+                self.move_event.set(value=False)
                 self.stop_robot()
                 return
 

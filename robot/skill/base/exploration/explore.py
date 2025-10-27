@@ -23,4 +23,3 @@ def explore_skill(**kwargs):
         return robot.form_feedback("finished", "Exploration completed.", 100)
     else:
         return robot.form_feedback("failed", "Exploration failed. / Time exceeded", 0)
-

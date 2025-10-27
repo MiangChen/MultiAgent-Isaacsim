@@ -50,10 +50,14 @@ class Target(Robot):
         self.body = BodyTarget(cfg_robot=self.cfg_robot, scene=scene)
         self.control_mode = "joint_velocities"
         self.is_moving = False
-        self.path = [ self.cfg_robot.base_pos, self.cfg_robot.mid_pos, self.cfg_robot.target_pos ]
+        self.path = [
+            self.cfg_robot.base_pos,
+            self.cfg_robot.mid_pos,
+            self.cfg_robot.target_pos,
+        ]
         self.path_index = 0
 
-    def start_moving (self) -> None:
+    def start_moving(self) -> None:
         self.is_moving = True
 
     def stop_moving(self):

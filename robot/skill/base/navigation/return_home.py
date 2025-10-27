@@ -1,5 +1,6 @@
 from utils.form_feedback import form_feedback
 
+
 def return_home_skill(**kwargs):
     robot = kwargs.get("robot")
 

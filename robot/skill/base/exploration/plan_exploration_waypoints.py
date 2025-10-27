@@ -106,10 +106,14 @@ def plan_exploration_waypoints_skill(**kwargs):
         reverse = not reverse
 
     if not path_pts_2d:
-        raise ValueError("没有生成任何覆盖航点，请检查 lane_width/robot_radius/区域大小。")
+        raise ValueError(
+            "没有生成任何覆盖航点，请检查 lane_width/robot_radius/区域大小。"
+        )
 
     # ---- 5) 旋回原坐标系并去抖 ----
-    back = rotate(LineString(path_pts_2d), sweep_deg, origin=poly.centroid, use_radians=False)
+    back = rotate(
+        LineString(path_pts_2d), sweep_deg, origin=poly.centroid, use_radians=False
+    )
     waypoints_2d = list(back.coords)
 
     simplified_2d = [waypoints_2d[0]]
@@ -124,7 +128,7 @@ def plan_exploration_waypoints_skill(**kwargs):
     if now:
         path_msg.header.stamp = now
 
-    for (xv, yv) in simplified_2d:
+    for xv, yv in simplified_2d:
         ps = PoseStamped()
         ps.header.frame_id = frame_id
         if now:

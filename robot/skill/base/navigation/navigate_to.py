@@ -4,6 +4,7 @@ from functools import partial
 # ROS2
 from nav2_msgs.action import ComputePathToPose
 
+
 def navigate_to_skill(**kwargs):
     robot = kwargs.get("robot")
     goal_pos = kwargs.get("goal_pos")
@@ -12,7 +13,6 @@ def navigate_to_skill(**kwargs):
     goal_quat_wxyz = kwargs.get("goal_quat_wxyz", [1.0, 0.0, 0.0, 0.0])
     if type(goal_quat_wxyz) is str:
         goal_quat_wxyz = json.loads(goal_quat_wxyz)
-
 
     if robot.is_planning:
         robot.node.get_logger().warn("Planning already in progress.")
@@ -48,7 +48,9 @@ def navigate_to_skill(**kwargs):
             yield robot.form_feedback("processing", "Navigation in progress...", 50)
             # 短暂休眠，避免过度占用CPU
             import time
+
             time.sleep(0.1)
+
 
 def _goal_response_callback(robot, future):
     goal_handle = future.result()

@@ -64,5 +64,8 @@ def pickup_object_skill(**kwargs):
 
         return robot.form_feedback("success", "Object picked successfully!", 100)
     else:
-        return robot.form_feedback("failed", f"Object is too far to pick up ({distance:.2f}m > {distance_threshold}m).",
-                                  0)
+        return robot.form_feedback(
+            "failed",
+            f"Object is too far to pick up ({distance:.2f}m > {distance_threshold}m).",
+            0,
+        )
