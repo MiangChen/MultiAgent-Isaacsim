@@ -178,39 +178,32 @@ class Robot:
         params = {p.key: p.value for p in request.skill_list[0].params}
         params["robot"] = self
 
-        skill_thread = Thread(
-            target=self.execute_skill_async, args=(goal_handle, task_name, params)
-        )
-        skill_thread.start()
+        self.prepare_skill_execution(goal_handle, task_name, params)
+
         return SkillExecution.Result()
 
-    def execute_skill_async(self, goal_handle, task_name, params):
-        """在单独线程中执行技能"""
+    def prepare_skill_execution(self, goal_handle, task_name, params):
+        """准备技能执行，在 physics step 中执行"""
         from robot.skill.base.navigation.navigate_to import navigate_to_skill
+        from robot.skill.base.pick_up.pickup_object import pickup_object_skill
 
-        SKILL_TABLE = {"navigation": navigate_to_skill}
-        feedback_msg = SkillExecution.Feedback()
+        SKILL_TABLE = {
+            "navigation": navigate_to_skill,
+            "pickup": pickup_object_skill
+        }
+
         try:
-            skill_generator = SKILL_TABLE[task_name](**params)
+            # 创建技能生成器，但不开始执行
+            self.skill_generator = SKILL_TABLE[task_name](**params)
             self.active_goal_handle = goal_handle
+            self.skill_feedback_msg = SkillExecution.Feedback()
 
-            for feedback in skill_generator:
-                if goal_handle.is_cancel_requested:
-                    goal_handle.canceled()
-                    return
-
-                feedback_msg.status = feedback["status"]
-                goal_handle.publish_feedback(feedback_msg)
-
-            # 技能完成
-            goal_handle.succeed()
+            logger.info(f"技能 {task_name} 已准备就绪，将在下一个 physics step 开始执行")
 
         except Exception as e:
-            feedback_msg.status = "fail"
-            goal_handle.publish_feedback(feedback_msg)
+            logger.error(f"准备技能失败: {e}")
             goal_handle.abort()
-        finally:
-            self.active_goal_handle = None
+
 
     def cleanup_action(self):
         """任务结束后（成功、失败或取消），清理所有相关资源。"""
@@ -590,6 +583,8 @@ class Robot:
         Args:
             step_size:  dt 时间间隔
         """
+        # 执行技能步骤
+        self.execute_skill_step()
         self.execute_frame_skill()
         # update robot velocity
         self.controller_simplified()
@@ -598,6 +593,57 @@ class Robot:
         # publish robot position
         self.publish_robot_state()
         return
+
+    def execute_skill_step(self):
+        """在 physics step 中执行技能的一步"""
+        if not self.active_goal_handle or not self.skill_generator:
+            return
+
+        try:
+            # 检查取消请求
+            if self.active_goal_handle.is_cancel_requested:
+                logger.info("技能被取消")
+                self.active_goal_handle.canceled()
+                self.cleanup_skill()
+                return
+
+            # 执行技能的下一步
+            feedback = next(self.skill_generator)
+
+            # 发送反馈
+            # self.skill_feedback_msg.status = feedback["status"]
+            # self.active_goal_handle.publish_feedback(self.skill_feedback_msg)
+
+            logger.debug(f"技能执行中: {feedback['status']}")
+
+        except StopIteration:
+            # 技能完成
+            logger.info("技能执行完成")
+            # 只有在 goal_handle 还有效时才调用 succeed
+            try:
+                self.active_goal_handle.succeed()
+            except Exception as e:
+                logger.warning(f"无法设置技能为成功状态: {e}")
+            self.cleanup_skill()
+
+        except Exception as e:
+            # 技能执行失败
+            logger.error(f"技能执行失败: {e}")
+            try:
+                self.skill_feedback_msg.status = "fail"
+                self.active_goal_handle.publish_feedback(self.skill_feedback_msg)
+                result = SkillExecution.Result(success=False, message=str(e))
+                self.active_goal_handle.abort()
+            except Exception as abort_error:
+                logger.warning(f"无法设置技能为失败状态: {abort_error}")
+            self.cleanup_skill()
+
+    def cleanup_skill(self):
+        """清理技能执行状态"""
+        self.active_goal_handle = None
+        self.skill_generator = None
+        self.skill_feedback_msg = None
+        logger.debug("技能状态已清理")
 
     def post_reset(self) -> None:
         """Set up things that happen after the world resets."""
