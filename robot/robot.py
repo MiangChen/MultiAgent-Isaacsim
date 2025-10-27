@@ -33,6 +33,8 @@ from robot.robot_trajectory import Trajectory
 from robot.skill.base.navigation import NodePlannerOmpl
 from robot.skill.base.navigation import NodeTrajectoryGenerator
 from robot.skill.base.navigation import NodeMpcController
+from robot.skill.base.detection import detect_skill
+from robot.skill.base.navigation import navigate_to_skill
 from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
 
@@ -155,6 +157,8 @@ class Robot:
         self.is_tracking = False
         self.track_waypoint_sub = None
         self.is_planning = False
+        self.track_counter = 0
+        self.track_period = 300
 
         # 测试锁
         self._test_lock = threading.Lock()
@@ -671,13 +675,13 @@ class Robot:
         需要周期性执行的技能，如拍照，检测，喊话
         """
         if self.is_detecting:
-            self.detect(self.target_prim)
+            detect_skill(self, self.target_prim)
         if (
             self.is_tracking
             and self.node_controller_mpc.has_reached_goal
             and self.track_waypoint_index < len(self.track_waypoint_list)
         ):
-            self.navigate_to(self.track_waypoint_list[self.track_waypoint_index])
+            navigate_to_skill(robot = self, goal_pos = self.track_waypoint_list[self.track_waypoint_index])
             self.track_waypoint_index += 1
 
     def track_callback(self, msg):
@@ -689,16 +693,6 @@ class Robot:
         self.track_counter += 1
         if self.track_counter % self.track_period == 0:
             self.track_waypoint_list.append(pos)
-
-    def start_tracking(self, target_prim: str = None):
-        self.is_tracking = True
-        self.track_waypoint_list = self.node.create_subscription(
-            VelTwistPose,
-            "/target/odom",
-            self.track_callback,
-            50,
-        )
-        return self.form_feedback(status="normal")
 
     def stop_tracking(self):
         self.is_tracking = False
