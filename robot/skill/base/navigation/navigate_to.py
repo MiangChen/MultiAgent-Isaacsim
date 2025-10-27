@@ -7,6 +7,12 @@ from nav2_msgs.action import ComputePathToPose
 
 def navigate_to_skill(**kwargs):
     robot = kwargs.get("robot")
+    start_pos = kwargs.get("start_pos", None)
+    if type(start_pos) is str:
+        start_pos = json.loads(start_pos)
+    start_quat = kwargs.get("start_quat", [1.0, 0.0, 0.0, 0.0])
+    if type(start_quat) is str:
+        start_quat = json.loads(start_quat)
     goal_pos = kwargs.get("goal_pos")
     if type(goal_pos) is str:
         goal_pos = json.loads(goal_pos)
@@ -28,10 +34,11 @@ def navigate_to_skill(**kwargs):
 
     goal_msg = ComputePathToPose.Goal()
 
-    start_pos_tensor, start_quat_tensor = robot.body.get_world_pose()
-    # start_pos_tensor[2] = 1  # 这里有问题, ai写的烂代码, 不理解物理规律. 本身是要让机器人在地面上规划, 应该是0的, 但是写成了1
-    start_pos = start_pos_tensor.cpu().numpy().tolist()
-    start_quat = start_quat_tensor.cpu().numpy().tolist()
+    if start_pos is None:
+        start_pos_tensor, start_quat_tensor = robot.body.get_world_pose()
+        # start_pos_tensor[2] = 1  # 这里有问题, ai写的烂代码, 不理解物理规律. 本身是要让机器人在地面上规划, 应该是0的, 但是写成了1
+        start_pos = start_pos_tensor.cpu().numpy().tolist()
+        start_quat = start_quat_tensor.cpu().numpy().tolist()
 
     goal_msg.start = _create_pose_stamped(robot, start_pos, start_quat)
     goal_msg.goal = _create_pose_stamped(robot, goal_pos, goal_quat_wxyz)
