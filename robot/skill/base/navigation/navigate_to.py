@@ -46,9 +46,9 @@ def navigate_to_skill(**kwargs):
             return robot.form_feedback("finished", "Navigation completed.", 100)
         else:
             yield robot.form_feedback("processing", "Navigation in progress...", 50)
+
             # 短暂休眠，避免过度占用CPU
             import time
-
             time.sleep(0.1)
 
 
