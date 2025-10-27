@@ -9,4 +9,5 @@
 
 from .to_torch import to_torch
 from .quat_to_yaw import quat_to_yaw
+from .quat_to_euler import quat_to_euler
 from .euler_to_quat import euler_to_quat
