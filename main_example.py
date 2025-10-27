@@ -286,15 +286,15 @@ def main():
     count = 0
     logger.info("Starting main simulation loop...")
 
-    object_name = "Critical-Package-Alpha"
-    object_prim_path = "/World/Critical_Package_Alpha"
+    object_name = "Critical-Package"
+    object_prim_path = "/World/Critical_Package"
     object = {
         "shape_type": "cuboid",
         "prim_path": object_prim_path,
         # "scene_name": "object",
         "name": object_name,
-        "scale": [0.1, 0.1, 0.1],
-        "position": [5, 6.5, 0.1],
+        "scale": [0.5, 0.5, 0.5],
+        "position": [3, 2.9, 0.25],
         "orientation": [0.707, 0, 0, 0.707],
         "color": [255, 255, 255],
         "mass": 0.1,
