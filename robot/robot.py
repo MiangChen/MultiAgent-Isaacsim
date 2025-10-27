@@ -228,9 +228,9 @@ class Robot:
             feedback_msg = SkillExecution.Feedback()
             feedback_msg.status = self.behaviour_tree.root.status.value # RUNNING, SUCCESS, FAILURE
             active_node = next((node for node in self.behaviour_tree.root.iterate() if node.status == py_trees.common.Status.RUNNING), None)
-            feedback_msg.reason = active_node.name if active_node else "任务完成中"
-            progress = self.behaviour_tree.blackboard_client.get("progress")
-            feedback_msg.progress = int(progress) if progress is not None else 0
+            # feedback_msg.reason = active_node.name if active_node else "任务完成中"  # 没有这个reason
+            # progress = self.behaviour_tree.blackboard_client.get("progress")  # behavior没有blackboard client
+            # feedback_msg.progress = int(progress) if progress is not None else 0  # 没有progress
             self.active_goal_handle.publish_feedback(feedback_msg)
 
             tree_status = self.behaviour_tree.root.status
@@ -245,7 +245,7 @@ class Robot:
                 self.active_goal_handle.abort()
                 self.cleanup_action()
         except Exception as e:
-            self.node.get_logger().error(f"行为树 tick 期间发生异常: {e}", exc_info=True)
+            raise(f"行为树 tick 期间发生异常: {e}")
             result = SkillExecution.Result(success=False, message=f"执行异常: {e}")
             self.active_goal_handle.abort()
             self.cleanup_action()
@@ -509,9 +509,8 @@ class Robot:
                 self.executor.spin_once(timeout_sec=0.05)
                 spin_count += 1
                 # 每1000次spin记录一次，避免日志过多
-                if spin_count % 1000 == 0:
+                if spin_count % 20 == 0:
                     logger.debug(f"Robot {self.namespace} ROS thread spinning... count: {spin_count}")
-                    # print(f"Robot {self.namespace} ROS thread spinning... count: {spin_count}")
                 spin_count += 1
         except Exception as e:
             logger.error(f"Robot {self.namespace} ROS thread error: {e}")
