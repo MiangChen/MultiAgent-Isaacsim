@@ -9,7 +9,7 @@ from .detection import detect_skill
 from .exploration import explore_skill, plan_exploration_waypoints_skill
 
 # Manipulation skills
-from .manipulation import pickup_object_skill, put_down_skill
+from .manipulation import pick_up_skill, put_down_skill
 
 # Navigation skills
 from .navigation import (
@@ -37,7 +37,7 @@ __all__ = [
     "explore_skill",
     "plan_exploration_waypoints_skill",
     # Manipulation
-    "pickup_object_skill",
+    "pick_up_skill",
     "put_down_skill",
     # Navigation
     "navigate_to_skill",
