@@ -10,9 +10,10 @@
 
 try:
     import pydevd_pycharm
-    pydevd_pycharm.settrace('localhost', port=12345, stdoutToServer=True, stderrToServer=True)
-except:
-    print("no pydevd found")
+
+    pydevd_pycharm.settrace('localhost', port=12345, stdout_to_server=True, stderr_to_server=True)
+except Exception as e:
+    print(f"no pydevd found: {e}")
 ###################################################################################################################
 
 from physics_engine.isaacsim_simulation_app import start_isaacsim_simulation_app
@@ -45,7 +46,6 @@ from utils import euler_to_quat
 # ROS2 imports
 import rclpy
 
-
 rclpy.init(args=None)
 logger = LogManager.get_logger(__name__)
 
@@ -55,10 +55,10 @@ PROJECT_ROOT = config_manager.get("project_root")
 
 @inject
 def setup_simulation(
-    swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
-    env: Env = Provide[AppContainer.env],
-    world: World = Provide[AppContainer.world],
-    loop: asyncio.AbstractEventLoop = Provide[AppContainer.loop],
+        swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
+        env: Env = Provide[AppContainer.env],
+        world: World = Provide[AppContainer.world],
+        loop: asyncio.AbstractEventLoop = Provide[AppContainer.loop],
 ) -> None:
     """
     Setup simulation environment with injected dependencies.
@@ -181,7 +181,7 @@ def create_car_objects(scene_manager: SceneManager, map_semantic: MapSemantic) -
     return created_prim_paths
 
 
-def process_semantic_detection(semantic_camera, map_semantic: MapSemantic, target_semantic_class:str) -> None:
+def process_semantic_detection(semantic_camera, map_semantic: MapSemantic, target_semantic_class: str) -> None:
     """
     Process semantic detection and car pose extraction using injected dependencies.
 
@@ -284,7 +284,6 @@ def main():
         camera_prim_path=semantic_camera_prim_path, viewport_name="Viewport"
     )
 
-
     count = 0
     logger.info("Starting main simulation loop...")
 
@@ -337,16 +336,15 @@ def main():
     import time
     time.sleep(2)
 
-
     result = True
     # Main simulation loop
     while simulation_app.is_running():
         env.step(action=None)
         ##### navigation usage example###
         ## 有时候会有些bug, 多运行几次main
-        if result == False and count %100==0:
+        if result == False and count % 100 == 0:
             # swarm_manager.robot_active['jetbot'][0].navigate_to([10, 10, 0])  #  回报错 invalid initial state
-            start_pos_tensor, start_quat_tensor =  swarm_manager.robot_active['jetbot'][0].body.get_world_pose()
+            start_pos_tensor, start_quat_tensor = swarm_manager.robot_active['jetbot'][0].body.get_world_pose()
             start_pos_tensor[2] = 1
             start_pos = start_pos_tensor.cpu().numpy().tolist()
             swarm_manager.robot_active['jetbot'][0].node_planner_ompl.compute_path(start_pos, [10, 10, 0])
@@ -360,7 +358,7 @@ def main():
         count += 1
 
     ros_manager.stop()
-    
+
     # 统一关闭rclpy上下文
     if rclpy.ok():
         rclpy.shutdown()
