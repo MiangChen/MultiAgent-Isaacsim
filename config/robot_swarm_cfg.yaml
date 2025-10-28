@@ -2,20 +2,20 @@ cf2x:
   - id: 0
     name: "cf2x_0"
     position: [ 7, 4 , 0.05 ]
-    quat: [ 1.0, 0.0, 0.0, 0.0 ]
+    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
     cfg_dict_camera: {}
 
   - id: 1
     name: "cf2x_1"
     position: [ 7, 3 , 0.05 ]
-    quat: [ 1.0, 0.0, 0.0, 0.0 ]
+    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
     cfg_dict_camera: {}
 
 jetbot:
   - id: 0
     name: Allen
     position: [ 5, 4, 0.035 ]
-    quat: [ 1.0, 0.0, 0.0, 0.0 ]
+    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
     cfg_dict_camera:
       front:
         use_existing_camera: True
@@ -28,7 +28,7 @@ jetbot:
   - id: 1
     name: Bob
     position: [ 5, 3, 0.035 ]
-    quat: [ 1.0, 0.0, 0.0, 0.0 ]
+    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
     cfg_dict_camera:
       front:
         use_existing_camera: True
@@ -41,7 +41,7 @@ jetbot:
 #  - id: 2
 #    name: Candy
 #    position: [ 5, 2, 0.035 ]
-#    quat: [ 1.0, 0.0, 0.0, 0.0 ]
+#    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
 #    cfg_dict_camera:
 #      front:
 #        use_existing_camera: True
@@ -54,7 +54,7 @@ jetbot:
 #  - id: 3
 #    name: David
 #    position: [ 5, 1, 0.035 ]
-#    quat: [ 1.0, 0.0, 0.0, 0.0 ]
+#    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
 #    cfg_dict_camera:
 #      front:
 #        use_existing_camera: True
