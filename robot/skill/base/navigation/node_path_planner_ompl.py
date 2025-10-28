@@ -134,9 +134,6 @@ class NodePlannerOmpl(Node):
         self.free_value = self.map_info["free_value"]
         self.unknown_value = self.map_info["unknown_value"]
 
-        print("Checking map~~~~")
-        print(self.map_info["min_bound"], self.map_info["max_bound"])
-
     def callback_point_cloud(self, msg_point_cloud: PointCloud2):
 
         self.grid_map = np.full(self.shape, self.free_value, dtype=np.int8)
