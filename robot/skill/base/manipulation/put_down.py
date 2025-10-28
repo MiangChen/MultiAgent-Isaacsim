@@ -22,6 +22,7 @@ def put_down_skill(**kwargs):
     if joint_prim.IsValid():
         joint = UsdPhysics.Joint(joint_prim)
         joint.GetJointEnabledAttr().Set(False)  # <-- 关键的状态切换！
+        # robot.scene_manager.active_prim(joint_path, active=False) # todo: 会报错     return SimulationManager.get_physics_sim_view() is not None and self._physics_view is not None       # AttributeError: 'Articulation' object has no attribute '_physics_view
         robot.scene_manager.set_collision_enabled(
             object_prim_path, collision_enabled=True
         )
