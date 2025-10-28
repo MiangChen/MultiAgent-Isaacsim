@@ -63,7 +63,7 @@ class RobotCf2x(Robot):
         self.hovering_height = self.takeoff_height  # 悬停高度
 
         # 路径瞬移相关
-        self.waypoints = [[0, 0, 1], [5, 0, 1], [5, 5, 1], [0, 5, 1]]  # 路径点列表
+        self.waypoints = None  # 路径点列表
         self.current_waypoint_index = 0
         self.teleport_mode = True  # 默认使用瞬移模式
 
@@ -267,7 +267,6 @@ class RobotCf2x(Robot):
 
         self.counter += 1
 
-        # 未激活或无目标：什么都不做
         if (
             getattr(self, "flag_action_navigation", False)
             and self.nav_target_xy is not None
