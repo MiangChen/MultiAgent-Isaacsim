@@ -73,3 +73,4 @@ ros:
   node_enable:
     node_scene_monitor: False
     node_action_server_plan_execution: True
+    node_time: True

@@ -14,6 +14,7 @@ import threading
 from log.log_manager import LogManager
 from ros.node_action_server_plan_execution import NodeActionServerPlanExecution
 from ros.node_scene_monitor import NodeSceneMonitor
+from ros.node_time import NodeTime
 
 # ROS2 imports
 import rclpy
@@ -23,8 +24,9 @@ logger = LogManager.get_logger(__name__)
 
 
 class RosManager:
-    def __init__(self, loop=None, config: dict = None):
+    def __init__(self, loop=None, config: dict = None, world=None):
         self.config = config if config is not None else {}
+        self.world=world
 
         self.node = {}
 
@@ -32,7 +34,6 @@ class RosManager:
         self.loop = loop
         self.stop_event = threading.Event()
         self.thread = None
-
         self.build_nodes()
 
     def build_nodes(self) -> None:
@@ -44,6 +45,9 @@ class RosManager:
             node = NodeActionServerPlanExecution(loop=self.loop)
             self.node["node_action_server_plan_execution"] = node
             self.node["node_action_client_skill"] = node.action_client_skill
+        if config_node_enable.get("node_time", False):
+            node = NodeTime(world_context=self.world)
+            self.node["node_time"] = node
 
         logger.info("ROS nodes built successfully.")
 
