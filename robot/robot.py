@@ -178,9 +178,7 @@ class Robot:
             return SkillExecution.Result(success=False, message="机器人正忙")
 
         request = goal_handle.request.skill_request
-        task_name = request.skill_list[
-            0
-        ].skill  # todo 返回的是一个技能列表, 目前我们先处理第一个
+        task_name = request.skill_list[0].skill  # todo 返回的是一个技能列表, 目前我们先处理第一个
         params = {p.key: p.value for p in request.skill_list[0].params}
         params["robot"] = self
 
