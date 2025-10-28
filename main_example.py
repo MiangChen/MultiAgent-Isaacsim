@@ -295,7 +295,7 @@ def main():
         # "scene_name": "object",
         "name": object_name,
         "scale": [0.5, 0.5, 0.5],
-        "position": [3, 2.9, 0.25],
+        "position": [3, 5, 0.25],
         "orientation": [0.707, 0, 0, 0.707],
         "color": [255, 255, 255],
         "mass": 0.1,
@@ -340,15 +340,7 @@ def main():
     # Main simulation loop
     while simulation_app.is_running():
         env.step(action=None)
-        ##### navigation usage example###
-        ## 有时候会有些bug, 多运行几次main
-        if result == False and count % 100 == 0:
-            # swarm_manager.robot_active['jetbot'][0].navigate_to([10, 10, 0])  #  回报错 invalid initial state
-            start_pos_tensor, start_quat_tensor = swarm_manager.robot_active['jetbot'][0].body.get_world_pose()
-            start_pos_tensor[2] = 1
-            start_pos = start_pos_tensor.cpu().numpy().tolist()
-            swarm_manager.robot_active['jetbot'][0].node_planner_ompl.compute_path(start_pos, [10, 10, 0])
-            result = True
+        ##### navigation usage ex
         if count % 120 == 0 and count > 0:
             result = process_semantic_detection(semantic_camera, semantic_map, "robot")
             print(result)
