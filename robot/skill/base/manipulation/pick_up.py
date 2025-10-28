@@ -10,7 +10,7 @@ from gsi_msgs.gsi_msgs_helper import Parameter
 logger = LogManager.get_logger(__name__)
 
 
-def pickup_object_skill(**kwargs):
+def pick_up_skill(**kwargs):
     robot = kwargs.get("robot")
     robot_hand_prim_path = kwargs.get("robot_hand_prim_path")
     object_prim_path = kwargs.get("object_prim_path")

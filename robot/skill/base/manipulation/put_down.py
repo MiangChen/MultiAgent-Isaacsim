@@ -1,3 +1,11 @@
+from log.log_manager import LogManager
+from physics_engine.isaacsim_utils import RigidPrim
+from physics_engine.pxr_utils import UsdPhysics
+
+from gsi_msgs.gsi_msgs_helper import Parameter
+
+logger = LogManager.get_logger(__name__)
+
 def put_down_skill(**kwargs):
     robot = kwargs.get("robot")
     robot_hand_prim_path = kwargs.get("robot_hand_prim_path")
@@ -5,12 +13,6 @@ def put_down_skill(**kwargs):
 
     result = {"success": False, "message": "", "data": None}
 
-    from physics_engine.isaacsim_utils import RigidPrim
-    from physics_engine.pxr_utils import UsdPhysics
-    from gsi_msgs.gsi_msgs_helper import Parameter
-    from log.log_manager import LogManager
-
-    logger = LogManager.get_logger(__name__)
 
     hand_prim = RigidPrim(prim_paths_expr=robot_hand_prim_path)
     object_prim = RigidPrim(prim_paths_expr=object_prim_path)

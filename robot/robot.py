@@ -189,9 +189,10 @@ class Robot:
     def prepare_skill_execution(self, goal_handle, task_name, params):
         """准备技能执行，在 physics step 中执行"""
         from robot.skill.base.navigation.navigate_to import navigate_to_skill
-        from robot.skill.base.pick_up.pickup_object import pickup_object_skill
+        from robot.skill.base.manipulation.pick_up import pick_up_skill
+        from robot.skill.base.manipulation.put_down import put_down_skill
 
-        SKILL_TABLE = {"navigation": navigate_to_skill, "pickup": pickup_object_skill}
+        SKILL_TABLE = {"navigation": navigate_to_skill, "pickup": pick_up_skill, "putdown": put_down_skill}
 
         try:
             # 创建技能生成器，但不开始执行
