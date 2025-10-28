@@ -9,12 +9,12 @@ from gsi_msgs.gsi_msgs_helper import Parameter
 
 logger = LogManager.get_logger(__name__)
 
+
 def pickup_object_skill(**kwargs):
     robot = kwargs.get("robot")
     robot_hand_prim_path = kwargs.get("robot_hand_prim_path")
     object_prim_path = kwargs.get("object_prim_path")
     distance_threshold = kwargs.get("distance_threshold", 2.0)
-
 
     hand_prim = RigidPrim(prim_paths_expr=robot_hand_prim_path)
     object_prim = RigidPrim(prim_paths_expr=object_prim_path)
@@ -28,7 +28,7 @@ def pickup_object_skill(**kwargs):
 
         yield robot.form_feedback("processing", "", 40)
         # 停止物体当前的任何运动，清除惯性
-        object_prim.set_linear_velocities(torch.zeros(3,  dtype=torch.float32))
+        object_prim.set_linear_velocities(torch.zeros(3, dtype=torch.float32))
         object_prim.set_angular_velocities(torch.zeros(3, dtype=torch.float32))
 
         # 将物体传送到精确的抓取位置

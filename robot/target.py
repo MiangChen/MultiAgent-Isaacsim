@@ -30,6 +30,7 @@ from gsi_msgs.gsi_msgs_helper import (
     VelTwistPose,
 )
 
+
 class Target(Robot):
     def __init__(
         self,
@@ -76,10 +77,13 @@ class Target(Robot):
 
         if self.is_moving:
             if self.node_controller_mpc.has_reached_goal:
-                navigate_to_skill(robot=self, goal_pos=self.path[self.path_index], goal_quat_wxyz=[1.0, 0.0, 0.0, 0.0])
+                navigate_to_skill(
+                    robot=self,
+                    goal_pos=self.path[self.path_index],
+                    goal_quat_wxyz=[1.0, 0.0, 0.0, 0.0],
+                )
                 self.path_index += 1
                 self.path_index %= len(self.path)
-
 
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)

@@ -1,4 +1,6 @@
 from .plan_exploration_waypoints import plan_exploration_waypoints_skill
+
+
 def explore_skill(**kwargs):
     robot = kwargs.get("robot")
     boundary = kwargs.get("boundary")

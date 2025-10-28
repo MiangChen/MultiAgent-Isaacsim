@@ -191,10 +191,7 @@ class Robot:
         from robot.skill.base.navigation.navigate_to import navigate_to_skill
         from robot.skill.base.pick_up.pickup_object import pickup_object_skill
 
-        SKILL_TABLE = {
-            "navigation": navigate_to_skill,
-            "pickup": pickup_object_skill
-        }
+        SKILL_TABLE = {"navigation": navigate_to_skill, "pickup": pickup_object_skill}
 
         try:
             # 创建技能生成器，但不开始执行
@@ -202,12 +199,13 @@ class Robot:
             self.active_goal_handle = goal_handle
             self.skill_feedback_msg = SkillExecution.Feedback()
 
-            logger.info(f"技能 {task_name} 已准备就绪，将在下一个 physics step 开始执行")
+            logger.info(
+                f"技能 {task_name} 已准备就绪，将在下一个 physics step 开始执行"
+            )
 
         except Exception as e:
             logger.error(f"准备技能失败: {e}")
             goal_handle.abort()
-
 
     def cleanup_action(self):
         """任务结束后（成功、失败或取消），清理所有相关资源。"""
@@ -681,7 +679,9 @@ class Robot:
             and self.node_controller_mpc.has_reached_goal
             and self.track_waypoint_index < len(self.track_waypoint_list)
         ):
-            navigate_to_skill(robot = self, goal_pos = self.track_waypoint_list[self.track_waypoint_index])
+            navigate_to_skill(
+                robot=self, goal_pos=self.track_waypoint_list[self.track_waypoint_index]
+            )
             self.track_waypoint_index += 1
 
     def track_callback(self, msg):

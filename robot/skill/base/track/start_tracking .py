@@ -1,5 +1,6 @@
 from nav_msgs.msg import Odometry, Path
 
+
 def start_tracking_skill(robot, target_prim: str = None):
     robot.is_tracking = True
     robot.track_waypoint_sub = robot.node.create_subscription(

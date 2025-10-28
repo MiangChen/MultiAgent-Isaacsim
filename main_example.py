@@ -356,8 +356,6 @@ def main():
             print(result)
 
         count += 1
-        print(count)
-        print(env.world.current_time)
 
     ros_manager.stop()
     

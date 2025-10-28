@@ -62,6 +62,7 @@ def navigate_to_skill(**kwargs):
 
             # 短暂休眠，避免过度占用CPU
             import time
+
             time.sleep(0.1)
 
 

@@ -29,6 +29,7 @@ from geometry_msgs.msg import Twist
 from builtin_interfaces.msg import Duration
 from rosgraph_msgs.msg import Clock
 
+
 class TrajectoryManager:
     """
     Manages and interpolates discrete trajectory data from toppra.
@@ -237,6 +238,7 @@ class NodeMpcController(Node):
         self.has_reached_goal = True
 
         self.move_event = FeedbackEvent()
+        self.latest_sim_time = 0
 
         # ROS 2 Communications
         self.trajectory_sub = self.create_subscription(
@@ -245,12 +247,10 @@ class NodeMpcController(Node):
         self.odom_sub = self.create_subscription(
             Odometry, "odom", self.odom_callback, 10
         )
+        self.control_timer = self.create_timer(self.mpc_dt, self.control_loop)
         self.cmd_vel_pub = self.create_publisher(Twist, "cmd_vel", 10)
         self.clock_sub = self.create_subscription(
-            Clock,
-            "/isaacsim_simulation_time",
-            self.clock_callback,
-            10
+            Clock, "/isaacsim_simulation_time", self.clock_callback, 10
         )
         self.get_logger().info("MPC Controller Node has started.")
 
@@ -293,32 +293,25 @@ class NodeMpcController(Node):
         ):
             return
 
-        elapsed_time = (
-            self.latest_sim_time - self.trajectory_start_time
-        ).nanoseconds / 1e9
+        elapsed_time = self.latest_sim_time - self.trajectory_start_time
         # Get reference slice from the trajectory manager
         ref_states, ref_controls = self.trajectory_manager.get_reference_slice(
             t_start=elapsed_time, horizon_N=self.mpc_horizon, dt=self.mpc_dt
         )
-        try:
-            # Solve the MPC problem
-            optimal_command = self.mpc_controller.solve(
-                self.current_state, ref_states, ref_controls
-            )
 
-            # Publish the optimal comman
-            # NOTE: This assumes the robot base controller accepts world-frame velocity commands.
-            # If it expects body-frame (base_link), a coordinate transformation is needed here.
-            cmd_msg = Twist()
-            cmd_msg.linear.x = optimal_command[0]
-            cmd_msg.linear.y = optimal_command[1]
-            cmd_msg.linear.z = optimal_command[2]
-            cmd_msg.angular.z = optimal_command[3]
-            self.cmd_vel_pub.publish(cmd_msg)
+        # Solve the MPC problem
+        optimal_command = self.mpc_controller.solve(
+            self.current_state, ref_states, ref_controls
+        )
 
-        except Exception as e:
-            self.get_logger().error(f"MPC solver failed: {e}")
-            self.is_active = False
+        # NOTE: This assumes the robot base controller accepts world-frame velocity commands.
+        # If it expects body-frame (base_link), a coordinate transformation is needed here.
+        cmd_msg = Twist()
+        cmd_msg.linear.x = optimal_command[0]
+        cmd_msg.linear.y = optimal_command[1]
+        cmd_msg.linear.z = optimal_command[2]
+        cmd_msg.angular.z = optimal_command[3]
+        self.cmd_vel_pub.publish(cmd_msg)
 
         if elapsed_time > self.trajectory_manager.duration:
             final_goal_state = self.trajectory_manager.positions[-1]
