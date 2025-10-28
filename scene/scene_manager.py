@@ -52,9 +52,10 @@ class SceneManager:
     and querying, but knows nothing about networking.
     """
 
-    def __init__(self):
+    def __init__(self, world):
         self.prim_info = []
         self.stage = omni.usd.get_context().get_stage()
+        self.world = world
         # 设置场景保存路径，默认为项目根目录下的scenes文件夹
         self.scene_repository_path = "./scenes"
         # todo: add a handler for extend simulation method if necessary
@@ -127,7 +128,7 @@ class SceneManager:
 
 
 
-    def delete_prim(self, prim_path):
+    def delete_prim(self, prim_path:str):
         """
         删除指定路径的prim
         """
@@ -135,14 +136,14 @@ class SceneManager:
             # 检查Prim是否存在
             prim_to_delete = self.stage.GetPrimAtPath(prim_path)
             if not prim_to_delete.IsValid():
-                # Prim不存在，可以认为删除“成功”或“已完成”
                 return {
                     "status": "skipped",
                     "message": f"Prim at '{prim_path}' does not exist. Nothing to delete.",
                 }
 
-            # 直接删除
-            self.stage.RemovePrim(Sdf.Path(prim_path))
+            if self.world.is_playing():
+                self.world.pause()
+            # self.stage.RemovePrim(Sdf.Path(prim_path)) # 不可以直接删除, 容易导致各种为难题, 建议使用deactive
 
             return {
                 "status": "success",
@@ -157,6 +158,9 @@ class SceneManager:
                 "status": "error",
                 "message": f"An error occurred while deleting {prim_path}: {str(e)}",
             }
+        finally:
+            # 确保在操作后恢复物理引擎的运行状态
+            self.world.play()
 
     def get_scene_info(self, max_depth: int = 2) -> Dict[str, Any]:
         try:
