@@ -591,6 +591,8 @@ class Robot:
         self._update_camera_view()
         # publish robot position
         self.publish_robot_state()
+        # on control loop
+        self.node_controller_mpc.control_loop()
         return
 
     def execute_skill_step(self):

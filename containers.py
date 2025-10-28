@@ -50,7 +50,8 @@ class AppContainer(containers.DeclarativeContainer):
         physics_dt=config.provided["world"]["physics_dt"],
         rendering_dt=config.provided["world"]["rendering_dt"],
         stage_units_in_meters=config.provided["world"]["stage_units_in_meters"],
-        backend="torch",
+        sim_params=config.provided["world"]["sim_params"],
+        backend=config.provided["world"]["backend"],
     )
 
     grid_map = providers.Singleton(
