@@ -39,8 +39,7 @@ def pickup_object_skill(**kwargs):
 
         # 创建物理连接 (关节)
         joint_path = f"/World/grasp_joint_{object_prim.name}"
-        stage = robot.scene_manager._stage  # 假设可以从SceneManager获取stage
-        joint_prim = stage.GetPrimAtPath(joint_path)
+        joint_prim = robot.scene_manager.stage.GetPrimAtPath(joint_path)
 
         yield robot.form_feedback("processing", "", 60)
 
@@ -58,7 +57,7 @@ def pickup_object_skill(**kwargs):
                 local_pos1=[0, 0, 0],
                 axis=[0, 0, 1],
             )
-            joint_prim = stage.GetPrimAtPath(joint_path)
+            joint_prim = robot.scene.stage.GetPrimAtPath(joint_path)
         joint = UsdPhysics.Joint(joint_prim)
         joint.GetJointEnabledAttr().Set(True)  # <-- 关键的状态切换！
 
