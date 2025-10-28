@@ -708,9 +708,9 @@ class Robot:
         self.camera_prim_path = f"/World/Robot_{self.cfg_robot.id}_Camera"
         self.viewport_name = f"Viewport_Robot_{self.cfg_robot.id}"
 
-        # 如果prim已存在，先删除（可选，用于热重载）
-        if prims_utils.is_prim_path_valid(self.camera_prim_path):
-            prims_utils.delete_prim(self.camera_prim_path)
+        # # 如果prim已存在，先删除（可选，用于热重载）
+        # if prims_utils.is_prim_path_valid(self.camera_prim_path):
+        #     prims_utils.delete_prim(self.camera_prim_path)
 
         # 2. 创建相机Prim
 
