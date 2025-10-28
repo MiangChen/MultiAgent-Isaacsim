@@ -77,6 +77,7 @@ class SceneManager:
             "save_scene": self.save_scene,
             ## prim ##
             "delete_prim": self.delete_prim,
+            "active_prim": self.active_prim,
             # "set_prim_scale": self.set_prim_scale,
             # "move_prim": self.move_prim,
             "adjust_prim": self.adjust_prim,
@@ -125,10 +126,7 @@ class SceneManager:
                 "message": f"Unknown command type: {command_type}",
             }
 
-
-
-
-    def delete_prim(self, prim_path:str):
+    def delete_prim(self, prim_path: str):
         """
         删除指定路径的prim
         """
@@ -162,6 +160,30 @@ class SceneManager:
             # 确保在操作后恢复物理引擎的运行状态
             self.world.play()
 
+    def active_prim(self, prim_path: str, active: bool = True):
+        try:
+            prim = self.stage.GetPrimAtPath(prim_path)
+
+            if not prim.IsValid():
+                return {
+                    "status": "not_found",
+                    "message": f"Prim '{prim_path}' 不存在，无法操作。"
+                }
+
+            prim.SetActive(active)
+
+            status_str = "active" if active else "deactive"
+            return {
+                "status": "success",
+                "message": f"成功 {status_str} Prim '{prim_path}'。"
+            }
+
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"操作Prim '{prim_path}' 时发生错误: {e}"
+            }
+
     def get_scene_info(self, max_depth: int = 2) -> Dict[str, Any]:
         try:
             # 清空之前的信息
@@ -187,7 +209,7 @@ class SceneManager:
                         try:
                             # 将Matrix4d对象转换为嵌套列表
                             if hasattr(world_transform, "__iter__") and hasattr(
-                                world_transform, "__getitem__"
+                                    world_transform, "__getitem__"
                             ):
                                 transform_list = []
                                 for i in range(4):
@@ -271,7 +293,7 @@ class SceneManager:
         return ret
 
     def check_prim_overlap(
-        self, position: list, threshold: float = 0.1
+            self, position: list, threshold: float = 0.1
     ) -> Dict[str, Any]:
         """
         检查给定位置附近是否已有 prim，避免重复创建
@@ -295,8 +317,8 @@ class SceneManager:
                 for op in xformable.GetOrderedXformOps():
                     # 只检查平移或整体变换
                     if op.GetOpType() in (
-                        UsdGeom.XformOp.TypeTranslate,
-                        UsdGeom.XformOp.TypeTransform,
+                            UsdGeom.XformOp.TypeTranslate,
+                            UsdGeom.XformOp.TypeTransform,
                     ):
                         existing_pos = Gf.Vec3f(op.Get())
                         if (existing_pos - pos_vec).GetLength() < threshold:
@@ -312,7 +334,7 @@ class SceneManager:
         }
 
     def overlap_hits_target_ancestor(
-        self, radius_cm: float = 500.0, pos=None, target_prim: str = None
+            self, radius_cm: float = 500.0, pos=None, target_prim: str = None
     ) -> bool:
         """
         用一个半径=radius_cm 的球做 Overlap 检测。
@@ -408,11 +430,11 @@ class SceneManager:
         }
 
     def add_camera(
-        self,
-        translation: List[float],
-        orientation: List[float],
-        focal_length: float = 2.0,
-        prim_path: str = "/World/MyCam",
+            self,
+            translation: List[float],
+            orientation: List[float],
+            focal_length: float = 2.0,
+            prim_path: str = "/World/MyCam",
     ) -> Dict[str, Any]:
         """
         使用 Isaac Sim 的高层 API 创建或封装一个相机。
@@ -457,7 +479,7 @@ class SceneManager:
             raise RuntimeError(f"add semantic camera failed '{prim_path}': {e}") from e
 
     def load_usd(
-        self, usd_path: str, position: List[float], orientation: List[float]
+            self, usd_path: str, position: List[float], orientation: List[float]
     ) -> Dict[str, Any]:
 
         # 检查重合
@@ -499,7 +521,7 @@ class SceneManager:
         return {"status": "success", "result": new_prim_path}
 
     def create_robot(
-        self, robot_type: str = "g1", position: List[float] = [0, 0, 0]
+            self, robot_type: str = "g1", position: List[float] = [0, 0, 0]
     ) -> Dict[str, Any]:
 
         from config.variables import ASSET_PATH
@@ -574,21 +596,21 @@ class SceneManager:
         }
 
     def create_shape_unified(
-        self,
-        shape_type: str,
-        prim_path: str,
-        name: str = None,
-        position: Optional[Sequence[float]] = None,
-        translation: Optional[Sequence[float]] = None,
-        orientation: Optional[Sequence[float]] = None,
-        scale: Optional[Sequence[float]] = None,
-        color: Optional[np.ndarray] = None,
-        size: Optional[float] = None,
-        radius: Optional[float] = None,
-        height: Optional[float] = None,
-        mass: Optional[float] = None,
-        density: Optional[float] = None,
-        entity_type: Optional[str] = "visual",  # rigid\fixed\visual
+            self,
+            shape_type: str,
+            prim_path: str,
+            name: str = None,
+            position: Optional[Sequence[float]] = None,
+            translation: Optional[Sequence[float]] = None,
+            orientation: Optional[Sequence[float]] = None,
+            scale: Optional[Sequence[float]] = None,
+            color: Optional[np.ndarray] = None,
+            size: Optional[float] = None,
+            radius: Optional[float] = None,
+            height: Optional[float] = None,
+            mass: Optional[float] = None,
+            density: Optional[float] = None,
+            entity_type: Optional[str] = "visual",  # rigid\fixed\visual
     ) -> Dict[str, Any]:
         """
         在场景中创建一个几何形状，此版本统一使用 isaacsim.core 高层级API。
@@ -717,15 +739,15 @@ class SceneManager:
         }
 
     def create_shape_components(
-        self,
-        prim_path: str,
-        name: str = None,
-        position: List[float] = [0, 0, 0],
-        orientation: List[float] = [1, 0, 0, 0],  # WXYZ
-        # size: Union[float, List[float]] = 1.0,
-        # color: List[float] = [0.8, 0.1, 0.1],
-        # physics_preset: str = 'dynamic_rigid_body',  # 'visual', 'static_collider', 'dynamic_rigid_body'
-        components: Optional[Dict[str, Dict]] = None,
+            self,
+            prim_path: str,
+            name: str = None,
+            position: List[float] = [0, 0, 0],
+            orientation: List[float] = [1, 0, 0, 0],  # WXYZ
+            # size: Union[float, List[float]] = 1.0,
+            # color: List[float] = [0.8, 0.1, 0.1],
+            # physics_preset: str = 'dynamic_rigid_body',  # 'visual', 'static_collider', 'dynamic_rigid_body'
+            components: Optional[Dict[str, Dict]] = None,
     ) -> Dict[str, Any]:
 
         xform = UsdGeom.Xform.Define(self.stage, prim_path)
@@ -756,11 +778,11 @@ class SceneManager:
         return {"status": "success", "result": prim_path, "usd_prim": xform.GetPrim()}
 
     def adjust_prim(
-        self,
-        prim_path: str = None,
-        position: list = None,
-        quat: list = None,
-        scale: list = None,
+            self,
+            prim_path: str = None,
+            position: list = None,
+            quat: list = None,
+            scale: list = None,
     ) -> dict:
         try:
             geom_prim = self.stage.GetPrimAtPath(prim_path)
@@ -868,7 +890,7 @@ class SceneManager:
             }
 
     def set_collision_offsets(
-        self, prim_path: str, contact_offset: float, rest_offset: float
+            self, prim_path: str, contact_offset: float, rest_offset: float
     ) -> dict:
         try:
             # 查找 prim
@@ -903,7 +925,7 @@ class SceneManager:
         collision_api.GetCollisionEnabledAttr().Set(collision_enabled)
 
     def set_physics_properties(
-        self, prim_path: str, mass: float, velocity: list, gravity_enabled: bool
+            self, prim_path: str, mass: float, velocity: list, gravity_enabled: bool
     ) -> dict:
         try:
             # 查找 prim
@@ -982,14 +1004,14 @@ class SceneManager:
             }
 
     def set_material_properties(
-        self,
-        material_path: str,
-        static_friction: float,
-        dynamic_friction: float,
-        restitution: float,
-        static_friction_mode: str,
-        dynamic_friction_mode: str,
-        restitution_mode: str,
+            self,
+            material_path: str,
+            static_friction: float,
+            dynamic_friction: float,
+            restitution: float,
+            static_friction_mode: str,
+            dynamic_friction_mode: str,
+            restitution_mode: str,
     ) -> dict:
         """
         在当前 USD Stage 上，为指定 Material prim 设置物理材质属性：
@@ -1034,7 +1056,7 @@ class SceneManager:
             }
 
     def set_physics_scene_config(
-        self, gravity: list, unit_system: str, scale: float, default_material: str = ""
+            self, gravity: list, unit_system: str, scale: float, default_material: str = ""
     ) -> dict:
         """
         在当前 USD Stage 上配置全局物理场景：
@@ -1084,16 +1106,16 @@ class SceneManager:
             }
 
     def create_joint(
-        self,
-        joint_path: str,
-        joint_type: str,
-        body0: str,
-        body1: str,
-        axis: list,
-        local_pos0: list,
-        local_pos1: list,
-        lower_limit: float = None,
-        upper_limit: float = None,
+            self,
+            joint_path: str,
+            joint_type: str,
+            body0: str,
+            body1: str,
+            axis: list,
+            local_pos0: list,
+            local_pos1: list,
+            lower_limit: float = None,
+            upper_limit: float = None,
     ) -> dict:
         try:
             # 校验两个刚体 prim 是否有效
@@ -1144,14 +1166,14 @@ class SceneManager:
             return {"status": "error", "message": f"Failed to create joint: {str(e)}"}
 
     def set_drive_parameters(
-        self,
-        joint_path: str,
-        drive_name: str,
-        target_position: float,
-        target_velocity: float,
-        stiffness: float,
-        damping: float,
-        max_force: float,
+            self,
+            joint_path: str,
+            drive_name: str,
+            target_position: float,
+            target_velocity: float,
+            stiffness: float,
+            damping: float,
+            max_force: float,
     ) -> dict:
         try:
             joint = self.stage.GetPrimAtPath(joint_path)
@@ -1187,7 +1209,7 @@ class SceneManager:
 
     # TODO:扩展到isaacsim官方Assets,支持更多的场景，或者使用Asset browser mcp的resource 功能。
     def browse_scene_repository(
-        self,
+            self,
     ) -> Dict[str, Any]:
         """Browse the scene repository and return a list of files."""
         try:
@@ -1293,9 +1315,9 @@ class SceneManager:
             prim_path_root (str): path to root prim
         """
         if (
-            usd_path.endswith("usd")
-            or usd_path.endswith("usda")
-            or usd_path.endswith("usdc")
+                usd_path.endswith("usd")
+                or usd_path.endswith("usda")
+                or usd_path.endswith("usdc")
         ):
 
             root_prim = create_prim(
@@ -1315,10 +1337,10 @@ class SceneManager:
         return
 
     def save_scene(
-        self,
-        scene_name: str = None,
-        save_directory: str = None,
-        flatten_scene: bool = True,
+            self,
+            scene_name: str = None,
+            save_directory: str = None,
+            flatten_scene: bool = True,
     ) -> Dict[str, Any]:
         """
         Save the current scene to a specified directory.
