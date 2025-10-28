@@ -11,22 +11,18 @@ def put_down_skill(**kwargs):
     robot_hand_prim_path = kwargs.get("robot_hand_prim_path")
     object_prim_path = kwargs.get("object_prim_path")
 
-    result = {"success": False, "message": "", "data": None}
-
-
     hand_prim = RigidPrim(prim_paths_expr=robot_hand_prim_path)
     object_prim = RigidPrim(prim_paths_expr=object_prim_path)
 
     # 定位并删除用于抓取的固定关节
-
     joint_path = f"/World/grasp_joint_{object_prim.name}"
-    stage = robot.scene_manager._stage
+    stage = robot.scene_manager.stage
     joint_prim = stage.GetPrimAtPath(joint_path)
 
     if joint_prim.IsValid():
         joint = UsdPhysics.Joint(joint_prim)
         joint.GetJointEnabledAttr().Set(False)  # <-- 关键的状态切换！
-        # 碰撞属性
+        # robot.scene_manager.active_prim(joint_path, active=False) # todo: 会报错     return SimulationManager.get_physics_sim_view() is not None and self._physics_view is not None       # AttributeError: 'Articulation' object has no attribute '_physics_view
         robot.scene_manager.set_collision_enabled(
             object_prim_path, collision_enabled=True
         )
@@ -42,4 +38,4 @@ def put_down_skill(**kwargs):
         yield robot.form_feedback("failed", "Joint not found", 0)
 
     logger.info(f"INFO: Object '{object_prim.name}' dropped and physics restored.")
-    return robot.form_feedback("success", "Object dropped successfully!", 100)
+    yield robot.form_feedback("success", "Object picked successfully!", 100)

@@ -203,7 +203,7 @@ class NodeMpcController(Node):
             namespace="",
             parameters=[
                 ("mpc.N", 20),
-                ("mpc.dt", 0.05),
+                ("mpc.dt", 0.1),
                 ("robot.max_velocity", 1.5),
                 ("robot.max_acceleration", 0.8),
                 ("robot.max_omega", 1.0),
@@ -247,7 +247,7 @@ class NodeMpcController(Node):
         self.odom_sub = self.create_subscription(
             Odometry, "odom", self.odom_callback, 10
         )
-        self.control_timer = self.create_timer(self.mpc_dt, self.control_loop)
+        # self.control_timer = self.create_timer(self.mpc_dt, self.control_loop)
         self.cmd_vel_pub = self.create_publisher(Twist, "cmd_vel", 10)
         self.clock_sub = self.create_subscription(
             Clock, "/isaacsim_simulation_time", self.clock_callback, 10

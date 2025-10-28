@@ -40,9 +40,11 @@ def navigate_to_skill(**kwargs):
     goal_msg = ComputePathToPose.Goal()
 
     if start_pos is None:
-        start_pos_tensor, start_quat_tensor = robot.body.get_world_pose()
+        start_pos_tensor, _ = robot.body.get_world_pose()
         # start_pos_tensor[2] = 1  # 这里有问题, ai写的烂代码, 不理解物理规律. 本身是要让机器人在地面上规划, 应该是0的, 但是写成了1
         start_pos = start_pos_tensor.cpu().numpy().tolist()
+    if start_quat is None:
+        _, start_quat_tensor = robot.body.get_world_pose()
         start_quat = start_quat_tensor.cpu().numpy().tolist()
 
     goal_msg.start = _create_pose_stamped(robot, start_pos, start_quat)

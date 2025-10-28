@@ -119,7 +119,6 @@ class Robot:
 
         # 机器人的技能
         self.active_goal_handle = None  # 存储当前活动的Action Goal句柄
-        self.action_timer = None  # 用于周期性 tick 行为树的定时器
 
         # 用于回调函数中
         self.flag_active = False
@@ -192,7 +191,11 @@ class Robot:
         from robot.skill.base.manipulation.pick_up import pick_up_skill
         from robot.skill.base.manipulation.put_down import put_down_skill
 
-        SKILL_TABLE = {"navigation": navigate_to_skill, "pickup": pick_up_skill, "putdown": put_down_skill}
+        SKILL_TABLE = {
+            "navigation": navigate_to_skill,
+            "pickup": pick_up_skill,
+            "putdown": put_down_skill,
+        }
 
         try:
             # 创建技能生成器，但不开始执行
@@ -207,15 +210,6 @@ class Robot:
         except Exception as e:
             logger.error(f"准备技能失败: {e}")
             goal_handle.abort()
-
-    def cleanup_action(self):
-        """任务结束后（成功、失败或取消），清理所有相关资源。"""
-        if self.action_timer:
-            self.action_timer.cancel()
-            self.action_timer = None
-        self.behaviour_tree = None
-        self.active_goal_handle = None  # 在最后重置，允许新任务进入
-        logger.info("任务已清理。")
 
     def run_skill_for_test(
         self,
@@ -595,11 +589,13 @@ class Robot:
         self._update_camera_view()
         # publish robot position
         self.publish_robot_state()
+        # on control loop
+        self.node_controller_mpc.control_loop()
         return
 
     def execute_skill_step(self):
         """在 physics step 中执行技能的一步"""
-#        if not self.active_goal_handle and not self.skill_generator: #测试使用
+        #        if not self.active_goal_handle and not self.skill_generator: #测试使用
         if not self.active_goal_handle or not self.skill_generator:
             return
 
@@ -712,9 +708,9 @@ class Robot:
         self.camera_prim_path = f"/World/Robot_{self.cfg_robot.id}_Camera"
         self.viewport_name = f"Viewport_Robot_{self.cfg_robot.id}"
 
-        # 如果prim已存在，先删除（可选，用于热重载）
-        if prims_utils.is_prim_path_valid(self.camera_prim_path):
-            prims_utils.delete_prim(self.camera_prim_path)
+        # # 如果prim已存在，先删除（可选，用于热重载）
+        # if prims_utils.is_prim_path_valid(self.camera_prim_path):
+        #     prims_utils.delete_prim(self.camera_prim_path)
 
         # 2. 创建相机Prim
 

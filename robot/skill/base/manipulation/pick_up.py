@@ -1,9 +1,11 @@
+import json
+
 import numpy as np
 import torch
 
 from log.log_manager import LogManager
 from physics_engine.isaacsim_utils import RigidPrim
-from physics_engine.pxr_utils import UsdPhysics
+from physics_engine.pxr_utils import UsdPhysics, Gf
 
 from gsi_msgs.gsi_msgs_helper import Parameter
 
@@ -15,7 +17,19 @@ def pick_up_skill(**kwargs):
     robot_hand_prim_path = kwargs.get("robot_hand_prim_path")
     object_prim_path = kwargs.get("object_prim_path")
     distance_threshold = kwargs.get("distance_threshold", 2.0)
+    axis = kwargs.get("axis", [0,0,1])
+    local_pos_hand = kwargs.get("local_pos_hand", [0,0,1])
+    local_pos_object = kwargs.get("local_pos_object", [0,0,0])
 
+    if type(axis) is str:
+        axis = json.loads(axis)
+    if type(local_pos_hand) is str:
+        local_pos_hand = json.loads(local_pos_hand)
+    if type(local_pos_object) is str:
+        local_pos_object = json.loads(local_pos_object)
+    print(type(axis), axis)
+    print(type(local_pos_hand), local_pos_hand)
+    print(type(local_pos_object), local_pos_object)
     hand_prim = RigidPrim(prim_paths_expr=robot_hand_prim_path)
     object_prim = RigidPrim(prim_paths_expr=object_prim_path)
 
@@ -55,12 +69,18 @@ def pick_up_skill(**kwargs):
                 joint_type="fixed",
                 body0=robot_hand_prim_path,
                 body1=object_prim_path,
-                local_pos0=[0, 0, 1],
-                local_pos1=[0, 0, 0],
-                axis=[0, 0, 1],
+                local_pos0=local_pos_hand,
+                local_pos1=local_pos_object,
+                axis=axis,
             )
             joint_prim = robot.scene_manager.stage.GetPrimAtPath(joint_path)
         joint = UsdPhysics.Joint(joint_prim)
+        joint.GetLocalPos0Attr().Set(Gf.Vec3f(local_pos_hand))
+        joint.GetLocalPos1Attr().Set(Gf.Vec3f(local_pos_object))
+        if axis == [1, 0, 0]: axis_str = "X"
+        elif axis == [0, 1, 0]: axis_str = "Y"
+        else: axis_str = "Z"
+        # joint.GetAxisAttr().Set(axis_str)
         joint.GetJointEnabledAttr().Set(True)  # <-- 关键的状态切换！
 
         yield robot.form_feedback("success", "Object picked successfully!", 100)

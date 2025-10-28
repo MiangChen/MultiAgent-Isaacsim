@@ -10,9 +10,10 @@
 
 try:
     import pydevd_pycharm
-    pydevd_pycharm.settrace('localhost', port=12345, stdoutToServer=True, stderrToServer=True)
-except:
-    print("no pydevd found")
+
+    pydevd_pycharm.settrace('localhost', port=12345, stdout_to_server=True, stderr_to_server=True)
+except Exception as e:
+    print(f"no pydevd found: {e}")
 ###################################################################################################################
 
 from physics_engine.isaacsim_simulation_app import start_isaacsim_simulation_app
@@ -37,13 +38,13 @@ from physics_engine.isaacsim_utils import World
 from robot.robot_drone_cf2x import RobotCf2x, CfgDroneCf2X
 from robot.robot_h1 import RobotH1, CfgH1
 from robot.robot_jetbot import CfgJetbot, RobotJetbot
+from robot.target import Target
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
 from utils import euler_to_quat
 
 # ROS2 imports
 import rclpy
-
 
 rclpy.init(args=None)
 logger = LogManager.get_logger(__name__)
@@ -54,10 +55,10 @@ PROJECT_ROOT = config_manager.get("project_root")
 
 @inject
 def setup_simulation(
-    swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
-    env: Env = Provide[AppContainer.env],
-    world: World = Provide[AppContainer.world],
-    loop: asyncio.AbstractEventLoop = Provide[AppContainer.loop],
+        swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
+        env: Env = Provide[AppContainer.env],
+        world: World = Provide[AppContainer.world],
+        loop: asyncio.AbstractEventLoop = Provide[AppContainer.loop],
 ) -> None:
     """
     Setup simulation environment with injected dependencies.
@@ -69,6 +70,7 @@ def setup_simulation(
     )
     swarm_manager.register_robot_class(robot_class_name="h1", robot_class=RobotH1)
     swarm_manager.register_robot_class(robot_class_name="cf2x", robot_class=RobotCf2x)
+    swarm_manager.register_robot_class(robot_class_name="target", robot_class=Target)
 
     # Create initialization tasks
     async def init_env_and_swarm():
@@ -179,7 +181,7 @@ def create_car_objects(scene_manager: SceneManager, map_semantic: MapSemantic) -
     return created_prim_paths
 
 
-def process_semantic_detection(semantic_camera, map_semantic: MapSemantic, target_semantic_class:str) -> None:
+def process_semantic_detection(semantic_camera, map_semantic: MapSemantic, target_semantic_class: str) -> None:
     """
     Process semantic detection and car pose extraction using injected dependencies.
 
@@ -282,7 +284,6 @@ def main():
         camera_prim_path=semantic_camera_prim_path, viewport_name="Viewport"
     )
 
-
     count = 0
     logger.info("Starting main simulation loop...")
 
@@ -294,7 +295,7 @@ def main():
         # "scene_name": "object",
         "name": object_name,
         "scale": [0.5, 0.5, 0.5],
-        "position": [3, 2.9, 0.25],
+        "position": [3, 5, 0.25],
         "orientation": [0.707, 0, 0, 0.707],
         "color": [255, 255, 255],
         "mass": 0.1,
@@ -335,20 +336,11 @@ def main():
     import time
     time.sleep(2)
 
-
     result = True
     # Main simulation loop
     while simulation_app.is_running():
         env.step(action=None)
-        ##### navigation usage example###
-        ## 有时候会有些bug, 多运行几次main
-        if result == False and count %100==0:
-            # swarm_manager.robot_active['jetbot'][0].navigate_to([10, 10, 0])  #  回报错 invalid initial state
-            start_pos_tensor, start_quat_tensor =  swarm_manager.robot_active['jetbot'][0].body.get_world_pose()
-            start_pos_tensor[2] = 1
-            start_pos = start_pos_tensor.cpu().numpy().tolist()
-            swarm_manager.robot_active['jetbot'][0].node_planner_ompl.compute_path(start_pos, [10, 10, 0])
-            result = True
+        ##### navigation usage ex
         if count % 120 == 0 and count > 0:
             result = process_semantic_detection(semantic_camera, semantic_map, "robot")
             print(result)
@@ -358,7 +350,7 @@ def main():
         count += 1
 
     ros_manager.stop()
-    
+
     # 统一关闭rclpy上下文
     if rclpy.ok():
         rclpy.shutdown()
