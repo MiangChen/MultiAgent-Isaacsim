@@ -132,12 +132,8 @@ class SceneManager:
         删除指定路径的prim
         """
         try:
-            stage = omni.usd.get_context().get_stage()
-            if not stage:
-                return {"status": "error", "message": "No active USD stage."}
-
             # 检查Prim是否存在
-            prim_to_delete = stage.GetPrimAtPath(prim_path)
+            prim_to_delete = self.stage.GetPrimAtPath(prim_path)
             if not prim_to_delete.IsValid():
                 # Prim不存在，可以认为删除“成功”或“已完成”
                 return {
@@ -146,7 +142,7 @@ class SceneManager:
                 }
 
             # 直接删除
-            stage.RemovePrim(Sdf.Path(prim_path))
+            self.stage.RemovePrim(Sdf.Path(prim_path))
 
             return {
                 "status": "success",
