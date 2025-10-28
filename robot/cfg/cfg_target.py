@@ -23,5 +23,5 @@ class CfgTarget(CfgRobot):
     robot_radius: float = 0.2
     # 起点-中点-终点-起点 的循环运动来躲避追踪
     base_pos: tuple = (0, 0, 0)
-    mid_pos: tuple = (0, 0, 0)
-    target_pos: tuple = (0, 0, 0)  # FIXME:语义地图做出来后应该在语义地图里选两个点
+    mid_pos: tuple = (11.5, 26, 0)
+    target_pos: tuple = (-11.5, 26, 0)  # FIXME:语义地图做出来后应该在语义地图里选两个点

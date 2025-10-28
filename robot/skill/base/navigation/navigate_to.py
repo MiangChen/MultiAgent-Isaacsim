@@ -6,9 +6,9 @@ from nav2_msgs.action import ComputePathToPose
 
 
 def navigate_to_skill(**kwargs):
-
     robot = kwargs.get("robot")
     start_pos = kwargs.get("start_pos", None)
+    robot.node_controller_mpc.has_reached_goal = False
     if type(start_pos) is str:
         start_pos = json.loads(start_pos)
     start_quat = kwargs.get("start_quat", [1.0, 0.0, 0.0, 0.0])
@@ -16,7 +16,6 @@ def navigate_to_skill(**kwargs):
         start_quat = json.loads(start_quat)
     goal_pos = kwargs.get("goal_pos")
     goal_quat_wxyz = kwargs.get("goal_quat_wxyz", [1.0, 0.0, 0.0, 0.0])
-
     if isinstance(goal_pos, str):
         goal_pos = json.loads(goal_pos)
     elif isinstance(goal_pos, tuple):
@@ -64,7 +63,6 @@ def navigate_to_skill(**kwargs):
             import time
 
             time.sleep(0.1)
-
 
 def _goal_response_callback(robot, future):
     goal_handle = future.result()

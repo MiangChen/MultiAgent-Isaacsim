@@ -54,7 +54,7 @@ class Target(Robot):
         ]
         self.path_index = 0
         self.debug_counter = 0
-        self.debug_period = 100
+        self.debug_period = 30
 
     def start_moving(self) -> None:
         self.is_moving = True
@@ -73,11 +73,9 @@ class Target(Robot):
         self,
     ) -> None:
 
-        self.debug_counter += 1
-
         if self.is_moving:
             if self.node_controller_mpc.has_reached_goal:
-                navigate_to_skill(
+                self.skill_generator = navigate_to_skill(
                     robot=self,
                     goal_pos=self.path[self.path_index],
                     goal_quat_wxyz=[1.0, 0.0, 0.0, 0.0],
