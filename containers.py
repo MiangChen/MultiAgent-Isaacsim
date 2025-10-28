@@ -68,7 +68,7 @@ class AppContainer(containers.DeclarativeContainer):
         RosManager, loop=loop, config=config.provided["ros"], world=world,
     )
 
-    scene_manager = providers.Singleton(SceneManager)
+    scene_manager = providers.Singleton(SceneManager, world=world)
     semantic_map = providers.Singleton(MapSemantic)
     viewport_manager = providers.Singleton(ViewportManager)
 
