@@ -14,8 +14,9 @@ cf2x:
 jetbot:
   - id: 0
     name: Allen
-    position: [ 5, 4, 0.035 ]
-    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
+    position: [ 7, 5, 0.035 ]
+#    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
+    quat: [1, 0.0, 0.0, 0]
     cfg_dict_camera:
       front:
         use_existing_camera: True
@@ -82,7 +83,7 @@ target:
 h1:
   - id: 0
     name: Hellen
-    position: [ 3, 2, 1.05 ]
+    position: [ 3, 4, 1.05 ]
     quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
     cfg_dict_camera:
       front:
