@@ -5,7 +5,7 @@ import torch
 
 from log.log_manager import LogManager
 from physics_engine.isaacsim_utils import RigidPrim
-from physics_engine.pxr_utils import UsdPhysics
+from physics_engine.pxr_utils import UsdPhysics, Gf
 
 from gsi_msgs.gsi_msgs_helper import Parameter
 
@@ -75,6 +75,12 @@ def pick_up_skill(**kwargs):
             )
             joint_prim = robot.scene_manager.stage.GetPrimAtPath(joint_path)
         joint = UsdPhysics.Joint(joint_prim)
+        joint.GetLocalPos0Attr().Set(Gf.Vec3f(local_pos_hand))
+        joint.GetLocalPos1Attr().Set(Gf.Vec3f(local_pos_object))
+        if axis == [1, 0, 0]: axis_str = "X"
+        elif axis == [0, 1, 0]: axis_str = "Y"
+        else: axis_str = "Z"
+        # joint.GetAxisAttr().Set(axis_str)
         joint.GetJointEnabledAttr().Set(True)  # <-- 关键的状态切换！
 
         yield robot.form_feedback("success", "Object picked successfully!", 100)
