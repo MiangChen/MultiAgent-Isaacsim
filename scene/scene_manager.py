@@ -37,7 +37,7 @@ from physics_engine.isaacsim_utils import (
     RigidPrim,
     create_prim,
 )
-from physics_engine.omni_utils import omni, get_physx_query_interface
+from physics_engine.omni_utils import omni
 from physics_engine.pxr_utils import (
     Gf, Sdf, UsdGeom, UsdPhysics, PhysxSchema, Usd
 )
