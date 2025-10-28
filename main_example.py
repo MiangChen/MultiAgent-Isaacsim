@@ -37,6 +37,7 @@ from physics_engine.isaacsim_utils import World
 from robot.robot_drone_cf2x import RobotCf2x, CfgDroneCf2X
 from robot.robot_h1 import RobotH1, CfgH1
 from robot.robot_jetbot import CfgJetbot, RobotJetbot
+from robot.target import Target
 from robot.swarm_manager import SwarmManager
 from scene.scene_manager import SceneManager
 from utils import euler_to_quat
@@ -69,6 +70,7 @@ def setup_simulation(
     )
     swarm_manager.register_robot_class(robot_class_name="h1", robot_class=RobotH1)
     swarm_manager.register_robot_class(robot_class_name="cf2x", robot_class=RobotCf2x)
+    swarm_manager.register_robot_class(robot_class_name="target", robot_class=Target)
 
     # Create initialization tasks
     async def init_env_and_swarm():
