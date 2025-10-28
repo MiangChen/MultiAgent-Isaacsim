@@ -27,7 +27,7 @@ from nav_msgs.msg import Odometry
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from geometry_msgs.msg import Twist
 from builtin_interfaces.msg import Duration
-
+from rosgraph_msgs.msg import Clock
 
 class TrajectoryManager:
     """
@@ -197,10 +197,6 @@ class NodeMpcController(Node):
     def __init__(self, namespace: str):
         super().__init__(node_name="node_mpc_controller", namespace=namespace)
 
-        # 移除独立的executor，由robot.py统一管理
-        # self.executor = MultiThreadedExecutor()
-        # self.thread = threading.Thread(target=self._spin, daemon=True)
-
         # Load parameters
         self.declare_parameters(
             namespace="",
@@ -214,6 +210,7 @@ class NodeMpcController(Node):
                 ("goal.position_tolerance", 0.1),
                 ("goal.velocity_tolerance", 0.05),
                 ("goal.completion_timeout", 20.0),
+                ("time.use_sim_time", True),  # 是否使用仿真时间
             ],
         )
 
@@ -239,7 +236,7 @@ class NodeMpcController(Node):
         self.is_active = False
         self.has_reached_goal = True
 
-        self.move_event = FeedbackEvent()  # 在主线程中通知, 目前还没有添加内容反馈
+        self.move_event = FeedbackEvent()
 
         # ROS 2 Communications
         self.trajectory_sub = self.create_subscription(
@@ -249,23 +246,17 @@ class NodeMpcController(Node):
             Odometry, "odom", self.odom_callback, 10
         )
         self.cmd_vel_pub = self.create_publisher(Twist, "cmd_vel", 10)
-        self.control_timer = self.create_timer(self.mpc_dt, self.control_loop)
-
+        self.clock_sub = self.create_subscription(
+            Clock,
+            "/isaacsim_simulation_time",
+            self.clock_callback,
+            10
+        )
         self.get_logger().info("MPC Controller Node has started.")
 
-    # 移除独立的spinning方法，由robot.py的统一executor管理
-    # def start_spinning(self):
-    #     if self.executor is None:
-    #         self.executor = MultiThreadedExecutor()
-    #     self.executor.add_node(self)
-    #     self.thread.start()
-    #     self.get_logger().info("Planner node spinning started in its own thread.")
-
-    # def _spin(self):
-    #     try:
-    #         self.executor.spin()
-    #     except Exception as e:
-    #         self.get_logger().error(f"Spin failed in node {self.namespace}: {e}")
+    def clock_callback(self, msg: Clock):
+        sim_time_float = msg.clock.sec + msg.clock.nanosec / 1e9
+        self.latest_sim_time = sim_time_float
 
     def trajectory_callback(self, msg: JointTrajectory):
         """Handles incoming trajectory messages."""
@@ -275,7 +266,7 @@ class NodeMpcController(Node):
         try:
             trajectory_data = self._convert_traj_msg_to_dict(msg)
             self.trajectory_manager = TrajectoryManager(trajectory_data)
-            self.trajectory_start_time = self.get_clock().now()
+            self.trajectory_start_time = self.latest_sim_time
             self.has_reached_goal = False
             self.is_active = True
         except ValueError as e:
@@ -303,7 +294,7 @@ class NodeMpcController(Node):
             return
 
         elapsed_time = (
-            self.get_clock().now() - self.trajectory_start_time
+            self.latest_sim_time - self.trajectory_start_time
         ).nanoseconds / 1e9
         # Get reference slice from the trajectory manager
         ref_states, ref_controls = self.trajectory_manager.get_reference_slice(
