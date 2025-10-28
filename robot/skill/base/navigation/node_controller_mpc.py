@@ -9,7 +9,7 @@
 
 # Standard library imports
 import threading
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 
 # Third-party library imports
 import numpy as np

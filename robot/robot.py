@@ -163,6 +163,8 @@ class Robot:
         # 测试锁
         self._test_lock = threading.Lock()
 
+        self.skill_generator = None
+
     def callback_task_execution(self, goal_handle):
         """
         新的非阻塞式 Action Server 回调。
@@ -587,8 +589,8 @@ class Robot:
             step_size:  dt 时间间隔
         """
         # 执行技能步骤
-        self.execute_skill_step()
         self.execute_frame_skill()
+        self.execute_skill_step()
         # update robot velocity
         self.controller_simplified()
         # 更新相机的视野
@@ -599,6 +601,7 @@ class Robot:
 
     def execute_skill_step(self):
         """在 physics step 中执行技能的一步"""
+#        if not self.active_goal_handle and not self.skill_generator: #测试使用
         if not self.active_goal_handle or not self.skill_generator:
             return
 
@@ -680,7 +683,7 @@ class Robot:
             and self.node_controller_mpc.has_reached_goal
             and self.track_waypoint_index < len(self.track_waypoint_list)
         ):
-            navigate_to_skill(
+            self.skill_generator = navigate_to_skill(
                 robot=self, goal_pos=self.track_waypoint_list[self.track_waypoint_index]
             )
             self.track_waypoint_index += 1

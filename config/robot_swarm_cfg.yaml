@@ -64,6 +64,21 @@ jetbot:
 #        resolution: [ 1280, 720 ]
 #        enable_semantic_detection: True
 
+target:
+  - id: 0
+    name: 11g
+    position: [ 5, 1, 0.035 ]
+    quat: [1.0, 0.0, 0.0, 0.0]
+    cfg_dict_camera:
+      front:
+        use_existing_camera: True
+        path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
+        id: 0
+        frequency: 30
+        resolution: [ 1280, 720 ]
+        enable_semantic_detection: True
+
+
 h1:
   - id: 0
     name: Hellen
