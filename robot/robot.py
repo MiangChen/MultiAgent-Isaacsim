@@ -165,7 +165,7 @@ class Robot:
 
         self.skill_generator = None
 
-    def callback_task_execution(self, goal_handle):
+    def callback_skill_execution(self, goal_handle):
         if self.active_goal_handle:
             goal_handle.abort()
             return SkillExecution.Result(success=False, message="机器人正忙")

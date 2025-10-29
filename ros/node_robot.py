@@ -56,7 +56,7 @@ class NodeRobot(Node):
             self.get_logger().warning("No robot instance connected for cmd_vel")
 
     def callback_execute_skill(self, goal_handle):
-        return self.robot_instance.callback_task_execution(goal_handle)
+        return self.robot_instance.callback_skill_execution(goal_handle)
 
     def set_robot_instance(self, robot):
         self.robot_instance = robot
