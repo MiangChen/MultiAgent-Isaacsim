@@ -57,19 +57,19 @@ def start_isaacsim_simulation_app():
             print(f"Set setting: {key} = {value}")
             simulation_app.set_setting(key, value)
 
-    # 7. 更新一次simulation_app
+    # 7. 发布仿真时钟
+    create_clock_graph()
+
+    # 8. 更新一次simulation_app
     simulation_app.update()
 
-    # 8.
-    # create_clock_graph()
     return simulation_app
 
 
 def create_clock_graph():
-    from physics_engine.omni_utils import og
     """Sets up the OmniGraph for publishing simulation time."""
+    from physics_engine.omni_utils import og
 
-    # Setup graph for clock publishing
     clock_topic = "/isaacsim_simulation_clock"
     (clock_graph_handle, _, _, _) = og.Controller.edit(
         {"graph_path": "/ActionGraph", "evaluator_name": "execution"},
