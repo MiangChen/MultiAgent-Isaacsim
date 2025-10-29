@@ -11,11 +11,9 @@
 import os
 
 # Third-party library imports
-import yaml
 from isaacsim import SimulationApp
-
-# Local project imports
-from physics_engine.omni_utils import omni
+import omni
+import yaml
 
 
 def start_isaacsim_simulation_app():
