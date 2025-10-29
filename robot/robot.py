@@ -266,16 +266,14 @@ class Robot:
         # self.node.callback_execute_skill = self.callback_task_execution  # 不可以用这个方法, 回调函数无法在后期修改
 
         # 导航基础设施节点
-        self.node_planner_ompl = NodePlannerOmpl(namespace=self.namespace)
-        self.node_trajectory_generator = NodeTrajectoryGenerator(
-            namespace=self.namespace
-        )
-        self.node_controller_mpc = NodeMpcController(namespace=self.namespace)
-
-        # Action客户端
         self.action_client_path_planner = ActionClient(
             self.node, ComputePathToPose, "action_compute_path_to_pose"
+        ) # 用于发布消息
+        self.node_planner_ompl = NodePlannerOmpl(namespace=self.namespace)
+        self.node_trajectory_generator = NodeTrajectoryGenerator(
+        namespace=self.namespace
         )
+        self.node_controller_mpc = NodeMpcController(namespace=self.namespace)
 
         # 执行器和线程管理
         self.executor = MultiThreadedExecutor()

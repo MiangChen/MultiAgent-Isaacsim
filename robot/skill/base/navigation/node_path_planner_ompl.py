@@ -174,6 +174,11 @@ class NodePlannerOmpl(Node):
     def callback_action(self, goal_handle):
         start_time = time.time()
         self.get_logger().info("Executing navigation goal...")
+        
+        if goal_handle.is_cancel_requested:
+            goal_handle.canceled()
+            return ComputePathToPose.Result()
+            
         if self.si is None:
             self.get_logger().error("Planner is not ready. Missing map or OMPL setup.")
             goal_handle.abort()
@@ -190,7 +195,7 @@ class NodePlannerOmpl(Node):
             start_pose.orientation.y,
             start_pose.orientation.z,
             start_pose.orientation.w,
-        ]  # xyzw
+        ]
 
         goal_pose = goal_handle.request.goal.pose
         goal_position = [
@@ -203,9 +208,14 @@ class NodePlannerOmpl(Node):
             goal_pose.orientation.y,
             goal_pose.orientation.z,
             goal_pose.orientation.w,
-        ]  # xyzw
+        ]
 
-        path = self.compute_path(start_position, goal_position, start_quat, goal_quat)
+        path = self.compute_path(start_position, goal_position, start_quat, goal_quat, goal_handle)
+        
+        if goal_handle.is_cancel_requested:
+            goal_handle.canceled()
+            return ComputePathToPose.Result()
+            
         result = ComputePathToPose.Result()
 
         def convert_ompl_path_to_ros_msg(path: list, frame_id: str) -> Path:
@@ -253,6 +263,7 @@ class NodePlannerOmpl(Node):
         goal_pos: list,
         start_quat: list = [0.0, 0.0, 0.0, 1.0],
         goal_quat: list = [0.0, 0.0, 0.0, 1.0],
+        goal_handle=None,
     ) -> list:
 
         pdef = ob.ProblemDefinition(self.si)
@@ -293,7 +304,13 @@ class NodePlannerOmpl(Node):
         planner.setProblemDefinition(pdef)
         planner.setup()
 
+        if goal_handle and goal_handle.is_cancel_requested:
+            return []
+
         solved = planner.solve(10)
+        
+        if goal_handle and goal_handle.is_cancel_requested:
+            return []
 
         path = []
         if solved:
