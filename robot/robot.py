@@ -116,7 +116,7 @@ class Robot:
         self.vel_angular = torch.tensor([0.0, 0.0, 0.0])
 
         # 机器人的技能
-        self.active_goal_handle = None  # 存储当前活动的Action Goal句柄
+        self.active_goal_handle = None
 
         # 用于回调函数中
         self.flag_active = False
@@ -192,18 +192,11 @@ class Robot:
         }
 
         try:
-            # 创建技能生成器，但不开始执行
             self.skill_generator = SKILL_TABLE[task_name](**params)
             self.active_goal_handle = goal_handle
             self.skill_feedback_msg = SkillExecution.Feedback()
-
-            logger.info(
-                f"技能 {task_name} 已准备就绪，将在下一个 physics step 开始执行"
-            )
-
         except Exception as e:
-            logger.error(f"准备技能失败: {e}")
-            goal_handle.abort()
+            raise e
 
     ########################## Publisher Odom  ############################
     def publish_robot_state(self):
@@ -266,9 +259,7 @@ class Robot:
         )
         self.node_controller_mpc = NodeMpcController(namespace=self.namespace)
 
-        # 技能状态发布器
-        from std_msgs.msg import String
-        self.skill_status_pub = self.node.create_publisher(String, "skill_status", 10)
+
 
         # 执行器和线程管理
         self.executor = MultiThreadedExecutor()
@@ -394,15 +385,21 @@ class Robot:
 
         try:
             feedback = next(self.skill_generator)
-            self.publish_skill_status(feedback)
+            if self.active_goal_handle:
+                self.skill_feedback_msg.status = str(feedback.get("progress", 0))
+                self.active_goal_handle.publish_feedback(self.skill_feedback_msg)
         except StopIteration as e:
             final_result = e.value if hasattr(e, 'value') and e.value else {}
-            logger.info(f"技能执行完成: {final_result}")
-            self.publish_skill_status(final_result)
+            success = final_result.get("status") == "finished"
+            result = SkillExecution.Result(success=success, message=final_result.get("reason", "完成"))
+            
+            if success:
+                self.active_goal_handle.succeed(result)
+            else:
+                self.active_goal_handle.abort()
             self.cleanup_skill()
         except Exception as e:
-            logger.error(f"技能执行失败: {e}")
-            self.publish_skill_status({"status": "failed", "reason": str(e)})
+            self.active_goal_handle.abort()
             self.cleanup_skill()
 
 
@@ -411,12 +408,7 @@ class Robot:
         self.skill_generator = None
         self.skill_feedback_msg = None
 
-    def publish_skill_status(self, status_dict):
-        if hasattr(self, 'skill_status_pub'):
-            from std_msgs.msg import String
-            msg = String()
-            msg.data = json.dumps(status_dict)
-            self.skill_status_pub.publish(msg)
+
 
     def post_reset(self) -> None:
         """Set up things that happen after the world resets."""
