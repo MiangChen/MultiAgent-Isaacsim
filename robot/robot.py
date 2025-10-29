@@ -8,6 +8,7 @@
 # =============================================================================
 
 # Standard library imports
+import json
 import threading
 from threading import Thread
 from typing import Any, Dict
@@ -165,24 +166,21 @@ class Robot:
         self.skill_generator = None
 
     def callback_task_execution(self, goal_handle):
-
-        logger.info("接收到新的任务目标...")
-
         if self.active_goal_handle:
-            logger.error("机器人正忙，拒绝新任务！")
             goal_handle.abort()
             return SkillExecution.Result(success=False, message="机器人正忙")
 
-        request = goal_handle.request.skill_request
-        task_name = request.skill_list[
-            0
-        ].skill  # todo 返回的是一个技能列表, 目前我们先处理第一个
-        params = {p.key: p.value for p in request.skill_list[0].params}
-        params["robot"] = self
+        try:
+            request = goal_handle.request.skill_request
+            task_name = request.skill_list[0].skill
+            params = {p.key: p.value for p in request.skill_list[0].params}
+            params["robot"] = self
 
-        self.prepare_skill_execution(goal_handle, task_name, params)
-
-        return SkillExecution.Result(success=False, message="executing")
+            self.prepare_skill_execution(goal_handle, task_name, params)
+            return SkillExecution.Result(success=True, message=f"技能 {task_name} 启动成功")
+        except Exception as e:
+            goal_handle.abort()
+            return SkillExecution.Result(success=False, message=f"启动失败: {str(e)}")
 
     def prepare_skill_execution(self, goal_handle, task_name, params) -> None:
         """准备技能执行，在 physics step 中执行"""
@@ -270,6 +268,10 @@ class Robot:
             namespace=self.namespace
         )
         self.node_controller_mpc = NodeMpcController(namespace=self.namespace)
+
+        # 技能状态发布器
+        from std_msgs.msg import String
+        self.skill_status_pub = self.node.create_publisher(String, "skill_status", 10)
 
         # 执行器和线程管理
         self.executor = MultiThreadedExecutor()
@@ -390,59 +392,34 @@ class Robot:
         return
 
     def execute_skill_step(self):
-        """在 physics step 中执行技能的一步"""
-        #        if not self.active_goal_handle and not self.skill_generator: #测试使用
-        if not self.active_goal_handle or not self.skill_generator:
+        if not self.skill_generator:
             return
 
         try:
-            # 检查取消请求
-            if self.active_goal_handle.is_cancel_requested:
-                logger.info("技能被取消")
-                self.active_goal_handle.canceled()
-                self.cleanup_skill()
-                return
-
-            # 执行技能的下一步
             feedback = next(self.skill_generator)
-
-            # 直接发布反馈
-            if self.active_goal_handle and feedback:
-                self.skill_feedback_msg.status = str(feedback.get("progress", 0))
-                self.active_goal_handle.publish_feedback(self.skill_feedback_msg)
-
-            logger.debug(f"技能执行中: {feedback.get('status', 'unknown')}")
+            self.publish_skill_status(feedback)
         except StopIteration as e:
-            # 技能完成，检查最终结果
-            final_result = (
-                e.value
-                if hasattr(e, "value") and e.value
-                else {"status": "finished", "reason": "completed", "progress": 100}
-            )
+            final_result = e.value if hasattr(e, 'value') and e.value else {}
             logger.info(f"技能执行完成: {final_result}")
-
-            try:
-                if final_result.get("status") == "finished":
-                    result = SkillExecution.Result(
-                        success=True, message=final_result.get("reason", "技能执行成功")
-                    )
-                    self.active_goal_handle.succeed(result)
-                elif final_result.get("status") == "failed":
-                    self.active_goal_handle.abort()
-                else:
-                    # 未知状态，默认为失败
-                    self.active_goal_handle.abort()
-            except Exception as e:
-                logger.warning(f"无法设置技能状态: {e}")
+            self.publish_skill_status(final_result)
+            self.cleanup_skill()
+        except Exception as e:
+            logger.error(f"技能执行失败: {e}")
+            self.publish_skill_status({"status": "failed", "reason": str(e)})
             self.cleanup_skill()
 
 
     def cleanup_skill(self):
-        """清理技能执行状态"""
         self.active_goal_handle = None
         self.skill_generator = None
         self.skill_feedback_msg = None
-        logger.debug("技能状态已清理")
+
+    def publish_skill_status(self, status_dict):
+        if hasattr(self, 'skill_status_pub'):
+            from std_msgs.msg import String
+            msg = String()
+            msg.data = json.dumps(status_dict)
+            self.skill_status_pub.publish(msg)
 
     def post_reset(self) -> None:
         """Set up things that happen after the world resets."""
