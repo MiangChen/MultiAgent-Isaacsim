@@ -91,6 +91,7 @@ import threading
 
 # enable ROS bridge extension and then import ros modules
 extensions.enable_extension("isaacsim.ros1.bridge")
+extensions.enable_extension("isaacsim.ros2.bridge")
 import rosgraph
 import rospy
 
@@ -705,36 +706,7 @@ def add_drone_cameras(curr_stage, rig_comps: list[CamRigComponent]):
 
     return gimbal_prim
 
-
-def create_clock_graph():
-    """Sets up the OmniGraph for publishing simulation time."""
-    global g_simulation_app
-    g_simulation_app.update()  # Ensure updates before graph setup
-
-    # Setup graph for clock publishing
-    clock_topic = "/clock"
-    (clock_graph_handle, _, _, _) = og.Controller.edit(
-        {"graph_path": "/ActionGraph", "evaluator_name": "execution"},
-        {
-            og.Controller.Keys.CREATE_NODES: [
-                ("ReadSimTime", "isaacsim.core.nodes.IsaacReadSimulationTime"),
-                ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
-                ("PublishClock", "isaacsim.ros1.bridge.ROS1PublishClock"),
-            ],
-            og.Controller.Keys.CONNECT: [
-                ("OnPlaybackTick.outputs:tick", "PublishClock.inputs:execIn"),
-                ("ReadSimTime.outputs:simulationTime", "PublishClock.inputs:timeStamp"),
-            ],
-            og.Controller.Keys.SET_VALUES: [
-                ("PublishClock.inputs:topicName", clock_topic),
-            ],
-        },
-    )
-
-    # Run the clock graph once to generate ROS clock publisher
-    og.Controller.evaluate_sync(clock_graph_handle)
-
-    g_simulation_app.update()
+from physics_engine.isaacsim_simulation_app import create_clock_graph
 
 
 def callback_gazebo_linkstate_msg(linkstate_msg):
