@@ -57,8 +57,6 @@ def start_isaacsim_simulation_app():
             print(f"Set setting: {key} = {value}")
             simulation_app.set_setting(key, value)
 
-    # # 7. 根据从配置中读取的 headless 状态来决定是否禁用视口
-    # if sim_app_config.get("headless", False):
-    #     omni.kit.viewport.utility.get_active_viewport().updates_enabled = False
-
+    # 7. 更新一次simulation_app, 确保能
+    simulation_app.update()
     return simulation_app

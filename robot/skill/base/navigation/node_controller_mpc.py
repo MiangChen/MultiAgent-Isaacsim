@@ -250,7 +250,7 @@ class NodeMpcController(Node):
         # self.control_timer = self.create_timer(self.mpc_dt, self.control_loop)
         self.cmd_vel_pub = self.create_publisher(Twist, "cmd_vel", 10)
         self.clock_sub = self.create_subscription(
-            Clock, "/isaacsim_simulation_time", self.clock_callback, 10
+            Clock, "/isaacsim_simulation_clock", self.clock_callback, 10
         )
         self.get_logger().info("MPC Controller Node has started.")
 
