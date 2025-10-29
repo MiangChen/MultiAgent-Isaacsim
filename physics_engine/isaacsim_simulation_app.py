@@ -57,6 +57,37 @@ def start_isaacsim_simulation_app():
             print(f"Set setting: {key} = {value}")
             simulation_app.set_setting(key, value)
 
-    # 7. 更新一次simulation_app, 确保能
+    # 7. 更新一次simulation_app
     simulation_app.update()
+
+    # 8.
+    # create_clock_graph()
     return simulation_app
+
+
+def create_clock_graph():
+    from physics_engine.omni_utils import og
+    """Sets up the OmniGraph for publishing simulation time."""
+
+    # Setup graph for clock publishing
+    clock_topic = "/isaacsim_simulation_clock"
+    (clock_graph_handle, _, _, _) = og.Controller.edit(
+        {"graph_path": "/ActionGraph", "evaluator_name": "execution"},
+        {
+            og.Controller.Keys.CREATE_NODES: [
+                ("ReadSimTime", "isaacsim.core.nodes.IsaacReadSimulationTime"),
+                ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
+                ("PublishClock", "isaacsim.ros2.bridge.ROS2PublishClock"),
+            ],
+            og.Controller.Keys.CONNECT: [
+                ("OnPlaybackTick.outputs:tick", "PublishClock.inputs:execIn"),
+                ("ReadSimTime.outputs:simulationTime", "PublishClock.inputs:timeStamp"),
+            ],
+            og.Controller.Keys.SET_VALUES: [
+                ("PublishClock.inputs:topicName", clock_topic),
+            ],
+        },
+    )
+
+    # Run the clock graph once to generate ROS clock publisher
+    og.Controller.evaluate_sync(clock_graph_handle)
