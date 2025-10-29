@@ -37,10 +37,6 @@ class NodeRobot(Node):
         self.namespace = namespace
         self.robot_instance = None
 
-        # 移除独立的executor，由robot.py统一管理
-        # self.executor = MultiThreadedExecutor()
-        # self.thread = threading.Thread(target=self._spin, daemon=True)
-
         self.publisher_odom = self.create_publisher(Odometry, "odom", 10)
         self.subscriber_cmd_vel = self.create_subscription(
             Twist, "cmd_vel", self.callback_cmd_vel, 10
