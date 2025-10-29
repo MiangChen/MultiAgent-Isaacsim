@@ -77,9 +77,9 @@ def _get_viewport_manager_from_container():
 
 class Robot:
     def __init__(
-            self,
-            scene: Scene = None,
-            scene_manager: SceneManager = None,
+        self,
+        scene: Scene = None,
+        scene_manager: SceneManager = None,
     ):
 
         self.cfg_dict_camera = self.cfg_robot.cfg_dict_camera
@@ -95,9 +95,9 @@ class Robot:
 
         # 通用的机器人本体初始化代码
         self.cfg_robot.path_prim_robot = (
-                self.cfg_robot.path_prim_swarm
-                + f"/{self.cfg_robot.type}"
-                + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
+            self.cfg_robot.path_prim_swarm
+            + f"/{self.cfg_robot.type}"
+            + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
         )
         self.cfg_robot.namespace = self.cfg_robot.type + f"_{self.cfg_robot.id}"
         self.namespace = self.cfg_robot.namespace
@@ -165,10 +165,7 @@ class Robot:
         self.skill_generator = None
 
     def callback_task_execution(self, goal_handle):
-        """
-        新的非阻塞式 Action Server 回调。
-        当接收到新的 Action Goal 时被调用。
-        """
+
         logger.info("接收到新的任务目标...")
 
         if self.active_goal_handle:
@@ -185,9 +182,9 @@ class Robot:
 
         self.prepare_skill_execution(goal_handle, task_name, params)
 
-        return SkillExecution.Result()
+        return SkillExecution.Result(success=False, message="executing")
 
-    def prepare_skill_execution(self, goal_handle, task_name, params):
+    def prepare_skill_execution(self, goal_handle, task_name, params) -> None:
         """准备技能执行，在 physics step 中执行"""
         from robot.skill.base.navigation.navigate_to import navigate_to_skill
         from robot.skill.base.manipulation.pick_up import pick_up_skill
@@ -263,15 +260,14 @@ class Robot:
         # ROS节点基础设施
         self.node = NodeRobot(namespace=self.namespace)
         self.node.set_robot_instance(self)
-        # self.node.callback_execute_skill = self.callback_task_execution  # 不可以用这个方法, 回调函数无法在后期修改
 
         # 导航基础设施节点
         self.action_client_path_planner = ActionClient(
             self.node, ComputePathToPose, "action_compute_path_to_pose"
-        ) # 用于发布消息
+        )  # 用于发布消息
         self.node_planner_ompl = NodePlannerOmpl(namespace=self.namespace)
         self.node_trajectory_generator = NodeTrajectoryGenerator(
-        namespace=self.namespace
+            namespace=self.namespace
         )
         self.node_controller_mpc = NodeMpcController(namespace=self.namespace)
 
@@ -367,7 +363,7 @@ class Robot:
         #     self._initialize_third_person_camera()
 
     def form_feedback(
-            self, status: str = "processing", reason: str = "none", progress: int = 100
+        self, status: str = "processing", reason: str = "none", progress: int = 100
     ) -> Dict[str, Any]:
         return dict(
             status=status,
@@ -410,33 +406,36 @@ class Robot:
             # 执行技能的下一步
             feedback = next(self.skill_generator)
 
-            # 发送反馈
-            # self.skill_feedback_msg.status = feedback["status"]
-            # self.active_goal_handle.publish_feedback(self.skill_feedback_msg)
-
-            logger.debug(f"技能执行中: {feedback['status']}")
-
-        except StopIteration:
-            # 技能完成
-            logger.info("技能执行完成")
-            # 只有在 goal_handle 还有效时才调用 succeed
-            try:
-                self.active_goal_handle.succeed()
-            except Exception as e:
-                logger.warning(f"无法设置技能为成功状态: {e}")
-            self.cleanup_skill()
-
-        except Exception as e:
-            # 技能执行失败
-            logger.error(f"技能执行失败: {e}")
-            try:
-                self.skill_feedback_msg.status = "fail"
+            # 直接发布反馈
+            if self.active_goal_handle and feedback:
+                self.skill_feedback_msg.status = str(feedback.get("progress", 0))
                 self.active_goal_handle.publish_feedback(self.skill_feedback_msg)
-                result = SkillExecution.Result(success=False, message=str(e))
-                self.active_goal_handle.abort()
-            except Exception as abort_error:
-                logger.warning(f"无法设置技能为失败状态: {abort_error}")
+
+            logger.debug(f"技能执行中: {feedback.get('status', 'unknown')}")
+        except StopIteration as e:
+            # 技能完成，检查最终结果
+            final_result = (
+                e.value
+                if hasattr(e, "value") and e.value
+                else {"status": "finished", "reason": "completed", "progress": 100}
+            )
+            logger.info(f"技能执行完成: {final_result}")
+
+            try:
+                if final_result.get("status") == "finished":
+                    result = SkillExecution.Result(
+                        success=True, message=final_result.get("reason", "技能执行成功")
+                    )
+                    self.active_goal_handle.succeed(result)
+                elif final_result.get("status") == "failed":
+                    self.active_goal_handle.abort()
+                else:
+                    # 未知状态，默认为失败
+                    self.active_goal_handle.abort()
+            except Exception as e:
+                logger.warning(f"无法设置技能状态: {e}")
             self.cleanup_skill()
+
 
     def cleanup_skill(self):
         """清理技能执行状态"""
