@@ -66,6 +66,7 @@ def navigate_to_skill(**kwargs):
 
             time.sleep(0.1)
 
+
 def _goal_response_callback(robot, future):
     goal_handle = future.result()
     if not goal_handle.accepted:
