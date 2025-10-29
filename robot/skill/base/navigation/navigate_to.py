@@ -12,7 +12,7 @@ def navigate_to_skill(**kwargs):
     robot.node_controller_mpc.has_reached_goal = False
     if type(start_pos) is str:
         start_pos = json.loads(start_pos)
-    start_quat = kwargs.get("start_quat", [1.0, 0.0, 0.0, 0.0])
+    start_quat = kwargs.get("start_quat")
     if type(start_quat) is str:
         start_quat = json.loads(start_quat)
     goal_pos = kwargs.get("goal_pos")
