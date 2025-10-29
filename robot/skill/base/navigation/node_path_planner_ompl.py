@@ -174,11 +174,11 @@ class NodePlannerOmpl(Node):
     def callback_action(self, goal_handle):
         start_time = time.time()
         self.get_logger().info("Executing navigation goal...")
-        
+
         if goal_handle.is_cancel_requested:
             goal_handle.canceled()
             return ComputePathToPose.Result()
-            
+
         if self.si is None:
             self.get_logger().error("Planner is not ready. Missing map or OMPL setup.")
             goal_handle.abort()
@@ -210,12 +210,14 @@ class NodePlannerOmpl(Node):
             goal_pose.orientation.w,
         ]
 
-        path = self.compute_path(start_position, goal_position, start_quat, goal_quat, goal_handle)
-        
+        path = self.compute_path(
+            start_position, goal_position, start_quat, goal_quat, goal_handle
+        )
+
         if goal_handle.is_cancel_requested:
             goal_handle.canceled()
             return ComputePathToPose.Result()
-            
+
         result = ComputePathToPose.Result()
 
         def convert_ompl_path_to_ros_msg(path: list, frame_id: str) -> Path:
@@ -308,7 +310,7 @@ class NodePlannerOmpl(Node):
             return []
 
         solved = planner.solve(10)
-        
+
         if goal_handle and goal_handle.is_cancel_requested:
             return []
 
