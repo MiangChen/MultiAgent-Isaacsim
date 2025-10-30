@@ -49,10 +49,6 @@ class SwarmManager:
         self.robot_warehouse: Dict[str, List[Robot]] = {
             # 'jetbot': Jetbot cls instance,
         }
-        self.flag_active: Dict[str, List[int]] = {}
-        self.robot_active: Dict[str, List[Robot]] = {
-            # 'jetbot': Jetbot cls instance,
-        }
         self.robot_class = {  # 可扩展的机器人类注册
             # 'jetbot': Jetbot,
             # 'g1': G1,
@@ -66,15 +62,12 @@ class SwarmManager:
     ) -> None:
         """注册新的机器人类型"""
         self.robot_warehouse[robot_class_name] = []
-        self.robot_active[robot_class_name] = []
-        self.flag_active[robot_class_name] = []
         self.robot_class[robot_class_name] = robot_class
 
     async def initialize_async(
         self,
         scene: Scene,
         robot_swarm_cfg_path: str = None,
-        robot_active_flag_path: str = None,
     ) -> None:
         """
         Complete async initialization of the swarm manager.
@@ -85,10 +78,6 @@ class SwarmManager:
         # Load robot swarm configuration if path provided
         if robot_swarm_cfg_path is not None:
             await self.load_robot_swarm_cfg(robot_swarm_cfg_path)
-
-        # Activate robots if flag path provided
-        if robot_active_flag_path is not None:
-            self.activate_robot(robot_active_flag_path)
 
     async def load_robot_swarm_cfg(self, robot_swarm_cfg_file: str = None) -> None:
         """异步加载并创建配置文件中定义的所有机器人。"""
@@ -122,59 +111,10 @@ class SwarmManager:
                     )
 
                 self.robot_warehouse[robot_class_name].append(robot)
+                self.scene.add(robot.body.robot_articulation)
                 self.map_semantic.dict_map_semantic[robot.cfg_robot.namespace] = (
                     robot.cfg_robot.path_prim_robot
                 )
                 self.map_semantic.add_semantic(
-                    prim_path=robot.cfg_robot.path_prim_robot, semantic_label="car"
+                    prim_path=robot.cfg_robot.path_prim_robot, semantic_label="robot"
                 )
-
-    def activate_robot(
-        self, flag_file_path: str = None, flag_dict: Dict = None
-    ) -> None:
-        # 两种寄存器配置模式, 一个是从文件读取, 适合初始化时后加载大量机器人, 另一个是通过dict来配置, 时候后续少量的处理;
-        if flag_file_path is not None:
-            with open(flag_file_path, "r") as file:
-                flag_dict = yaml.safe_load(file)  # 返回字典
-
-        if flag_dict is None:
-            print("No flag file or dict found")
-
-        for key in self.robot_class.keys():
-            for robot in self.robot_warehouse[key]:
-                if robot.cfg_robot.type in flag_dict.keys():
-                    if robot.cfg_robot.id in flag_dict[key]:
-                        robot.flag_active = True  # 机器人自身记录一份
-                        self.robot_active[key].append(robot)
-                        self.scene.add(robot.body.robot_articulation)
-        return
-
-    def deactivate_robot(self, name: str):
-        """停用机器人并返回仓库"""
-        for robot_type in list(self.robot_active.keys()):
-            for i, robot in enumerate(self.robot_active[robot_type]):
-                if robot.cfg_robot.type == name:
-                    robot.is_active = False
-                    # self.robot_warehouse.append(robot)
-                    self.robot_active[robot_type].pop(i)
-
-                    # 清理空类型
-                    if not self.robot_active[robot_type]:
-                        del self.robot_active[robot_type]
-                    return True
-        return False
-
-    def _find_robot(self, name: str):
-        """在所有机器人中查找"""
-        for robots in self.robot_active.values():
-            for robot in robots:
-                if robot.cfg_robot.type == name:
-                    return robot
-        for robot in self.robot_warehouse.keys():
-            if robot.cfg_robot.namespace == name:
-                return robot
-        return None
-
-    def _is_name_unique(self, name: str):
-        """检查名称是否唯一"""
-        return self._find_robot(name) is None

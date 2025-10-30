@@ -63,6 +63,9 @@ class RobotJetbot(Robot):
         return
 
     def on_physics_step(self, step_size):
+        self.vel_linear[2] = 0
+        self.vel_angular[0] = 0
+        self.vel_angular[1] = 0
         super().on_physics_step(step_size)
 
         self.counter += 1

@@ -17,9 +17,9 @@ def pick_up_skill(**kwargs):
     robot_hand_prim_path = kwargs.get("robot_hand_prim_path")
     object_prim_path = kwargs.get("object_prim_path")
     distance_threshold = kwargs.get("distance_threshold", 2.0)
-    axis = kwargs.get("axis", [0,0,1])
-    local_pos_hand = kwargs.get("local_pos_hand", [0,0,1])
-    local_pos_object = kwargs.get("local_pos_object", [0,0,0])
+    axis = kwargs.get("axis", [0, 0, 1])
+    local_pos_hand = kwargs.get("local_pos_hand", [0, 0, 1])
+    local_pos_object = kwargs.get("local_pos_object", [0, 0, 0])
 
     if type(axis) is str:
         axis = json.loads(axis)
@@ -77,9 +77,12 @@ def pick_up_skill(**kwargs):
         joint = UsdPhysics.Joint(joint_prim)
         joint.GetLocalPos0Attr().Set(Gf.Vec3f(local_pos_hand))
         joint.GetLocalPos1Attr().Set(Gf.Vec3f(local_pos_object))
-        if axis == [1, 0, 0]: axis_str = "X"
-        elif axis == [0, 1, 0]: axis_str = "Y"
-        else: axis_str = "Z"
+        if axis == [1, 0, 0]:
+            axis_str = "X"
+        elif axis == [0, 1, 0]:
+            axis_str = "Y"
+        else:
+            axis_str = "Z"
         # joint.GetAxisAttr().Set(axis_str)
         joint.GetJointEnabledAttr().Set(True)  # <-- 关键的状态切换！
 

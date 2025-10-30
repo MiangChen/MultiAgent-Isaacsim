@@ -6,6 +6,7 @@ from gsi_msgs.gsi_msgs_helper import Parameter
 
 logger = LogManager.get_logger(__name__)
 
+
 def put_down_skill(**kwargs):
     robot = kwargs.get("robot")
     robot_hand_prim_path = kwargs.get("robot_hand_prim_path")

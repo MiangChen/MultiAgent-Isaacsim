@@ -1,8 +1,9 @@
 import json
-from functools import partial
+import time
 
 # ROS2
 from nav2_msgs.action import ComputePathToPose
+from action_msgs.msg import GoalStatus
 
 
 def navigate_to_skill(**kwargs):
@@ -11,7 +12,7 @@ def navigate_to_skill(**kwargs):
     robot.node_controller_mpc.has_reached_goal = False
     if type(start_pos) is str:
         start_pos = json.loads(start_pos)
-    start_quat = kwargs.get("start_quat", [1.0, 0.0, 0.0, 0.0])
+    start_quat = kwargs.get("start_quat")
     if type(start_quat) is str:
         start_quat = json.loads(start_quat)
     goal_pos = kwargs.get("goal_pos")
@@ -50,30 +51,53 @@ def navigate_to_skill(**kwargs):
     goal_msg.start = _create_pose_stamped(robot, start_pos, start_quat)
     goal_msg.goal = _create_pose_stamped(robot, goal_pos, goal_quat_wxyz)
 
-    send_goal_future = robot.action_client_path_planner.send_goal_async(goal_msg)
-    send_goal_future.add_done_callback(partial(_goal_response_callback, robot))
+    # 发送规划请求
+    send_future = robot.action_client_path_planner.send_goal_async(goal_msg)
 
-    yield robot.form_feedback("processing", "Path Planning processing", 30)
-
-    while True:
-        if robot.node_controller_mpc.move_event.is_set():
-            return robot.form_feedback("finished", "Navigation completed.", 100)
-        else:
-            yield robot.form_feedback("processing", "Navigation in progress...", 50)
-
-            # 短暂休眠，避免过度占用CPU
-            import time
-
-            time.sleep(0.1)
-
-def _goal_response_callback(robot, future):
-    goal_handle = future.result()
-    if not goal_handle.accepted:
-        robot.node.get_logger().error("Goal was rejected by the planner server.")
+    # 等待响应
+    for _ in range(20):
+        if send_future.done():
+            break
+        yield robot.form_feedback("processing", "Sending request...", 5)
+        time.sleep(0.1)
     else:
-        robot.node.get_logger().info("Goal was accepted by the planner server.")
+        robot.is_planning = False
+        return robot.form_feedback("failed", "No response from planner")
 
+    goal_handle = send_future.result()
+    if not goal_handle.accepted:
+        robot.is_planning = False
+        return robot.form_feedback("failed", "Request rejected")
+
+    # 等待规划结果
+    result_future = goal_handle.get_result_async()
+    for _ in range(150):
+        if result_future.done():
+            break
+        yield robot.form_feedback("processing", "Planning path...", 30)
+        time.sleep(0.1)
+    else:
+        goal_handle.cancel_goal_async()
+        robot.is_planning = False
+        return robot.form_feedback("failed", "Planning timeout")
+
+    # 检查结果
+    result = result_future.result()
     robot.is_planning = False
+    if result.status != GoalStatus.STATUS_SUCCEEDED or not result.result.path.poses:
+        return robot.form_feedback("failed", "Planning failed")
+
+    # 执行导航
+    yield robot.form_feedback("processing", "Executing...", 50)
+    robot.node_controller_mpc.move_event.clear()
+
+    for _ in range(1200):  # 2分钟超时
+        if robot.node_controller_mpc.move_event.is_set():
+            return robot.form_feedback("finished", "Done", 100)
+        yield robot.form_feedback("processing", "Moving...", 80)
+        time.sleep(0.1)
+
+    return robot.form_feedback("failed", "Navigation timeout")
 
 
 def _create_pose_stamped(robot, pos: list, quat_wxyz: list = [0.0, 0.0, 0.0, 0.0]):

@@ -124,11 +124,9 @@ except ImportError:
 # 10. Rendering and Viewport
 # -----------------------------------------------------------------------------
 # omni.kit.viewport: Viewport and rendering utilities
-try:
-    import omni.kit.viewport.utility
-    from omni.kit.viewport.utility import get_active_viewport_window
-except ImportError:
-    pass
+
+from omni.kit.viewport.utility import get_viewport_from_window_name
+
 
 # -----------------------------------------------------------------------------
 # 11. Hydra and Rendering

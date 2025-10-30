@@ -16,7 +16,6 @@ from .navigation import (
     navigate_to_skill,
     return_home_skill,
     TrajectoryManager,
-    NodeNavigation,
     NodePlannerOmpl,
     NodeTrajectoryGenerator,
 )
@@ -43,7 +42,6 @@ __all__ = [
     "navigate_to_skill",
     "return_home_skill",
     "TrajectoryManager",
-    "NodeNavigation",
     "NodePlannerOmpl",
     "NodeTrajectoryGenerator",
     # Object Detection

@@ -78,7 +78,6 @@ def setup_simulation(
         await swarm_manager.initialize_async(
             scene=world.scene,
             robot_swarm_cfg_path=f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml",
-            robot_active_flag_path=f"{PROJECT_ROOT}/config/robot_swarm_active_flag.yaml",
         )
 
     # Schedule the initialization in Isaac Sim's event loop
@@ -250,13 +249,11 @@ def main():
 
     # Add physics callbacks for active robots
     for robot_class in swarm_manager.robot_class:
-        for i, robot in enumerate(swarm_manager.robot_active[robot_class]):
+        for i, robot in enumerate(swarm_manager.robot_warehouse[robot_class]):
             callback_name = f"physics_step_{robot_class}_{i}"
             env.world.add_physics_callback(
                 callback_name, callback_fn=robot.on_physics_step
             )
-            # Note: Robot nodes are managed by their own executors in robot.py
-            # Do not add them to ros_manager.executor to avoid conflicts
 
     # Create and initialize semantic camera
     create_car_objects(scene_manager, semantic_map)
@@ -275,7 +272,7 @@ def main():
     semantic_camera.add_bounding_box_2d_loose_to_frame()
 
     # Switch viewport to semantic camera
-    from omni.kit.viewport.utility import get_viewport_from_window_name
+    from physics_engine.omni_utils import get_viewport_from_window_name
 
     viewport_manager.register_viewport(
         name="Viewport", viewport_obj=get_viewport_from_window_name("Viewport")
@@ -295,7 +292,7 @@ def main():
         # "scene_name": "object",
         "name": object_name,
         "scale": [0.5, 0.5, 0.5],
-        "position": [3, 5, 0.25],
+        "position": [3, 50, 0.25],
         "orientation": [0.707, 0, 0, 0.707],
         "color": [255, 255, 255],
         "mass": 0.1,

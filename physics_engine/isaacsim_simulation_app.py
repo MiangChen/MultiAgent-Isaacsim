@@ -11,11 +11,9 @@
 import os
 
 # Third-party library imports
-import yaml
 from isaacsim import SimulationApp
-
-# Local project imports
-from physics_engine.omni_utils import omni
+import omni
+import yaml
 
 
 def start_isaacsim_simulation_app():
@@ -59,8 +57,37 @@ def start_isaacsim_simulation_app():
             print(f"Set setting: {key} = {value}")
             simulation_app.set_setting(key, value)
 
-    # # 7. 根据从配置中读取的 headless 状态来决定是否禁用视口
-    # if sim_app_config.get("headless", False):
-    #     omni.kit.viewport.utility.get_active_viewport().updates_enabled = False
+    # 7. 发布仿真时钟
+    create_clock_graph()
+
+    # 8. 更新一次simulation_app
+    simulation_app.update()
 
     return simulation_app
+
+
+def create_clock_graph():
+    """Sets up the OmniGraph for publishing simulation time."""
+    from physics_engine.omni_utils import og
+
+    clock_topic = "/isaacsim_simulation_clock"
+    (clock_graph_handle, _, _, _) = og.Controller.edit(
+        {"graph_path": "/ActionGraph", "evaluator_name": "execution"},
+        {
+            og.Controller.Keys.CREATE_NODES: [
+                ("ReadSimTime", "isaacsim.core.nodes.IsaacReadSimulationTime"),
+                ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
+                ("PublishClock", "isaacsim.ros2.bridge.ROS2PublishClock"),
+            ],
+            og.Controller.Keys.CONNECT: [
+                ("OnPlaybackTick.outputs:tick", "PublishClock.inputs:execIn"),
+                ("ReadSimTime.outputs:simulationTime", "PublishClock.inputs:timeStamp"),
+            ],
+            og.Controller.Keys.SET_VALUES: [
+                ("PublishClock.inputs:topicName", clock_topic),
+            ],
+        },
+    )
+
+    # Run the clock graph once to generate ROS clock publisher
+    og.Controller.evaluate_sync(clock_graph_handle)

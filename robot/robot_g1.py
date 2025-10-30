@@ -83,8 +83,8 @@ class RobotG1(Robot):
 
         self.counter += 1
 
-        if self.flag_world_reset:
-            if self.flag_action_navigation:
-                self.step(self.action)
-            if self.is_detecting:
-                self.detect(self, target_prim=self.target_prim)
+        # if self.flag_world_reset:
+        if self.flag_action_navigation:
+            self.step(self.action)
+        if self.is_detecting:
+            self.detect(self, target_prim=self.target_prim)

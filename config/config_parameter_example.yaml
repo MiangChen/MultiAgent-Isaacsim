@@ -4,10 +4,19 @@ path_asset: "/home/cleanuser/isaacsim_assets/Assets/Isaac/4.5/"
 # 场景的位置
 world:
   name: small_city_available.usd # 要使用的场的名字,和 asset / user_usd_files.json对应
-  physics_dt: 0.005  # 1 / 200
   path: Isaac/Environments/Grid/default_environment.usd  # 从name 和 path中二选一
+  physics_dt: 0.01  # 物理仿真步长时间
   rendering_dt: 0.0333333333333333333333333333333
   stage_units_in_meters: 1
+  backend: torch
+  sim_params:
+    use_gpu_pipeline: True
+#    use_gpu_broadphase: True
+#    enable_gpu_dynamics: True
+#    enable_ccd: False
+#    enable_stabilization: True
+#    solver_type: 1
+#    broadphase_type: GPU
 
 simulation_app_config:
   renderer: "RaytracedLighting"
@@ -16,6 +25,7 @@ simulation_app_config:
 
 # 定义启动时需要启用的扩展列表
 enabled_extensions:
+  - "isaacsim.core.nodes"
   - "isaacsim.ros2.bridge"
   - "omni.kit.graph.editor.core"
   - "omni.graph.bundle.action"
@@ -25,7 +35,7 @@ enabled_extensions:
 
 experience: "isaacsim.exp.base.zero_delay.kit"
 
-# 渲染配置, 下面的配置可以降低资源消耗
+# 渲染配置, 下面的配置可以降低资源消耗并减少渲染器错误
 settings:
   "/rtx/ecoMode/enabled": False
   "/rtx/post/dlss/execMode": 0
@@ -42,6 +52,16 @@ settings:
 
 
 # 栅格地图
+#资源消耗小的地图
+#map:
+#  cell_size: 1
+#  start_point: [ 0, 0, 0 ]  # 构建gridmap的起点, 要保证这里是没有障碍物的
+#  min_bound: [ -10, -10, 0 ]
+#  max_bound: [ 10, 10, 2 ]
+#  occupied_cell: 100
+#  free_cell: 0
+#  unknown_cell: -1
+# 资源消耗大的地图
 map:
   cell_size: 0.5
   start_point: [ 0, 0, 0 ]  # 构建gridmap的起点, 要保证这里是没有障碍物的
@@ -65,7 +85,7 @@ dict_map_semantic:
 
 # --- 日志配置 ---
 logging:
-  level: "DEBUG" # 层级关系: DEBUG (all message) > INFO > WARNING > ERROR > CRITICAL (breaking errors)
+  level: "INFO" # 层级关系: DEBUG (all message) > INFO > WARNING > ERROR > CRITICAL (breaking errors)
   file: "logs/app.log" # 相对于项目根目录，或使用绝对路径
 
 # ROS相关
