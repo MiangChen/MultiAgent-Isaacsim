@@ -83,24 +83,12 @@ class NodeRobot(Node):
             while self.robot_instance.skill_function is not None and goal_handle.is_active:
                 # 读取robot的状态信息
                 feedback = SkillExecution.Feedback()
-                
-                # 检查是否有navigation状态
-                if hasattr(self.robot_instance, '_nav_state'):
-                    nav_state = self.robot_instance._nav_state
-                    feedback.status = f"Navigation状态: {nav_state}"
-                elif hasattr(self.robot_instance, 'skill_feedback'):
-                    # 使用通用的skill feedback
-                    skill_feedback = self.robot_instance.skill_feedback
-                    if skill_feedback:
-                        status = skill_feedback.get("status", "processing")
-                        reason = skill_feedback.get("reason", "")
-                        progress = skill_feedback.get("progress", 0)
-                        feedback.status = f"{status}: {reason} ({progress}%)"
-                    else:
-                        feedback.status = f"技能 {task_name} 执行中..."
+
+                if self.robot_instance.skill_feedback is not None:
+                    feedback.status = str(skill_feedback)
                 else:
-                    feedback.status = f"技能 {task_name} 执行中..."
-                
+                    feedback.status = str({status = "processing", reason = "Initializing", progress = 1})
+
                 # 发送feedback
                 goal_handle.publish_feedback(feedback)
                 
@@ -113,7 +101,7 @@ class NodeRobot(Node):
             # 创建ROS2 action result
             result = SkillExecution.Result(
                 success=skill_result["success"], 
-                message=skill_result["message"]
+                message=skill_result["message"],
             )
             
             # 根据结果调用succeed或abort

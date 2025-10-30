@@ -141,11 +141,13 @@ def _handle_failed(robot):
 
 
 def _cleanup_navigation(robot):
-    attrs_to_remove = ['skill_state', 'skill_error', '_nav_start_time', '_nav_send_future', 
-                       '_nav_result_future', '_nav_goal_handle', '_nav_move_start_time']
+    attrs_to_remove = ['_nav_start_time', '_nav_send_future', '_nav_result_future', '_nav_goal_handle', '_nav_move_start_time']
     for attr in attrs_to_remove:
         if hasattr(robot, attr):
             delattr(robot, attr)
+
+    robot.skill_state = None
+    robot.skill_error = None
     
 
 def _create_pose_stamped(robot, pos: list, quat_wxyz: list = [0.0, 0.0, 0.0, 0.0]):

@@ -105,6 +105,9 @@ class Robot:
         self.active_goal_handle = None
         self.skill_function = None
         self.skill_params = None
+        self.skill_feedback = None
+        self.skill_error = None
+        self.skill_state = None
 
         self.cameras: dict = {}
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
@@ -307,7 +310,6 @@ class Robot:
                 self.skill_result = {
                     "success": success,
                     "message": feedback.get("reason", "完成"),
-                    "feedback": feedback
                 }
 
                 self.cleanup_skill()
@@ -317,7 +319,6 @@ class Robot:
             self.skill_result = {
                 "success": False,
                 "message": f"执行错误: {str(e)}",
-                "feedback": {"status": "failed", "reason": str(e), "progress": 0}
             }
 
             self.cleanup_skill()
@@ -326,6 +327,8 @@ class Robot:
         self.skill_function = None
         self.skill_params = None
         self.skill_feedback = None
+        self.skill_error = None
+        self.skill_state = None
 
     def post_reset(self) -> None:
         for sensor in self.cameras.values():
@@ -361,14 +364,6 @@ class Robot:
         self.track_counter += 1
         if self.track_counter % self.track_period == 0:
             self.track_waypoint_list.append(pos)
-
-    def stop_tracking(self):
-        self.is_tracking = False
-        self.track_waypoint_list = []
-        self.track_waypoint_index = 0
-        self.node.destroy_subscription(self.track_waypoint_sub)
-        self.track_waypoint_sub = None
-        return self.form_feedback(status="finished")
 
     def _initialize_third_person_camera(self):
         """初始化第三人称相机并注册到ViewportManager"""
