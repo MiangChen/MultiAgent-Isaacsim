@@ -298,29 +298,30 @@ class Robot:
 
         try:
             feedback = self.skill_function(**self.skill_params)
-            
-            if self.active_goal_handle:
-                self.skill_feedback_msg.status = str(feedback.get("progress", 0))
-                self.active_goal_handle.publish_feedback(self.skill_feedback_msg)
+
+            self.skill_feedback_msg = feedback
             
             if feedback.get("status") in ["finished", "failed"]:
                 success = feedback.get("status") == "finished"
-                result = SkillExecution.Result(success=success, message=feedback.get("reason", "完成"))
-                
-                if success:
-                    self.active_goal_handle.succeed(result)
-                else:
-                    self.active_goal_handle.abort()
+                self.skill_result = {
+                    "success": success,
+                    "message": feedback.get("reason", "完成"),
+                    "feedback": feedback
+                }
+
                 self.cleanup_skill()
                 
         except Exception as e:
             logger.error(f"Skill execution error: {e}")
-            if self.active_goal_handle:
-                self.active_goal_handle.abort()
+            self.skill_result = {
+                "success": False,
+                "message": f"执行错误: {str(e)}",
+                "feedback": {"status": "failed", "reason": str(e), "progress": 0}
+            }
+
             self.cleanup_skill()
 
     def cleanup_skill(self):
-        self.active_goal_handle = None
         self.skill_function = None
         self.skill_params = None
         self.skill_feedback_msg = None

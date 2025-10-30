@@ -46,8 +46,9 @@ class NodeRobot(Node):
             self,
             action_type=SkillExecution,
             action_name=f"skill_execution",
-            execute_callback=self.callback_execute_skill,
+            execute_callback=self.execute_callback_wrapper,
         )
+        
 
         self.subscriber_sim_clock = self.create_subscription(
             Clock, "/isaacsim_simulation_clock", self.callback_sim_clock, 10
@@ -67,9 +68,11 @@ class NodeRobot(Node):
     def set_robot_instance(self, robot):
         self.robot_instance = robot
 
-    def callback_execute_skill(self, goal_handle):
-
-        if self.robot_instance.active_goal_handle:
+    def execute_callback_wrapper(self, goal_handle):
+        """
+        ROS2 action server的callback wrapper，处理skill执行请求
+        """
+        if self.robot_instance.skill_function is not None:
             goal_handle.abort()
             return SkillExecution.Result(success=False, message="机器人正忙")
 
@@ -80,7 +83,47 @@ class NodeRobot(Node):
             params["robot"] = self.robot_instance
 
             self.prepare_skill_execution(goal_handle, task_name, params)
-            return SkillExecution.Result(success=True, message=f"技能 {task_name} 启动成功")
+            
+            # 发送初始feedback表示技能已启动
+            initial_feedback = SkillExecution.Feedback()
+            initial_feedback.status = f"技能 {task_name} 启动成功"
+            goal_handle.publish_feedback(initial_feedback)
+            
+            # 等待skill在execute_skill_step中完成
+            # 使用一个简单的事件机制来避免阻塞仿真
+            import threading
+            completion_event = threading.Event()
+            
+            # 将completion_event传递给robot，让execute_skill_step在完成时设置它
+            self.robot_instance.skill_completion_event = completion_event
+            
+            # 等待skill完成
+            completion_event.wait()  # 这会阻塞直到execute_skill_step调用event.set()
+            
+            # 检查结果并调用相应的goal_handle方法
+            if hasattr(self.robot_instance, 'skill_result'):
+                skill_result = self.robot_instance.skill_result
+                delattr(self.robot_instance, 'skill_result')
+                
+                # 创建ROS2 action result
+                result = SkillExecution.Result(
+                    success=skill_result["success"], 
+                    message=skill_result["message"]
+                )
+                
+                # 根据结果调用succeed或abort
+                if skill_result["success"]:
+                    goal_handle.succeed()
+                    return result
+                else:
+                    goal_handle.abort()
+                    return result
+            else:
+                # 默认成功情况
+                result = SkillExecution.Result(success=True, message=f"技能 {task_name} 执行完成")
+                goal_handle.succeed()
+                return result
+            
         except Exception as e:
             goal_handle.abort()
             return SkillExecution.Result(success=False, message=f"启动失败: {str(e)}")
@@ -98,5 +141,3 @@ class NodeRobot(Node):
 
         self.robot_instance.skill_function = SKILL_TABLE[task_name]
         self.robot_instance.skill_params = params
-        self.robot_instance.active_goal_handle = goal_handle
-        self.robot_instance.skill_feedback_msg = SkillExecution.Feedback()

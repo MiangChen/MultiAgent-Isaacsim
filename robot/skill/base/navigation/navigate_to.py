@@ -46,10 +46,6 @@ def _init_navigation(robot, kwargs):
     elif isinstance(goal_quat_wxyz, tuple):
         goal_quat_wxyz = list(goal_quat_wxyz)
 
-    if robot.skill_function is not None:
-        robot._nav_state = "FAILED"
-        robot._nav_error = "Robot is busy."
-        return
 
     if not robot.action_client_path_planner.wait_for_server(timeout_sec=2.0):
         robot._nav_state = "FAILED"
