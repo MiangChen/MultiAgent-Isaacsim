@@ -75,9 +75,9 @@ def _get_viewport_manager_from_container():
 
 class Robot:
     def __init__(
-        self,
-        scene: Scene = None,
-        scene_manager: SceneManager = None,
+            self,
+            scene: Scene = None,
+            scene_manager: SceneManager = None,
     ):
 
         self.cfg_dict_camera = self.cfg_robot.cfg_dict_camera
@@ -93,9 +93,9 @@ class Robot:
 
         # 通用的机器人本体初始化代码
         self.cfg_robot.path_prim_robot = (
-            self.cfg_robot.path_prim_swarm
-            + f"/{self.cfg_robot.type}"
-            + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
+                self.cfg_robot.path_prim_swarm
+                + f"/{self.cfg_robot.type}"
+                + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
         )
         self.cfg_robot.namespace = self.cfg_robot.type + f"_{self.cfg_robot.id}"
         self.namespace = self.cfg_robot.namespace
@@ -117,10 +117,7 @@ class Robot:
 
         # 机器人的技能
         self.active_goal_handle = None
-
-        # 用于回调函数中
-        self.flag_active = False
-        self.flag_world_reset: bool = False  # 用来记录下世界是不是被初始化了
+        self.skill_generator = None
 
         # 布置机器人的相机传感器, 可以有多个相机
         self.cameras: dict = {}
@@ -136,15 +133,6 @@ class Robot:
         # 初始化基础ROS组件
         self._init_ros()
 
-        # 机器人的任务状态
-        self.current_task_id = "0"
-        self.current_task_name = "n"
-
-        # 以下三个变量用于记录navigate开始时的机器人位置，用于计算feedback里的progress
-        self.nav_begin = None
-        self.nav_end = None
-        self.nav_dist = 1.0
-
         # 机器人探索区域状态
         self.is_detecting = False
         self.target_prim = None
@@ -157,46 +145,6 @@ class Robot:
         self.track_counter = 0
         self.track_period = 300
 
-        # 测试锁
-        self._test_lock = threading.Lock()
-
-        self.skill_generator = None
-
-    def callback_skill_execution(self, goal_handle):
-        if self.active_goal_handle:
-            goal_handle.abort()
-            return SkillExecution.Result(success=False, message="机器人正忙")
-
-        try:
-            request = goal_handle.request.skill_request
-            task_name = request.skill_list[0].skill
-            params = {p.key: p.value for p in request.skill_list[0].params}
-            params["robot"] = self
-
-            self.prepare_skill_execution(goal_handle, task_name, params)
-            return SkillExecution.Result(success=True, message=f"技能 {task_name} 启动成功")
-        except Exception as e:
-            goal_handle.abort()
-            return SkillExecution.Result(success=False, message=f"启动失败: {str(e)}")
-
-    def prepare_skill_execution(self, goal_handle, task_name, params) -> None:
-        """准备技能执行，在 physics step 中执行"""
-        from robot.skill.base.navigation.navigate_to import navigate_to_skill
-        from robot.skill.base.manipulation.pick_up import pick_up_skill
-        from robot.skill.base.manipulation.put_down import put_down_skill
-
-        SKILL_TABLE = {
-            "navigation": navigate_to_skill,
-            "pickup": pick_up_skill,
-            "putdown": put_down_skill,
-        }
-
-        try:
-            self.skill_generator = SKILL_TABLE[task_name](**params)
-            self.active_goal_handle = goal_handle
-            self.skill_feedback_msg = SkillExecution.Feedback()
-        except Exception as e:
-            raise e
 
     ########################## Publisher Odom  ############################
     def publish_robot_state(self):
@@ -258,8 +206,6 @@ class Robot:
             namespace=self.namespace
         )
         self.node_controller_mpc = NodeMpcController(namespace=self.namespace)
-
-
 
         # 执行器和线程管理
         self.executor = MultiThreadedExecutor()
@@ -353,7 +299,7 @@ class Robot:
         #     self._initialize_third_person_camera()
 
     def form_feedback(
-        self, status: str = "processing", reason: str = "none", progress: int = 100
+            self, status: str = "processing", reason: str = "none", progress: int = 100
     ) -> Dict[str, Any]:
         return dict(
             status=status,
@@ -392,7 +338,7 @@ class Robot:
             final_result = e.value if hasattr(e, 'value') and e.value else {}
             success = final_result.get("status") == "finished"
             result = SkillExecution.Result(success=success, message=final_result.get("reason", "完成"))
-            
+
             if success:
                 self.active_goal_handle.succeed(result)
             else:
@@ -402,13 +348,10 @@ class Robot:
             self.active_goal_handle.abort()
             self.cleanup_skill()
 
-
     def cleanup_skill(self):
         self.active_goal_handle = None
         self.skill_generator = None
         self.skill_feedback_msg = None
-
-
 
     def post_reset(self) -> None:
         """Set up things that happen after the world resets."""

@@ -270,8 +270,6 @@ class RobotCf2x(Robot):
         if (
             getattr(self, "flag_action_navigation", False)
             and self.nav_target_xy is not None
-            and hasattr(self, "flag_world_reset")
-            and self.flag_world_reset
         ):
             pass
         elif self.flight_state == "fluctuating":

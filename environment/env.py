@@ -57,4 +57,3 @@ class Env(gym.Env):
         for robot_class in self._swarm_manager.robot_warehouse.keys():
             for robot in self._swarm_manager.robot_warehouse[robot_class]:
                 robot.initialize()
-                robot.flag_world_reset = True
