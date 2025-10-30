@@ -1,9 +1,10 @@
 import json
-import time
 
-# ROS2
-from nav2_msgs.action import ComputePathToPose
+# ROS2 Message
 from action_msgs.msg import GoalStatus
+from builtin_interfaces.msg import Time
+from geometry_msgs.msg import PoseStamped
+from nav2_msgs.action import ComputePathToPose
 
 
 def navigate_to_skill(**kwargs):
@@ -54,57 +55,86 @@ def navigate_to_skill(**kwargs):
     # 发送规划请求
     send_future = robot.action_client_path_planner.send_goal_async(goal_msg)
 
-    # 等待响应
-    for _ in range(20):
-        if send_future.done():
-            break
-        yield robot.form_feedback("processing", "Sending request...", 5)
-        time.sleep(0.1)
+    # 等待响应 - 使用仿真时钟
+    robot._nav_send_start_time = robot.sim_time
+
+    if send_future.done():
+        goal_handle = send_future.result()
+        if not goal_handle.accepted:
+            robot.is_planning = False
+            delattr(robot, '_nav_send_start_time')
+            return robot.form_feedback("failed", "Request rejected")
+
+        # 开始等待规划结果
+        robot._nav_result_future = goal_handle.get_result_async()
+        robot._nav_goal_handle = goal_handle
+        robot._nav_plan_start_time = robot.sim_time
+        delattr(robot, '_nav_send_start_time')
     else:
-        robot.is_planning = False
-        return robot.form_feedback("failed", "No response from planner")
+        # 检查超时
+        elapsed_time = robot.sim_time - robot._nav_send_start_time
 
-    goal_handle = send_future.result()
-    if not goal_handle.accepted:
-        robot.is_planning = False
-        return robot.form_feedback("failed", "Request rejected")
+        if elapsed_time < 3.0:  # 3秒超时
+            yield robot.form_feedback("processing", "Sending request...", 5)
+        else:
+            robot.is_planning = False
+            delattr(robot, '_nav_send_start_time')
+            return robot.form_feedback("failed", "No response from planner")
 
-    # 等待规划结果
-    result_future = goal_handle.get_result_async()
-    for _ in range(150):
-        if result_future.done():
-            break
-        yield robot.form_feedback("processing", "Planning path...", 30)
-        time.sleep(0.1)
+    # 等待规划结果 - 使用仿真时钟
+    if robot._nav_result_future.done():
+        # 检查结果
+        result = robot._nav_result_future.result()
+        robot.is_planning = False
+        delattr(robot, '_nav_result_future')
+        delattr(robot, '_nav_goal_handle')
+        delattr(robot, '_nav_plan_start_time')
+
+        if result.status != GoalStatus.STATUS_SUCCEEDED or not result.result.path.poses:
+            return robot.form_feedback("failed", "Planning failed")
+
+        # 执行导航
+        yield robot.form_feedback("processing", "Executing...", 50)
+        robot.node_controller_mpc.move_event.clear()
+        robot._nav_move_start_time = robot.sim_time
     else:
-        goal_handle.cancel_goal_async()
-        robot.is_planning = False
-        return robot.form_feedback("failed", "Planning timeout")
+        # 检查规划超时
+        elapsed_time = robot.sim_time - robot._nav_plan_start_time
 
-    # 检查结果
-    result = result_future.result()
-    robot.is_planning = False
-    if result.status != GoalStatus.STATUS_SUCCEEDED or not result.result.path.poses:
-        return robot.form_feedback("failed", "Planning failed")
+        if elapsed_time < 15.0:  # 15秒超时
+            yield robot.form_feedback("processing", "Planning path...", 30)
+        else:
+            robot._nav_goal_handle.cancel_goal_async()
+            robot.is_planning = False
+            delattr(robot, '_nav_result_future')
+            delattr(robot, '_nav_goal_handle')
+            delattr(robot, '_nav_plan_start_time')
+            return robot.form_feedback("failed", "Planning timeout")
 
-    # 执行导航
-    yield robot.form_feedback("processing", "Executing...", 50)
-    robot.node_controller_mpc.move_event.clear()
+    # 移动执行 - 使用仿真时钟
+    if robot.node_controller_mpc.move_event.is_set():
+        delattr(robot, '_nav_move_start_time')
+        return robot.form_feedback("finished", "Done", 100)
+    else:
+        # 检查移动超时
+        elapsed_time = robot.sim_time - robot._nav_move_start_time
 
-    for _ in range(1200):  # 2分钟超时
-        if robot.node_controller_mpc.move_event.is_set():
-            return robot.form_feedback("finished", "Done", 100)
-        yield robot.form_feedback("processing", "Moving...", 80)
-        time.sleep(0.1)
-
-    return robot.form_feedback("failed", "Navigation timeout")
+        if elapsed_time < 120.0:
+            # 计算动态进度
+            progress = min(80 + (elapsed_time / 120.0) * 15, 95)
+            yield robot.form_feedback("processing", f"Moving... ({elapsed_time:.1f}s)", int(progress))
+        else:
+            delattr(robot, '_nav_move_start_time')
+            return robot.form_feedback("failed", "Navigation timeout")
 
 
 def _create_pose_stamped(robot, pos: list, quat_wxyz: list = [0.0, 0.0, 0.0, 0.0]):
-    from geometry_msgs.msg import PoseStamped
-
     pose_stamped = PoseStamped()
-    pose_stamped.header.stamp = robot.node.get_clock().now().to_msg()
+
+    sim_time_sec = int(robot.sim_time)
+    sim_time_nanosec = int((robot.sim_time - sim_time_sec) * 1e9)
+    pose_stamped.header.stamp = Time(sec=sim_time_sec, nanosec=sim_time_nanosec)
+
     pose_stamped.header.frame_id = "map"
 
     pose_stamped.pose.position.x = float(pos[0])

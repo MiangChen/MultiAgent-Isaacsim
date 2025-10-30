@@ -352,6 +352,13 @@ class Robot:
         self.active_goal_handle = None
         self.skill_generator = None
         self.skill_feedback_msg = None
+        
+        # 清理导航时间戳和状态
+        nav_attrs = ['_nav_send_start_time', '_nav_plan_start_time', '_nav_move_start_time', 
+                    '_nav_result_future', '_nav_goal_handle']
+        for attr in nav_attrs:
+            if hasattr(self, attr):
+                delattr(self, attr)
 
     def post_reset(self) -> None:
         """Set up things that happen after the world resets."""
