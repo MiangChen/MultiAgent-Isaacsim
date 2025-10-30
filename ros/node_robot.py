@@ -1,15 +1,3 @@
-# =============================================================================
-# Node Robot Module - Individual Robot ROS2 Communication
-# =============================================================================
-#
-# This module provides ROS2 node implementation for managing all ROS2
-# communication for individual robot entities, including odometry publishing
-# and command velocity subscription.
-#
-# =============================================================================
-
-# Standard library imports
-
 # Local project imports
 from log.log_manager import LogManager
 
@@ -89,18 +77,37 @@ class NodeRobot(Node):
             initial_feedback.status = f"技能 {task_name} 启动成功"
             goal_handle.publish_feedback(initial_feedback)
             
-            # 等待skill在execute_skill_step中完成
-            # 使用一个简单的事件机制来避免阻塞仿真
-            import threading
-            completion_event = threading.Event()
+            # 循环监控skill执行状态并发送feedback
+            import time
             
-            # 将completion_event传递给robot，让execute_skill_step在完成时设置它
-            self.robot_instance.skill_completion_event = completion_event
+            while self.robot_instance.skill_function is not None and goal_handle.is_active:
+                # 读取robot的状态信息
+                feedback = SkillExecution.Feedback()
+                
+                # 检查是否有navigation状态
+                if hasattr(self.robot_instance, '_nav_state'):
+                    nav_state = self.robot_instance._nav_state
+                    feedback.status = f"Navigation状态: {nav_state}"
+                elif hasattr(self.robot_instance, 'skill_feedback'):
+                    # 使用通用的skill feedback
+                    skill_feedback = self.robot_instance.skill_feedback
+                    if skill_feedback:
+                        status = skill_feedback.get("status", "processing")
+                        reason = skill_feedback.get("reason", "")
+                        progress = skill_feedback.get("progress", 0)
+                        feedback.status = f"{status}: {reason} ({progress}%)"
+                    else:
+                        feedback.status = f"技能 {task_name} 执行中..."
+                else:
+                    feedback.status = f"技能 {task_name} 执行中..."
+                
+                # 发送feedback
+                goal_handle.publish_feedback(feedback)
+                
+                # 10Hz频率，等待0.1秒
+                time.sleep(0.1)
             
-            # 等待skill完成
-            completion_event.wait()  # 这会阻塞直到execute_skill_step调用event.set()
-            
-            # 检查结果并调用相应的goal_handle方法
+            # skill执行完成，检查结果
             if hasattr(self.robot_instance, 'skill_result'):
                 skill_result = self.robot_instance.skill_result
                 delattr(self.robot_instance, 'skill_result')
@@ -141,3 +148,4 @@ class NodeRobot(Node):
 
         self.robot_instance.skill_function = SKILL_TABLE[task_name]
         self.robot_instance.skill_params = params
+        # 不再设置active_goal_handle和skill_feedback_msg，保持skill执行的纯净性

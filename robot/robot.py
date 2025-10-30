@@ -299,7 +299,8 @@ class Robot:
         try:
             feedback = self.skill_function(**self.skill_params)
 
-            self.skill_feedback_msg = feedback
+            # 存储最新的feedback信息，供其他地方使用
+            self.skill_feedback = feedback
             
             if feedback.get("status") in ["finished", "failed"]:
                 success = feedback.get("status") == "finished"
@@ -324,7 +325,7 @@ class Robot:
     def cleanup_skill(self):
         self.skill_function = None
         self.skill_params = None
-        self.skill_feedback_msg = None
+        self.skill_feedback = None
 
     def post_reset(self) -> None:
         for sensor in self.cameras.values():
