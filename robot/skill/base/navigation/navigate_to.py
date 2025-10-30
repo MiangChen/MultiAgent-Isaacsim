@@ -11,19 +11,19 @@ def navigate_to_skill(**kwargs):
     robot = kwargs.get("robot")
     
     # 初始化状态机（只在第一次调用时执行）
-    if not hasattr(robot, '_nav_state'):
+    if not hasattr(robot, 'skill_state'):
         _init_navigation(robot, kwargs)
     
     # 状态机：每个physics step执行一次
-    if robot._nav_state == "SENDING":
+    if robot.skill_state == "SENDING":
         return _handle_sending(robot)
-    elif robot._nav_state == "PLANNING":
+    elif robot.skill_state == "PLANNING":
         return _handle_planning(robot)
-    elif robot._nav_state == "EXECUTING":
+    elif robot.skill_state == "EXECUTING":
         return _handle_executing(robot)
-    elif robot._nav_state == "COMPLETED":
+    elif robot.skill_state == "COMPLETED":
         return _handle_completed(robot)
-    elif robot._nav_state == "FAILED":
+    elif robot.skill_state == "FAILED":
         return _handle_failed(robot)
 
 
@@ -48,8 +48,8 @@ def _init_navigation(robot, kwargs):
 
 
     if not robot.action_client_path_planner.wait_for_server(timeout_sec=2.0):
-        robot._nav_state = "FAILED"
-        robot._nav_error = "Path planner server is not available."
+        robot.skill_state = "FAILED"
+        robot.skill_error = "Path planner server is not available."
         return
 
 
@@ -71,7 +71,7 @@ def _init_navigation(robot, kwargs):
     # 发送规划请求
     robot._nav_send_future = robot.action_client_path_planner.send_goal_async(goal_msg)
     robot._nav_start_time = robot.sim_time
-    robot._nav_state = "SENDING"
+    robot.skill_state = "SENDING"
 
 
 def _handle_sending(robot):
@@ -80,15 +80,15 @@ def _handle_sending(robot):
         if goal_handle.accepted:
             robot._nav_result_future = goal_handle.get_result_async()
             robot._nav_goal_handle = goal_handle
-            robot._nav_state = "PLANNING"
+            robot.skill_state = "PLANNING"
         else:
-            robot._nav_state = "FAILED"
-            robot._nav_error = "Request rejected"
+            robot.skill_state = "FAILED"
+            robot.skill_error = "Request rejected"
     else:
         elapsed = robot.sim_time - robot._nav_start_time
         if elapsed > 3.0:
-            robot._nav_state = "FAILED"
-            robot._nav_error = "No response from planner"
+            robot.skill_state = "FAILED"
+            robot.skill_error = "No response from planner"
     
     return robot.form_feedback("processing", "Sending request...", 5)
 
@@ -99,29 +99,29 @@ def _handle_planning(robot):
         if result.status == GoalStatus.STATUS_SUCCEEDED and result.result.path.poses:
             robot.node_controller_mpc.move_event.clear()
             robot._nav_move_start_time = robot.sim_time
-            robot._nav_state = "EXECUTING"
+            robot.skill_state = "EXECUTING"
         else:
-            robot._nav_state = "FAILED"
-            robot._nav_error = "Planning failed"
+            robot.skill_state = "FAILED"
+            robot.skill_error = "Planning failed"
     else:
         elapsed = robot.sim_time - robot._nav_start_time
         if elapsed > 15.0:
             robot._nav_goal_handle.cancel_goal_async()
-            robot._nav_state = "FAILED"
-            robot._nav_error = "Planning timeout"
+            robot.skill_state = "FAILED"
+            robot.skill_error = "Planning timeout"
     
     return robot.form_feedback("processing", "Planning path...", 30)
 
 
 def _handle_executing(robot):
     if robot.node_controller_mpc.move_event.is_set():
-        robot._nav_state = "COMPLETED"
+        robot.skill_state = "COMPLETED"
         return robot.form_feedback("processing", "Executing...", 50)
     else:
         elapsed = robot.sim_time - robot._nav_move_start_time
         if elapsed > 120.0:
-            robot._nav_state = "FAILED"
-            robot._nav_error = "Navigation timeout"
+            robot.skill_state = "FAILED"
+            robot.skill_error = "Navigation timeout"
         else:
             progress = min(50 + (elapsed / 120.0) * 45, 95)
             return robot.form_feedback("processing", f"Moving... ({elapsed:.1f}s)", int(progress))
@@ -135,18 +135,18 @@ def _handle_completed(robot):
 
 
 def _handle_failed(robot):
-    error_msg = getattr(robot, '_nav_error', "Unknown error")
+    error_msg = getattr(robot, 'skill_error', "Unknown error")
     _cleanup_navigation(robot)
     return robot.form_feedback("failed", error_msg)
 
 
 def _cleanup_navigation(robot):
-    attrs_to_remove = ['_nav_state', '_nav_start_time', '_nav_send_future', 
-                       '_nav_result_future', '_nav_goal_handle', '_nav_move_start_time', '_nav_error']
+    attrs_to_remove = ['skill_state', 'skill_error', '_nav_start_time', '_nav_send_future', 
+                       '_nav_result_future', '_nav_goal_handle', '_nav_move_start_time']
     for attr in attrs_to_remove:
         if hasattr(robot, attr):
             delattr(robot, attr)
-
+    
 
 def _create_pose_stamped(robot, pos: list, quat_wxyz: list = [0.0, 0.0, 0.0, 0.0]):
     pose_stamped = PoseStamped()
