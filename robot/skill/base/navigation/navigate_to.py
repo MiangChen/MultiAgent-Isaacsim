@@ -16,8 +16,6 @@ def navigate_to_skill(**kwargs):
     # 状态机：每个physics step执行一次
     if robot.skill_state == "INITIALIZING":
         return _handle_initializing(robot)
-    elif robot.skill_state == "PLANNING":
-        return _handle_planning(robot)
     elif robot.skill_state == "EXECUTING":
         return _handle_executing(robot)
     elif robot.skill_state == "COMPLETED":
@@ -75,25 +73,27 @@ def _init_navigation(robot, kwargs):
 
 
 def _handle_initializing(robot):
-    if robot._nav_send_future.done():
-        goal_handle = robot._nav_send_future.result()
-        if goal_handle.accepted:
-            robot._nav_result_future = goal_handle.get_result_async()
-            robot._nav_goal_handle = goal_handle
-            robot.skill_state = "PLANNING"
+    # 检查发送请求是否完成
+    if not hasattr(robot, '_nav_result_future'):
+        if robot._nav_send_future.done():
+            goal_handle = robot._nav_send_future.result()
+            if goal_handle.accepted:
+                robot._nav_result_future = goal_handle.get_result_async()
+                robot._nav_goal_handle = goal_handle
+                return robot.form_feedback("processing", "Planning path...", 15)
+            else:
+                robot.skill_state = "FAILED"
+                robot.skill_error = "Request rejected"
+                return robot.form_feedback("failed", "Request rejected")
         else:
-            robot.skill_state = "FAILED"
-            robot.skill_error = "Request rejected"
-    else:
-        elapsed = robot.sim_time - robot._nav_start_time
-        if elapsed > 3.0:
-            robot.skill_state = "FAILED"
-            robot.skill_error = "No response from planner"
+            elapsed = robot.sim_time - robot._nav_start_time
+            if elapsed > 3.0:
+                robot.skill_state = "FAILED"
+                robot.skill_error = "No response from planner"
+                return robot.form_feedback("failed", "No response from planner")
+            return robot.form_feedback("processing", "Sending request...", 5)
     
-    return robot.form_feedback("processing", "Sending request...", 5)
-
-
-def _handle_planning(robot):
+    # 检查规划结果
     if robot._nav_result_future.done():
         result = robot._nav_result_future.result()
         if result.status == GoalStatus.STATUS_SUCCEEDED and result.result.path.poses:
