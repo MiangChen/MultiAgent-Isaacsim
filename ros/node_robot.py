@@ -48,8 +48,7 @@ class NodeRobot(Node):
             action_name=f"skill_execution",
             execute_callback=self.callback_execute_skill,
         )
-        
-        # 订阅Isaac Sim仿真时钟
+
         self.subscriber_sim_clock = self.create_subscription(
             Clock, "/isaacsim_simulation_clock", self.callback_sim_clock, 10
         )
@@ -87,7 +86,6 @@ class NodeRobot(Node):
             return SkillExecution.Result(success=False, message=f"启动失败: {str(e)}")
 
     def prepare_skill_execution(self, goal_handle, task_name, params) -> None:
-        """准备技能执行，在 physics step 中执行"""
         from robot.skill.base.navigation.navigate_to import navigate_to_skill
         from robot.skill.base.manipulation.pick_up import pick_up_skill
         from robot.skill.base.manipulation.put_down import put_down_skill
@@ -98,9 +96,7 @@ class NodeRobot(Node):
             "putdown": put_down_skill,
         }
 
-        try:
-            self.robot_instance.skill_generator = SKILL_TABLE[task_name](**params)
-            self.robot_instance.active_goal_handle = goal_handle
-            self.robot_instance.skill_feedback_msg = SkillExecution.Feedback()
-        except Exception as e:
-            raise e
+        self.robot_instance.skill_function = SKILL_TABLE[task_name]
+        self.robot_instance.skill_params = params
+        self.robot_instance.active_goal_handle = goal_handle
+        self.robot_instance.skill_feedback_msg = SkillExecution.Feedback()
