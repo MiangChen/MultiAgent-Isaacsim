@@ -107,28 +107,21 @@ class NodeRobot(Node):
                 # 10Hz频率，等待0.1秒
                 time.sleep(0.1)
             
-            # skill执行完成，检查结果
-            if hasattr(self.robot_instance, 'skill_result'):
-                skill_result = self.robot_instance.skill_result
-                delattr(self.robot_instance, 'skill_result')
-                
-                # 创建ROS2 action result
-                result = SkillExecution.Result(
-                    success=skill_result["success"], 
-                    message=skill_result["message"]
-                )
-                
-                # 根据结果调用succeed或abort
-                if skill_result["success"]:
-                    goal_handle.succeed()
-                    return result
-                else:
-                    goal_handle.abort()
-                    return result
-            else:
-                # 默认成功情况
-                result = SkillExecution.Result(success=True, message=f"技能 {task_name} 执行完成")
+            # skill执行完成，获取结果
+            skill_result = self.robot_instance.skill_result
+            
+            # 创建ROS2 action result
+            result = SkillExecution.Result(
+                success=skill_result["success"], 
+                message=skill_result["message"]
+            )
+            
+            # 根据结果调用succeed或abort
+            if skill_result["success"]:
                 goal_handle.succeed()
+                return result
+            else:
+                goal_handle.abort()
                 return result
             
         except Exception as e:

@@ -209,7 +209,7 @@ class NodeMpcController(Node):
                 ("robot.max_omega", 1.0),
                 ("robot.max_alpha", 1.5),
                 ("goal.position_tolerance", 0.1),
-                ("goal.velocity_tolerance", 0.05),
+                ("goal.velocity_tolerance", 0.1),
                 ("goal.completion_timeout", 20.0),
                 ("time.use_sim_time", True),  # 是否使用仿真时间
             ],
