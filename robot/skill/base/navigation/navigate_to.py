@@ -15,8 +15,8 @@ def navigate_to_skill(**kwargs):
         _init_navigation(robot, kwargs)
     
     # 状态机：每个physics step执行一次
-    if robot.skill_state == "SENDING":
-        return _handle_sending(robot)
+    if robot.skill_state == "INITIALIZING":
+        return _handle_initializing(robot)
     elif robot.skill_state == "PLANNING":
         return _handle_planning(robot)
     elif robot.skill_state == "EXECUTING":
@@ -28,6 +28,7 @@ def navigate_to_skill(**kwargs):
 
 
 def _init_navigation(robot, kwargs):
+    robot.skill_state = "INITIALIZING"
     start_pos = kwargs.get("start_pos", None)
     robot.node_controller_mpc.has_reached_goal = False
     if type(start_pos) is str:
@@ -71,10 +72,9 @@ def _init_navigation(robot, kwargs):
     # 发送规划请求
     robot._nav_send_future = robot.action_client_path_planner.send_goal_async(goal_msg)
     robot._nav_start_time = robot.sim_time
-    robot.skill_state = "SENDING"
 
 
-def _handle_sending(robot):
+def _handle_initializing(robot):
     if robot._nav_send_future.done():
         goal_handle = robot._nav_send_future.result()
         if goal_handle.accepted:
