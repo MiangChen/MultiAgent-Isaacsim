@@ -55,18 +55,8 @@ logger = LogManager.get_logger(__name__)
 
 
 def _get_viewport_manager_from_container():
-    """
-    Get viewport manager from dependency injection container.
-
-    This function provides a fallback mechanism to obtain the viewport manager
-    when it's not directly injected into the constructor.
-
-    Returns:
-        ViewportManager: The viewport manager instance from the container
-    """
     try:
         from containers import get_container
-
         container = get_container()
         return container.viewport_manager()
     except Exception as e:
@@ -87,11 +77,7 @@ class Robot:
 
         self.scene = scene
         self.scene_manager = scene_manager
-        self.viewport_manager = (
-            _get_viewport_manager_from_container()
-        )  # 通过依赖注入获取viewport_manager
-
-        # 通用的机器人本体初始化代码
+        self.viewport_manager = _get_viewport_manager_from_container()
         self.cfg_robot.path_prim_robot = (
                 self.cfg_robot.path_prim_swarm
                 + f"/{self.cfg_robot.type}"
@@ -115,11 +101,11 @@ class Robot:
         self.vel_linear = torch.tensor([0.0, 0.0, 0.0])
         self.vel_angular = torch.tensor([0.0, 0.0, 0.0])
 
-        # 机器人的技能
-        self.active_goal_handle = None
-        self.skill_generator = None
 
-        # 布置机器人的相机传感器, 可以有多个相机
+        self.active_goal_handle = None
+        self.skill_function = None
+        self.skill_params = None
+
         self.cameras: dict = {}
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
@@ -129,11 +115,7 @@ class Robot:
         self.viewport_name = None  # 存储viewport名称
         self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
         self.transform_camera_pos = np.array([0, 0, 0])
-
-        # 初始化基础ROS组件
         self._init_ros()
-
-        # 机器人探索区域状态
         self.is_detecting = False
         self.target_prim = None
 
@@ -141,15 +123,14 @@ class Robot:
         self.track_waypoint_index = 0
         self.is_tracking = False
         self.track_waypoint_sub = None
-        self.is_planning = False
+
         self.track_counter = 0
         self.track_period = 300
 
 
     ########################## Publisher Odom  ############################
     def publish_robot_state(self):
-        """发布机器人状态到/odom话题"""
-        pos, quat = self.body.get_world_pose()  # quat: wxyz
+        pos, quat = self.body.get_world_pose()
         vel_linear, vel_angular = self.body.get_world_vel()
 
         pos = pos.detach().cpu().numpy()
@@ -183,7 +164,6 @@ class Robot:
 
     ########################## Subscriber Velocity  ############################
     def callback_cmd_vel(self, msg):
-        """处理来自ROS的速度命令"""
         linear_vel = torch.tensor([msg.linear.x, msg.linear.y, msg.linear.z])
         angular_vel = torch.tensor([msg.angular.x, msg.angular.y, msg.angular.z])
         self.vel_linear = linear_vel
@@ -200,7 +180,7 @@ class Robot:
         # 导航基础设施节点
         self.action_client_path_planner = ActionClient(
             self.node, ComputePathToPose, "action_compute_path_to_pose"
-        )  # 用于发布消息
+        )
         self.node_planner_ompl = NodePlannerOmpl(namespace=self.namespace)
         self.node_trajectory_generator = NodeTrajectoryGenerator(
             namespace=self.namespace
@@ -229,13 +209,8 @@ class Robot:
             )
             self.ros_thread.start()
             logger.info(f"Robot {self.namespace} ROS thread started")
-            # 等待一小段时间确保线程启动
             import time
-
             time.sleep(0.1)
-            logger.info(
-                f"Robot {self.namespace} ROS thread is_alive: {self.ros_thread.is_alive()}"
-            )
 
     def _spin_ros(self):
         logger.info(f"Robot {self.namespace} ROS thread started spinning")
@@ -243,12 +218,6 @@ class Robot:
             spin_count = 0
             while not self.stop_event.is_set():
                 self.executor.spin_once(timeout_sec=0.05)
-                spin_count += 1
-                # 每1000次spin记录一次，避免日志过多
-                if spin_count % 20 == 0:
-                    logger.debug(
-                        f"Robot {self.namespace} ROS thread spinning... count: {spin_count}"
-                    )
                 spin_count += 1
         except Exception as e:
             logger.error(f"Robot {self.namespace} ROS thread error: {e}")
@@ -260,9 +229,7 @@ class Robot:
             self.stop_event.set()
             self.ros_thread.join(timeout=2.0)
             if self.ros_thread.is_alive():
-                logger.warning(
-                    f"Robot {self.namespace} ROS thread did not stop gracefully"
-                )
+                logger.warning(f"Robot {self.namespace} ROS thread did not stop gracefully")
 
     def cleanup(self):
         self.stop_ros()
@@ -313,71 +280,62 @@ class Robot:
             step_size:  dt 时间间隔
         """
         # 执行技能步骤
-        self.execute_frame_skill()
+        # self.execute_frame_skill()
         self.execute_skill_step()
+        # calculate robot elocity
+        self.node_controller_mpc.control_loop()
         # update robot velocity
         self.controller_simplified()
         # 更新相机的视野
         self._update_camera_view()
         # publish robot position
         self.publish_robot_state()
-        # on control loop
-        self.node_controller_mpc.control_loop()
         return
 
     def execute_skill_step(self):
-        if not self.skill_generator:
+        if not self.skill_function:
             return
 
         try:
-            feedback = next(self.skill_generator)
+            feedback = self.skill_function(**self.skill_params)
+            
             if self.active_goal_handle:
                 self.skill_feedback_msg.status = str(feedback.get("progress", 0))
                 self.active_goal_handle.publish_feedback(self.skill_feedback_msg)
-        except StopIteration as e:
-            final_result = e.value if hasattr(e, 'value') and e.value else {}
-            success = final_result.get("status") == "finished"
-            result = SkillExecution.Result(success=success, message=final_result.get("reason", "完成"))
-
-            if success:
-                self.active_goal_handle.succeed(result)
-            else:
-                self.active_goal_handle.abort()
-            self.cleanup_skill()
+            
+            if feedback.get("status") in ["finished", "failed"]:
+                success = feedback.get("status") == "finished"
+                result = SkillExecution.Result(success=success, message=feedback.get("reason", "完成"))
+                
+                if success:
+                    self.active_goal_handle.succeed(result)
+                else:
+                    self.active_goal_handle.abort()
+                self.cleanup_skill()
+                
         except Exception as e:
-            self.active_goal_handle.abort()
+            logger.error(f"Skill execution error: {e}")
+            if self.active_goal_handle:
+                self.active_goal_handle.abort()
             self.cleanup_skill()
 
     def cleanup_skill(self):
         self.active_goal_handle = None
-        self.skill_generator = None
+        self.skill_function = None
+        self.skill_params = None
         self.skill_feedback_msg = None
 
     def post_reset(self) -> None:
-        """Set up things that happen after the world resets."""
         for sensor in self.cameras.values():
             sensor.post_reset()
-        return
 
-    ############ controller ######################
-    def controller_simplified(
-            self,
-    ) -> None:
-        """
-        this function can only be used in on_physics_step
-        """
+    def controller_simplified(self) -> None:
         if self.body.robot_articulation.is_physics_handle_valid():
             self.body.robot_articulation.set_linear_velocities(self.vel_linear)
             self.body.robot_articulation.set_angular_velocities(self.vel_angular)
             logger.debug(f"Robot Articulation vel, {self.vel_linear}")
-        return None
 
-    def execute_frame_skill(
-            self,
-    ) -> None:
-        """
-        需要周期性执行的技能，如拍照，检测，喊话
-        """
+    def execute_frame_skill(self) -> None:
         if self.is_detecting:
             detect_skill(self, self.target_prim)
         if (
@@ -385,9 +343,11 @@ class Robot:
                 and self.node_controller_mpc.has_reached_goal
                 and self.track_waypoint_index < len(self.track_waypoint_list)
         ):
-            self.skill_generator = navigate_to_skill(
-                robot=self, goal_pos=self.track_waypoint_list[self.track_waypoint_index]
-            )
+            self.skill_function = navigate_to_skill
+            self.skill_params = {
+                "robot": self, 
+                "goal_pos": self.track_waypoint_list[self.track_waypoint_index]
+            }
             self.track_waypoint_index += 1
 
     def track_callback(self, msg):

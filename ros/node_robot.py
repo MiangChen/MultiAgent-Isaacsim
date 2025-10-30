@@ -23,6 +23,8 @@ from nav_msgs.msg import Odometry
 # Custom ROS message imports
 from gsi_msgs.gsi_msgs_helper import SkillExecution
 
+from rosgraph_msgs.msg import Clock
+
 logger = LogManager.get_logger(__name__)
 
 
@@ -46,6 +48,11 @@ class NodeRobot(Node):
             action_name=f"skill_execution",
             execute_callback=self.callback_execute_skill,
         )
+
+        self.subscriber_sim_clock = self.create_subscription(
+            Clock, "/isaacsim_simulation_clock", self.callback_sim_clock, 10
+        )
+        
         logger.info(f"ROS2 Node for {self.namespace} has been created.")
 
     def callback_cmd_vel(self, msg):
@@ -53,6 +60,9 @@ class NodeRobot(Node):
             self.robot_instance.callback_cmd_vel(msg)
         else:
             self.get_logger().warning("No robot instance connected for cmd_vel")
+
+    def callback_sim_clock(self, msg: Clock):
+        self.robot_instance.sim_time = msg.clock.sec + msg.clock.nanosec / 1e9
 
     def set_robot_instance(self, robot):
         self.robot_instance = robot
@@ -76,7 +86,6 @@ class NodeRobot(Node):
             return SkillExecution.Result(success=False, message=f"启动失败: {str(e)}")
 
     def prepare_skill_execution(self, goal_handle, task_name, params) -> None:
-        """准备技能执行，在 physics step 中执行"""
         from robot.skill.base.navigation.navigate_to import navigate_to_skill
         from robot.skill.base.manipulation.pick_up import pick_up_skill
         from robot.skill.base.manipulation.put_down import put_down_skill
@@ -87,9 +96,7 @@ class NodeRobot(Node):
             "putdown": put_down_skill,
         }
 
-        try:
-            self.robot_instance.skill_generator = SKILL_TABLE[task_name](**params)
-            self.robot_instance.active_goal_handle = goal_handle
-            self.robot_instance.skill_feedback_msg = SkillExecution.Feedback()
-        except Exception as e:
-            raise e
+        self.robot_instance.skill_function = SKILL_TABLE[task_name]
+        self.robot_instance.skill_params = params
+        self.robot_instance.active_goal_handle = goal_handle
+        self.robot_instance.skill_feedback_msg = SkillExecution.Feedback()
