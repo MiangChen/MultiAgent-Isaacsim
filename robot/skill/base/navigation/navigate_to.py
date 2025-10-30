@@ -46,9 +46,9 @@ def _init_navigation(robot, kwargs):
     elif isinstance(goal_quat_wxyz, tuple):
         goal_quat_wxyz = list(goal_quat_wxyz)
 
-    if robot.is_planning:
+    if robot.skill_function is not None:
         robot._nav_state = "FAILED"
-        robot._nav_error = "Planning already in progress."
+        robot._nav_error = "Robot is busy."
         return
 
     if not robot.action_client_path_planner.wait_for_server(timeout_sec=2.0):
@@ -56,7 +56,7 @@ def _init_navigation(robot, kwargs):
         robot._nav_error = "Path planner server is not available."
         return
 
-    robot.is_planning = True
+
     robot.node_controller_mpc.move_event.clear()
     robot.node.get_logger().info(f"Sending path request to goal: {goal_pos}")
 
@@ -145,7 +145,6 @@ def _handle_failed(robot):
 
 
 def _cleanup_navigation(robot):
-    robot.is_planning = False
     attrs_to_remove = ['_nav_state', '_nav_start_time', '_nav_send_future', 
                        '_nav_result_future', '_nav_goal_handle', '_nav_move_start_time', '_nav_error']
     for attr in attrs_to_remove:

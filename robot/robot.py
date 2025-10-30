@@ -123,7 +123,7 @@ class Robot:
         self.track_waypoint_index = 0
         self.is_tracking = False
         self.track_waypoint_sub = None
-        self.is_planning = False
+
         self.track_counter = 0
         self.track_period = 300
 
@@ -280,7 +280,7 @@ class Robot:
             step_size:  dt 时间间隔
         """
         # 执行技能步骤
-        self.execute_frame_skill()
+        # self.execute_frame_skill()
         self.execute_skill_step()
         # calculate robot elocity
         self.node_controller_mpc.control_loop()
