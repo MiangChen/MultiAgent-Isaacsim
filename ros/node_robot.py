@@ -23,6 +23,8 @@ from nav_msgs.msg import Odometry
 # Custom ROS message imports
 from gsi_msgs.gsi_msgs_helper import SkillExecution
 
+from rosgraph_msgs.msg import Clock
+
 logger = LogManager.get_logger(__name__)
 
 
@@ -46,6 +48,12 @@ class NodeRobot(Node):
             action_name=f"skill_execution",
             execute_callback=self.callback_execute_skill,
         )
+        
+        # 订阅Isaac Sim仿真时钟
+        self.subscriber_sim_clock = self.create_subscription(
+            Clock, "/isaacsim_simulation_clock", self.callback_sim_clock, 10
+        )
+        
         logger.info(f"ROS2 Node for {self.namespace} has been created.")
 
     def callback_cmd_vel(self, msg):
@@ -53,6 +61,9 @@ class NodeRobot(Node):
             self.robot_instance.callback_cmd_vel(msg)
         else:
             self.get_logger().warning("No robot instance connected for cmd_vel")
+
+    def callback_sim_clock(self, msg: Clock):
+        self.robot_instance.sim_time = msg.clock.sec + msg.clock.nanosec / 1e9
 
     def set_robot_instance(self, robot):
         self.robot_instance = robot
