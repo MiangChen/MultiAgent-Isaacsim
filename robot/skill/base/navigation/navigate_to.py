@@ -46,7 +46,7 @@ def _init_navigation(robot, kwargs):
     elif isinstance(goal_quat_wxyz, tuple):
         goal_quat_wxyz = list(goal_quat_wxyz)
 
-    if robot.skill_function is not None:
+    if (robot.skill_function is not None) and (robot.skill_function is not navigate_to_skill):
         robot._nav_state = "FAILED"
         robot._nav_error = "Robot is busy."
         return
