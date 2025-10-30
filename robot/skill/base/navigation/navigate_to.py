@@ -11,8 +11,7 @@ def navigate_to_skill(**kwargs):
     robot = kwargs.get("robot")
     
     # 初始化状态机（只在第一次调用时执行）
-    if not hasattr(robot, 'skill_state'):
-        _init_navigation(robot, kwargs)
+    _init_navigation(robot, kwargs)
     
     # 状态机：每个physics step执行一次
     if robot.skill_state == "INITIALIZING":
@@ -28,12 +27,11 @@ def navigate_to_skill(**kwargs):
 
 
 def _init_navigation(robot, kwargs):
-    robot.skill_state = "INITIALIZING"
-    start_pos = kwargs.get("start_pos", None)
     robot.node_controller_mpc.has_reached_goal = False
+    start_pos = kwargs.get("start_pos", None)
+    start_quat = kwargs.get("start_quat")
     if type(start_pos) is str:
         start_pos = json.loads(start_pos)
-    start_quat = kwargs.get("start_quat")
     if type(start_quat) is str:
         start_quat = json.loads(start_quat)
     goal_pos = kwargs.get("goal_pos")
@@ -72,6 +70,8 @@ def _init_navigation(robot, kwargs):
     # 发送规划请求
     robot._nav_send_future = robot.action_client_path_planner.send_goal_async(goal_msg)
     robot._nav_start_time = robot.sim_time
+    robot.skill_state = "INITIALIZING"
+
 
 
 def _handle_initializing(robot):
