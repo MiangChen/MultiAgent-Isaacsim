@@ -9,7 +9,6 @@
 # =============================================================================
 
 # Standard library imports
-import threading
 
 # Local project imports
 from log.log_manager import LogManager
@@ -55,8 +54,42 @@ class NodeRobot(Node):
         else:
             self.get_logger().warning("No robot instance connected for cmd_vel")
 
-    def callback_execute_skill(self, goal_handle):
-        return self.robot_instance.callback_skill_execution(goal_handle)
-
     def set_robot_instance(self, robot):
         self.robot_instance = robot
+
+    def callback_execute_skill(self, goal_handle):
+
+        if self.robot_instance.active_goal_handle:
+            goal_handle.abort()
+            return SkillExecution.Result(success=False, message="机器人正忙")
+
+        try:
+            request = goal_handle.request.skill_request
+            task_name = request.skill_list[0].skill
+            params = {p.key: p.value for p in request.skill_list[0].params}
+            params["robot"] = self.robot_instance
+
+            self.prepare_skill_execution(goal_handle, task_name, params)
+            return SkillExecution.Result(success=True, message=f"技能 {task_name} 启动成功")
+        except Exception as e:
+            goal_handle.abort()
+            return SkillExecution.Result(success=False, message=f"启动失败: {str(e)}")
+
+    def prepare_skill_execution(self, goal_handle, task_name, params) -> None:
+        """准备技能执行，在 physics step 中执行"""
+        from robot.skill.base.navigation.navigate_to import navigate_to_skill
+        from robot.skill.base.manipulation.pick_up import pick_up_skill
+        from robot.skill.base.manipulation.put_down import put_down_skill
+
+        SKILL_TABLE = {
+            "navigation": navigate_to_skill,
+            "pickup": pick_up_skill,
+            "putdown": put_down_skill,
+        }
+
+        try:
+            self.robot_instance.skill_generator = SKILL_TABLE[task_name](**params)
+            self.robot_instance.active_goal_handle = goal_handle
+            self.robot_instance.skill_feedback_msg = SkillExecution.Feedback()
+        except Exception as e:
+            raise e
