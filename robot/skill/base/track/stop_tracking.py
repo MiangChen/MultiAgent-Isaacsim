@@ -1,4 +1,4 @@
-def stop_tracking(robot):
+def stop_tracking_skill(robot):
     robot.is_tracking = False
     robot.track_waypoint_list = []
     robot.track_waypoint_index = 0
