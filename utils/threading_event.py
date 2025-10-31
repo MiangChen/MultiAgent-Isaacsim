@@ -5,13 +5,13 @@ class FeedbackEvent:
     线程安全的反馈信号，封装反馈内容，用于navigate内部
     """
     def __init__(self):
-        self._event = threading.Event()
+        # self._event = threading.Event()
         self._result = None
 
     def set(self, value=None):
         """设置结果并触发事件"""
         self._result = value
-        self._event.set()
+        # self._event.set()
 
     def wait(self, timeout=None):
         """
@@ -23,8 +23,8 @@ class FeedbackEvent:
 
     def clear(self):
         """清除事件状态（可重复使用）"""
-        self._event.clear()
+        # self._event.clear()
 
     def is_set(self):
         """查询事件是否已触发"""
-        return self._event.is_set()
+        # return self._event.is_set()
