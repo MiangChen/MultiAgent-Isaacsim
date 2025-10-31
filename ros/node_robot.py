@@ -83,12 +83,7 @@ class NodeRobot(Node):
             while self.robot_instance.skill_function is not None and goal_handle.is_active:
                 # 读取robot的状态信息
                 feedback = SkillExecution.Feedback()
-
-                if self.robot_instance.skill_feedback is not None:
-                    feedback.status = str(skill_feedback)
-                else:
-                    feedback.status = str({status = "processing", reason = "Initializing", progress = 1})
-
+                feedback.status = str(self.robot_instance.skill_feedback)
                 # 发送feedback
                 goal_handle.publish_feedback(feedback)
                 
