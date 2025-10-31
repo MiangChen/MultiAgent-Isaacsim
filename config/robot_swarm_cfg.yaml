@@ -83,7 +83,7 @@ target:
 h1:
   - id: 0
     name: Hellen
-    position: [ 3, 4, 1.05 ]
+    position: [ 3, 2, 1.05 ]
     quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
     cfg_dict_camera:
       front:
