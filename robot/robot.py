@@ -217,10 +217,8 @@ class Robot:
     def _spin_ros(self):
         logger.info(f"Robot {self.namespace} ROS thread started spinning")
         try:
-            spin_count = 0
             while not self.stop_event.is_set():
                 self.executor.spin_once(timeout_sec=0.05)
-                spin_count += 1
         except Exception as e:
             logger.error(f"Robot {self.namespace} ROS thread error: {e}")
         finally:

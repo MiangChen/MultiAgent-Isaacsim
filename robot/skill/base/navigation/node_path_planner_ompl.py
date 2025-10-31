@@ -309,7 +309,7 @@ class NodePlannerOmpl(Node):
         if goal_handle and goal_handle.is_cancel_requested:
             return []
 
-        solved = planner.solve(10)
+        solved = planner.solve(5)
 
         if goal_handle and goal_handle.is_cancel_requested:
             return []
@@ -318,7 +318,7 @@ class NodePlannerOmpl(Node):
         if solved:
             solution_path = pdef.getSolutionPath()
             solution_path = self.smooth_path_ompl(solution_path)
-            solution_path.interpolate(100)
+            solution_path.interpolate(20)
 
             states = solution_path.getStates()
             for state in states:
