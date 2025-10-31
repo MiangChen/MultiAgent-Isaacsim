@@ -7,7 +7,7 @@ def detect_skill(**kwargs):
     robot = kwargs.get("robot")
     
     # 初始化状态机（只在第一次调用时执行）
-    if not hasattr(robot, 'skill_state'):
+    if robot.skill_state is None:
         _init_detect(robot, kwargs)
     
     # 状态机：每个physics step执行一次
