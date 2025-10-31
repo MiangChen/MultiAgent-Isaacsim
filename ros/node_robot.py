@@ -45,13 +45,12 @@ class NodeRobot(Node):
         logger.info(f"ROS2 Node for {self.namespace} has been created.")
 
     def callback_cmd_vel(self, msg):
-        if self.robot_instance and hasattr(self.robot_instance, "callback_cmd_vel"):
-            self.robot_instance.callback_cmd_vel(msg)
-        else:
-            self.get_logger().warning("No robot instance connected for cmd_vel")
-
+        linear_vel = [msg.linear.x, msg.linear.y, msg.linear.z]
+        angular_vel = [msg.angular.x, msg.angular.y, msg.angular.z]
+        self.robot_instance.set_velocity_command(linear_vel, angular_vel)
     def callback_sim_clock(self, msg: Clock):
-        self.robot_instance.sim_time = msg.clock.sec + msg.clock.nanosec / 1e9
+        sim_time = msg.clock.sec + msg.clock.nanosec / 1e9
+        self.robot_instance.update_sim_time(sim_time)
 
     def set_robot_instance(self, robot):
         self.robot_instance = robot
@@ -83,7 +82,14 @@ class NodeRobot(Node):
             while self.robot_instance.skill_function is not None and goal_handle.is_active:
                 # 读取robot的状态信息
                 feedback = SkillExecution.Feedback()
-                feedback.status = str(self.robot_instance.skill_feedback)
+                
+                # 获取技能状态
+                skill_status = self.robot_instance.get_skill_status()
+                status = skill_status.get("status", "processing")
+                reason = skill_status.get("reason", "")
+                progress = skill_status.get("progress", 0)
+                feedback.status = f"{status}: {reason} ({progress}%)"
+                
                 # 发送feedback
                 goal_handle.publish_feedback(feedback)
                 
@@ -92,11 +98,12 @@ class NodeRobot(Node):
             
             # skill执行完成，获取结果
             skill_result = self.robot_instance.skill_result
+            delattr(self.robot_instance, 'skill_result')
             
             # 创建ROS2 action result
             result = SkillExecution.Result(
                 success=skill_result["success"], 
-                message=skill_result["message"],
+                message=skill_result["message"]
             )
             
             # 根据结果调用succeed或abort

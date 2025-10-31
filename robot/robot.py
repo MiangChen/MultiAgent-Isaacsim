@@ -100,6 +100,7 @@ class Robot:
         # robot physics state
         self.vel_linear = torch.tensor([0.0, 0.0, 0.0])
         self.vel_angular = torch.tensor([0.0, 0.0, 0.0])
+        self.sim_time = 0.0
 
 
         self.active_goal_handle = None
@@ -166,12 +167,11 @@ class Robot:
         self.node.publisher_odom.publish(odom_msg)
 
     ########################## Subscriber Velocity  ############################
-    def callback_cmd_vel(self, msg):
-        linear_vel = torch.tensor([msg.linear.x, msg.linear.y, msg.linear.z])
-        angular_vel = torch.tensor([msg.angular.x, msg.angular.y, msg.angular.z])
-        self.vel_linear = linear_vel
-        self.vel_angular = angular_vel
-        logger.debug(f"get linear vel: {linear_vel}, angular vel: {angular_vel}")
+    def set_velocity_command(self, linear_vel, angular_vel):
+        """设置机器人速度命令 - 业务逻辑接口"""
+        self.vel_linear = torch.tensor(linear_vel)
+        self.vel_angular = torch.tensor(angular_vel)
+        logger.debug(f"set linear vel: {linear_vel}, angular vel: {angular_vel}")
 
     ########################## Infrastructure Initialization ############################
 
@@ -453,3 +453,16 @@ class Robot:
                 else False
             ),
         }
+    def update_sim_time(self, sim_time):
+        """更新仿真时间"""
+        self.sim_time = sim_time
+
+    def get_skill_status(self):
+        """获取当前技能执行状态 - 供ROS节点查询"""
+        if not self.skill_function:
+            return {"status": "idle", "reason": "无活动技能", "progress": 0}
+        
+        if hasattr(self, 'skill_feedback') and self.skill_feedback:
+            return self.skill_feedback
+        
+        return {"status": "processing", "reason": "技能执行中", "progress": 50}
