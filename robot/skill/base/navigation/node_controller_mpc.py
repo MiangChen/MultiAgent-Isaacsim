@@ -17,7 +17,27 @@ from scipy.interpolate import interp1d
 from scipy.spatial.transform import Rotation as R
 import casadi as ca
 
-from utils.threading_event import FeedbackEvent
+# from utils.threading_event import FeedbackEvent
+
+class SimpleEvent:
+    """简单的事件状态管理，不需要线程安全"""
+    def __init__(self):
+        self._is_set = False
+        self._value = None
+    
+    def set(self, value=None):
+        self._is_set = True
+        self._value = value
+    
+    def clear(self):
+        self._is_set = False
+        self._value = None
+    
+    def is_set(self):
+        return self._is_set
+    
+    def get_value(self):
+        return self._value
 
 # ROS2 imports
 import rclpy
@@ -203,14 +223,14 @@ class NodeMpcController(Node):
             namespace="",
             parameters=[
                 ("mpc.N", 20),
-                ("mpc.dt", 0.1),
+                ("mpc.dt", 0.01),
                 ("robot.max_velocity", 1.5),
                 ("robot.max_acceleration", 0.8),
                 ("robot.max_omega", 1.0),
                 ("robot.max_alpha", 1.5),
                 ("goal.position_tolerance", 0.1),
                 ("goal.velocity_tolerance", 0.1),
-                ("goal.completion_timeout", 20.0),
+                ("goal.completion_timeout", 5.0),
                 ("time.use_sim_time", True),  # 是否使用仿真时间
             ],
         )
@@ -234,10 +254,9 @@ class NodeMpcController(Node):
         self.trajectory_manager = None
         self.trajectory_start_time = None
         self.current_state = None
-        self.is_active = False
         self.has_reached_goal = True
 
-        self.move_event = FeedbackEvent()
+        self.move_event = SimpleEvent()
         self.latest_sim_time = 0
 
         # ROS 2 Communications
@@ -268,10 +287,10 @@ class NodeMpcController(Node):
             self.trajectory_manager = TrajectoryManager(trajectory_data)
             self.trajectory_start_time = self.latest_sim_time
             self.has_reached_goal = False
-            self.is_active = True
+            self.move_event.clear()  # 重置事件状态，开始新的移动任务
         except ValueError as e:
             self.get_logger().error(f"Failed to process trajectory: {e}")
-            self.is_active = False
+            self.move_event.set(value=False)  # 轨迹处理失败
 
     def odom_callback(self, msg: Odometry):
         """Updates the current state of the robot from odometry data."""
@@ -287,7 +306,7 @@ class NodeMpcController(Node):
     def control_loop(self):
         """Main MPC control loop, running at a fixed frequency."""
         if (
-            not self.is_active
+            self.move_event.is_set()
             or self.trajectory_manager is None
             or self.current_state is None
         ):
@@ -330,7 +349,6 @@ class NodeMpcController(Node):
                 return
 
             # Condition 2: Have we run out of extra time?
-            self.has_reached_goal = True
             if (
                 elapsed_time
                 > self.trajectory_manager.duration + self.completion_timeout
@@ -340,7 +358,7 @@ class NodeMpcController(Node):
                     f"Stopping at final distance of {position_error:.2f}m."
                 )
                 self.has_reached_goal = True
-                self.move_event.set(value=False)
+                self.move_event.set(value=False)  # 超时失败，也要设置事件
                 self.stop_robot()
                 return
 
