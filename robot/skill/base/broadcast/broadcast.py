@@ -57,7 +57,7 @@ def _handle_executing(robot):
     """执行广播操作"""
     try:
         # 执行广播
-        robot_name = robot.body.cfg_robot.name
+        robot_name = robot.body.cfg_robot.namespace
         logger.info(
             f"[Skill] {robot_name} executing broadcasting. The content is {robot._broadcast_content}"
         )
