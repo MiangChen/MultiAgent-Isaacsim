@@ -102,7 +102,6 @@ class Robot:
         self.vel_angular = torch.tensor([0.0, 0.0, 0.0])
         self.sim_time = 0.0
 
-
         self.skill_function = None
         self.skill_params = None
         self.skill_feedback = None
@@ -129,7 +128,6 @@ class Robot:
 
         self.track_counter = 0
         self.track_period = 300
-
 
     ########################## Publisher Odom  ############################
     def publish_robot_state(self):
@@ -296,26 +294,13 @@ class Robot:
         if not self.skill_function:
             return
 
-        try:
-            feedback = self.skill_function(**self.skill_params)
+        self.skill_feedback = self.skill_function(**self.skill_params)
 
-            # 存储最新的feedback信息，供其他地方使用
-            self.skill_feedback = feedback
-            
-            if feedback.get("status") in ["finished", "failed"]:
-                success = feedback.get("status") == "finished"
-                self.skill_result = {
-                    "success": success,
-                    "message": feedback.get("reason", "完成"),
-                }
-
-                self.cleanup_skill()
-                
-        except Exception as e:
-            logger.error(f"Skill execution error: {e}")
+        if self.skill_feedback.get("status") in ["finished", "failed"]:
+            success = self.skill_feedback.get("status") == "finished"
             self.skill_result = {
-                "success": False,
-                "message": f"执行错误: {str(e)}",
+                "success": success,
+                "message": self.skill_feedback.get("reason", "完成"),
             }
 
             self.cleanup_skill()
@@ -347,7 +332,7 @@ class Robot:
         ):
             self.skill_function = navigate_to_skill
             self.skill_params = {
-                "robot": self, 
+                "robot": self,
                 "goal_pos": self.track_waypoint_list[self.track_waypoint_index]
             }
             self.track_waypoint_index += 1
@@ -450,6 +435,7 @@ class Robot:
                 else False
             ),
         }
+
     def update_sim_time(self, sim_time):
         """更新仿真时间"""
         self.sim_time = sim_time
@@ -458,8 +444,8 @@ class Robot:
         """获取当前技能执行状态 - 供ROS节点查询"""
         if not self.skill_function:
             return {"status": "idle", "reason": "无活动技能", "progress": 0}
-        
+
         if hasattr(self, 'skill_feedback') and self.skill_feedback:
             return self.skill_feedback
-        
+
         return {"status": "processing", "reason": "技能执行中", "progress": 50}
