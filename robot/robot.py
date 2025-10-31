@@ -103,7 +103,6 @@ class Robot:
         self.sim_time = 0.0
 
 
-        self.active_goal_handle = None
         self.skill_function = None
         self.skill_params = None
         self.skill_feedback = None
