@@ -4,7 +4,7 @@ from log.log_manager import LogManager
 logger = LogManager.get_logger(__name__)
 
 
-def broadcast_skill(**kwargs):
+def broadcast(**kwargs):
     robot = kwargs.get("robot")
     
     # 初始化状态机（只在第一次调用时执行）

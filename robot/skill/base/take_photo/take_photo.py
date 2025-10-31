@@ -1,4 +1,4 @@
-def take_photo_skill(**kwargs):
+def take_photo(**kwargs):
     robot = kwargs.get("robot")
     
     # 初始化状态机（只在第一次调用时执
