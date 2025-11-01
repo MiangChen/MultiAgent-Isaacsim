@@ -124,8 +124,8 @@ class Camera:
         return self.camera.get_world_pose(camera_axes=camera_axes)
 
     def save_rgb_to_file(
-            self, rgb, file_path: str = None
-    ) -> bool:
+            self, rgb: np.ndarray, file_path: str = None
+    ) -> str:
         """
         保存RGB图像到文件
 
@@ -133,18 +133,17 @@ class Camera:
             rgb: numpy array RGB数据 [H, W, C]
             file_path: 保存路径
 
-        Returns:
-            bool: 是否保存成功
         """
+        try:
+            # 确保数据类型为uint8
+            if rgb.dtype != np.uint8:
+                if rgb.max() <= 1.0:
+                    rgb = (rgb * 255).astype(np.uint8)
+                else:
+                    rgb = rgb.astype(np.uint8)
 
-        # 确保数据类型为uint8
-        if rgb.dtype != np.uint8:
-            if rgb.max() <= 1.0:
-                rgb = (rgb * 255).astype(np.uint8)
-            else:
-                rgb = rgb.astype(np.uint8)
+            Image.fromarray(rgb, 'RGB').save(file_path)
 
-        Image.fromarray(rgb, 'RGB').save(file_path)
-
-        logger.info(f"图像已成功保存到: {file_path}")
-        return True
+            return f"图像已成功保存到: {file_path}"
+        except Exception as e:
+            return f"Error: {repr(e)}"

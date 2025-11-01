@@ -40,11 +40,12 @@ def _handle_executing(robot):
 
     # robot.data_io.output("photo", photo_data)
 
+    feedback = None
     if robot._save_to_file:
-        camera.save_rgb_to_file(rgb=rgb, file_path=robot._save_to_file)
+        feedback = camera.save_rgb_to_file(rgb=rgb, file_path=robot._save_to_file)
 
     robot.skill_state = "COMPLETED"
-    return robot.form_feedback("processing", "Taking photo...", 90)
+    return robot.form_feedback("processing", f"Taking photo...{feedback}", 90)
 
 
 def _handle_completed(robot):
