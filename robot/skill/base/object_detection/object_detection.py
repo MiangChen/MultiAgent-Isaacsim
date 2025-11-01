@@ -56,7 +56,7 @@ def _handle_completed(robot):
     result = getattr(robot, '_detection_result', {"success": False, "message": "no _detection_result", "data": None})
     _cleanup_object_detection(robot)
 
-    return robot.form_feedback("finished", result["message"], 100)
+    return robot.form_feedback("finished", result, 100)
 
 
 def _handle_failed(robot):
