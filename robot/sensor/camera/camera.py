@@ -109,13 +109,13 @@ class Camera:
         return self.camera.get_point_cloud()
 
     def get_rgb(self) -> np.ndarray:
-        """
-
-        Returns:
-            containing the RGB data for each camera. Shape is (num_cameras, height, width, 3) with type torch.float32.
-
-        """
         return self.camera.get_rgb()
+
+    def get_semantic_detection(self) -> np.ndarray:
+        if self.cfg_camera.enable_semantic_detection in [False, None]:
+            self.cfg_camera.enable_semantic_detection = True
+            self.camera.add_bounding_box_2d_loose_to_frame()
+        return self.camera.get_current_frame["bounding_box_2d_loose"]
 
     def get_local_pose(self, camera_axes: str = "usd"):
         return self.camera.get_local_pose(camera_axes=camera_axes)

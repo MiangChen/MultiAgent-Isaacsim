@@ -123,12 +123,14 @@ class NodeRobot(Node):
         from robot.skill.base.manipulation.pick_up import pick_up_skill
         from robot.skill.base.manipulation.put_down import put_down_skill
         from robot.skill.base.take_photo import take_photo
+        from robot.skill.base.object_detection import object_detection_skill
 
         SKILL_TABLE = {
             "navigation": navigate_to_skill,
             "pickup": pick_up_skill,
             "putdown": put_down_skill,
             "take_photo": take_photo,
+            "object_detection": object_detection_skill,
         }
 
         self.robot_instance.skill_function = SKILL_TABLE[task_name]
