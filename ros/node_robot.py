@@ -72,25 +72,21 @@ class NodeRobot(Node):
             self.prepare_skill_execution(goal_handle, task_name, params)
             
             # 发送初始feedback表示技能已启动
-            initial_feedback = SkillExecution.Feedback()
-            initial_feedback.status = f"技能 {task_name} 启动成功"
-            goal_handle.publish_feedback(initial_feedback)
+            feedback = SkillExecution.Feedback()
+            feedback.status = f"技能 {task_name} 启动成功"
+            goal_handle.publish_feedback(feedback)
             
             # 循环监控skill执行状态并发送feedback
             import time
             
             while self.robot_instance.skill_function is not None and goal_handle.is_active:
-                # 读取robot的状态信息
-                feedback = SkillExecution.Feedback()
-                
-                # 获取技能状态
+
                 skill_status = self.robot_instance.get_skill_status()
                 status = skill_status.get("status", "processing")
                 reason = skill_status.get("reason", "")
                 progress = skill_status.get("progress", 0)
                 feedback.status = f"{status}: {reason} ({progress}%)"
-                
-                # 发送feedback
+
                 goal_handle.publish_feedback(feedback)
                 
                 # 10Hz频率，等待0.1秒
@@ -98,7 +94,6 @@ class NodeRobot(Node):
             
             # skill执行完成，获取结果
             skill_result = self.robot_instance.skill_result
-            delattr(self.robot_instance, 'skill_result')
             
             # 创建ROS2 action result
             result = SkillExecution.Result(

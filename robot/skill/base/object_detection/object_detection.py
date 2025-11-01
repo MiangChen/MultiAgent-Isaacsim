@@ -18,16 +18,10 @@ def _init_object_detection(robot, kwargs):
     robot._target_class = kwargs.get("target_class", "car")
     robot.skill_state = "INITIALIZING"
 
-    if robot.camera_name is None:
+    if not hasattr(robot, 'camera_dict') or robot._camera_name not in robot.camera_dict:
         robot.skill_state = "FAILED"
         robot.skill_error = "Semantic camera is not available."
         return robot.form_feedback("failed", robot.skill_error)
-
-    # 检查语义地图是否可用
-    # if robot._map_semantic is None:
-    #     robot.skill_state = "FAILED"
-    #     robot.skill_error = "Map semantic is not available."
-    #     return robot.form_feedback("failed", robot.skill_error)
 
     # 初始化完成，进入执行阶段
     robot.skill_state = "EXECUTING"
@@ -37,36 +31,19 @@ def _init_object_detection(robot, kwargs):
 def _handle_executing(robot):
     """执行物体检测"""
     try:
-        # 获取当前帧
-        camera = robot.camera_dict[robot.camera_name]
+        camera = robot.camera_dict[robot._camera_name]
         result = camera.get_semantic_detection()
         if result is None:
-            robot.skill_state = "FAILED"
+            robot.skill_state = "EXECUTING"
             robot.skill_error = "Failed to get current frame from semantic camera"
-            return robot.form_feedback("failed", robot.skill_error)
-
-        # robot.skill_feedback =  result
-        # # 执行语义检测
-        # prim_target, target_pose = robot._map_semantic.get_prim_and_pose_by_semantic(
-        #     bounding_box_result, target_semantic_class=robot._target_class
-        # )
-
-        # 存储检测结果
-        # if prim_target and target_pose:
-        #     robot._detection_result = {
-        #         "success": True,
-        #         "message": f"Detected {robot._target_class}",
-        #         "data": {"prim_path": prim_target, "pose": target_pose}
-        #     }
-        # else:
-        #     robot._detection_result = {
-        #         "success": False,
-        #         "message": f"No {robot._target_class} detected",
-        #         "data": None
-        #     }
-
-        robot.skill_state = "COMPLETED"
-        return robot.form_feedback("processing", f"Detecting {robot._target_class}...{result}", 90)
+            return robot.form_feedback("processing", robot.skill_error)
+        elif type(result) is str:
+            robot.skill_state = "EXECUTING"
+            return robot.form_feedback("processing", result)
+        else:
+            robot.skill_state = "COMPLETED"
+            robot._detection_result = {"success": True, "message": None, "data": result}
+            return robot.form_feedback("processing", f"Detecting {robot._target_class}...", 90)
 
     except Exception as e:
         robot.skill_state = "FAILED"
@@ -76,13 +53,10 @@ def _handle_executing(robot):
 
 def _handle_completed(robot):
     """处理完成状态"""
-    result = getattr(robot, '_detection_result', {"success": False, "message": "Unknown result", "data": None})
+    result = getattr(robot, '_detection_result', {"success": False, "message": "no _detection_result", "data": None})
     _cleanup_object_detection(robot)
 
-    if result["success"]:
-        return robot.form_feedback("finished", result["message"], 100)
-    else:
-        return robot.form_feedback("finished", result["message"], 100)
+    return robot.form_feedback("finished", result["message"], 100)
 
 
 def _handle_failed(robot):

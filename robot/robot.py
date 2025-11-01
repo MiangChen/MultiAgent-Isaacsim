@@ -266,8 +266,8 @@ class Robot:
             self, status: str = "processing", reason: str = "none", progress: int = 100
     ) -> Dict[str, Any]:
         return dict(
-            status=status,
-            reason=reason,
+            status=str(status),
+            reason=str(reason),
             progress=progress,
         )
 
