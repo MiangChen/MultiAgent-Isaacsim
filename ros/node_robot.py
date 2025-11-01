@@ -128,9 +128,8 @@ class NodeRobot(Node):
             "navigation": navigate_to_skill,
             "pickup": pick_up_skill,
             "putdown": put_down_skill,
-            # "take_photo": take_photo,
+            "take_photo": take_photo,
         }
 
         self.robot_instance.skill_function = SKILL_TABLE[task_name]
         self.robot_instance.skill_params = params
-        # 不再设置active_goal_handle和skill_feedback_msg，保持skill执行的纯净性

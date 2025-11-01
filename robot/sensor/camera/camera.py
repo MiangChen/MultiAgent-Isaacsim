@@ -39,7 +39,7 @@ class Camera:
         self.cfg_camera.name = self.cfg_camera.type + "_" + str(self.cfg_camera.id)
         if self.cfg_camera.use_existing_camera == True:
             self.cfg_camera.path_prim_absolute = (
-                self.path_prim_parent + self.cfg_camera.path_prim_relative_to_robot
+                    self.path_prim_parent + self.cfg_camera.path_prim_relative_to_robot
             )
             self.camera = IsaacCamera(
                 prim_path=self.cfg_camera.path_prim_absolute,
@@ -54,10 +54,10 @@ class Camera:
             )
         else:
             self.cfg_camera.path_prim_absolute = (
-                self.path_prim_parent
-                + self.cfg_camera.path_prim_relative_to_robot
-                + "/"
-                + self.cfg_camera.name
+                    self.path_prim_parent
+                    + self.cfg_camera.path_prim_relative_to_robot
+                    + "/"
+                    + self.cfg_camera.name
             )
 
             self.camera = IsaacCamera(
@@ -90,10 +90,10 @@ class Camera:
             self.camera.add_bounding_box_2d_loose_to_frame()
 
     def set_local_pose(
-        self,
-        translation: Sequence[float] = None,
-        orientation: Sequence[float] = None,
-        camera_axes: str = "usd",
+            self,
+            translation: Sequence[float] = None,
+            orientation: Sequence[float] = None,
+            camera_axes: str = "usd",
     ) -> None:
         self.camera.set_local_pose(
             translation=translation, orientation=orientation, camera_axes=camera_axes
@@ -109,7 +109,7 @@ class Camera:
     def get_point_cloud(self):
         return self.camera.get_point_cloud()
 
-    def get_rgb(self) -> torch.Tensor:
+    def get_rgb(self) -> np.ndarray:
         """
 
         Returns:
@@ -125,59 +125,31 @@ class Camera:
         return self.camera.get_world_pose(camera_axes=camera_axes)
 
     def save_rgb_to_file(
-        self, rgb_tensor_gpu: torch.Tensor, file_path: str = None
+            self, rgb, file_path: str = None
     ) -> bool:
         """
-        使用 torchvision.utils.save_image 简化版本
+        保存RGB图像到文件
 
         Args:
-            rgb_tensor_gpu: [height, width, 3] 或 [batch, height, width, 3] RGB Tensor
+            rgb: numpy array RGB数据 [H, W, C]
             file_path: 保存路径
 
         Returns:
             bool: 是否保存成功
         """
-        try:
-            if not isinstance(rgb_tensor_gpu, torch.Tensor):
-                logger.error(
-                    f"输入无效：期望一个 torch.Tensor，但收到了 {type(rgb_tensor_gpu)}。"
-                )
-                return False
+        import cv2
+        
 
-            if not isinstance(file_path, str) or not file_path:
-                logger.error(
-                    f"文件路径无效：路径必须是一个非空字符串，但收到了 '{file_path}'。"
-                )
-                return False
+        if rgb.dtype == np.float32 or rgb.dtype == np.float64:
+            if rgb.max() <= 1.0:
+                rgb = (rgb * 255).astype(np.uint8)
+            else:
+                rgb = rgb.astype(np.uint8)
+        elif rgb.dtype != np.uint8:
+            rgb = rgb.astype(np.uint8)
 
-            # 如果是4维张量 (batch, H, W, C)，则只取第一张图
-            if rgb_tensor_gpu.ndim == 4:
-                logger.warning(
-                    f"输入为4维张量，将只保存第一张图像。形状: {rgb_tensor_gpu.shape}"
-                )
-                rgb_tensor_gpu = rgb_tensor_gpu[0]
-
-            # 核心检查：必须是3维张量
-            if rgb_tensor_gpu.ndim != 3 or rgb_tensor_gpu.shape[2] != 3:
-                logger.error(
-                    f"张量形状错误：期望 [H, W, 3]，但收到了 {rgb_tensor_gpu.shape}"
-                )
-                return False
-
-            logger.info(f"开始处理图像，准备保存到 {file_path}...")
-
-            # save_image 要求浮点张量在 [0,1] 范围内，或直接是 uint8 张量
-            if rgb_tensor_gpu.max() > 1.0:
-                rgb_tensor_gpu = rgb_tensor_gpu / 255.0
-            # torchvision 需要 [C, H, W] 格式，因此需要重排维度, permute(2, 0, 1) 将 [H, W, C] 变为 [C, H, W]
-            tensor_chw = rgb_tensor_gpu.permute(2, 0, 1)
-
-            save_image(tensor_chw, file_path)
-
-            logger.info(f"图像已成功保存到: {file_path}")
-            return True
-
-        except Exception as e:
-            # 捕获任何可能发生的异常
-            logger.error(f"保存文件到 {file_path} 时发生未知错误: {e}", exc_info=True)
-            return False
+        bgr_image = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(file_path, bgr_image)
+        
+        logger.info(f"图像已成功保存到: {file_path}")
+        return True
