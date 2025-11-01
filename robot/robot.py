@@ -72,8 +72,8 @@ class Robot:
 
         self.cfg_dict_camera = self.cfg_robot.cfg_dict_camera
         self.cfg_dict_camera_third = self.cfg_robot.cfg_dict_camera_third
-        self.camera = {}
-        self.camera_third = {}
+        self.camera_dict = {}
+        self.camera_third_dict = {}
 
         self.scene = scene
         self.scene_manager = scene_manager
@@ -108,7 +108,6 @@ class Robot:
         self.skill_error = None
         self.skill_state = None
 
-        self.cameras: dict = {}
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
 
@@ -250,13 +249,13 @@ class Robot:
             camera_instance = Camera(
                 path_prim_parent=self.cfg_robot.path_prim_robot, cfg_camera=camera_cfg
             )
-            self.camera[camera_name] = camera_instance
+            self.camera_dict[camera_name] = camera_instance
         for cam_name, cam_cfg in self.cfg_robot.cfg_dict_camera_third.items():
             camera_instance = Camera(
                 path_prim_parent=self.cfg_robot.path_prim_robot, cfg_camera=cam_cfg
             )
-            self.camera_third[cam_name] = camera_instance
-        for camera in self.camera.values():
+            self.camera_third_dict[cam_name] = camera_instance
+        for camera in self.camera_dict.values():
             camera.initialize()
 
         # 第三视角相机初始化 - 使用ViewportManager
@@ -401,7 +400,7 @@ class Robot:
 
     def _update_camera_view(self):
         """更新第三人称相机的位置和朝向"""
-        if self.camera_third:
+        if self.camera_third_dict:
             # 1. 获取机器人的当前位置
             robot_position, _ = self.get_world_poses()  # torch.tensor
 
