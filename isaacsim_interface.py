@@ -916,7 +916,7 @@ def save_world_prim_fun(req):
             rospy.logerr(response.message)
 
     except Exception as e:
-        response.message = f"Exception during save_world_prim: {str(e)}"
+        response.message = f"Exception during save_world_prim: {repr(e)}"
         rospy.logerr(response.message)
 
     return response
@@ -1089,7 +1089,7 @@ def run_simulation(world, curr_stage, drone_prim, gimbal_prim):
                             )
                     except Exception as e:
                         rospy.logerr(
-                            f"Failed to spawn USD model {request_data['name']}: {str(e)}"
+                            f"Failed to spawn USD model {request_data['name']}: {repr(e)}"
                         )
 
                 # Apply collision APIs so that we can detect collisions

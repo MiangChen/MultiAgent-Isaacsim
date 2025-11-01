@@ -13,7 +13,7 @@ try:
 
     pydevd_pycharm.settrace('localhost', port=12345, stdout_to_server=True, stderr_to_server=True)
 except Exception as e:
-    print(f"no pydevd found: {e}")
+    print(f"no pydevd found: {repr(e)}")
 ###################################################################################################################
 
 from physics_engine.isaacsim_simulation_app import start_isaacsim_simulation_app
@@ -206,7 +206,7 @@ def process_semantic_detection(semantic_camera, map_semantic: MapSemantic, targe
         else:
             print("No frame data or bounding box key available")
     except Exception as e:
-        print(f"Error getting semantic camera data: {e}")
+        print(f"Error getting semantic camera data: {repr(e)}")
 
 
 def main():

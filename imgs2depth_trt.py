@@ -50,7 +50,7 @@ class FisheyeTRTProcessor:
             self.logger.info(f"TensorRT engine loaded successfully from {engine_file}")
 
         except Exception as e:
-            self.logger.error(f"Failed to load TensorRT engine from {engine_file}: {e}")
+            self.logger.error(f"Failed to load TensorRT engine from {engine_file}: {repr(e)}")
             raise e
 
         trt_to_torch_dtype_dict = {
@@ -208,7 +208,7 @@ class FisheyeTRTProcessor:
             )
             return True
         except Exception as e:
-            self.logger.error(f"Error during inference: {e}")
+            self.logger.error(f"Error during inference: {repr(e)}")
             return False
 
     @carb.profiler.profile

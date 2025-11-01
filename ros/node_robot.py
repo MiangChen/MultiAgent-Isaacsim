@@ -116,17 +116,19 @@ class NodeRobot(Node):
             
         except Exception as e:
             goal_handle.abort()
-            return SkillExecution.Result(success=False, message=f"启动失败: {str(e)}")
+            return SkillExecution.Result(success=False, message=f"启动失败: {repr(e)}")
 
     def prepare_skill_execution(self, goal_handle, task_name, params) -> None:
         from robot.skill.base.navigation.navigate_to import navigate_to_skill
         from robot.skill.base.manipulation.pick_up import pick_up_skill
         from robot.skill.base.manipulation.put_down import put_down_skill
+        from robot.skill.base.take_photo import take_photo
 
         SKILL_TABLE = {
             "navigation": navigate_to_skill,
             "pickup": pick_up_skill,
             "putdown": put_down_skill,
+            # "take_photo": take_photo,
         }
 
         self.robot_instance.skill_function = SKILL_TABLE[task_name]
