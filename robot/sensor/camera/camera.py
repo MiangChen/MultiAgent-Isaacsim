@@ -12,8 +12,7 @@ from typing import List, Optional, Tuple, Sequence
 
 # Third-party library imports
 import numpy as np
-import torch
-from torchvision.utils import save_image
+from PIL import Image
 
 # Local project imports
 from log.log_manager import LogManager
@@ -137,19 +136,15 @@ class Camera:
         Returns:
             bool: 是否保存成功
         """
-        import cv2
-        
 
-        if rgb.dtype == np.float32 or rgb.dtype == np.float64:
+        # 确保数据类型为uint8
+        if rgb.dtype != np.uint8:
             if rgb.max() <= 1.0:
                 rgb = (rgb * 255).astype(np.uint8)
             else:
                 rgb = rgb.astype(np.uint8)
-        elif rgb.dtype != np.uint8:
-            rgb = rgb.astype(np.uint8)
 
-        bgr_image = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(file_path, bgr_image)
-        
+        Image.fromarray(rgb, 'RGB').save(file_path)
+
         logger.info(f"图像已成功保存到: {file_path}")
         return True
