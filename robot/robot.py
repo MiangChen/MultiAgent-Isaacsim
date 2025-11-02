@@ -303,7 +303,7 @@ class Robot:
         if self.skill_functions:
             completed_skills = []
 
-            for skill_name, skill_function in self.skill_functions.items():
+            for skill_name, skill_function in list(self.skill_functions.items()):
 
                 # 执行技能
                 params = self.skill_params.get(skill_name, {})

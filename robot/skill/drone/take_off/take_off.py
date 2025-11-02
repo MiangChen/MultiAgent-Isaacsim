@@ -1,3 +1,4 @@
+import json
 from robot.skill.base.navigation.navigate_to import navigate_to_skill
 from log.log_manager import LogManager
 
@@ -5,131 +6,193 @@ logger = LogManager.get_logger(__name__)
 
 
 def take_off(**kwargs):
-    """无人机起飞技能 - 基于navigate_to实现"""
+    """无人机起飞技能 - 使用字典化状态管理"""
     robot = kwargs.get("robot")
+    skill_name = "take_off"  # 直接使用函数名
 
-    if robot.skill_states in [None, "INITIALIZING"]:
-        _init_take_off(robot, kwargs)
+    current_state = robot.skill_states.get(skill_name)
 
-    if robot.skill_state == "EXECUTING":
-        return _handle_executing(robot)
-    elif robot.skill_state == "COMPLETED":
-        return _handle_completed(robot)
-    elif robot.skill_state == "FAILED":
-        return _handle_failed(robot)
+    if current_state in [None, "INITIALIZING"]:
+        _init_take_off(robot, skill_name, kwargs)
+
+    current_state = robot.skill_states.get(skill_name)
+
+    if current_state == "EXECUTING_1":
+        return _handle_executing_1(robot, skill_name)
+    if current_state == "EXECUTING":
+        return _handle_executing(robot, skill_name)
+    elif current_state == "COMPLETED":
+        return _handle_completed(robot, skill_name)
+    elif current_state == "FAILED":
+        return _handle_failed(robot, skill_name)
 
 
-def _init_take_off(robot, kwargs):
+def _init_take_off(robot, skill_name, kwargs):
     """初始化起飞技能"""
+    robot.skill_states[skill_name] = "EXECUTING_1"
     try:
         # 获取目标高度参数
-        robot._target_altitude = kwargs.get("altitude")
-        if robot._target_altitude is None:
-            robot.skill_state = "FAILED"
-            robot.skill_error = "Altitude parameter is required"
+        altitude = kwargs.get("altitude")
+        if altitude is None:
+            robot.skill_states[skill_name] = "FAILED"
+            robot.skill_errors[skill_name] = "Altitude parameter is required"
             return
 
         # 验证高度参数
         try:
-            robot._target_altitude = float(robot._target_altitude)
-            if robot._target_altitude <= 0:
-                robot.skill_state = "FAILED"
-                robot.skill_error = "Altitude must be greater than 0"
+            altitude = float(altitude)
+            if altitude <= 0:
+                robot.skill_states[skill_name] = "FAILED"
+                robot.skill_errors[skill_name] = "Altitude must be greater than 0"
                 return
         except (ValueError, TypeError):
-            robot.skill_state = "FAILED"
-            robot.skill_error = "Invalid altitude parameter"
+            robot.skill_states[skill_name] = "FAILED"
+            robot.skill_errors[skill_name] = "Invalid altitude parameter"
             return
 
+        # 检查机器人身体组件
+        if not hasattr(robot, 'body') or robot.body is None:
+            robot.skill_states[skill_name] = "FAILED"
+            robot.skill_errors[skill_name] = "Robot body is not available"
+            return
+
+        # 存储到技能私有数据
+        robot.set_skill_data(skill_name, "target_altitude", altitude)
+
         # 获取当前位置
-        current_pos, current_quat = robot.pos, robot.quat
-        # current_pos = current_pos.cpu().numpy().tolist()
-        # current_quat = current_quat.cpu().numpy().tolist()
+        current_pos, current_quat = robot.body.get_world_pose()
+        current_pos = current_pos.cpu().numpy().tolist()
+        current_quat = current_quat.cpu().numpy().tolist()
 
         # 构造目标位置：保持XY，改变Z
-        robot._take_off_goal = [
+        take_off_goal = [
             current_pos[0],  # 保持当前X
-            current_pos[1],  # 保持当前Y
-            float(robot._target_altitude)  # 目标高度
+            current_pos[1],  # 保持当前Y  
+            float(altitude)  # 目标高度
         ]
 
-        logger.info(f"Take off: current={current_pos}, target={robot._take_off_goal}")
+        logger.info(f"Take off: current={current_pos}, target={take_off_goal}")
 
-        # 准备navigate_to的参数
-        robot._nav_kwargs = {
-            "robot": robot,
-            "goal_pos": robot._take_off_goal,
+        # 存储目标位置和导航参数
+        robot.set_skill_data(skill_name, "take_off_goal", take_off_goal)
+        robot.set_skill_data(skill_name, "nav_kwargs", {
+            "goal_pos": take_off_goal,
             "goal_quat_wxyz": current_quat  # 保持当前朝向
-        }
-
-        robot.skill_state = "EXECUTING"
+        })
 
     except Exception as e:
-        robot.skill_state = "FAILED"
-        robot.skill_error = f"Take off initialization failed: {str(e)}"
+        robot.skill_states[skill_name] = "FAILED"
+        robot.skill_errors[skill_name] = f"Take off initialization failed: {str(e)}"
         logger.error(f"Take off initialization error: {e}")
 
-
-def _handle_executing(robot):
-    """执行起飞 - 委托给navigate_to技能"""
+def _handle_executing_1(robot, skill_name):
     try:
-        # 调用navigate_to技能
-        robot.skill_state = "INITIALIZING"
-        robot.skill_function = navigate_to_skill
-        nav_result = navigate_to_skill(**robot._nav_kwargs)
-        robot.skill_state = "EXECUTING"
-        robot.skill_function = take_off
-        # 根据navigate_to的结果更新状态
-        if nav_result and nav_result.get("status") == "finished":
-            robot.skill_state = "COMPLETED"
-            return robot.form_feedback("processing", "Take off completed", 95)
-        elif nav_result and nav_result.get("status") == "failed":
-            robot.skill_state = "FAILED"
-            robot.skill_error = f"Navigation failed: {nav_result.get('message', 'Unknown error')}"
-            return robot.form_feedback("failed", robot.skill_error)
+        # 检查是否已经启动导航子技能
+        nav_skill_started = robot.get_skill_data(skill_name, "nav_skill_started", False)
+
+        if not nav_skill_started:
+            # 检查是否已有导航技能在运行
+            if "navigate_to_skill" in robot.skill_states:
+                return robot.form_feedback("processing", "Waiting for navigation to be available...", 20)
+
+            # 启动导航子技能
+            nav_kwargs = robot.get_skill_data(skill_name, "nav_kwargs")
+            robot.start_skill(navigate_to_skill, **nav_kwargs)
+            robot.set_skill_data(skill_name, "nav_skill_started", True)
+            robot.set_skill_data(skill_name, "nav_start_time", robot.sim_time)
+
+            return robot.form_feedback("processing", "Starting navigation for take off...", 30)
+
+        # 检查导航子技能状态
+        nav_state = robot.skill_states.get("navigate_to_skill")
+
+        if nav_state == "INITIALIZING":
+            return robot.form_feedback("processing", "Navigation initializing...", 40)
+        elif nav_state == "EXECUTING":
+            robot.skill_states[skill_name] = "EXECUTING"
+            return robot.form_feedback("processing", "Navigation started, taking off...", 50)
+        elif nav_state == "FAILED":
+            nav_error = robot.skill_errors.get("navigate_to_skill", "Unknown navigation error")
+            robot.skill_states[skill_name] = "FAILED"
+            robot.skill_errors[skill_name] = f"Navigation initialization failed: {nav_error}"
+            return robot.form_feedback("failed", robot.skill_errors[skill_name])
         else:
-            # 继续执行中，传递navigate_to的进度
-            progress = nav_result.get("progress", 50) if nav_result else 50
-            message = nav_result.get("message", "Taking off...") if nav_result else "Taking off..."
-            return robot.form_feedback("processing", f"Take off: {message}", progress)
+            # 导航还在初始化中
+            elapsed = robot.sim_time - robot.get_skill_data(skill_name, "nav_start_time", robot.sim_time)
+            if elapsed > 30.0:  # 30秒超时
+                robot.skill_states[skill_name] = "FAILED"
+                robot.skill_errors[skill_name] = "Navigation initialization timeout"
+                return robot.form_feedback("failed", robot.skill_errors[skill_name])
+
+            return robot.form_feedback("processing", "Waiting for navigation initialization...", 35)
 
     except Exception as e:
-        robot.skill_state = "FAILED"
-        robot.skill_error = f"Take off execution failed: {str(e)}"
+        robot.skill_states[skill_name] = "FAILED"
+        robot.skill_errors[skill_name] = f"Take off initialization failed: {str(e)}"
+        logger.error(f"Take off initialization error: {e}")
+        return robot.form_feedback("failed", robot.skill_errors[skill_name])
+
+
+def _handle_executing(robot, skill_name):
+    """执行起飞 - 监控导航子技能"""
+    try:
+        # 检查导航子技能状态
+        nav_state = robot.skill_states.get("navigate_to_skill")
+        nav_feedback = robot.skill_feedbacks.get("navigate_to_skill", {})
+
+        if nav_state == "COMPLETED":
+            robot.skill_states[skill_name] = "COMPLETED"
+            return robot.form_feedback("processing", "Take off completed", 95)
+        elif nav_state == "FAILED":
+            nav_error = robot.skill_errors.get("navigate_to_skill", "Unknown navigation error")
+            robot.skill_states[skill_name] = "FAILED"
+            robot.skill_errors[skill_name] = f"Navigation failed: {nav_error}"
+            return robot.form_feedback("failed", robot.skill_errors[skill_name])
+        elif nav_state == "EXECUTING":
+            # 传递导航的进度，但调整消息
+            nav_progress = nav_feedback.get('progress', 50)
+            nav_message = nav_feedback.get('message', 'Moving...')
+
+            # 调整进度范围到50-95
+            adjusted_progress = 50 + (nav_progress / 100) * 45
+
+            return robot.form_feedback("processing", f"Taking off: {nav_message}", int(adjusted_progress))
+        else:
+            # 导航状态异常，检查超时
+            nav_start_time = robot.get_skill_data(skill_name, "nav_start_time", robot.sim_time)
+            elapsed = robot.sim_time - nav_start_time
+
+            if elapsed > 120.0:  # 2分钟超时
+                robot.skill_states[skill_name] = "FAILED"
+                robot.skill_errors[skill_name] = "Take off timeout"
+                return robot.form_feedback("failed", robot.skill_errors[skill_name])
+
+            return robot.form_feedback("processing", "Take off in progress...", 60)
+
+    except Exception as e:
+        robot.skill_states[skill_name] = "FAILED"
+        robot.skill_errors[skill_name] = f"Take off execution failed: {str(e)}"
         logger.error(f"Take off execution error: {e}")
-        return robot.form_feedback("failed", robot.skill_error)
+        return robot.form_feedback("failed", robot.skill_errors[skill_name])
 
 
-def _handle_completed(robot):
+def _handle_completed(robot, skill_name):
     """处理完成状态"""
     try:
-        final_altitude = robot.pos[2]
+        final_pos, _ = robot.body.get_world_pose()
+        final_altitude = final_pos[2].item()
 
         success_msg = f"Take off completed at {final_altitude:.1f}m altitude"
         logger.info(success_msg)
 
-        _cleanup_take_off(robot)
         return robot.form_feedback("finished", success_msg, 100)
     except Exception as e:
         logger.error(f"Take off completion error: {e}")
-        _cleanup_take_off(robot)
         return robot.form_feedback("finished", "Take off completed", 100)
 
 
-def _handle_failed(robot):
+def _handle_failed(robot, skill_name):
     """处理失败状态"""
-    error_msg = getattr(robot, 'skill_error', "Unknown error")
+    error_msg = robot.skill_errors.get(skill_name, "Unknown error")
     logger.error(f"Take off failed: {error_msg}")
-    _cleanup_take_off(robot)
     return robot.form_feedback("failed", error_msg)
-
-
-def _cleanup_take_off(robot):
-    """清理起飞技能状态"""
-    attrs_to_remove = ['_target_altitude', '_take_off_goal', '_nav_kwargs']
-    for attr in attrs_to_remove:
-        if hasattr(robot, attr):
-            delattr(robot, attr)
-
-    robot.skill_state = None
-    robot.skill_error = None
