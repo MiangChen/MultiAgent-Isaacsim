@@ -11,13 +11,10 @@ def navigate_to_skill(**kwargs):
     robot = kwargs.get("robot")
 
     # 初始化状态机（只在第一次调用时执行）
-    if robot.skill_state is None:
+    if robot.skill_state in [None, "INITIALIZING"]:
         _init_navigation(robot, kwargs)
 
-    # 状态机：每个physics step执行一次
-    if robot.skill_state == "INITIALIZING":
-        return _handle_initializing(robot)
-    elif robot.skill_state == "EXECUTING":
+    if robot.skill_state == "EXECUTING":
         return _handle_executing(robot)
     elif robot.skill_state == "COMPLETED":
         return _handle_completed(robot)
@@ -69,9 +66,6 @@ def _init_navigation(robot, kwargs):
     robot._nav_start_time = robot.sim_time
     robot.skill_state = "INITIALIZING"
 
-
-def _handle_initializing(robot):
-    # 检查发送请求是否完成
     if not hasattr(robot, '_nav_result_future'):
         if robot._nav_send_future.done():
             goal_handle = robot._nav_send_future.result()
