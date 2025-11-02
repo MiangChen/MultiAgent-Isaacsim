@@ -5,7 +5,7 @@ def explore_skill(**kwargs):
     robot = kwargs.get("robot")
 
     # 初始化状态机（只在第一次调用时执行）
-    if robot.skill_state is None:
+    if robot.skill_state in [None, "INITIALIZING"]:
         _init_explore(robot, kwargs)
 
     if robot.skill_state == "EXECUTING":
