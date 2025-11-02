@@ -100,6 +100,8 @@ class Robot:
         # robot physics state
         self.vel_linear = torch.tensor([0.0, 0.0, 0.0])
         self.vel_angular = torch.tensor([0.0, 0.0, 0.0])
+        self.pos = torch.tensor([0.0, 0.0, 0.0])
+        self.quat = torch.tensor([0.0, 0.0, 0.0, 1.0])
         self.sim_time = 0.0
 
         self.skill_function = None
@@ -132,6 +134,9 @@ class Robot:
     def publish_robot_state(self):
         pos, quat = self.body.get_world_pose()
         vel_linear, vel_angular = self.body.get_world_vel()
+
+        self.pos = pos
+        self.quta = quat
 
         pos = pos.detach().cpu().numpy()
         quat = quat.detach().cpu().numpy()
