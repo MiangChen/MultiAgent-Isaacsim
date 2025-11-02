@@ -34,6 +34,8 @@ class Camera:
         self.path_prim_parent = path_prim_parent
         self.create_camera()
 
+        self.count_for_sim_update = 0
+
     def create_camera(self):
         self.cfg_camera.name = self.cfg_camera.type + "_" + str(self.cfg_camera.id)
         if self.cfg_camera.use_existing_camera == True:
@@ -115,7 +117,12 @@ class Camera:
         if self.cfg_camera.enable_semantic_detection in [False, None]:
             self.cfg_camera.enable_semantic_detection = True
             self.camera.add_bounding_box_2d_loose_to_frame()
+            self.count_for_sim_update = 100
             return f"第一次使用语义检测功能, 第一次进行初始化中, 下次调用生效"
+        if self.count_for_sim_update:
+            self.count_for_sim_update -= 1
+            return f"刚启动语义检测功能, 等待仿真器响应"
+
         return self.camera.get_current_frame()["bounding_box_2d_loose"]
 
     def get_local_pose(self, camera_axes: str = "usd"):
