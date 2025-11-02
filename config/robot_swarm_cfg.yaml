@@ -3,12 +3,16 @@ cf2x:
     name: "cf2x_0"
     position: [ 7, 4 , 0.05 ]
     quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
+    disable_gravity: True
+    use_simplified_controller: True
     cfg_dict_camera: {}
 
   - id: 1
     name: "cf2x_1"
     position: [ 7, 3 , 0.05 ]
     quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
+    disable_gravity: True
+    use_simplified_controller: True
     cfg_dict_camera: {}
 
 jetbot:
@@ -17,6 +21,8 @@ jetbot:
     position: [ 7, 5, 0.035 ]
 #    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
     quat: [1, 0.0, 0.0, 0]
+    disable_gravity: True
+    use_simplified_controller: True
     cfg_dict_camera:
       front:
         use_existing_camera: True
@@ -30,6 +36,8 @@ jetbot:
 #    name: Bob
 #    position: [ 5, 3, 0.035 ]
 #    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
+#    disable_gravity: True
+#    use_simplified_controller: True
 #    cfg_dict_camera:
 #      front:
 #        use_existing_camera: True
@@ -43,6 +51,8 @@ jetbot:
 #    name: Candy
 #    position: [ 5, 2, 0.035 ]
 #    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
+#    disable_gravity: True
+#    use_simplified_controller: True
 #    cfg_dict_camera:
 #      front:
 #        use_existing_camera: True
@@ -56,6 +66,8 @@ jetbot:
 #    name: David
 #    position: [ 5, 1, 0.035 ]
 #    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
+#    disable_gravity: True
+#    use_simplified_controller: True
 #    cfg_dict_camera:
 #      front:
 #        use_existing_camera: True
@@ -70,6 +82,8 @@ target:
     name: 11g
     position: [ 5, 1, 0.035 ]
     quat: [1.0, 0.0, 0.0, 0.0]
+    disable_gravity: True
+    use_simplified_controller: True
     cfg_dict_camera:
       front:
         use_existing_camera: True
@@ -85,6 +99,8 @@ h1:
     name: Hellen
     position: [ 3, 2, 1.05 ]
     quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
+    disable_gravity: True
+    use_simplified_controller: True
     cfg_dict_camera:
       front:
         use_existing_camera: False

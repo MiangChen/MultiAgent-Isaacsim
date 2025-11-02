@@ -9,11 +9,11 @@ from nav2_msgs.action import ComputePathToPose
 
 def navigate_to_skill(**kwargs):
     robot = kwargs.get("robot")
-    
+
     # 初始化状态机（只在第一次调用时执行）
     if robot.skill_state is None:
         _init_navigation(robot, kwargs)
-    
+
     # 状态机：每个physics step执行一次
     if robot.skill_state == "INITIALIZING":
         return _handle_initializing(robot)
@@ -44,12 +44,10 @@ def _init_navigation(robot, kwargs):
     elif isinstance(goal_quat_wxyz, tuple):
         goal_quat_wxyz = list(goal_quat_wxyz)
 
-
     if not robot.action_client_path_planner.wait_for_server(timeout_sec=2.0):
         robot.skill_state = "FAILED"
         robot.skill_error = "Path planner server is not available."
         return
-
 
     robot.node_controller_mpc.move_event.clear()
     robot.node.get_logger().info(f"Sending path request to goal: {goal_pos}")
@@ -72,7 +70,6 @@ def _init_navigation(robot, kwargs):
     robot.skill_state = "INITIALIZING"
 
 
-
 def _handle_initializing(robot):
     # 检查发送请求是否完成
     if not hasattr(robot, '_nav_result_future'):
@@ -93,7 +90,7 @@ def _handle_initializing(robot):
                 robot.skill_error = "No response from planner"
                 return robot.form_feedback("failed", "No response from planner")
             return robot.form_feedback("processing", "Sending request...", 5)
-    
+
     # 检查规划结果
     if robot._nav_result_future.done():
         result = robot._nav_result_future.result()
@@ -110,7 +107,7 @@ def _handle_initializing(robot):
             robot._nav_goal_handle.cancel_goal_async()
             robot.skill_state = "FAILED"
             robot.skill_error = "Planning timeout"
-    
+
     return robot.form_feedback("processing", "Planning path...", 30)
 
 
@@ -126,7 +123,7 @@ def _handle_executing(robot):
         else:
             progress = min(50 + (elapsed / 120.0) * 45, 95)
             return robot.form_feedback("processing", f"Moving... ({elapsed:.1f}s)", int(progress))
-    
+
     return robot.form_feedback("processing", "Executing...", 50)
 
 
@@ -142,14 +139,15 @@ def _handle_failed(robot):
 
 
 def _cleanup_navigation(robot):
-    attrs_to_remove = ['_nav_start_time', '_nav_send_future', '_nav_result_future', '_nav_goal_handle', '_nav_move_start_time']
+    attrs_to_remove = ['_nav_start_time', '_nav_send_future', '_nav_result_future', '_nav_goal_handle',
+                       '_nav_move_start_time']
     for attr in attrs_to_remove:
         if hasattr(robot, attr):
             delattr(robot, attr)
 
     robot.skill_state = None
     robot.skill_error = None
-    
+
 
 def _create_pose_stamped(robot, pos: list, quat_wxyz: list = [0.0, 0.0, 0.0, 0.0]):
     pose_stamped = PoseStamped()

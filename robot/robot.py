@@ -277,7 +277,6 @@ class Robot:
             step_size:  dt 时间间隔
         """
         # 执行技能步骤
-        # self.execute_frame_skill()
         self.execute_skill_step()
         # calculate robot elocity
         self.node_controller_mpc.control_loop()

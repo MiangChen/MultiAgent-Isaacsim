@@ -43,3 +43,6 @@ class CfgRobot(CfgBase):
     )
     scale: Optional[Tuple[float, float, float]] = (1.0, 1.0, 1.0)
     base: Optional[Tuple[float, float, float]] = (5.0, 3.0, 0.0)
+
+    disable_gravity: bool = False  # 这个参数通常是在不使用物理引擎动力学的条件下用
+    use_simplified_controller: bool = False

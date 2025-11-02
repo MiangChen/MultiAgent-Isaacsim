@@ -63,7 +63,8 @@ class RobotH1(Robot):
             0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
         )
         self.body = BodyH1(cfg_robot=self.cfg_robot, scene=self.scene)
-        self.scene_manager.disable_gravity_for_hierarchy(self.cfg_robot.path_prim_robot)
+        if self.cfg_robot.disable_gravity:
+            self.scene_manager.disable_gravity_for_hierarchy(self.cfg_robot.path_prim_robot)
 
     @classmethod
     async def create(

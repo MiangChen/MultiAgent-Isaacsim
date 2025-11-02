@@ -57,6 +57,8 @@ class RobotJetbot(Robot):
         self.movement_threshold = (
             0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
         )
+        if self.cfg_robot.disable_gravity:
+            self.scene_manager.disable_gravity_for_hierarchy(self.cfg_robot.path_prim_robot)
 
     def initialize(self) -> None:
         super().initialize()
@@ -68,7 +70,6 @@ class RobotJetbot(Robot):
         self.vel_angular[1] = 0
         super().on_physics_step(step_size)
 
-        self.counter += 1
 
         # if self.flag_world_reset:
         # if self.flag_action_navigation:

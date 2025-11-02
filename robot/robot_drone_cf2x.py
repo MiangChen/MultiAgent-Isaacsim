@@ -68,23 +68,25 @@ class RobotCf2x(Robot):
         self.teleport_mode = True  # 默认使用瞬移模式
 
         # 键盘控制
-        self.keyboard_control_enabled = True
-        self._movement_command = np.zeros(3, dtype=np.float32)  # 键盘移动命令
-        self._keyboard_sub = None
+        # self.keyboard_control_enabled = True
+        # self._movement_command = np.zeros(3, dtype=np.float32)  # 键盘移动命令
+        # self._keyboard_sub = None
 
         # ROS2初始化
-        self.counter = 0
-        self.pub_period = 50
-        self.previous_pos = None
-        self.movement_threshold = (
-            0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
-        )
+        # self.counter = 0
+        # self.pub_period = 50
+        # self.previous_pos = None
+        # self.movement_threshold = (
+        #     0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
+        # )
 
         # —— 平滑导航配置（无人机专用）——
         self.nav_target_xy = None  # 目标点的 XY
         self.nav_max_speed = 0.5  # 导航最大水平速度
         self.nav_slow_radius = 3.0  # 减速起始半径（m）
         self.nav_stop_radius = 0.30  # 到点判定半径（m）
+        if self.cfg_robot.disable_gravity:
+            self.scene_manager.disable_gravity_for_hierarchy(self.cfg_robot.path_prim_robot)
 
     def initialize(self):
         """初始化无人机"""
@@ -265,69 +267,18 @@ class RobotCf2x(Robot):
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
 
-        self.counter += 1
+        # self.counter += 1
 
-        if (
-            getattr(self, "flag_action_navigation", False)
-            and self.nav_target_xy is not None
-        ):
-            pass
-        elif self.flight_state == "fluctuating":
-            self.move_vertically()
-        else:
-
-            if hasattr(self, "waypoints") and self.waypoints:
-                self.execute_waypoint_sequence()
-            if self.flight_state == "hovering":
-                self.update_position_with_velocity(step_size)
-
-    def explore_zone(
-        self,
-        zone_corners: list = None,
-        scan_direction: str = "horizontal",
-        reset_flag: bool = False,
-    ):
-        """探索指定区域"""
-        min_x = min(corner[0] for corner in zone_corners)
-        max_x = max(corner[0] for corner in zone_corners)
-        min_y = min(corner[1] for corner in zone_corners)
-        max_y = max(corner[1] for corner in zone_corners)
-
-        scan_direction = scan_direction
-
-        import math
-
-        effective_width = 2 * self.view_radius * math.sin(self.viewgraph_angle / 2)
-        scan_line_spacing = effective_width * 0.8
-
-        scan_lines = []
-        if scan_direction == "horizontal":
-            y = min_y
-            while y <= max_y:
-                scan_lines.append(y)
-                y += scan_line_spacing
-        else:
-            x = min_x
-            while x <= max_x:
-                scan_lines.append(x)
-                x += scan_line_spacing
-
-        path_points = []
-        if scan_direction == "horizontal":
-            for i, y in enumerate(scan_lines):
-                if i % 2 == 0:
-                    path_points.append([min_x, y])
-                    path_points.append([max_x, y])
-                else:
-                    path_points.append([max_x, y])
-                    path_points.append([min_x, y])
-        else:
-            for i, x in enumerate(scan_lines):
-                if i % 2 == 0:
-                    path_points.append([x, min_y])
-                    path_points.append([x, max_y])
-                else:
-                    path_points.append([x, max_y])
-                    path_points.append([x, min_y])
-
-        return path_points
+        # if (
+        #     getattr(self, "flag_action_navigation", False)
+        #     and self.nav_target_xy is not None
+        # ):
+        #     pass
+        # elif self.flight_state == "fluctuating":
+        #     self.move_vertically()
+        # else:
+        #
+        #     if hasattr(self, "waypoints") and self.waypoints:
+        #         self.execute_waypoint_sequence()
+        #     if self.flight_state == "hovering":
+        #         self.update_position_with_velocity(step_size)
