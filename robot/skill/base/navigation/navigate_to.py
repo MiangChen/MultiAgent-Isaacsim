@@ -9,21 +9,26 @@ from nav2_msgs.action import ComputePathToPose
 
 def navigate_to_skill(**kwargs):
     robot = kwargs.get("robot")
+    skill_name = "navigate_to_skill"  # 直接使用函数名
+    
+    current_state = robot.skill_states.get(skill_name)
 
     # 初始化状态机（只在第一次调用时执行）
-    if robot.skill_state in [None, "INITIALIZING"]:
-        _init_navigation(robot, kwargs)
+    if current_state in [None, "INITIALIZING"]:
+        _init_navigation(robot, skill_name, kwargs)
 
-    if robot.skill_state == "EXECUTING":
-        return _handle_executing(robot)
-    elif robot.skill_state == "COMPLETED":
-        return _handle_completed(robot)
-    elif robot.skill_state == "FAILED":
-        return _handle_failed(robot)
+    current_state = robot.skill_states.get(skill_name)
+    if current_state == "EXECUTING":
+        return _handle_executing(robot, skill_name)
+    elif current_state == "COMPLETED":
+        return _handle_completed(robot, skill_name)
+    elif current_state == "FAILED":
+        return _handle_failed(robot, skill_name)
 
 
-def _init_navigation(robot, kwargs):
+def _init_navigation(robot, skill_name, kwargs):
     robot.node_controller_mpc.has_reached_goal = False
+    robot.skill_states[skill_name] = "EXECUTING"
     start_pos = kwargs.get("start_pos", None)
     start_quat = kwargs.get("start_quat")
     if type(start_pos) is str:
@@ -42,8 +47,8 @@ def _init_navigation(robot, kwargs):
         goal_quat_wxyz = list(goal_quat_wxyz)
 
     if not robot.action_client_path_planner.wait_for_server(timeout_sec=2.0):
-        robot.skill_state = "FAILED"
-        robot.skill_error = "Path planner server is not available."
+        robot.skill_states[skill_name] = "FAILED"
+        robot.skill_errors[skill_name] = "Path planner server is not available."
         return
 
     robot.node_controller_mpc.move_event.clear()
@@ -61,59 +66,81 @@ def _init_navigation(robot, kwargs):
     goal_msg.start = _create_pose_stamped(robot, start_pos, start_quat)
     goal_msg.goal = _create_pose_stamped(robot, goal_pos, goal_quat_wxyz)
 
-    # 发送规划请求
-    robot._nav_send_future = robot.action_client_path_planner.send_goal_async(goal_msg)
-    robot._nav_start_time = robot.sim_time
-    robot.skill_state = "INITIALIZING"
+    # 存储导航参数到技能私有数据
+    robot.set_skill_data(skill_name, "goal_pos", goal_pos)
+    robot.set_skill_data(skill_name, "goal_quat_wxyz", goal_quat_wxyz)
+    robot.set_skill_data(skill_name, "start_pos", start_pos)
+    robot.set_skill_data(skill_name, "start_quat", start_quat)
 
-    if not hasattr(robot, '_nav_result_future'):
-        if robot._nav_send_future.done():
-            goal_handle = robot._nav_send_future.result()
+    # 发送规划请求
+    nav_send_future = robot.action_client_path_planner.send_goal_async(goal_msg)
+    nav_start_time = robot.sim_time
+    
+    # 存储导航状态到技能私有数据
+    robot.set_skill_data(skill_name, "nav_send_future", nav_send_future)
+    robot.set_skill_data(skill_name, "nav_start_time", nav_start_time)
+
+
+    """处理初始化状态 - 检查路径规划结果"""
+    nav_send_future = robot.get_skill_data(skill_name, "nav_send_future")
+    nav_start_time = robot.get_skill_data(skill_name, "nav_start_time")
+    
+    nav_result_future = robot.get_skill_data(skill_name, "nav_result_future")
+    
+    if nav_result_future is None:
+        if nav_send_future.done():
+            goal_handle = nav_send_future.result()
             if goal_handle.accepted:
-                robot._nav_result_future = goal_handle.get_result_async()
-                robot._nav_goal_handle = goal_handle
+                nav_result_future = goal_handle.get_result_async()
+                robot.set_skill_data(skill_name, "nav_result_future", nav_result_future)
+                robot.set_skill_data(skill_name, "nav_goal_handle", goal_handle)
                 return robot.form_feedback("processing", "Planning path...", 15)
             else:
-                robot.skill_state = "FAILED"
-                robot.skill_error = "Request rejected"
+                robot.skill_states[skill_name] = "FAILED"
+                robot.skill_errors[skill_name] = "Request rejected"
                 return robot.form_feedback("failed", "Request rejected")
         else:
-            elapsed = robot.sim_time - robot._nav_start_time
+            elapsed = robot.sim_time - nav_start_time
             if elapsed > 3.0:
-                robot.skill_state = "FAILED"
-                robot.skill_error = "No response from planner"
+                robot.skill_states[skill_name] = "FAILED"
+                robot.skill_errors[skill_name] = "No response from planner"
                 return robot.form_feedback("failed", "No response from planner")
             return robot.form_feedback("processing", "Sending request...", 5)
 
     # 检查规划结果
-    if robot._nav_result_future.done():
-        result = robot._nav_result_future.result()
+    if nav_result_future.done():
+        result = nav_result_future.result()
         if result.status == GoalStatus.STATUS_SUCCEEDED and result.result.path.poses:
             robot.node_controller_mpc.move_event.clear()
-            robot._nav_move_start_time = robot.sim_time
-            robot.skill_state = "EXECUTING"
+            robot.set_skill_data(skill_name, "nav_move_start_time", robot.sim_time)
+            robot.skill_states[skill_name] = "EXECUTING"
         else:
-            robot.skill_state = "FAILED"
-            robot.skill_error = "Planning failed"
+            robot.skill_states[skill_name] = "FAILED"
+            robot.skill_errors[skill_name] = "Planning failed"
     else:
-        elapsed = robot.sim_time - robot._nav_start_time
+        elapsed = robot.sim_time - nav_start_time
         if elapsed > 15.0:
-            robot._nav_goal_handle.cancel_goal_async()
-            robot.skill_state = "FAILED"
-            robot.skill_error = "Planning timeout"
+            nav_goal_handle = robot.get_skill_data(skill_name, "nav_goal_handle")
+            if nav_goal_handle:
+                nav_goal_handle.cancel_goal_async()
+            robot.skill_states[skill_name] = "FAILED"
+            robot.skill_errors[skill_name] = "Planning timeout"
+
 
     return robot.form_feedback("processing", "Planning path...", 30)
 
 
-def _handle_executing(robot):
+def _handle_executing(robot, skill_name):
+    """处理执行状态"""
     if robot.node_controller_mpc.move_event.is_set():
-        robot.skill_state = "COMPLETED"
+        robot.skill_states[skill_name] = "COMPLETED"
         return robot.form_feedback("processing", "Executing...", 50)
     else:
-        elapsed = robot.sim_time - robot._nav_move_start_time
+        nav_move_start_time = robot.get_skill_data(skill_name, "nav_move_start_time", robot.sim_time)
+        elapsed = robot.sim_time - nav_move_start_time
         if elapsed > 120.0:
-            robot.skill_state = "FAILED"
-            robot.skill_error = "Navigation timeout"
+            robot.skill_states[skill_name] = "FAILED"
+            robot.skill_errors[skill_name] = "Navigation timeout"
         else:
             progress = min(50 + (elapsed / 120.0) * 45, 95)
             return robot.form_feedback("processing", f"Moving... ({elapsed:.1f}s)", int(progress))
@@ -121,26 +148,15 @@ def _handle_executing(robot):
     return robot.form_feedback("processing", "Executing...", 50)
 
 
-def _handle_completed(robot):
-    _cleanup_navigation(robot)
-    return robot.form_feedback("finished", "Done", 100)
+def _handle_completed(robot, skill_name):
+    """处理完成状态"""
+    return robot.form_feedback("finished", "Navigation completed", 100)
 
 
-def _handle_failed(robot):
-    error_msg = getattr(robot, 'skill_error', "Unknown error")
-    _cleanup_navigation(robot)
+def _handle_failed(robot, skill_name):
+    """处理失败状态"""
+    error_msg = robot.skill_errors.get(skill_name, "Unknown error")
     return robot.form_feedback("failed", error_msg)
-
-
-def _cleanup_navigation(robot):
-    attrs_to_remove = ['_nav_start_time', '_nav_send_future', '_nav_result_future', '_nav_goal_handle',
-                       '_nav_move_start_time']
-    for attr in attrs_to_remove:
-        if hasattr(robot, attr):
-            delattr(robot, attr)
-
-    robot.skill_state = None
-    robot.skill_error = None
 
 
 def _create_pose_stamped(robot, pos: list, quat_wxyz: list = [0.0, 0.0, 0.0, 0.0]):

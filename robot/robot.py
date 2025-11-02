@@ -104,11 +104,15 @@ class Robot:
         self.quat = torch.tensor([0.0, 0.0, 0.0, 1.0])
         self.sim_time = 0.0
 
-        self.skill_function = None
-        self.skill_params = None
-        self.skill_feedback = None
-        self.skill_error = None
-        self.skill_state = None
+        # 字典化的技能管理 - 以函数名为key
+        self.skill_states = {}  # {"navigate_to_skill": "EXECUTING", "take_off_skill": "COMPLETED", ...}
+        self.skill_functions = {}  # {"navigate_to_skill": navigate_to_skill, "take_off_skill": take_off_skill, ...}
+        self.skill_params = {}  # {"navigate_to_skill": {...params...}, "take_off_skill": {...params...}, ...}
+        self.skill_errors = {}  # {"navigate_to_skill": "error_message", "take_off_skill": None, ...}
+        self.skill_feedbacks = {}  # {"navigate_to_skill": {...feedback...}, "take_off_skill": {...feedback...}, ...}
+
+        # 技能私有数据存储
+        self.skill_data = {}  # {"navigate_to_skill": {...private_data...}, "take_off_skill": {...private_data...}, ...}
 
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
@@ -294,26 +298,66 @@ class Robot:
         return
 
     def execute_skill_step(self):
-        if not self.skill_function:
+        """执行所有活跃技能的步骤"""
+        # 新的多技能执行逻辑
+        if self.skill_functions:
+            completed_skills = []
+
+            for skill_name, skill_function in self.skill_functions.items():
+
+                # 执行技能
+                params = self.skill_params.get(skill_name, {})
+                feedback = skill_function(**params)
+                self.skill_feedbacks[skill_name] = feedback
+
+                # 检查技能是否完成
+                if feedback and feedback.get("status") in ["finished", "failed"]:
+                    completed_skills.append(skill_name)
+
+                # except Exception as e:
+                #     self.skill_errors[skill_name] = str(e)
+                #     self.skill_states[skill_name] = "FAILED"
+                #     completed_skills.append(skill_name)
+
+            # 清理完成的技能
+            for skill_name in completed_skills:
+                self._cleanup_skill(skill_name)
+
             return
 
-        self.skill_feedback = self.skill_function(**self.skill_params)
+    def start_skill(self, skill_function: callable, **params):
+        """启动技能 - 使用函数名作为技能标识"""
+        skill_name = skill_function.__name__
+        params['robot'] = self
 
-        if self.skill_feedback.get("status") in ["finished", "failed"]:
-            success = self.skill_feedback.get("status") == "finished"
-            self.skill_result = {
-                "success": success,
-                "message": self.skill_feedback.get("reason", "完成"),
-            }
+        self.skill_params[skill_name] = params
+        self.skill_states[skill_name] = None
+        self.skill_errors[skill_name] = {}
+        self.skill_feedbacks[skill_name] = {}
+        self.skill_data[skill_name] = {}
+        self.skill_functions[skill_name] = skill_function
 
-            self.cleanup_skill()
+        return skill_name
 
-    def cleanup_skill(self):
-        self.skill_function = None
-        self.skill_params = None
-        self.skill_feedback = None
-        self.skill_error = None
-        self.skill_state = None
+
+    def _cleanup_skill(self, skill_name: str):
+        """内部清理方法"""
+        self.skill_functions.pop(skill_name, None)
+        self.skill_params.pop(skill_name, None)
+        self.skill_states.pop(skill_name, None)
+        self.skill_errors.pop(skill_name, None)
+        # self.skill_feedbacks.pop(skill_name, None)  # 因为需要反馈机器人的执行结果, 所以暂时不可以清除
+        self.skill_data.pop(skill_name, None)
+
+    def set_skill_data(self, skill_name: str, key: str, value):
+        """设置技能私有数据"""
+        if skill_name not in self.skill_data:
+            self.skill_data[skill_name] = {}
+        self.skill_data[skill_name][key] = value
+
+    def get_skill_data(self, skill_name: str, key: str, default=None):
+        """获取技能私有数据"""
+        return self.skill_data.get(skill_name, {}).get(key, default)
 
     def post_reset(self) -> None:
         for sensor in self.cameras.values():
@@ -443,12 +487,3 @@ class Robot:
         """更新仿真时间"""
         self.sim_time = sim_time
 
-    def get_skill_status(self):
-        """获取当前技能执行状态 - 供ROS节点查询"""
-        if not self.skill_function:
-            return {"status": "idle", "reason": "无活动技能", "progress": 0}
-
-        if hasattr(self, 'skill_feedback') and self.skill_feedback:
-            return self.skill_feedback
-
-        return {"status": "processing", "reason": "技能执行中", "progress": 50}

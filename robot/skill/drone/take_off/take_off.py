@@ -8,7 +8,7 @@ def take_off(**kwargs):
     """无人机起飞技能 - 基于navigate_to实现"""
     robot = kwargs.get("robot")
 
-    if robot.skill_state in [None, "INITIALIZING"]:
+    if robot.skill_states in [None, "INITIALIZING"]:
         _init_take_off(robot, kwargs)
 
     if robot.skill_state == "EXECUTING":
