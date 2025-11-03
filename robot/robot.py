@@ -272,11 +272,11 @@ class Robot:
         #     self._initialize_third_person_camera()
 
     def form_feedback(
-            self, status: str = "processing", reason: str = "none", progress: int = 100
+            self, status: str = "processing", message: str = "none", progress: int = 100
     ) -> Dict[str, Any]:
         return dict(
             status=str(status),
-            reason=str(reason),
+            message=str(message),
             progress=progress,
         )
 

@@ -89,10 +89,10 @@ class NodeRobot(Node):
             skill_feedback = self.robot_instance.skill_feedbacks.get(skill_name, {})
 
             status = skill_feedback.get("status", "processing")
-            reason = skill_feedback.get("message", "")
+            message = skill_feedback.get("message", "")
             progress = skill_feedback.get("progress", 0)
 
-            feedback.status = f"{status}: {reason} ({progress}%)"
+            feedback.status = f"{status}: {message} ({progress}%)"
             goal_handle.publish_feedback(feedback)
 
             # 检查技能是否完成
@@ -130,6 +130,7 @@ class NodeRobot(Node):
         from robot.skill.base.take_photo import take_photo
         from robot.skill.base.object_detection import object_detection_skill
         from robot.skill.drone.take_off.take_off import take_off
+        from robot.skill.base.exploration.explore import explore_skill
 
         SKILL_TABLE = {
             "navigation": navigate_to_skill,
@@ -138,6 +139,7 @@ class NodeRobot(Node):
             "take_photo": take_photo,
             "object_detection": object_detection_skill,
             "take_off": take_off,
+            "explore": explore_skill,
         }
 
         return SKILL_TABLE.get(task_name)
