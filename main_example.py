@@ -292,7 +292,7 @@ def main():
         # "scene_name": "object",
         "name": object_name,
         "scale": [0.5, 0.5, 0.5],
-        "position": [3, 50, 0.25],
+        "position": [3, 4.5, 0.25],
         "orientation": [0.707, 0, 0, 0.707],
         "color": [255, 255, 255],
         "mass": 0.1,
