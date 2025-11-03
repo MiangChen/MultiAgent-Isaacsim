@@ -384,16 +384,6 @@ class Robot:
             }
             self.track_waypoint_index += 1
 
-    def track_callback(self, msg):
-        pos = (
-            msg.pose.pose.position.x,
-            msg.pose.pose.position.y,
-            msg.pose.pose.position.z,
-        )
-        self.track_counter += 1
-        if self.track_counter % self.track_period == 0:
-            self.track_waypoint_list.append(pos)
-
     def _initialize_third_person_camera(self):
         """初始化第三人称相机并注册到ViewportManager"""
         logger.info(f"Creating third-person camera for robot {self.cfg_robot.id}...")
