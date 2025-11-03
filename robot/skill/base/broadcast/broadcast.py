@@ -6,94 +6,94 @@ logger = LogManager.get_logger(__name__)
 
 def broadcast(**kwargs):
     robot = kwargs.get("robot")
+    skill_name = "broadcast_skill"
     
+    current_state = robot.skill_states.get(skill_name)
+
     # 初始化状态机（只在第一次调用时执行）
-    if robot.skill_state is None:
-        _init_broadcast(robot, kwargs)
-    
-    # 状态机：每个physics step执行一次
-    if robot.skill_state == "INITIALIZING":
-        return _handle_initializing(robot)
-    elif robot.skill_state == "EXECUTING":
-        return _handle_executing(robot)
-    elif robot.skill_state == "COMPLETED":
-        return _handle_completed(robot)
-    elif robot.skill_state == "FAILED":
-        return _handle_failed(robot)
+    if current_state in [None, "INITIALIZING"]:
+        _init_broadcast(robot, skill_name, kwargs)
+
+    current_state = robot.skill_states.get(skill_name)
+    if current_state == "INITIALIZING":
+        return _handle_initializing(robot, skill_name)
+    elif current_state == "EXECUTING":
+        return _handle_executing(robot, skill_name)
+    elif current_state == "COMPLETED":
+        return _handle_completed(robot, skill_name)
+    elif current_state == "FAILED":
+        return _handle_failed(robot, skill_name)
 
 
-def _init_broadcast(robot, kwargs):
+def _init_broadcast(robot, skill_name, kwargs):
     """初始化广播技能"""
-    robot._broadcast_content = kwargs.get("content")
-    robot.skill_state = "INITIALIZING"
+    broadcast_content = kwargs.get("content")
+    
+    # 存储参数到技能私有数据
+    robot.set_skill_data(skill_name, "broadcast_content", broadcast_content)
+    
+    robot.skill_states[skill_name] = "INITIALIZING"
 
 
-def _handle_initializing(robot):
+def _handle_initializing(robot, skill_name):
     """初始化阶段：检查广播内容和机器人配置"""
     try:
+        # 获取参数
+        broadcast_content = robot.get_skill_data(skill_name, "broadcast_content")
+        
         # 检查广播内容
-        if not robot._broadcast_content:
-            robot.skill_state = "FAILED"
-            robot.skill_error = "Broadcast content is not provided."
-            return robot.form_feedback("failed", robot.skill_error)
+        if not broadcast_content:
+            robot.skill_states[skill_name] = "FAILED"
+            robot.skill_errors[skill_name] = "Broadcast content is not provided."
+            return robot.form_feedback("failed", robot.skill_errors[skill_name])
         
         # 检查机器人配置
         if not hasattr(robot, 'body') or not hasattr(robot.body, 'cfg_robot'):
-            robot.skill_state = "FAILED"
-            robot.skill_error = "Robot configuration is not available."
-            return robot.form_feedback("failed", robot.skill_error)
+            robot.skill_states[skill_name] = "FAILED"
+            robot.skill_errors[skill_name] = "Robot configuration is not available."
+            return robot.form_feedback("failed", robot.skill_errors[skill_name])
         
         # 初始化完成，进入执行阶段
-        robot.skill_state = "EXECUTING"
+        robot.skill_states[skill_name] = "EXECUTING"
         return robot.form_feedback("processing", "Initializing broadcast...", 20)
         
     except Exception as e:
-        robot.skill_state = "FAILED"
-        robot.skill_error = f"Broadcast initialization failed: {str(e)}"
-        return robot.form_feedback("failed", robot.skill_error)
+        robot.skill_states[skill_name] = "FAILED"
+        robot.skill_errors[skill_name] = f"Broadcast initialization failed: {str(e)}"
+        return robot.form_feedback("failed", robot.skill_errors[skill_name])
 
 
-def _handle_executing(robot):
+def _handle_executing(robot, skill_name):
     """执行广播操作"""
     try:
+        # 获取存储的数据
+        broadcast_content = robot.get_skill_data(skill_name, "broadcast_content")
+        
         # 执行广播
         robot_name = robot.body.cfg_robot.namespace
         logger.info(
-            f"[Skill] {robot_name} executing broadcasting. The content is {robot._broadcast_content}"
+            f"[Skill] {robot_name} executing broadcasting. The content is {broadcast_content}"
         )
         
         # 存储广播结果
-        robot._broadcast_result = True
-        robot.skill_state = "COMPLETED"
+        robot.set_skill_data(skill_name, "broadcast_result", True)
+        robot.skill_states[skill_name] = "COMPLETED"
         
         return robot.form_feedback("processing", "Broadcasting message...", 90)
         
     except Exception as e:
-        robot.skill_state = "FAILED"
-        robot.skill_error = f"Broadcast execution failed: {str(e)}"
-        return robot.form_feedback("failed", robot.skill_error)
+        robot.skill_states[skill_name] = "FAILED"
+        robot.skill_errors[skill_name] = f"Broadcast execution failed: {str(e)}"
+        return robot.form_feedback("failed", robot.skill_errors[skill_name])
 
 
-def _handle_completed(robot):
+def _handle_completed(robot, skill_name):
     """处理完成状态"""
-    result = getattr(robot, '_broadcast_result', False)
-    _cleanup_broadcast(robot)
+    result = robot.get_skill_data(skill_name, "broadcast_result", False)
     return robot.form_feedback("finished", "Broadcast completed successfully!", 100)
 
 
-def _handle_failed(robot):
+def _handle_failed(robot, skill_name):
     """处理失败状态"""
-    error_msg = getattr(robot, 'skill_error', "Unknown error")
-    _cleanup_broadcast(robot)
+    error_msg = robot.skill_errors.get(skill_name, "Unknown error")
     return robot.form_feedback("failed", error_msg)
-
-
-def _cleanup_broadcast(robot):
-    """清理广播技能的状态"""
-    attrs_to_remove = ['_broadcast_content', '_broadcast_result']
-    for attr in attrs_to_remove:
-        if hasattr(robot, attr):
-            delattr(robot, attr)
-    
-    robot.skill_state = None
-    robot.skill_error = None
