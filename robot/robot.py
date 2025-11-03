@@ -285,16 +285,16 @@ class Robot:
         Args:
             step_size:  dt 时间间隔
         """
+        # publish robot position
+        self.publish_robot_state()
+        # 更新相机的视野
+        self._update_camera_view()
         # 执行技能步骤
         self.execute_skill_step()
-        # calculate robot elocity
+        # calculate robot velocity
         self.node_controller_mpc.control_loop()
         # update robot velocity
         self.controller_simplified()
-        # 更新相机的视野
-        self._update_camera_view()
-        # publish robot position
-        self.publish_robot_state()
         return
 
     def execute_skill_step(self):
