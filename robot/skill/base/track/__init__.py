@@ -2,8 +2,7 @@
 Tracking skill module for robot camera functionality.
 """
 
-from .start_tracking import start_tracking_skill
-from .stop_tracking import stop_tracking_skill
+from .track import track_skill
 
-__all__ = ["start_tracking_skill",
-           "stop_tracking_skill"]
+
+__all__ = ["track_skill"]
