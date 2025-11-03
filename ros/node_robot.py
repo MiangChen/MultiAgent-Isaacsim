@@ -131,6 +131,7 @@ class NodeRobot(Node):
         from robot.skill.base.object_detection import object_detection_skill
         from robot.skill.drone.take_off.take_off import take_off
         from robot.skill.base.exploration.explore import explore_skill
+        from robot.skill.base.track import track_skill
 
         SKILL_TABLE = {
             "navigation": navigate_to_skill,
@@ -140,6 +141,7 @@ class NodeRobot(Node):
             "object_detection": object_detection_skill,
             "take_off": take_off,
             "explore": explore_skill,
+            "track": track_skill,
         }
 
         return SKILL_TABLE.get(task_name)
