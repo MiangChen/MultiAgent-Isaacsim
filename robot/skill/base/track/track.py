@@ -207,7 +207,7 @@ def _handle_completed(robot, skill_name):
     
     # 更新航点索引
     robot.set_skill_data(skill_name, "track_current_waypoint_index", track_current_waypoint_index + 1)
-    _cleanup_tracking_navigation(robot, skill_name)
+    _cleanup_track_navigation(robot, skill_name)
     robot.skill_states[skill_name] = "IDLE"  # 回到IDLE状态，检查是否有下一个航点
     return robot.form_feedback("processing", f"Reached waypoint, checking for next...", 50)
 
@@ -215,7 +215,7 @@ def _handle_completed(robot, skill_name):
 def _handle_failed(robot, skill_name):
     """处理失败状态：清理资源并返回错误信息"""
     error_msg = robot.skill_errors.get(skill_name, "Unknown error")
-    _cleanup_tracking_navigation(robot, skill_name)
+    _cleanup_track_navigation(robot, skill_name)
     return robot.form_feedback("failed", error_msg)
 
 
@@ -229,7 +229,7 @@ def _cancel_track(robot, skill_name):
         track_nav_goal_handle.cancel_goal_async()
     
     # 清理导航相关的临时属性
-    _cleanup_tracking_navigation(robot, skill_name)
+    _cleanup_track_navigation(robot, skill_name)
     
     # 停止跟踪订阅
     if hasattr(robot, 'is_tracking'):
@@ -246,7 +246,7 @@ def _cancel_track(robot, skill_name):
     return robot.form_feedback("finished", "Tracking canceled")
 
 
-def _cleanup_tracking_navigation(robot, skill_name):
+def _cleanup_track_navigation(robot, skill_name):
     """清理当前导航相关的临时数据"""
     nav_keys_to_remove = [
         "track_nav_start_time", 
