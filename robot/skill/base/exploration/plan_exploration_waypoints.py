@@ -13,14 +13,13 @@ def plan_exploration_waypoints_skill(**kwargs):
     interpolation_distance = kwargs.get("interpolation_distance", 0.05)  # 5cm
     interpolation_method = kwargs.get("interpolation_method", "linear")  # linear, spline, adaptive
 
-    import torch
     import numpy as np
     from shapely.geometry import Polygon, LineString, MultiLineString
     from shapely.affinity import rotate
     from nav_msgs.msg import Odometry, Path
     from nav2_msgs.action import ComputePathToPose
     from geometry_msgs.msg import PoseStamped, Quaternion
-    from .path_interpolation import interpolate_path_with_fixed_distance, analyze_path_spacing
+    from .path_interpolation import interpolate_path_with_fixed_distance
 
     def _to_xy(seq):
         """把输入统一转换为二维点序列 [(x,y), ...]，兼容 list/np/tensor。"""
