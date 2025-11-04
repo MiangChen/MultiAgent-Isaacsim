@@ -202,7 +202,7 @@ def _cancel_track(robot, skill_name):
     robot.skill_states[skill_name] = None
     robot.skill_errors[skill_name] = None
 
-    return robot.form_feedback("finished", "Target stop moving.")
+    return robot.form_feedback("completed", "Target stop moving.")
 
 
 def _cleanup_move_navigation(robot, skill_name):

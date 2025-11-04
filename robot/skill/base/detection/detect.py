@@ -106,7 +106,7 @@ def _handle_executing(robot, skill_name):
 def _handle_completed(robot, skill_name):
     """处理完成状态"""
     result = robot.get_skill_data(skill_name, "detection_result", {"success": False, "message": "Unknown result", "data": None})
-    return robot.form_feedback("finished", result["message"], 100)
+    return robot.form_feedback("completed", result["message"], 100)
 
 
 def _handle_failed(robot, skill_name):

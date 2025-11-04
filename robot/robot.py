@@ -311,7 +311,7 @@ class Robot:
                 self.skill_feedbacks[skill_name] = feedback
 
                 # 检查技能是否完成
-                if feedback and feedback.get("status") in ["finished", "failed"]:
+                if feedback and feedback.get("status") in ["completed", "failed"]:
                     completed_skills.append(skill_name)
 
                 # except Exception as e:

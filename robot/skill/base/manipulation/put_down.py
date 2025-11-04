@@ -133,7 +133,7 @@ def _handle_executing(robot, skill_name):
 
 def _handle_completed(robot, skill_name):
     """处理完成状态"""
-    return robot.form_feedback("finished", "Object put down successfully!", 100)
+    return robot.form_feedback("completed", "Object put down successfully!", 100)
 
 
 def _handle_failed(robot, skill_name):

@@ -2,7 +2,7 @@ def object_detection_skill(**kwargs):
     """物体检测技能 - 使用字典化状态管理"""
     robot = kwargs.get("robot")
     skill_name = "object_detection_skill"
-    
+
     current_state = robot.skill_states.get(skill_name)
 
     if current_state in [None, "INITIALIZING"]:
@@ -23,11 +23,11 @@ def _init_object_detection(robot, skill_name, kwargs):
         # 获取参数
         camera_name = kwargs.get("camera_name", "default")
         target_class = kwargs.get("target_class", "car")
-        
+
         # 存储到技能私有数据
         robot.set_skill_data(skill_name, "camera_name", camera_name)
         robot.set_skill_data(skill_name, "target_class", target_class)
-        
+
         robot.skill_states[skill_name] = "INITIALIZING"
 
         # 检查相机是否可用
@@ -38,7 +38,7 @@ def _init_object_detection(robot, skill_name, kwargs):
 
         # 初始化完成，进入执行阶段
         robot.skill_states[skill_name] = "EXECUTING"
-        
+
     except Exception as e:
         robot.skill_states[skill_name] = "FAILED"
         robot.skill_errors[skill_name] = f"Object detection initialization failed: {str(e)}"
@@ -49,10 +49,10 @@ def _handle_executing(robot, skill_name):
     try:
         camera_name = robot.get_skill_data(skill_name, "camera_name")
         target_class = robot.get_skill_data(skill_name, "target_class")
-        
+
         camera = robot.camera_dict[camera_name]
         result = camera.get_semantic_detection()
-        
+
         if result is None:
             robot.skill_states[skill_name] = "EXECUTING"
             error_msg = "Failed to get current frame from semantic camera"
@@ -75,9 +75,9 @@ def _handle_executing(robot, skill_name):
 
 def _handle_completed(robot, skill_name):
     """处理完成状态"""
-    detection_result = robot.get_skill_data(skill_name, "detection_result", 
-                                          {"success": False, "message": "no detection result", "data": None})
-    return robot.form_feedback("finished", detection_result, 100)
+    detection_result = robot.get_skill_data(skill_name, "detection_result",
+                                            {"success": False, "message": "no detection result", "data": None})
+    return robot.form_feedback("completed", detection_result, 100)
 
 
 def _handle_failed(robot, skill_name):

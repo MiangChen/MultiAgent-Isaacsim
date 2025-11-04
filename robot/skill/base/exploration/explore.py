@@ -137,7 +137,7 @@ def _handle_executing(robot, skill_name):
 def _handle_completed(robot, skill_name):
     """处理完成状态"""
     _cleanup_explore(robot, skill_name)
-    return robot.form_feedback("finished", "Exploration completed.", 100)
+    return robot.form_feedback("completed", "Exploration completed.", 100)
 
 
 def _handle_failed(robot, skill_name):
