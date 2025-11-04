@@ -59,6 +59,10 @@ def _init_explore(robot, skill_name, kwargs):
         return robot.form_feedback("failed", robot.skill_errors[skill_name])
 
     try:
+        # 获取插值参数
+        interpolation_distance = kwargs.get("interpolation_distance", 0.05)  # 默认5cm
+        interpolation_method = kwargs.get("interpolation_method", "linear")  # 默认线性插值
+        
         # 规划探索路径点
         waypoints = plan_exploration_waypoints_skill(
             robot=robot,
@@ -66,6 +70,8 @@ def _init_explore(robot, skill_name, kwargs):
             holes=holes,
             lane_width=robot.body.cfg_robot.detection_radius,
             robot_radius=robot.body.cfg_robot.robot_radius,
+            interpolation_distance=interpolation_distance,
+            interpolation_method=interpolation_method,
         )
         if not waypoints:
             robot.skill_states[skill_name] = "FAILED"

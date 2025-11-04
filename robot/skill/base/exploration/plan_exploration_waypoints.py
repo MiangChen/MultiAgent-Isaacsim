@@ -9,6 +9,10 @@ def plan_exploration_waypoints_skill(**kwargs):
     z_out = kwargs.get("z_out", 0.0)
     frame_id = kwargs.get("frame_id", "map")
 
+    # 插值参数
+    interpolation_distance = kwargs.get("interpolation_distance", 0.05)  # 5cm
+    interpolation_method = kwargs.get("interpolation_method", "linear")  # linear, spline, adaptive
+
     import torch
     import numpy as np
     from shapely.geometry import Polygon, LineString, MultiLineString
@@ -16,6 +20,7 @@ def plan_exploration_waypoints_skill(**kwargs):
     from nav_msgs.msg import Odometry, Path
     from nav2_msgs.action import ComputePathToPose
     from geometry_msgs.msg import PoseStamped, Quaternion
+    from .path_interpolation import interpolate_path_with_fixed_distance, analyze_path_spacing
 
     def _to_xy(seq):
         """把输入统一转换为二维点序列 [(x,y), ...]，兼容 list/np/tensor。"""
@@ -121,14 +126,23 @@ def plan_exploration_waypoints_skill(**kwargs):
         if np.hypot(p[0] - simplified_2d[-1][0], p[1] - simplified_2d[-1][1]) > 1e-3:
             simplified_2d.append(p)
 
-    # ---- 6) 构造 Path 消息（z = z_out，默认 0；朝向为单位四元数）----
+    # ---- 6) 路径插值（确保点间距约为指定距离）----
+
+    # 执行插值
+    interpolated_2d = interpolate_path_with_fixed_distance(
+        simplified_2d,
+        target_distance=interpolation_distance,
+        method=interpolation_method
+    )
+
+    # ---- 7) 构造 Path 消息（z = z_out，默认 0；朝向为单位四元数）----
     path_msg = Path()
     now = robot.get_clock().now().to_msg() if hasattr(robot, "get_clock") else None
     path_msg.header.frame_id = frame_id
     if now:
         path_msg.header.stamp = now
 
-    for xv, yv in simplified_2d:
+    for xv, yv in interpolated_2d:
         ps = PoseStamped()
         ps.header.frame_id = frame_id
         if now:

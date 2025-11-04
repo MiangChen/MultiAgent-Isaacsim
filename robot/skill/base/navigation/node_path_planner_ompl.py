@@ -52,10 +52,6 @@ class NodePlannerOmpl(Node):
         self.space = None
         self.si = None
 
-        # 移除独立的executor，由robot.py统一管理
-        # self.executor = MultiThreadedExecutor()
-        # self.thread = threading.Thread(target=self._spin, daemon=True)
-
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
             history=HistoryPolicy.KEEP_LAST,
@@ -90,23 +86,9 @@ class NodePlannerOmpl(Node):
             self,
             ComputePathToPose,
             "action_compute_path_to_pose",
-            execute_callback=self.callback_action,
+            execute_callback=self.callback_compute_path_to_pose,
             callback_group=callback_group,
         )
-
-    # 移除独立的spinning方法，由robot.py的统一executor管理
-    # def start_spinning(self):
-    #     if self.executor is None:
-    #         self.executor = MultiThreadedExecutor()
-    #     self.executor.add_node(self)
-    #     self.thread.start()
-    #     self.get_logger().info("Planner node spinning started in its own thread.")
-
-    # def _spin(self):
-    #     try:
-    #         self.executor.spin()
-    #     except Exception as e:
-    #         self.get_logger().error(f"Spin failed in node {self.namespace}: {e}")
 
     def callback(self, msg_map_info: DiagnosticArray, msg_point_cloud: PointCloud2):
         self.callback_map_info(msg_map_info=msg_map_info)
@@ -171,7 +153,7 @@ class NodePlannerOmpl(Node):
 
         return True
 
-    def callback_action(self, goal_handle):
+    def callback_compute_path_to_pose(self, goal_handle):
         start_time = time.time()
         self.get_logger().info("Executing navigation goal...")
 
@@ -318,7 +300,7 @@ class NodePlannerOmpl(Node):
         if solved:
             solution_path = pdef.getSolutionPath()
             solution_path = self.smooth_path_ompl(solution_path)
-            solution_path.interpolate(20)
+            solution_path.interpolate(5)
 
             states = solution_path.getStates()
             for state in states:
