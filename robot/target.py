@@ -46,4 +46,4 @@ class Target(Robot):
         )
         self.body = BodyTarget(cfg_robot=self.cfg_robot, scene=scene)
         self.control_mode = "joint_velocities"
-        self.path = self.cfg_robot.model_path
+        self.path = self.cfg_robot.move_path
