@@ -1,6 +1,8 @@
 import ast
 import json
 from .plan_exploration_waypoints import plan_exploration_waypoints_skill
+from .ompl_coverage_planner import plan_ompl_coverage_waypoints
+from .coverage_config import get_coverage_config, CoverageAlgorithm
 
 
 def explore_skill(**kwargs):
@@ -59,14 +61,41 @@ def _init_explore(robot, skill_name, kwargs):
         return robot.form_feedback("failed", robot.skill_errors[skill_name])
 
     try:
-        # 规划探索路径点
-        waypoints = plan_exploration_waypoints_skill(
-            robot=robot,
-            polygon_coords=boundary,
-            holes=holes,
-            lane_width=robot.body.cfg_robot.detection_radius,
-            robot_radius=robot.body.cfg_robot.robot_radius,
-        )
+        # 获取配置参数
+        config_name = kwargs.get("config", "ground_robot")  # 默认地面机器人配置
+        algorithm_override = kwargs.get("algorithm", None)  # 可选的算法覆盖
+        
+        # 获取覆盖规划配置
+        coverage_config = get_coverage_config(config_name)
+        
+        # 如果指定了算法覆盖，则使用指定算法
+        if algorithm_override:
+            if algorithm_override.startswith("ompl_"):
+                coverage_config.algorithm = CoverageAlgorithm(algorithm_override)
+            elif algorithm_override == "custom":
+                coverage_config.algorithm = CoverageAlgorithm.CUSTOM_BOUSTROPHEDON
+        
+        # 根据算法类型选择规划方法
+        if coverage_config.algorithm in [CoverageAlgorithm.OMPL_STC, CoverageAlgorithm.OMPL_BSTAR]:
+            # 使用OMPL算法
+            ompl_algorithm = coverage_config.algorithm.value.replace("ompl_", "")
+            waypoints = plan_ompl_coverage_waypoints(
+                robot=robot,
+                polygon_coords=boundary,
+                holes=holes,
+                robot_radius=coverage_config.robot_radius,
+                algorithm=ompl_algorithm,
+                coverage_resolution=coverage_config.coverage_resolution,
+            )
+        else:
+            # 使用自定义算法（保持向后兼容）
+            waypoints = plan_exploration_waypoints_skill(
+                robot=robot,
+                polygon_coords=boundary,
+                holes=holes,
+                lane_width=coverage_config.lane_width or coverage_config.coverage_resolution,
+                robot_radius=coverage_config.robot_radius,
+            )
         if not waypoints:
             robot.skill_states[skill_name] = "FAILED"
             robot.skill_errors[skill_name] = "Failed to plan exploration waypoints."
