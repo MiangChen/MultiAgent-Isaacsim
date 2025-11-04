@@ -299,7 +299,6 @@ class Robot:
 
     def execute_skill_step(self):
         """执行所有活跃技能的步骤"""
-        # 新的多技能执行逻辑
         if self.skill_functions:
             completed_skills = []
 
@@ -346,7 +345,7 @@ class Robot:
         self.skill_params.pop(skill_name, None)
         self.skill_states.pop(skill_name, None)
         self.skill_errors.pop(skill_name, None)
-        # self.skill_feedbacks.pop(skill_name, None)  # 因为需要反馈机器人的执行结果, 所以暂时不可以清除
+        # self.skill_feedbacks.pop(skill_name, None)  # 因为需要在ros robot中反馈机器人的执行结果, 所以暂时不可以清除
         self.skill_data.pop(skill_name, None)
 
     def set_skill_data(self, skill_name: str, key: str, value):
