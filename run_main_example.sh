@@ -1,7 +1,7 @@
 #!/bin/bash
 # sudo apt install ros-humble-rmw-fastrtps-cpp
-PATH_PYTHON="/home/cleanuser/anaconda3/envs/env_isaacsim"
-PATH_GSI_MSG="/home/cleanuser/PycharmProjects/isaacsim-gsi/src/gsi_msgs"
+PATH_PYTHON="path to python, example: /home/cleanuser/anaconda3/envs/env_isaacsim"
+PATH_GSI_MSG="path to gsi_msgs, example: /home/cleanuser/PycharmProjects/isaacsim-gsi/src/gsi_msgs"
 
 # --- 1. 项目根目录 ---
 PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
