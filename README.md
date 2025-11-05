@@ -22,7 +22,7 @@
 
 ## 架构理解
 
-参考文档: []()
+参考文档: [架构图](https://xetk4h23q3.feishu.cn/wiki/PHEFws9W2iEnAeky4dJcnN05nCK?from=from_copylink)
 
 ## 各种BUG报错
 
