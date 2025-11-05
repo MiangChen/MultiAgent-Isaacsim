@@ -10,7 +10,6 @@ from .robot_g1 import RobotG1
 from .robot_h1 import RobotH1
 from .robot_jetbot import RobotJetbot
 
-# from .robot_trajectory import RobotTrajectory
 from .target import Target
 from .swarm_manager import SwarmManager
 

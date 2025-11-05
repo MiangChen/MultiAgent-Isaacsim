@@ -20,7 +20,6 @@ from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from robot.body.body_h1 import BodyH1
 from robot.cfg import CfgH1
 from robot.robot import Robot
-from robot.robot_trajectory import Trajectory
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from utils import to_torch, quat_to_yaw
 

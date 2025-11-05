@@ -27,7 +27,6 @@ from physics_engine.isaacsim_utils import (
 )
 from robot.sensor.camera import Camera
 from robot.body import BodyRobot
-from robot.robot_trajectory import Trajectory
 from robot.skill.base.navigation import NodePlannerOmpl
 from robot.skill.base.navigation import NodeTrajectoryGenerator
 from robot.skill.base.navigation import NodeMpcController
@@ -88,8 +87,6 @@ class Robot:
 
         self.body: BodyRobot = None
 
-        # 机器人的历史轨迹
-        self.trajectory: Trajectory = None
         # 机器人的控制器
         self.controllers: dict = {}  # 用于存储多个控制器, 'controller name': function
         self.control_mode: str = (

@@ -22,7 +22,6 @@ from physics_engine.isaacsim_utils import Scene, Articulation
 from physics_engine.omni_utils import omni
 
 from robot.robot import Robot
-from robot.robot_trajectory import Trajectory
 from robot.cfg import CfgDroneCf2X
 from robot.body.body_drone_cf2x import BodyDroneCf2X
 from robot.sensor.camera import CfgCamera, CfgCameraThird

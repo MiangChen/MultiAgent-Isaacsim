@@ -16,7 +16,6 @@ import torch
 # Local project imports
 from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from robot.robot import Robot
-from robot.robot_trajectory import Trajectory
 from robot.cfg import CfgG1
 from robot.body.body_g1 import BodyG1
 from robot.sensor.camera import CfgCamera, CfgCameraThird

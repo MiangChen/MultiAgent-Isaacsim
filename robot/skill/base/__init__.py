@@ -15,7 +15,6 @@ from .manipulation import pick_up_skill, put_down_skill
 from .navigation import (
     navigate_to_skill,
     return_home_skill,
-    TrajectoryManager,
     NodePlannerOmpl,
     NodeTrajectoryGenerator,
 )
@@ -41,7 +40,6 @@ __all__ = [
     # Navigation
     "navigate_to_skill",
     "return_home_skill",
-    "TrajectoryManager",
     "NodePlannerOmpl",
     "NodeTrajectoryGenerator",
     # Object Detection
