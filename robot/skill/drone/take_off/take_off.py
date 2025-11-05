@@ -185,8 +185,8 @@ def _handle_completed(robot, skill_name):
 
     robot.skill_states[skill_name] = "COMPLETED"
     success_msg = f"Take off completed at {final_altitude:.1f}m altitude"
-    robot.form_feedback("completed", success_msg )
     logger.info(success_msg)
+    return robot.form_feedback("completed", success_msg, 100 )
 
 
 def _handle_failed(robot, skill_name):

@@ -96,7 +96,7 @@ class NodeRobot(Node):
             goal_handle.publish_feedback(feedback)
 
             # 检查技能是否完成
-            if status in ["finished", "failed"]:
+            if status in ["finished", "failed", "completed"]:
                 break
 
             # 10Hz频率，等待0.1秒
