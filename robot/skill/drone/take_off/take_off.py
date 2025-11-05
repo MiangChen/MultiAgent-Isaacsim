@@ -85,6 +85,7 @@ def _init_take_off(robot, skill_name, kwargs):
         robot.skill_errors[skill_name] = f"Take off initialization failed: {str(e)}"
         logger.error(f"Take off initialization error: {e}")
 
+
 def _handle_executing_1(robot, skill_name):
     try:
         # 检查是否已经启动导航子技能
@@ -178,17 +179,14 @@ def _handle_executing(robot, skill_name):
 
 def _handle_completed(robot, skill_name):
     """处理完成状态"""
-    try:
-        final_pos, _ = robot.body.get_world_pose()
-        final_altitude = final_pos[2].item()
 
-        success_msg = f"Take off completed at {final_altitude:.1f}m altitude"
-        logger.info(success_msg)
+    final_pos, _ = robot.body.get_world_pose()
+    final_altitude = final_pos[2].item()
 
-        return robot.form_feedback("finished", success_msg, 100)
-    except Exception as e:
-        logger.error(f"Take off completion error: {e}")
-        return robot.form_feedback("finished", "Take off completed", 100)
+    robot.skill_states[skill_name] = "COMPLETED"
+    success_msg = f"Take off completed at {final_altitude:.1f}m altitude"
+    robot.form_feedback("completed", success_msg )
+    logger.info(success_msg)
 
 
 def _handle_failed(robot, skill_name):
