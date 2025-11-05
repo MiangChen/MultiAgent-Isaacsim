@@ -23,3 +23,5 @@ class CfgDroneCf2X(CfgRobot):
     takeoff_height: float = 1.0  # 起飞悬停高度，单位米
     land_height: float = 0.0  # 降落高度，地面
     control_mode: str = "velocity"  # "velocity" or "teleport"
+    detection_radius: float = 1.0
+    robot_radius: float = 0.2
