@@ -69,7 +69,6 @@ class NodePlannerOmpl(Node):
             self,
             PointCloud2,
             "/map_point_cloud",
-            # self.callback_point_cloud,
             qos_profile=qos_profile,
         )
         self.time_synchronizer = message_filters.ApproximateTimeSynchronizer(
@@ -284,7 +283,7 @@ class NodePlannerOmpl(Node):
 
         pdef.setStartAndGoalStates(start_state, goal_state)
 
-        planner = og.RRT(self.si)
+        planner = og.PRM(self.si)
         planner.setProblemDefinition(pdef)
         planner.setup()
 
