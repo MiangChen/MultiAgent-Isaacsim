@@ -20,6 +20,15 @@
 
 [仿真部分 效果演示](https://xetk4h23q3.feishu.cn/wiki/LSzqwurKmiF3lqkEYlocTXtYnke?from=from_copylink)
 
+## 架构理解
+
+参考文档: []()
+
+## 各种BUG报错
+
+可以查阅该文档是否有提到过: [疑难杂症 BUG](https://xetk4h23q3.feishu.cn/wiki/ATyhwSTrmizJWAkCP60cR6yYn4f?from=from_copylink)
+
+如果没有, 可以发起Issue, 后续也会整合到上述的文档中
 
 ***
 ***
