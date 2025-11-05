@@ -202,7 +202,6 @@ def main():  # Needed in build_drone_ctx
     env.simulation_app = simulation_app
     # setup_simulation()
     ros_manager.start()
-    scene_manager = SceneManager()
 
     WORLD_USD_PATH = config_manager.get("world_usd_path")
     scene_manager.load_scene(usd_path=WORLD_USD_PATH, prim_path_root="/World/Scene")
