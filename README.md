@@ -21,8 +21,11 @@
 [仿真部分 效果演示](https://xetk4h23q3.feishu.cn/wiki/LSzqwurKmiF3lqkEYlocTXtYnke?from=from_copylink)
 
 
-[![Lines of Code](https://img.shields.io/badge/LoC-12244-blue)](https://github.com/MiangChen/multiagent-isaacsim)
+***
+***
+
+[![Lines of Code](https://img.shields.io/badge/LoC-30998-blue)](https://github.com/MiangChen/multiagent-isaacsim)
 
 
- cloc --exclude-dir=$(tr '\n' ',' < .clocignore) 
- 
+cloc --exclude-dir=$(tr '\n' ',' < .clocignore) 
+cloc .
