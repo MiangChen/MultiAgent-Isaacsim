@@ -99,7 +99,7 @@ class NodeRobot(Node):
             if status in ["finished", "failed", "completed"]:
                 break
 
-            # 10Hz频率，等待0.1秒
+            # 10Hz频率，等待0.1秒 todo
             time.sleep(0.1)
 
         # 获取最终结果
@@ -108,7 +108,7 @@ class NodeRobot(Node):
         final_message = final_feedback.get("message", "Unknown result")
 
         # 创建ROS2 action result
-        success = final_status == "finished"
+        success = final_status in ["finished", "completed"]
         result = SkillExecution.Result(
             success=success,
             message=final_message

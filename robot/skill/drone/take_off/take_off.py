@@ -94,7 +94,7 @@ def _handle_executing_1(robot, skill_name):
         if not nav_skill_started:
             # 检查是否已有导航技能在运行
             if "navigate_to_skill" in robot.skill_states:
-                return robot.form_feedback("processing", "Waiting for navigation to be available...", 20)
+                return robot.form_feedback("processing", "navigation busy, wait to be available...", 20)
 
             # 启动导航子技能
             nav_kwargs = robot.get_skill_data(skill_name, "nav_kwargs")
@@ -186,7 +186,7 @@ def _handle_completed(robot, skill_name):
     robot.skill_states[skill_name] = "COMPLETED"
     success_msg = f"Take off completed at {final_altitude:.1f}m altitude"
     logger.info(success_msg)
-    return robot.form_feedback("completed", success_msg, 100 )
+    return robot.form_feedback("completed", success_msg, 100)
 
 
 def _handle_failed(robot, skill_name):

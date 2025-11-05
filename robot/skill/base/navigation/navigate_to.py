@@ -1,5 +1,8 @@
 import json
 
+from log.log_manager import LogManager
+logger = LogManager().get_logger(__name__)
+
 # ROS2 Message
 from action_msgs.msg import GoalStatus
 from builtin_interfaces.msg import Time
@@ -49,6 +52,7 @@ def _init_navigation(robot, skill_name, kwargs):
     if not robot.action_client_path_planner.wait_for_server(timeout_sec=2.0):
         robot.skill_states[skill_name] = "FAILED"
         robot.skill_errors[skill_name] = "Path planner server is not available."
+        logger.info(robot.skill_errors[skill_name])
         return
 
     robot.node_controller_mpc.move_event.clear()
@@ -136,7 +140,7 @@ def _handle_executing(robot, skill_name):
         robot.skill_states[skill_name] = "COMPLETED"
         return robot.form_feedback("processing", "Executing...", 50)
     else:
-        nav_move_start_time = robot.get_skill_data(skill_name, "nav_move_start_time", robot.sim_time)
+        nav_move_start_time = robot.get_skill_data(skill_name, "nav_move_start_time", 0)
         elapsed = robot.sim_time - nav_move_start_time
         if elapsed > 120.0:
             robot.skill_states[skill_name] = "FAILED"
