@@ -18,10 +18,10 @@ def explore_skill(**kwargs):
         _init_explore(robot, skill_name, kwargs)
 
     current_state = robot.skill_states.get(skill_name)
-    if current_state == "NAVIGATING_TO_START":
-        return _handle_navigating_to_start(robot, skill_name)
-    elif current_state == "EXECUTING":
-        return _handle_executing(robot, skill_name)
+    if current_state == "EXECUTING1":
+        return _handle_executing1(robot, skill_name)
+    elif current_state == "EXECUTING2":
+        return _handle_executing2(robot, skill_name)
     elif current_state == "COMPLETED":
         return _handle_completed(robot, skill_name)
     elif current_state == "FAILED":
@@ -113,7 +113,7 @@ def _init_explore(robot, skill_name, kwargs):
         robot.set_skill_data(skill_name, "nav_to_start_completed", False)
 
         # 初始化完成，进入导航到起点阶段
-        robot.skill_states[skill_name] = "NAVIGATING_TO_START"
+        robot.skill_states[skill_name] = "EXECUTING1"
         return robot.form_feedback("processing", "Exploration waypoints planned, preparing to navigate to start point.", 20)
 
     except Exception as e:
@@ -122,7 +122,7 @@ def _init_explore(robot, skill_name, kwargs):
         return robot.form_feedback("failed", robot.skill_errors[skill_name])
 
 
-def _handle_navigating_to_start(robot, skill_name):
+def _handle_executing1(robot, skill_name):
     """处理导航到起点状态 - 模仿take_off的导航逻辑"""
     try:
         # 检查是否已经启动导航子技能
@@ -159,7 +159,7 @@ def _handle_navigating_to_start(robot, skill_name):
         elif nav_state == "COMPLETED":
             # 导航到起点完成，开始探索
             robot.set_skill_data(skill_name, "nav_to_start_completed", True)
-            robot.skill_states[skill_name] = "EXECUTING"
+            robot.skill_states[skill_name] = "EXECUTING2"
             return robot.form_feedback("processing", "Reached exploration start point, beginning exploration...", 65)
         elif nav_state == "FAILED":
             nav_error = robot.skill_errors.get("navigate_to_skill", "Unknown navigation error")
@@ -183,21 +183,13 @@ def _handle_navigating_to_start(robot, skill_name):
         return robot.form_feedback("failed", robot.skill_errors[skill_name])
 
 
-def _handle_executing(robot, skill_name):
+def _handle_executing2(robot, skill_name):
     """执行探索操作（对齐 navigate.py 的执行节奏和进度反馈）"""
     try:
         start_time = robot.get_skill_data(skill_name, "exploration_start_time")
         waypoints = robot.get_skill_data(skill_name, "waypoints")
         target_prim = robot.get_skill_data(skill_name, "target_prim", "/TARGET_PRIM_NOT_SPECIFIED")
 
-        # 确保已经导航到起点
-        nav_to_start_completed = robot.get_skill_data(skill_name, "nav_to_start_completed", False)
-        if not nav_to_start_completed:
-            robot.skill_states[skill_name] = "FAILED"
-            robot.skill_errors[skill_name] = "Cannot start exploration: navigation to start point not completed"
-            return robot.form_feedback("failed", robot.skill_errors[skill_name])
-
-        # 第一次进入 EXECUTING：设置检测与发布路径
         if start_time is None:
             # 设置机器人检测模式与目标
             if hasattr(robot, 'is_detecting'):
