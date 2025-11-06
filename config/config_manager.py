@@ -22,9 +22,7 @@ class ConfigManager:
 
     def __init__(self):
         self.config: Dict[str, Any] = {}
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(current_dir, "../config/config_parameter.yaml")
-        self.config_path = os.path.normpath(config_path)
+        self.config_path = Path(__file__).parent / "config_parameter.yaml"
         self.load()
 
     def load(self):

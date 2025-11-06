@@ -98,3 +98,6 @@ ros:
 frames:
   frame_id_global: "map"
   frame_id_base: "base_link"
+
+# 命名空间配置 (用于多无人机仿真)
+namespace: ["uav1", "uav2", "uav3"]

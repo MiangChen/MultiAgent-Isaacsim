@@ -1,12 +1,10 @@
-# file: pyproject.toml
-
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "multi_robot_isaacsim"
-version = "2025.10.22"
+version = "2025.11.6"
 
 
 [tool.setuptools]

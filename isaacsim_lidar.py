@@ -219,7 +219,7 @@ def main():  # Needed in build_drone_ctx
     semantic_camera_prim_path = result.get("result").get("prim_path")
 
     drone_ctxs: list[RobotDroneAutel] = []
-    for idx, ns in enumerate(namespace_list):
+    for idx, ns in enumerate(config_manager.get("namespace")):
         drone_ctxs.append(build_drone_ctx(ns, idx, scene_manager=scene_manager))
 
     # ---------------- Run simulation -----------------------------------
