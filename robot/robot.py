@@ -491,4 +491,5 @@ class Robot:
     def get_available_skills(self):
         """获取当前机器人类型支持的所有技能"""
         from robot.skill.skill_registry import SkillRegistry
+
         return SkillRegistry.get_skill_names_for_robot(self.cfg_robot.type)

@@ -26,20 +26,24 @@ class NodeRobot(Node):
         self.namespace = namespace
         self.robot_instance = None
         self.topics = topics or {}
-        
+
         # 创建publishers和subscribers
         self._create_publishers()
         self._create_subscribers()
         self._create_action_servers()
 
-        logger.info(f"ROS2 Node for {self.namespace} has been created with topics: {list(self.topics.keys())}")
+        logger.info(
+            f"ROS2 Node for {self.namespace} has been created with topics: {list(self.topics.keys())}"
+        )
 
     def _create_publishers(self):
         """根据配置创建publishers"""
         self.publisher_dict = {}
 
         if "odom" in self.topics:
-            self.publisher_odom = self.create_publisher(Odometry, self.topics["odom"], 10)
+            self.publisher_odom = self.create_publisher(
+                Odometry, self.topics["odom"], 10
+            )
             self.publisher_dict["odom"] = self.publisher_odom
 
     def _create_subscribers(self):
@@ -151,15 +155,19 @@ class NodeRobot(Node):
     def get_skill_function(self, task_name):
         """获取技能函数 - 使用SkillRegistry（支持按需导入）"""
         from robot.skill.skill_registry import SkillRegistry
-        
+
         # 获取机器人类型
         robot_type = self.robot_instance.cfg_robot.type
-        
+
         # 直接从SkillRegistry获取技能函数
         skill_function = SkillRegistry.get_skill(robot_type, task_name)
-            
+
         if skill_function is None:
-            logger.warning(f"Skill '{task_name}' not found for robot type '{robot_type}'")
-            logger.info(f"Available skills for {robot_type}: {SkillRegistry.get_skill_names_for_robot(robot_type)}")
-        
+            logger.warning(
+                f"Skill '{task_name}' not found for robot type '{robot_type}'"
+            )
+            logger.info(
+                f"Available skills for {robot_type}: {SkillRegistry.get_skill_names_for_robot(robot_type)}"
+            )
+
         return skill_function

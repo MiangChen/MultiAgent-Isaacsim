@@ -21,9 +21,8 @@ logger = LogManager.get_logger(__name__)
 class SkillRegistry:
     """
     技能注册系统
-    
+
     用于管理不同机器人类型支持的技能，通过装饰器方式注册技能函数
-    支持按需导入技能模块
     """
 
     _skills: Dict[str, Dict[str, Callable]] = {}
@@ -32,10 +31,10 @@ class SkillRegistry:
     def register(cls, robot_types: List[str] = None):
         """
         装饰器：为指定的机器人类型注册技能
-        
+
         Args:
             robot_types: 支持该技能的机器人类型列表，如果为None则自动推断
-            
+
         Returns:
             装饰器函数
         """
@@ -48,7 +47,9 @@ class SkillRegistry:
                     cls._skills[robot_type] = {}
 
                 cls._skills[robot_type][skill_name] = skill_func
-                logger.debug(f"Registered skill '{skill_name}' for robot type '{robot_type}'")
+                logger.debug(
+                    f"Registered skill '{skill_name}' for robot type '{robot_type}'"
+                )
 
             return skill_func
 
@@ -58,11 +59,11 @@ class SkillRegistry:
     def get_skill(cls, robot_type: str, skill_name: str) -> Optional[Callable]:
         """
         获取指定机器人类型的技能函数
-        
+
         Args:
             robot_type: 机器人类型
             skill_name: 技能名称
-            
+
         Returns:
             技能函数，如果不存在则返回None
         """
@@ -72,10 +73,10 @@ class SkillRegistry:
     def get_skill_names_for_robot(cls, robot_type: str) -> List[str]:
         """
         获取指定机器人类型支持的所有技能名称
-        
+
         Args:
             robot_type: 机器人类型
-            
+
         Returns:
             技能名称列表
         """
@@ -85,19 +86,19 @@ class SkillRegistry:
     def _infer_robot_types_from_config(cls, skill_name: str) -> List[str]:
         """
         根据配置文件推断技能支持的机器人类型
-        
+
         Args:
             skill_name: 技能名称
-            
+
         Returns:
             支持的机器人类型列表
         """
-        if not hasattr(cls, '_skill_config'):
+        if not hasattr(cls, "_skill_config"):
             current_dir = os.path.dirname(__file__)
-            config_path = os.path.join(current_dir, 'skill_config.yaml')
+            config_path = os.path.join(current_dir, "skill_config.yaml")
 
             try:
-                with open(config_path, 'r', encoding='utf-8') as f:
+                with open(config_path, "r", encoding="utf-8") as f:
                     config = yaml.safe_load(f)
 
                 cls._skill_config = config
@@ -107,7 +108,7 @@ class SkillRegistry:
                 raise f"Failed to load skill config from {config_path}: {repr(e)}"
 
         for skill_category, info in cls._skill_config.items():
-            if skill_name in info.get('skills'):
-                return info['robot_types']
+            if skill_name in info.get("skills"):
+                return info["robot_types"]
 
         raise ValueError(f"Skill {skill_name} not found in skill config")

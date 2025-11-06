@@ -7,7 +7,8 @@ from robot.skill.skill_registry import SkillRegistry
 
 logger = LogManager.get_logger(__name__)
 
-@SkillRegistry.register(['jetbot', 'g1', 'h1', 'cf2x'])
+
+@SkillRegistry.register(["jetbot", "g1", "h1", "cf2x"])
 def explore_skill(**kwargs):
     robot = kwargs.get("robot")
     skill_name = "explore_skill"

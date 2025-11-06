@@ -59,7 +59,7 @@ class ConfigManager:
         # 动态搜索 asset 目录下所有 JSON 文件
         asset_dir = project_root / "asset"
         world_usd_path = None
-        
+
         for json_file in asset_dir.glob("*.json"):
             try:
                 with open(json_file, "r") as f:
@@ -69,9 +69,11 @@ class ConfigManager:
                     break
             except Exception:
                 continue
-        
+
         if world_usd_path is None:
-            raise ValueError(f"在 asset 目录的所有 JSON 文件中都找不到名为 '{world_name}' 的场景")
+            raise ValueError(
+                f"在 asset 目录的所有 JSON 文件中都找不到名为 '{world_name}' 的场景"
+            )
         self.config["world_usd_path"] = world_usd_path
 
         return
