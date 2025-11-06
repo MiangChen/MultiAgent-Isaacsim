@@ -36,11 +36,11 @@ class CfgLidar(CfgBase):
     )
 
     # --- 核心 Lidar 参数 ---
-    # 这个参数指向一个定义了 Lidar 物理特性的 JSON 配置文件
+    #  Lidar 物理特性的 JSON 配置文件
     config_file_name: str = Field(
-        default="Simple_Example_Solid_State",
-        description="要使用的Lidar配置文件名 (无需 .json 后缀), "
-        "对应 isaacsim.sensors.rtx/data/lidar_configs/ 目录下的文件",
+        default="Hesai_XT32_SD10",
+        description="要使用的Lidar配置文件名 (去掉 .json 后缀), "
+        "对应 .../{python所在的路径}/lib/python3.10/site-packages/isaacsim/exts/isaacsim.sensors.rtx/data/lidar_configs 目录下的文件",
     )
 
     # --- 性能和数据设置 ---
