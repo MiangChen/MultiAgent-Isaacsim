@@ -1,21 +1,11 @@
-# =============================================================================
-# Config G1 Module - G1 Humanoid Robot Configuration
-# =============================================================================
-#
-# This module provides configuration parameters specific to the G1
-# humanoid robot, including physical properties and sensor configurations.
-#
-# =============================================================================
+from dataclasses import dataclass
 
-# Local project imports
 from .cfg_robot import CfgRobot, ASSET_PATH
 
 
+@dataclass
 class CfgG1(CfgRobot):
-    # meta info
     type: str = "g1"
-    id: int = 0
-    path_prim_swarm: str = "/World/robot"
     path_prim_robot: str = "/World/robot/g1"
     path_usd: str = ASSET_PATH + "/Isaac/Robots/Unitree/G1/g1.usd"
     detection_radius: float = 1.0
