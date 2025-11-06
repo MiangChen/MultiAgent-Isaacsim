@@ -32,7 +32,6 @@ from robot.robot_drone_autel import RobotDroneAutel
 from scene.scene_manager import SceneManager
 from simulation_utils.ros_bridge import setup_ros
 from simulation_utils.simulation_core import run_simulation_loop_multi
-from utils import euler_to_quat
 
 logger = LogManager.get_logger(__name__)
 
@@ -54,17 +53,6 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
         else "/drone" if idx == 0 else f"/drone_{idx}"
     )
 
-    # LiDAR -------------------------------------------------------------
-    # lidar_cfg = CfgLidar()
-    # lidar_cfg.prim_path = prim_path + "/Lidar/lfr"
-    #
-    # lidar_cfg.config_file_name = "autel_perception_120x352"
-    # lidar = Lidar(cfg_lidar=lidar_cfg)
-    # lidar.create_lidar(prim_path=lidar_cfg.prim_path)
-    # lidar.lidar.add_point_cloud_data_to_frame()
-    # lidar.initialize()
-
-    # from robot.sensor.lidar.lidar_isaac import add_drone_lidar, create_lidar_step_wrapper
     from robot.sensor.lidar.lidar_omni import LidarOmni
     from robot.sensor.lidar.cfg_lidar import CfgLidar
 
@@ -86,11 +74,6 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
 
     lidar_lfr = LidarOmni(cfg_lidar=cfg_lfr)
     lidar_ubd = LidarOmni(cfg_lidar=cfg_ubd)
-
-    # lidar_config = "autel_perception_120x352"
-    # lidar_annotators = add_drone_lidar(prim_path, lidar_config)
-    # lidar_step_wrapper = create_lidar_step_wrapper(lidar_annotators)
-    # print(f"Adding drone body to {prim_path} with color scheme {idx}")
 
     partial_ctx = RobotDroneAutel(
         scene_manager=scene_manager,

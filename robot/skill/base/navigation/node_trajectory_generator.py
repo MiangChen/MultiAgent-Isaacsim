@@ -38,9 +38,6 @@ class NodeTrajectoryGenerator(Node):
     def __init__(self, namespace: str):
         super().__init__(node_name="node_trajectory_generator", namespace=namespace)
 
-        # 移除独立的executor，由robot.py统一管理
-        # self.executor = MultiThreadedExecutor()
-        # self.thread = threading.Thread(target=self._spin, daemon=True)
         self.declare_parameters(
             namespace="",
             parameters=[
@@ -70,7 +67,6 @@ class NodeTrajectoryGenerator(Node):
             JointTrajectory, "timed_trajectory", 10
         )
         self.get_logger().info("Trajectory Generator Node has started.")
-
 
     def path_callback(self, msg: Path):
         """Callback function for the /planned_path topic."""
@@ -124,7 +120,7 @@ class NodeTrajectoryGenerator(Node):
         return np.column_stack((np.array(positions), unwrapped_yaw_angles))
 
     def _generate_trajectory_with_toppra(
-        self, path_points: np.ndarray
+            self, path_points: np.ndarray
     ) -> Dict[str, Any]:
         """Generates a trajectory using toppra for a given 4D path."""
         ss = np.zeros(len(path_points))
@@ -195,7 +191,7 @@ class NodeTrajectoryGenerator(Node):
         }
 
     def _convert_to_joint_trajectory_msg(
-        self, traj_data: Dict, frame_id: str
+            self, traj_data: Dict, frame_id: str
     ) -> JointTrajectory:
         """Converts the toppra output dictionary into a JointTrajectory message."""
         traj_msg = JointTrajectory()
@@ -211,7 +207,6 @@ class NodeTrajectoryGenerator(Node):
         for i in range(len(timestamps)):
             point = JointTrajectoryPoint()
 
-            # Convert float seconds to ROS 2 Duration (sec + nanosec)
             time_from_start_sec = timestamps[i]
             point.time_from_start = Duration(
                 sec=int(time_from_start_sec),
@@ -225,19 +220,3 @@ class NodeTrajectoryGenerator(Node):
             traj_msg.points.append(point)
 
         return traj_msg
-
-
-def main(args=None):
-    rclpy.init(args=args)
-    node = NodeTrajectoryGenerator()
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
-
-
-if __name__ == "__main__":
-    main()

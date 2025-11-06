@@ -22,8 +22,8 @@ from physics_engine.pxr_utils import Gf
 from robot.robot_drone_autel import DronePose, RobotDroneAutel
 from simulation_utils.message_convert import create_pc2_msg, create_image_msg
 from simulation_utils.perception import (
-    create_depth2pc_lut,
-    depth2pointclouds,
+    # create_depth2pc_lut,
+    # depth2pointclouds,
     process_semantic_detection,
 )
 
@@ -170,9 +170,9 @@ def run_simulation_loop_multi(
     rate = Rate(1.0 / rendering_dt)
 
     # Create depth→point-cloud LUT once and share
-    depth2pc_lut = create_depth2pc_lut()
-    for ctx in drone_ctxs:
-        ctx.depth2pc_lut = depth2pc_lut
+    # depth2pc_lut = create_depth2pc_lut()
+    # for ctx in drone_ctxs:
+    #     ctx.depth2pc_lut = depth2pc_lut
 
     # Initial desired poses (arranged in a grid pattern for better visualization)
     for i, ctx in enumerate(drone_ctxs):
@@ -232,9 +232,9 @@ def run_simulation_loop_multi(
         for ctx in drone_ctxs:
             header = Header()
             header.stamp = t_now.to_msg()
+            header.frame_id = "map"
 
             # Collision detection
-            header.frame_id = "world"
             msg = ContactsState(header=header)
             if scene_manager.check_prim_collision(prim_path=ctx.prim_path):
                 msg.states.append(
@@ -243,22 +243,13 @@ def run_simulation_loop_multi(
                 print(f"Collision detected for drone {ctx.namespace}")
             ctx.pubs["collision"].publish(msg)
 
-            # Custom step (LiDAR / perception)
-            # if ctx.custom_step_fn is not None:
             if ctx.lidar_list is not None:
-                # depths = ctx.custom_step_fn()
-                # depths_lfr = ctx.lidar_list[0].wrapper
-                # depths_ubd = ctx.custom_step_fn[1]()
-                # depths = np.stack([depths_lfr, depths_ubd], axis=0)
                 pc_LFR = ctx.lidar_list[0].get_pointcloud()
                 pc_UBD = ctx.lidar_list[1].get_pointcloud()
 
-                # if depths is not None:
-                #     pc_LFR, pc_UBD = depth2pointclouds(depths, ctx.depth2pc_lut)
-                #     pc_LFR =
-                    # pc_LFR = ctx
                 header = Header()
                 header.stamp = t_now.to_msg()
+                header.frame_id = "map"
 
                 ctx.pubs["lfr_pc"].publish(create_pc2_msg(header, pc_LFR))
                 ctx.pubs["ubd_pc"].publish(create_pc2_msg(header, pc_UBD))

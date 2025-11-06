@@ -44,9 +44,7 @@ class CfgLidar(CfgBase):
                     "对应 .../{python所在的路径}/lib/python3.10/site-packages/isaacsim/exts/isaacsim.sensors.rtx/data/lidar_configs 目录下的文件"
                     "如果用自定义的, 需要自己将lidar 的配置文件放到上述的文件夹中, 比如autel_perception_120x352"
     )
-    output_size: Tuple[int, int] = Field(
-        description="雷达的输出维度"
-    )
+    output_size: Tuple[int, int] = Field(description="雷达的输出维度")
     max_depth: float = Field(default=1000, description="雷达的最大深度, 如果超过该深度, 则会被设置成这个数值")
 
     # --- ERP 投影参数 ---
