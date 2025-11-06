@@ -21,11 +21,6 @@ from physics_engine.isaacsim_utils import extensions, stage, set_camera_view
 from physics_engine.pxr_utils import Gf
 from robot.robot_drone_autel import DronePose, RobotDroneAutel
 from simulation_utils.message_convert import create_pc2_msg, create_image_msg
-from simulation_utils.perception import (
-    # create_depth2pc_lut,
-    # depth2pointclouds,
-    process_semantic_detection,
-)
 
 # ROS2 imports
 import rclpy
@@ -220,11 +215,6 @@ def run_simulation_loop_multi(
 
         # Run single simulation step
         world.step(render=True)
-
-        # semantic camera detection
-        if count % 120 == 0 and count > 0:
-            result = process_semantic_detection(semantic_camera, semantic_map)
-        count += 1
 
         # ------------------------------------------------------------------
         # Publish per-drone outputs
