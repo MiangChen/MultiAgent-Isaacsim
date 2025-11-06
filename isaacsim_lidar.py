@@ -37,12 +37,6 @@ from simulation_utils.simulation_core import run_simulation_loop_multi
 
 logger = LogManager.get_logger(__name__)
 
-# Derive list of namespaces --------------------------------------------------
-if config_manager.get("namespace"):
-    namespace_list = config_manager.get("namespace")
-    print(f"Running LiDAR sim with namespaces: {namespace_list}")
-
-
 #############################################################
 
 

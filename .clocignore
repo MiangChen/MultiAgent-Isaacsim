@@ -1,5 +1,9 @@
+asset
 IsaacLab
 trash
 recycle_bin
 logs
 pddl
+.vscode
+.gitignore
+.kiro

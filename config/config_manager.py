@@ -9,7 +9,6 @@
 # =============================================================================
 
 # Standard library imports
-import argparse
 import os
 import pprint
 from pathlib import Path
@@ -20,55 +19,18 @@ import yaml
 
 
 class ConfigManager:
-    """
-    一个统一的配置管理器。
-    负责整合来自 YAML 文件和命令行参数的配置，并计算派生路径。
-    加载顺序: YAML 文件 -> 命令行参数。
-    """
 
     def __init__(self):
-        # 通过args传递的参数
-        self._parser = self._create_argument_parser()
-        self.args, self.args_unknown = self._parser.parse_known_args()
-        # 通过文件读取的参数
         self.config: Dict[str, Any] = {}
         current_dir = os.path.dirname(os.path.abspath(__file__))
         config_path = os.path.join(current_dir, "../config/config_parameter.yaml")
         self.config_path = os.path.normpath(config_path)
         self.load()
 
-    def _create_argument_parser(self) -> argparse.ArgumentParser:
-        """
-        创建并配置参数解析器，取代 argument_parser.py 的功能。
-        """
-        parser = argparse.ArgumentParser(description="Isaac Sim Multi-Agent Simulation")
-
-        group = parser.add_mutually_exclusive_group()
-        group.add_argument(
-            "--namespace",
-            type=str,
-            default=None,
-            help="Comma-separated list of namespaces for multi-UAV simulation. Overrides config.",
-        )
-
-        return parser
-
     def load(self):
-        """
-        加载、合并和处理所有配置。
-        """
         with open(self.config_path, "r") as f:
             self.config = yaml.safe_load(f)
 
-        # 将命令行参数覆盖到配置上
-        cli_args_dict = vars(self.args)
-        if cli_args_dict.get("namespace") is not None:
-            namespaces_list = [
-                ns.strip() for ns in cli_args_dict["namespace"].split(",") if ns.strip()
-            ]
-            self.config["namespace"] = namespaces_list
-
-        # 计算派生路径和值
         self._derive_paths()
         return self
 
@@ -99,7 +61,6 @@ class ConfigManager:
         # 获取场景 USD 文件的绝对路径
         user_usd_files_json_path = project_root / "asset" / "User_assets.json"
         if not user_usd_files_json_path.exists():
-
             raise FileNotFoundError(f"找不到场景定义文件: {user_usd_files_json_path}")
 
         with open(user_usd_files_json_path, "r") as f:
@@ -112,11 +73,8 @@ class ConfigManager:
         self.config["world_usd_path"] = world_name_dic[world_name]
 
     def get_summary(self) -> str:
-        """
-        生成最终配置的摘要，用于日志记录。
-        """
-        summary = "=== Unified Configuration Summary ===\n"
-        summary += f"Source config file: {self.args.config}\n"
+        summary = "=== Configuration Summary ===\n"
+        summary += f"Source config file: {self.config_path}\n"
         summary += "-----------------------------------\n"
         summary += pprint.pformat(self.config)
         summary += "\n==================================="

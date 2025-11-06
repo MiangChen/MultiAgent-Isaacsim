@@ -8,27 +8,6 @@ build-backend = "setuptools.build_meta"
 name = "multi_robot_isaacsim"
 version = "2025.10.22"
 
-#[project.entry-points."robot.tasks"]
-## Navigation tasks
-#"navigate_and_return" = "robot.skill.py_trees_tasks.navigation_tasks:build_navigate_and_return_tree"
-#"simple_navigation" = "robot.skill.py_trees_tasks.navigation_tasks:build_simple_navigation_tree"
-#"waypoint_navigation" = "robot.skill.py_trees_tasks.navigation_tasks:build_waypoint_navigation_tree"
-#
-## Manipulation tasks
-#"pickup_task" = "robot.skill.py_trees_tasks.manipulation_tasks:build_pickup_task_tree"
-#"manipulation_sequence" = "robot.skill.py_trees_tasks.manipulation_tasks:build_manipulation_sequence_tree"
-#"sorting_task" = "robot.skill.py_trees_tasks.manipulation_tasks:build_sorting_task_tree"
-#
-## Exploration tasks
-#"exploration" = "robot.skill.py_trees_tasks.exploration_tasks:build_exploration_tree"
-#"search_and_explore" = "robot.skill.py_trees_tasks.exploration_tasks:build_search_and_explore_tree"
-#"patrol_exploration" = "robot.skill.py_trees_tasks.exploration_tasks:build_patrol_exploration_tree"
-#
-## Composite tasks
-#"patrol_task" = "robot.skill.py_trees_tasks.composite_tasks:build_patrol_task_tree"
-#"delivery_task" = "robot.skill.py_trees_tasks.composite_tasks:build_delivery_task_tree"
-#"search_and_rescue" = "robot.skill.py_trees_tasks.composite_tasks:build_search_and_rescue_tree"
-#"inspection_task" = "robot.skill.py_trees_tasks.composite_tasks:build_inspection_task_tree"
 
 [tool.setuptools]
 packages = [
