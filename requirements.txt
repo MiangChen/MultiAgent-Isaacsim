@@ -3,13 +3,14 @@ black
 pydantic>=2.0.0  # Data validation
 pyyaml>=6.0  # 用于读取yaml文件
 usd-core>=23.0  # pixar的官方库，处理usd文件
-shapely
 dependency-injector>=4.41.0  # 依赖注入
+
+# Path Planning
+shapely
 ompl # path planning
 toppra # path generator
 casadi # for mpc
 #octomap-python # for grid map 不存在这个包
-py_trees>=2.2.0
 
 # AI and Language Processing
 faster-whisper>=0.9.0  # openai的whisper语音转录模型, 输入音频, 可以输出文本
@@ -41,21 +42,3 @@ asyncio-mqtt>=0.13.0,<1.0.0  # For potential MQTT integration
 
 # Logging and Utilities
 python-json-logger>=2.0.0,<3.0.0
-
-# PDDL Planning
-#unified-planning[engines]>=1.0.0
-#networks>=3.0
-#tamer>=0.4.0
-
-# Optional ROS2 dependencies (uncomment if ROS2 integration is needed)
-# rclpy>=3.3.0
-# ros2cli>=0.18.0
-# ros2topic>=0.18.0
-# ros2node>=0.18.0
-
-# Development and Testing (optional)
-# pytest>=7.0.0
-# pytest-asyncio>=0.21.0
-# pytest-mock>=3.10.0
-# black>=23.0.0
-# flake8>=6.0.0
