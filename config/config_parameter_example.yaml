@@ -94,3 +94,7 @@ ros:
     node_scene_monitor: False
     node_action_server_plan_execution: True
     node_time: True
+
+frames:
+  frame_id_global: "map"
+  frame_id_base: "base_link"

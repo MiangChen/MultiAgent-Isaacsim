@@ -33,7 +33,7 @@
 ***
 ***
 
-[![Lines of Code](https://img.shields.io/badge/LoC-30998-blue)](https://github.com/MiangChen/multiagent-isaacsim)
+[![Lines of Code](https://img.shields.io/badge/LoC-30855-blue)](https://github.com/MiangChen/multiagent-isaacsim)
 
 
 cloc --exclude-dir=$(tr '\n' ',' < .clocignore) 

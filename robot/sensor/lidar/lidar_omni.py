@@ -86,7 +86,6 @@ class LidarOmni:
     @carb.profiler.profile
     def get_depth(self):
         """直接获取深度数据"""
-
         self._depth.fill(self.cfg_lidar.max_depth)
         data = self.annotator.get_data()
         lidar_depths = data["distances"]
