@@ -6,7 +6,7 @@ from log.log_manager import LogManager
 logger = LogManager.get_logger(__name__)
 
 
-@SkillRegistry.auto_register()
+@SkillRegistry.register()
 def take_off(**kwargs):
     """无人机起飞技能 - 使用字典化状态管理"""
     robot = kwargs.get("robot")

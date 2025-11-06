@@ -12,7 +12,7 @@ from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import ComputePathToPose
 
 
-@SkillRegistry.auto_register()
+@SkillRegistry.register()
 def navigate_to_skill(**kwargs):
     robot = kwargs.get("robot")
     skill_name = "navigate_to_skill"  # 直接使用函数名

@@ -4,7 +4,7 @@ from robot.skill.skill_registry import SkillRegistry
 logger = LogManager.get_logger(__name__)
 
 
-@SkillRegistry.auto_register()
+@SkillRegistry.register()
 def detect_skill(**kwargs):
     robot = kwargs.get("robot")
     skill_name = "detect_skill"
