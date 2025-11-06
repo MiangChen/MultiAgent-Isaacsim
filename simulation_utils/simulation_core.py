@@ -245,7 +245,8 @@ def run_simulation_loop_multi(
 
             # Custom step (LiDAR / perception)
             if ctx.custom_step_fn is not None:
-                depths = ctx.custom_step_fn()
+                # depths = ctx.custom_step_fn()
+                depths = ctx.custom_step_fn[0]()
                 if depths is not None:
                     pc_LFR, pc_UBD = depth2pointclouds(depths, ctx.depth2pc_lut)
                     # pc_LFR = ctx

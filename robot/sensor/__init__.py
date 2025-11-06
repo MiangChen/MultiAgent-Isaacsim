@@ -6,7 +6,7 @@ Robot sensor module - Sensor implementations and configurations.
 from .camera import CfgCamera, CfgCameraThird, Camera
 
 # LiDAR sensors
-from .lidar import CfgLidar, Lidar
+from .lidar import CfgLidar, LidarIsaac
 
 __all__ = [
     # Camera
@@ -15,5 +15,5 @@ __all__ = [
     "Camera",
     # LiDAR
     "CfgLidar",
-    "Lidar",
+    "LidarIsaac",
 ]

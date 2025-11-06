@@ -7,7 +7,12 @@
 # coordination.
 #
 # =============================================================================
+try:
+    import pydevd_pycharm
 
+    pydevd_pycharm.settrace('localhost', port=12345, stdout_to_server=True, stderr_to_server=True)
+except Exception as e:
+    print(f"no pydevd found: {repr(e)}")
 ##########################################################################################################################
 from physics_engine.isaacsim_simulation_app import start_isaacsim_simulation_app
 
@@ -28,8 +33,6 @@ from scene.scene_manager import SceneManager
 from simulation_utils.ros_bridge import setup_ros
 from simulation_utils.simulation_core import run_simulation_loop_multi
 from utils import euler_to_quat
-
-
 
 logger = LogManager.get_logger(__name__)
 
@@ -58,15 +61,30 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
     # lidar_cfg.config_file_name = "autel_perception_120x352"
     # lidar = Lidar(cfg_lidar=lidar_cfg)
     # lidar.create_lidar(prim_path=lidar_cfg.prim_path)
-    # lidar.lidar_sensor.add_point_cloud_data_to_frame()
+    # lidar.lidar.add_point_cloud_data_to_frame()
     # lidar.initialize()
 
-    from robot.sensor.lidar.base_lidar import add_drone_lidar, create_lidar_step_wrapper
+    # from robot.sensor.lidar.lidar_isaac import add_drone_lidar, create_lidar_step_wrapper
+    from robot.sensor.lidar.lidar_omni import LidarOmni
+    from robot.sensor.lidar.cfg_lidar import CfgLidar
+    cfg_lfr = CfgLidar()
+    cfg_lfr.name = 'lfr'
+    cfg_lfr.prim_path = prim_path + '/lfr'
+    cfg_lfr.quat = [1, 0, 0, 0]
+    cfg_lfr.config_file_name = "autel_perception_120x352"
+    lidar_lfr = LidarOmni(cfg_lidar=cfg_lfr)
 
-    lidar_config = "autel_perception_120x352"
-    lidar_annotators = add_drone_lidar(prim_path, lidar_config)
-    lidar_step_wrapper = create_lidar_step_wrapper(lidar_annotators)
-    print(f"Adding drone body to {prim_path} with color scheme {idx}")
+    cfg_ubd = CfgLidar()
+    cfg_ubd.name = 'ubd'
+    cfg_ubd.prim_path = prim_path + '/ubd'
+    cfg_ubd.quat = (0, 0, 0.7071067811865476, 0.7071067811865476)
+    cfg_ubd.config_file_name = "autel_perception_120x352"
+    lidar_ubd = LidarOmni(cfg_lidar=cfg_ubd)
+
+    # lidar_config = "autel_perception_120x352"
+    # lidar_annotators = add_drone_lidar(prim_path, lidar_config)
+    # lidar_step_wrapper = create_lidar_step_wrapper(lidar_annotators)
+    # print(f"Adding drone body to {prim_path} with color scheme {idx}")
 
     partial_ctx = RobotDroneAutel(
         scene_manager=scene_manager,
@@ -83,7 +101,7 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
     partial_ctx.pubs = pubs
     partial_ctx.subs = subs
     partial_ctx.srvs = srvs
-    partial_ctx.custom_step_fn = lidar_step_wrapper
+    partial_ctx.custom_step_fn = [lidar_lfr.wrapper(size=[352,120]), lidar_ubd.wrapper(size=[352,120])]
     # partial_ctx.custom_step_fn = lidar.get_current_frame
 
     print(f"Drone {namespace} set up with callbacks for:")

@@ -8,7 +8,6 @@
 # =============================================================================
 
 # Standard library imports
-import threading
 from typing import Dict, Any
 
 # Third-party library imports
@@ -72,19 +71,6 @@ class NodeTrajectoryGenerator(Node):
         )
         self.get_logger().info("Trajectory Generator Node has started.")
 
-    # 移除独立的spinning方法，由robot.py的统一executor管理
-    # def start_spinning(self):
-    #     if self.executor is None:
-    #         self.executor = MultiThreadedExecutor()
-    #     self.executor.add_node(self)
-    #     self.thread.start()
-    #     self.get_logger().info("Planner node spinning started in its own thread.")
-
-    # def _spin(self):
-    #     try:
-    #         self.executor.spin()
-    #     except Exception as e:
-    #         self.get_logger().error(f"Spin failed in node {self.namespace}: {e}")
 
     def path_callback(self, msg: Path):
         """Callback function for the /planned_path topic."""

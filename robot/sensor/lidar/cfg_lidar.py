@@ -22,16 +22,17 @@ class CfgLidar(CfgBase):
     配置类，用于定义一个 RTX Lidar 传感器的属性。
     """
 
-    type: Optional[str] = Field(default="lidar", description="传感器类型")
-    prim_path: Optional[str] = Field(
+    type: str = Field(default="lidar", description="传感器类型")
+    name: str = Field(default="name", description="雷达的名字, 同一个机器人上的雷达名字需要不一样")
+    prim_path: str = Field(
         default=None, description="Lidar 在 USD 舞台中的路径"
     )
 
     # --- 位姿设置 ---
-    position: Tuple[float, float, float] = Field(
-        default=(0.0, 0.0, 0.0), description="相对于机器人中心的偏移位置"
+    translation: Tuple[float, float, float] = Field(
+        default=(0.0, 0.0, 0.0), description="相对于parent prim的偏移位置"
     )
-    quat: Optional[Tuple[float, float, float, float]] = Field(
+    quat: Tuple[float, float, float, float] = Field(
         default=(1.0, 0.0, 0.0, 0.0), description="相对于机器人中心的四元数朝向 (WXYZ)"
     )
 
@@ -47,7 +48,7 @@ class CfgLidar(CfgBase):
 
     # --- 性能和数据设置 ---
     # Lidar 的数据更新频率
-    frequency: Optional[int] = Field(default=10, description="Lidar 的扫描频率 (Hz)")
+    frequency: int = Field(default=10, description="Lidar 的扫描频率 (Hz)")
 
     # 是否在初始化时自动添加数据读取器 (Annotator)
     attach_annotator: bool = Field(

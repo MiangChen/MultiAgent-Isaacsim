@@ -8,4 +8,5 @@
 # =============================================================================
 
 from .cfg_lidar import CfgLidar
-from .base_lidar import Lidar
+from .lidar_isaac import LidarIsaac
+from .lidar_omni import LidarOmni
