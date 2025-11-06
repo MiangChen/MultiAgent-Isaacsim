@@ -15,7 +15,7 @@ logger = LogManager.get_logger(__name__)
 class LidarOmni:
     """
     一个高层级的封装器，用于在 Isaac Sim 中创建、管理和读取 RTX Lidar 传感器数据。
-    这个方法创建的Lidar是使用的Isaacsim的API
+    这个方法创建的Lidar是使用的 Omni 的API
     """
 
     def __init__(self, cfg_lidar: CfgLidar, cfg_robot: CfgRobot = None):
