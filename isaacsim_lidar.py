@@ -67,18 +67,24 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
     # from robot.sensor.lidar.lidar_isaac import add_drone_lidar, create_lidar_step_wrapper
     from robot.sensor.lidar.lidar_omni import LidarOmni
     from robot.sensor.lidar.cfg_lidar import CfgLidar
-    cfg_lfr = CfgLidar()
-    cfg_lfr.name = 'lfr'
-    cfg_lfr.prim_path = prim_path + '/lfr'
-    cfg_lfr.quat = [1, 0, 0, 0]
-    cfg_lfr.config_file_name = "autel_perception_120x352"
-    lidar_lfr = LidarOmni(cfg_lidar=cfg_lfr)
 
-    cfg_ubd = CfgLidar()
-    cfg_ubd.name = 'ubd'
-    cfg_ubd.prim_path = prim_path + '/ubd'
-    cfg_ubd.quat = (0, 0, 0.7071067811865476, 0.7071067811865476)
-    cfg_ubd.config_file_name = "autel_perception_120x352"
+    cfg_lfr = CfgLidar(
+        name='lfr',
+        prim_path=prim_path + '/lfr',
+        output_size=(352, 120),
+        quat=(1, 0, 0, 0),
+        config_file_name="autel_perception_120x352"
+    )
+
+    cfg_ubd = CfgLidar(
+        name='ubd',
+        prim_path=prim_path + '/ubd',
+        output_size=(352, 120),
+        quat=(0, 0, 0.7071067811865476, 0.7071067811865476),
+        config_file_name="autel_perception_120x352"
+    )
+
+    lidar_lfr = LidarOmni(cfg_lidar=cfg_lfr)
     lidar_ubd = LidarOmni(cfg_lidar=cfg_ubd)
 
     # lidar_config = "autel_perception_120x352"
@@ -101,8 +107,8 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
     partial_ctx.pubs = pubs
     partial_ctx.subs = subs
     partial_ctx.srvs = srvs
-    partial_ctx.custom_step_fn = [lidar_lfr.wrapper(size=[352,120]), lidar_ubd.wrapper(size=[352,120])]
-    # partial_ctx.custom_step_fn = lidar.get_current_frame
+    partial_ctx.lidar_list = [lidar_lfr, lidar_ubd]
+    # partial_ctx.custom_step_fn = [lidar_lfr.wrapper(size=[352,120]), lidar_ubd.wrapper(size=[352,120])]
 
     print(f"Drone {namespace} set up with callbacks for:")
     print(

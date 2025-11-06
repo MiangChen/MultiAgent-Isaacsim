@@ -244,20 +244,27 @@ def run_simulation_loop_multi(
             ctx.pubs["collision"].publish(msg)
 
             # Custom step (LiDAR / perception)
-            if ctx.custom_step_fn is not None:
+            # if ctx.custom_step_fn is not None:
+            if ctx.lidar_list is not None:
                 # depths = ctx.custom_step_fn()
-                depths = ctx.custom_step_fn[0]()
-                if depths is not None:
-                    pc_LFR, pc_UBD = depth2pointclouds(depths, ctx.depth2pc_lut)
+                # depths_lfr = ctx.lidar_list[0].wrapper
+                # depths_ubd = ctx.custom_step_fn[1]()
+                # depths = np.stack([depths_lfr, depths_ubd], axis=0)
+                pc_LFR = ctx.lidar_list[0].get_pointcloud()
+                pc_UBD = ctx.lidar_list[1].get_pointcloud()
+
+                # if depths is not None:
+                #     pc_LFR, pc_UBD = depth2pointclouds(depths, ctx.depth2pc_lut)
+                #     pc_LFR =
                     # pc_LFR = ctx
-                    header = Header()
-                    header.stamp = t_now.to_msg()
+                header = Header()
+                header.stamp = t_now.to_msg()
 
-                    ctx.pubs["lfr_pc"].publish(create_pc2_msg(header, pc_LFR))
-                    ctx.pubs["ubd_pc"].publish(create_pc2_msg(header, pc_UBD))
+                ctx.pubs["lfr_pc"].publish(create_pc2_msg(header, pc_LFR))
+                ctx.pubs["ubd_pc"].publish(create_pc2_msg(header, pc_UBD))
 
-                    ctx.pubs["lfr_img"].publish(create_image_msg(header, depths[0]))
-                    ctx.pubs["ubd_img"].publish(create_image_msg(header, depths[1]))
+                ctx.pubs["lfr_img"].publish(create_image_msg(header, ctx.lidar_list[0].get_depth()))
+                ctx.pubs["ubd_img"].publish(create_image_msg(header, ctx.lidar_list[1].get_depth()))
 
         # ------------------------------------------------------------------
         # Viewer camera follow first drone (if GUI enabled)

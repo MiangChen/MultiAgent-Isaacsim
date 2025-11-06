@@ -123,20 +123,6 @@ class RobotDroneAutel:
         # sensor
         self.lidar = None
 
-        #
-        # self.node.register_feedback_publisher(
-        #     robot_class=self.cfg_robot.type,
-        #     robot_id=self.cfg_robot.id,
-        #     qos=50
-        # )
-        # self.node.register_motion_publisher(
-        #     robot_class=self.cfg_robot.type,
-        #     robot_id=self.cfg_robot.id,
-        #     qos=50
-        # )
-        #
-        # self.custom_step_fn = None  # 用于Lidar等传感器
-        # self._lidar_cfg_path = None
 
     def create_robot_entity(self, prim_path: str = None):
         """
