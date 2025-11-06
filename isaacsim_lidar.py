@@ -93,7 +93,6 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
     partial_ctx.subs = subs
     partial_ctx.srvs = srvs
     partial_ctx.lidar_list = [lidar_lfr, lidar_ubd]
-    # partial_ctx.custom_step_fn = [lidar_lfr.wrapper(size=[352,120]), lidar_ubd.wrapper(size=[352,120])]
 
     print(f"Drone {namespace} set up with callbacks for:")
     print(
