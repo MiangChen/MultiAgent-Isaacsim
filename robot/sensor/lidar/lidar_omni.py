@@ -3,11 +3,11 @@ import carb
 import numpy as np
 
 # Local project imports
-from physics_engine.omni_utils import omni
 from log.log_manager import LogManager
+from physics_engine.omni_utils import omni
+from physics_engine.pxr_utils import Gf
 from robot.cfg.cfg_robot import CfgRobot
 from robot.sensor.lidar.cfg_lidar import CfgLidar
-from physics_engine.pxr_utils import Gf
 
 logger = LogManager.get_logger(__name__)
 
@@ -21,14 +21,11 @@ class LidarOmni:
     def __init__(self, cfg_lidar: CfgLidar, cfg_robot: CfgRobot = None):
         self.cfg_lidar = cfg_lidar
         self.cfg_robot = cfg_robot
-        self.lidar = None
+        self.lidar = None  # 用于持有 LidarRtx 实例
         self.render_product = None
         self.annotator = None
         self._depth2pc_lut = None
-        self._depth = np.empty(
-            (self.cfg_lidar.output_size[0], self.cfg_lidar.output_size[1]),
-            dtype=np.float32,
-        )  # 存储lidar 的原始深度信息
+        self._depth = np.empty(self.cfg_lidar.output_size, dtype=np.float32)  # 存储lidar 的原始深度信息
 
         self.create_lidar()
 
@@ -109,7 +106,7 @@ class LidarOmni:
         self.get_depth()
 
         point_cloud = (
-            self._depth.reshape((self._depth.shape[0], self._depth.shape[1], 1))
-            * self._depth2pc_lut
+                self._depth.reshape((self._depth.shape[0], self._depth.shape[1], 1))
+                * self._depth2pc_lut
         )
         return point_cloud
