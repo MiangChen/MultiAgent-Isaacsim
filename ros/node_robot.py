@@ -149,25 +149,18 @@ class NodeRobot(Node):
             return result
 
     def get_skill_function(self, task_name):
-        """获取技能函数"""
-        from robot.skill.base.navigation.navigate_to import navigate_to_skill
-        from robot.skill.base.manipulation.pick_up import pick_up_skill
-        from robot.skill.base.manipulation.put_down import put_down_skill
-        from robot.skill.base.take_photo import take_photo
-        from robot.skill.base.object_detection import object_detection_skill
-        from robot.skill.drone.take_off.take_off import take_off
-        from robot.skill.base.exploration.explore import explore_skill
-        from robot.skill.base.track import track_skill
-
-        SKILL_TABLE = {
-            "navigation": navigate_to_skill,
-            "pickup": pick_up_skill,
-            "putdown": put_down_skill,
-            "take_photo": take_photo,
-            "object_detection": object_detection_skill,
-            "take_off": take_off,
-            "explore": explore_skill,
-            "track": track_skill,
-        }
-
-        return SKILL_TABLE.get(task_name)
+        """获取技能函数 - 使用SkillRegistry（支持按需导入）"""
+        from robot.skill.skill_registry import SkillRegistry
+        
+        # 获取机器人类型
+        robot_type = self.robot_instance.cfg_robot.type
+        
+        # 直接从SkillRegistry获取技能函数
+        skill_function = SkillRegistry.get_skill(robot_type, task_name)
+            
+        if skill_function is None:
+            logger.warning(f"Skill '{task_name}' not found for robot type '{robot_type}'")
+            logger.info(f"Available skills for {robot_type}: {SkillRegistry.get_skill_names_for_robot(robot_type)}")
+            logger.info(f"Available skill modules: {list(SkillRegistry.get_skill_module_mapping().keys())}")
+        
+        return skill_function

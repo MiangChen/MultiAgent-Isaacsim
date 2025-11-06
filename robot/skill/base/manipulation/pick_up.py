@@ -6,12 +6,13 @@ import torch
 from log.log_manager import LogManager
 from physics_engine.isaacsim_utils import RigidPrim
 from physics_engine.pxr_utils import UsdPhysics, Gf
+from robot.skill.skill_registry import SkillRegistry
 
 from gsi_msgs.gsi_msgs_helper import Parameter
 
 logger = LogManager.get_logger(__name__)
 
-
+@SkillRegistry.register(['jetbot', 'g1', 'h1', 'cf2x'])
 def pick_up_skill(**kwargs):
     robot = kwargs.get("robot")
     skill_name = "pick_up_skill"

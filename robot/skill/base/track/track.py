@@ -1,5 +1,7 @@
-import json
 import functools
+
+from robot.skill.skill_registry import SkillRegistry
+
 from action_msgs.msg import GoalStatus
 from builtin_interfaces.msg import Time
 from geometry_msgs.msg import PoseStamped
@@ -7,6 +9,7 @@ from nav2_msgs.action import ComputePathToPose
 from nav_msgs.msg import Odometry
 
 
+@SkillRegistry.register(['jetbot', 'g1', 'h1', 'cf2x'])
 def track_callback(robot, msg):
     pos = (
         msg.pose.pose.position.x,

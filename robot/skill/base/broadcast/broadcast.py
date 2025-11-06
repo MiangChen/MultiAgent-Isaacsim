@@ -1,9 +1,9 @@
-from typing import Dict, Any
 from log.log_manager import LogManager
+from robot.skill.skill_registry import SkillRegistry
 
 logger = LogManager.get_logger(__name__)
 
-
+@SkillRegistry.register(['jetbot', 'g1', 'h1', 'cf2x'])
 def broadcast(**kwargs):
     robot = kwargs.get("robot")
     skill_name = "broadcast_skill"

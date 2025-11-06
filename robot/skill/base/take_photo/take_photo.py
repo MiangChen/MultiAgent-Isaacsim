@@ -1,3 +1,6 @@
+from robot.skill.skill_registry import SkillRegistry
+
+@SkillRegistry.register(['jetbot', 'g1', 'h1', 'cf2x'])
 def take_photo(**kwargs):
     """拍照技能 - 使用字典化状态管理"""
     robot = kwargs.get("robot")

@@ -1,10 +1,12 @@
 import json
 from robot.skill.base.navigation.navigate_to import navigate_to_skill
+from robot.skill.skill_registry import SkillRegistry
 from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
 
 
+@SkillRegistry.auto_register()
 def take_off(**kwargs):
     """无人机起飞技能 - 使用字典化状态管理"""
     robot = kwargs.get("robot")
