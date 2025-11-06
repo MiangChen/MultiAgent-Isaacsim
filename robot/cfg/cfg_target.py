@@ -18,7 +18,7 @@ class CfgTarget(CfgRobot):
     path_prim_swarm: str = "/World/target"
     path_prim_robot: str = "/World/robot/car1"
     path_usd: str = (
-            ASSET_PATH + "/Isaac/Robots/Jetbot/jetbot.usd"
+        ASSET_PATH + "/Isaac/Robots/Jetbot/jetbot.usd"
     )  # 先用jetbot的模型来当目标
     robot_radius: float = 0.2
     # 起点-中点-终点-起点 的循环运动来躲避追踪

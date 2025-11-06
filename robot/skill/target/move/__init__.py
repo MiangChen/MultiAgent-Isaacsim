@@ -1,4 +1,5 @@
-from.move import move
+from .move import move
+
 __all__ = [
     "move",
 ]

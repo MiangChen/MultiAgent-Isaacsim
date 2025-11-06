@@ -40,7 +40,7 @@ class Camera:
         self.cfg_camera.name = self.cfg_camera.type + "_" + str(self.cfg_camera.id)
         if self.cfg_camera.use_existing_camera == True:
             self.cfg_camera.path_prim_absolute = (
-                    self.path_prim_parent + self.cfg_camera.path_prim_relative_to_robot
+                self.path_prim_parent + self.cfg_camera.path_prim_relative_to_robot
             )
             self.camera = IsaacCamera(
                 prim_path=self.cfg_camera.path_prim_absolute,
@@ -55,10 +55,10 @@ class Camera:
             )
         else:
             self.cfg_camera.path_prim_absolute = (
-                    self.path_prim_parent
-                    + self.cfg_camera.path_prim_relative_to_robot
-                    + "/"
-                    + self.cfg_camera.name
+                self.path_prim_parent
+                + self.cfg_camera.path_prim_relative_to_robot
+                + "/"
+                + self.cfg_camera.name
             )
 
             self.camera = IsaacCamera(
@@ -91,10 +91,10 @@ class Camera:
             self.camera.add_bounding_box_2d_loose_to_frame()
 
     def set_local_pose(
-            self,
-            translation: Sequence[float] = None,
-            orientation: Sequence[float] = None,
-            camera_axes: str = "usd",
+        self,
+        translation: Sequence[float] = None,
+        orientation: Sequence[float] = None,
+        camera_axes: str = "usd",
     ) -> None:
         self.camera.set_local_pose(
             translation=translation, orientation=orientation, camera_axes=camera_axes
@@ -131,9 +131,7 @@ class Camera:
     def get_world_pose(self, camera_axes: str = "usd") -> Tuple[np.ndarray, np.ndarray]:
         return self.camera.get_world_pose(camera_axes=camera_axes)
 
-    def save_rgb_to_file(
-            self, rgb: np.ndarray, file_path: str = None
-    ) -> str:
+    def save_rgb_to_file(self, rgb: np.ndarray, file_path: str = None) -> str:
         """
         保存RGB图像到文件
 
@@ -150,7 +148,7 @@ class Camera:
                 else:
                     rgb = rgb.astype(np.uint8)
 
-            Image.fromarray(rgb, 'RGB').save(file_path)
+            Image.fromarray(rgb, "RGB").save(file_path)
 
             return f"图像已成功保存到: {file_path}"
         except Exception as e:

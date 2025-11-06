@@ -31,7 +31,7 @@ def _init_object_detection(robot, skill_name, kwargs):
         robot.skill_states[skill_name] = "INITIALIZING"
 
         # 检查相机是否可用
-        if not hasattr(robot, 'camera_dict') or camera_name not in robot.camera_dict:
+        if not hasattr(robot, "camera_dict") or camera_name not in robot.camera_dict:
             robot.skill_states[skill_name] = "FAILED"
             robot.skill_errors[skill_name] = "Semantic camera is not available."
             return
@@ -41,7 +41,9 @@ def _init_object_detection(robot, skill_name, kwargs):
 
     except Exception as e:
         robot.skill_states[skill_name] = "FAILED"
-        robot.skill_errors[skill_name] = f"Object detection initialization failed: {str(e)}"
+        robot.skill_errors[skill_name] = (
+            f"Object detection initialization failed: {str(e)}"
+        )
 
 
 def _handle_executing(robot, skill_name):
@@ -75,8 +77,11 @@ def _handle_executing(robot, skill_name):
 
 def _handle_completed(robot, skill_name):
     """处理完成状态"""
-    detection_result = robot.get_skill_data(skill_name, "detection_result",
-                                            {"success": False, "message": "no detection result", "data": None})
+    detection_result = robot.get_skill_data(
+        skill_name,
+        "detection_result",
+        {"success": False, "message": "no detection result", "data": None},
+    )
     return robot.form_feedback("completed", detection_result, 100)
 
 

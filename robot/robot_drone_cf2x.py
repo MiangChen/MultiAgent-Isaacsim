@@ -85,7 +85,9 @@ class RobotCf2x(Robot):
         self.nav_slow_radius = 3.0  # 减速起始半径（m）
         self.nav_stop_radius = 0.30  # 到点判定半径（m）
         if self.cfg_robot.disable_gravity:
-            self.scene_manager.disable_gravity_for_hierarchy(self.cfg_robot.path_prim_robot)
+            self.scene_manager.disable_gravity_for_hierarchy(
+                self.cfg_robot.path_prim_robot
+            )
 
     def initialize(self):
         """初始化无人机"""

@@ -6,7 +6,7 @@ logger = LogManager.get_logger(__name__)
 def detect_skill(**kwargs):
     robot = kwargs.get("robot")
     skill_name = "detect_skill"
-    
+
     current_state = robot.skill_states.get(skill_name)
 
     # 初始化状态机（只在第一次调用时执行）
@@ -27,10 +27,10 @@ def detect_skill(**kwargs):
 def _init_detect(robot, skill_name, kwargs):
     """初始化检测技能"""
     target_prim = kwargs.get("target_prim")
-    
+
     # 存储参数到技能私有数据
     robot.set_skill_data(skill_name, "target_prim", target_prim)
-    
+
     robot.skill_states[skill_name] = "INITIALIZING"
 
 
@@ -39,7 +39,7 @@ def _handle_initializing(robot, skill_name):
     try:
         # 获取参数
         target_prim = robot.get_skill_data(skill_name, "target_prim")
-        
+
         # 检查目标对象
         if not target_prim:
             robot.skill_states[skill_name] = "FAILED"
@@ -47,13 +47,13 @@ def _handle_initializing(robot, skill_name):
             return robot.form_feedback("failed", robot.skill_errors[skill_name])
 
         # 检查机器人身体组件
-        if not hasattr(robot, 'body') or robot.body is None:
+        if not hasattr(robot, "body") or robot.body is None:
             robot.skill_states[skill_name] = "FAILED"
             robot.skill_errors[skill_name] = "Robot body is not available."
             return robot.form_feedback("failed", robot.skill_errors[skill_name])
 
         # 检查场景管理器
-        if not hasattr(robot, 'scene_manager') or robot.scene_manager is None:
+        if not hasattr(robot, "scene_manager") or robot.scene_manager is None:
             robot.skill_states[skill_name] = "FAILED"
             robot.skill_errors[skill_name] = "Scene manager is not available."
             return robot.form_feedback("failed", robot.skill_errors[skill_name])
@@ -73,7 +73,7 @@ def _handle_executing(robot, skill_name):
     try:
         # 获取存储的数据
         target_prim = robot.get_skill_data(skill_name, "target_prim")
-        
+
         # 获取机器人当前位置
         pos, quat = robot.body.get_world_pose()
 
@@ -90,7 +90,7 @@ def _handle_executing(robot, skill_name):
         detection_result_data = {
             "success": True,
             "message": f"Detection completed for {target_prim}",
-            "data": detection_result
+            "data": detection_result,
         }
         robot.set_skill_data(skill_name, "detection_result", detection_result_data)
 
@@ -105,7 +105,11 @@ def _handle_executing(robot, skill_name):
 
 def _handle_completed(robot, skill_name):
     """处理完成状态"""
-    result = robot.get_skill_data(skill_name, "detection_result", {"success": False, "message": "Unknown result", "data": None})
+    result = robot.get_skill_data(
+        skill_name,
+        "detection_result",
+        {"success": False, "message": "Unknown result", "data": None},
+    )
     return robot.form_feedback("completed", result["message"], 100)
 
 

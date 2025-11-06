@@ -57,7 +57,10 @@ def _handle_idle(robot, skill_name):
 
     robot.set_skill_data(skill_name, "path_index", path_index)
 
-    return robot.form_feedback("processing", f"Target starting moving to {goal_pos}", 10)
+    return robot.form_feedback(
+        "processing", f"Target starting moving to {goal_pos}", 10
+    )
+
 
 def _start_navigation_to_waypoint(robot, skill_name, goal_pos):
     """开始导航到指定航点"""
@@ -109,7 +112,9 @@ def _handle_initializing(robot, skill_name):
             goal_handle = move_nav_send_future.result()
             if goal_handle.accepted:
                 move_nav_result_future = goal_handle.get_result_async()
-                robot.set_skill_data(skill_name, "move_nav_result_future", move_nav_result_future)
+                robot.set_skill_data(
+                    skill_name, "move_nav_result_future", move_nav_result_future
+                )
                 robot.set_skill_data(skill_name, "move_nav_goal_handle", goal_handle)
                 return robot.form_feedback("processing", "Planning path...", 15)
             else:
@@ -137,7 +142,9 @@ def _handle_initializing(robot, skill_name):
     else:
         elapsed = robot.sim_time - move_nav_start_time
         if elapsed > 15.0:
-            move_nav_goal_handle = robot.get_skill_data(skill_name, "move_nav_goal_handle")
+            move_nav_goal_handle = robot.get_skill_data(
+                skill_name, "move_nav_goal_handle"
+            )
             if move_nav_goal_handle:
                 move_nav_goal_handle.cancel_goal_async()
             robot.skill_states[skill_name] = "FAILED"
@@ -152,7 +159,9 @@ def _handle_executing(robot, skill_name):
         robot.skill_states[skill_name] = "COMPLETED"
         return robot.form_feedback("processing", "Executing...", 50)
     else:
-        move_nav_start_time = robot.get_skill_data(skill_name, "move_nav_start_time", robot.sim_time)
+        move_nav_start_time = robot.get_skill_data(
+            skill_name, "move_nav_start_time", robot.sim_time
+        )
         path_index = robot.get_skill_data(skill_name, "path_index", 0)
 
         elapsed = robot.sim_time - move_nav_start_time
@@ -162,7 +171,11 @@ def _handle_executing(robot, skill_name):
         else:
             progress = min(50 + (elapsed / 120.0) * 45, 95)
             waypoint_info = f"to waypoint {path_index}"
-            return robot.form_feedback("processing", f"Moving {waypoint_info}... ({elapsed:.1f}s)", int(progress))
+            return robot.form_feedback(
+                "processing",
+                f"Moving {waypoint_info}... ({elapsed:.1f}s)",
+                int(progress),
+            )
 
     return robot.form_feedback("processing", "Executing...", 50)
 
@@ -176,7 +189,9 @@ def _handle_completed(robot, skill_name):
     robot.set_skill_data(skill_name, "path_index", path_index + 1)
     _cleanup_move_navigation(robot, skill_name)
     robot.skill_states[skill_name] = "IDLE"  # 回到IDLE状态，检查是否有下一个航点
-    return robot.form_feedback("processing", f"Reached waypoint, checking for next...", 50)
+    return robot.form_feedback(
+        "processing", f"Reached waypoint, checking for next...", 50
+    )
 
 
 def _handle_failed(robot, skill_name):
@@ -212,7 +227,7 @@ def _cleanup_move_navigation(robot, skill_name):
         "move_nav_send_future",
         "move_nav_result_future",
         "move_nav_goal_handle",
-        "move_nav_start_time"
+        "move_nav_start_time",
     ]
     for key in nav_keys_to_remove:
         robot.set_skill_data(skill_name, key, None)

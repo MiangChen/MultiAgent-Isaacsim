@@ -120,7 +120,7 @@ class NodeTrajectoryGenerator(Node):
         return np.column_stack((np.array(positions), unwrapped_yaw_angles))
 
     def _generate_trajectory_with_toppra(
-            self, path_points: np.ndarray
+        self, path_points: np.ndarray
     ) -> Dict[str, Any]:
         """Generates a trajectory using toppra for a given 4D path."""
         ss = np.zeros(len(path_points))
@@ -191,7 +191,7 @@ class NodeTrajectoryGenerator(Node):
         }
 
     def _convert_to_joint_trajectory_msg(
-            self, traj_data: Dict, frame_id: str
+        self, traj_data: Dict, frame_id: str
     ) -> JointTrajectory:
         """Converts the toppra output dictionary into a JointTrajectory message."""
         traj_msg = JointTrajectory()

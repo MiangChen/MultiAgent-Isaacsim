@@ -50,7 +50,9 @@ class FisheyeTRTProcessor:
             self.logger.info(f"TensorRT engine loaded successfully from {engine_file}")
 
         except Exception as e:
-            self.logger.error(f"Failed to load TensorRT engine from {engine_file}: {repr(e)}")
+            self.logger.error(
+                f"Failed to load TensorRT engine from {engine_file}: {repr(e)}"
+            )
             raise e
 
         trt_to_torch_dtype_dict = {

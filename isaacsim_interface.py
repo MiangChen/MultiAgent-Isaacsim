@@ -706,6 +706,7 @@ def add_drone_cameras(curr_stage, rig_comps: list[CamRigComponent]):
 
     return gimbal_prim
 
+
 from physics_engine.isaacsim_simulation_app import create_clock_graph
 
 

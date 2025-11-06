@@ -56,6 +56,7 @@ logger = LogManager.get_logger(__name__)
 def _get_viewport_manager_from_container():
     try:
         from containers import get_container
+
         container = get_container()
         return container.viewport_manager()
     except Exception as e:
@@ -64,9 +65,9 @@ def _get_viewport_manager_from_container():
 
 class Robot:
     def __init__(
-            self,
-            scene: Scene = None,
-            scene_manager: SceneManager = None,
+        self,
+        scene: Scene = None,
+        scene_manager: SceneManager = None,
     ):
 
         self.cfg_dict_camera = self.cfg_robot.cfg_dict_camera
@@ -78,9 +79,9 @@ class Robot:
         self.scene_manager = scene_manager
         self.viewport_manager = _get_viewport_manager_from_container()
         self.cfg_robot.path_prim_robot = (
-                self.cfg_robot.path_prim_swarm
-                + f"/{self.cfg_robot.type}"
-                + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
+            self.cfg_robot.path_prim_swarm
+            + f"/{self.cfg_robot.type}"
+            + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
         )
         self.cfg_robot.namespace = self.cfg_robot.type + f"_{self.cfg_robot.id}"
         self.namespace = self.cfg_robot.namespace
@@ -102,14 +103,26 @@ class Robot:
         self.sim_time = 0.0
 
         # 字典化的技能管理 - 以函数名为key
-        self.skill_states = {}  # {"navigate_to_skill": "EXECUTING", "take_off_skill": "COMPLETED", ...}
-        self.skill_functions = {}  # {"navigate_to_skill": navigate_to_skill, "take_off_skill": take_off_skill, ...}
-        self.skill_params = {}  # {"navigate_to_skill": {...params...}, "take_off_skill": {...params...}, ...}
-        self.skill_errors = {}  # {"navigate_to_skill": "error_message", "take_off_skill": None, ...}
-        self.skill_feedbacks = {}  # {"navigate_to_skill": {...feedback...}, "take_off_skill": {...feedback...}, ...}
+        self.skill_states = (
+            {}
+        )  # {"navigate_to_skill": "EXECUTING", "take_off_skill": "COMPLETED", ...}
+        self.skill_functions = (
+            {}
+        )  # {"navigate_to_skill": navigate_to_skill, "take_off_skill": take_off_skill, ...}
+        self.skill_params = (
+            {}
+        )  # {"navigate_to_skill": {...params...}, "take_off_skill": {...params...}, ...}
+        self.skill_errors = (
+            {}
+        )  # {"navigate_to_skill": "error_message", "take_off_skill": None, ...}
+        self.skill_feedbacks = (
+            {}
+        )  # {"navigate_to_skill": {...feedback...}, "take_off_skill": {...feedback...}, ...}
 
         # 技能私有数据存储
-        self.skill_data = {}  # {"navigate_to_skill": {...private_data...}, "take_off_skill": {...private_data...}, ...}
+        self.skill_data = (
+            {}
+        )  # {"navigate_to_skill": {...private_data...}, "take_off_skill": {...private_data...}, ...}
 
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
@@ -215,6 +228,7 @@ class Robot:
             self.ros_thread.start()
             logger.info(f"Robot {self.namespace} ROS thread started")
             import time
+
             time.sleep(0.1)
 
     def _spin_ros(self):
@@ -232,7 +246,9 @@ class Robot:
             self.stop_event.set()
             self.ros_thread.join(timeout=2.0)
             if self.ros_thread.is_alive():
-                logger.warning(f"Robot {self.namespace} ROS thread did not stop gracefully")
+                logger.warning(
+                    f"Robot {self.namespace} ROS thread did not stop gracefully"
+                )
 
     def cleanup(self):
         self.stop_ros()
@@ -269,7 +285,7 @@ class Robot:
         #     self._initialize_third_person_camera()
 
     def form_feedback(
-            self, status: str = "processing", message: str = "none", progress: int = 100
+        self, status: str = "processing", message: str = "none", progress: int = 100
     ) -> Dict[str, Any]:
         return dict(
             status=str(status),
@@ -324,7 +340,7 @@ class Robot:
     def start_skill(self, skill_function: callable, **params):
         """启动技能 - 使用函数名作为技能标识"""
         skill_name = skill_function.__name__
-        params['robot'] = self
+        params["robot"] = self
 
         self.skill_params[skill_name] = params
         self.skill_states[skill_name] = None
@@ -334,7 +350,6 @@ class Robot:
         self.skill_functions[skill_name] = skill_function
 
         return skill_name
-
 
     def _cleanup_skill(self, skill_name: str):
         """内部清理方法"""
@@ -369,14 +384,14 @@ class Robot:
         if self.is_detecting:
             detect_skill(self, self.target_prim)
         if (
-                self.is_tracking
-                and self.node_controller_mpc.has_reached_goal
-                and self.track_waypoint_index < len(self.track_waypoint_list)
+            self.is_tracking
+            and self.node_controller_mpc.has_reached_goal
+            and self.track_waypoint_index < len(self.track_waypoint_list)
         ):
             self.skill_function = navigate_to_skill
             self.skill_params = {
                 "robot": self,
-                "goal_pos": self.track_waypoint_list[self.track_waypoint_index]
+                "goal_pos": self.track_waypoint_list[self.track_waypoint_index],
             }
             self.track_waypoint_index += 1
 
@@ -440,7 +455,7 @@ class Robot:
 
             # 2. 计算相机的位置 (eye) 和目标位置 (target)
             camera_eye_position = (
-                    robot_position + self.relative_camera_pos + self.transform_camera_pos
+                robot_position + self.relative_camera_pos + self.transform_camera_pos
             )
             camera_target_position = robot_position
 
@@ -472,4 +487,3 @@ class Robot:
     def update_sim_time(self, sim_time):
         """更新仿真时间"""
         self.sim_time = sim_time
-

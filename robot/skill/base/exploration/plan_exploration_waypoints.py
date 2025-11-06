@@ -11,7 +11,9 @@ def plan_exploration_waypoints_skill(**kwargs):
 
     # 插值参数
     interpolation_distance = kwargs.get("interpolation_distance", 0.05)  # 5cm
-    interpolation_method = kwargs.get("interpolation_method", "linear")  # linear, spline, adaptive
+    interpolation_method = kwargs.get(
+        "interpolation_method", "linear"
+    )  # linear, spline, adaptive
 
     import numpy as np
     from shapely.geometry import Polygon, LineString, MultiLineString
@@ -131,7 +133,7 @@ def plan_exploration_waypoints_skill(**kwargs):
     interpolated_2d = interpolate_path_with_fixed_distance(
         simplified_2d,
         target_distance=interpolation_distance,
-        method=interpolation_method
+        method=interpolation_method,
     )
 
     # ---- 7) 构造 Path 消息（z = z_out，默认 0；朝向为单位四元数）----

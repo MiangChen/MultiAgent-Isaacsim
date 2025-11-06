@@ -36,18 +36,18 @@ class NodeRobot(Node):
             action_name=f"skill_execution",
             execute_callback=self.execute_callback_wrapper,
         )
-        
 
         self.subscriber_sim_clock = self.create_subscription(
             Clock, "/isaacsim_simulation_clock", self.callback_sim_clock, 10
         )
-        
+
         logger.info(f"ROS2 Node for {self.namespace} has been created.")
 
     def callback_cmd_vel(self, msg):
         linear_vel = [msg.linear.x, msg.linear.y, msg.linear.z]
         angular_vel = [msg.angular.x, msg.angular.y, msg.angular.z]
         self.robot_instance.set_velocity_command(linear_vel, angular_vel)
+
     def callback_sim_clock(self, msg: Clock):
         sim_time = msg.clock.sec + msg.clock.nanosec / 1e9
         self.robot_instance.update_sim_time(sim_time)
@@ -69,7 +69,9 @@ class NodeRobot(Node):
         skill_function = self.get_skill_function(task_name)
         if skill_function is None:
             goal_handle.abort()
-            return SkillExecution.Result(success=False, message=f"未知技能: {task_name}")
+            return SkillExecution.Result(
+                success=False, message=f"未知技能: {task_name}"
+            )
 
         # 启动技能
         skill_name = self.robot_instance.start_skill(skill_function, **params)
@@ -82,7 +84,9 @@ class NodeRobot(Node):
         # 循环监控skill执行状态并发送feedback
         import time
 
-        while skill_name in self.robot_instance.skill_functions and goal_handle.is_active:
+        while (
+            skill_name in self.robot_instance.skill_functions and goal_handle.is_active
+        ):
             # 获取技能状态
             skill_state = self.robot_instance.skill_states.get(skill_name, "UNKNOWN")
             skill_error = self.robot_instance.skill_errors.get(skill_name)
@@ -109,10 +113,7 @@ class NodeRobot(Node):
 
         # 创建ROS2 action result
         success = final_status in ["finished", "completed"]
-        result = SkillExecution.Result(
-            success=success,
-            message=final_message
-        )
+        result = SkillExecution.Result(success=success, message=final_message)
 
         if success:
             goal_handle.succeed()
@@ -120,7 +121,6 @@ class NodeRobot(Node):
         else:
             goal_handle.abort()
             return result
-
 
     def get_skill_function(self, task_name):
         """获取技能函数"""

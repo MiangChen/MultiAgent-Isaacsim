@@ -19,25 +19,28 @@ import casadi as ca
 
 # from utils.threading_event import FeedbackEvent
 
+
 class SimpleEvent:
     """简单的事件状态管理，不需要线程安全"""
+
     def __init__(self):
         self._is_set = False
         self._value = None
-    
+
     def set(self, value=None):
         self._is_set = True
         self._value = value
-    
+
     def clear(self):
         self._is_set = False
         self._value = None
-    
+
     def is_set(self):
         return self._is_set
-    
+
     def get_value(self):
         return self._value
+
 
 # ROS2 imports
 import rclpy

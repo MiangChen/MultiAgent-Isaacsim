@@ -10,7 +10,9 @@
 try:
     import pydevd_pycharm
 
-    pydevd_pycharm.settrace('localhost', port=12345, stdout_to_server=True, stderr_to_server=True)
+    pydevd_pycharm.settrace(
+        "localhost", port=12345, stdout_to_server=True, stderr_to_server=True
+    )
 except Exception as e:
     print(f"no pydevd found: {repr(e)}")
 ##########################################################################################################################
@@ -57,19 +59,19 @@ def build_drone_ctx(namespace: str, idx: int, scene_manager):
     from robot.sensor.lidar.cfg_lidar import CfgLidar
 
     cfg_lfr = CfgLidar(
-        name='lfr',
-        prim_path=prim_path + '/lfr',
+        name="lfr",
+        prim_path=prim_path + "/lfr",
         output_size=(352, 120),
         quat=(1, 0, 0, 0),
-        config_file_name="autel_perception_120x352"
+        config_file_name="autel_perception_120x352",
     )
 
     cfg_ubd = CfgLidar(
-        name='ubd',
-        prim_path=prim_path + '/ubd',
+        name="ubd",
+        prim_path=prim_path + "/ubd",
         output_size=(352, 120),
         quat=(0, 0, 0.7071067811865476, 0.7071067811865476),
-        config_file_name="autel_perception_120x352"
+        config_file_name="autel_perception_120x352",
     )
 
     lidar_lfr = LidarOmni(cfg_lidar=cfg_lfr)

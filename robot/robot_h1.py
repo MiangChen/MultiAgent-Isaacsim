@@ -63,7 +63,9 @@ class RobotH1(Robot):
         )
         self.body = BodyH1(cfg_robot=self.cfg_robot, scene=self.scene)
         if self.cfg_robot.disable_gravity:
-            self.scene_manager.disable_gravity_for_hierarchy(self.cfg_robot.path_prim_robot)
+            self.scene_manager.disable_gravity_for_hierarchy(
+                self.cfg_robot.path_prim_robot
+            )
 
     @classmethod
     async def create(

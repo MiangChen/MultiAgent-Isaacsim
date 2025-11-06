@@ -29,7 +29,7 @@ from isaacsim.core.api.controllers import BaseController
 from isaacsim.core.api.objects import cuboid, sphere
 from isaacsim.core.api.objects import (
     VisualCuboid,
-    VisualCylinder, 
+    VisualCylinder,
     VisualSphere,
     DynamicCuboid,
     DynamicSphere,

@@ -11,6 +11,7 @@
 
 # Standard library imports
 import matplotlib
+
 matplotlib.use("TkAgg")
 
 # Third-party library imports

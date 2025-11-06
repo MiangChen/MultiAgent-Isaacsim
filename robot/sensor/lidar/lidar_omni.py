@@ -25,8 +25,10 @@ class LidarOmni:
         self.render_product = None
         self.annotator = None
         self._depth2pc_lut = None
-        self._depth = np.empty((self.cfg_lidar.output_size[0], self.cfg_lidar.output_size[1]),
-                               dtype=np.float32)  # 存储lidar 的原始深度信息
+        self._depth = np.empty(
+            (self.cfg_lidar.output_size[0], self.cfg_lidar.output_size[1]),
+            dtype=np.float32,
+        )  # 存储lidar 的原始深度信息
 
         self.create_lidar()
 
@@ -106,5 +108,8 @@ class LidarOmni:
             self._depth2pc_lut = self.create_depth2pc_lut()
         self.get_depth()
 
-        point_cloud = self._depth.reshape((self._depth.shape[0], self._depth.shape[1], 1)) * self._depth2pc_lut
+        point_cloud = (
+            self._depth.reshape((self._depth.shape[0], self._depth.shape[1], 1))
+            * self._depth2pc_lut
+        )
         return point_cloud

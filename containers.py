@@ -66,7 +66,9 @@ class AppContainer(containers.DeclarativeContainer):
     )
 
     ros_manager = providers.Singleton(
-        RosManager, loop=loop, config=config.provided["ros"],
+        RosManager,
+        loop=loop,
+        config=config.provided["ros"],
     )
 
     scene_manager = providers.Singleton(SceneManager, world=world)

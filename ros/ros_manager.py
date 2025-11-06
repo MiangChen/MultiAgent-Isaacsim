@@ -23,7 +23,11 @@ logger = LogManager.get_logger(__name__)
 
 
 class RosManager:
-    def __init__(self, loop=None, config: dict = None, ):
+    def __init__(
+        self,
+        loop=None,
+        config: dict = None,
+    ):
         self.config = config if config is not None else {}
         self.executor = MultiThreadedExecutor()
         self.loop = loop
@@ -71,7 +75,9 @@ class RosManager:
                 if n and self.executor:
                     self.executor.remove_node(n)
                     n.destroy_node()
-            logger.info("ROS manager executor stopped (rclpy context preserved for robots).")
+            logger.info(
+                "ROS manager executor stopped (rclpy context preserved for robots)."
+            )
 
     def stop(self):
         """停止ROS线程"""

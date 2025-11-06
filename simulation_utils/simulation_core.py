@@ -97,10 +97,10 @@ def update_viewer_camera(curr_stage):
             # Position camera behind the drone
             camera_pos = drone_pos_np.copy()
             camera_pos[0] += (
-                    forward_x * offset_distance
+                forward_x * offset_distance
             )  # Move camera back relative to drone heading
             camera_pos[1] += (
-                    forward_y * offset_distance
+                forward_y * offset_distance
             )  # Move camera back relative to drone heading
             camera_pos[2] += height_offset  # Move camera up in Z direction
 
@@ -121,11 +121,11 @@ def update_viewer_camera(curr_stage):
 
 
 def run_simulation_loop_multi(
-        simulation_app,
-        drone_ctxs: list[RobotDroneAutel],
-        semantic_camera,
-        semantic_camera_prim_path,
-        semantic_map,
+    simulation_app,
+    drone_ctxs: list[RobotDroneAutel],
+    semantic_camera,
+    semantic_camera_prim_path,
+    semantic_map,
 ):
     """Simulation loop that handles *multiple* DroneSimCtx objects.
 
@@ -244,8 +244,12 @@ def run_simulation_loop_multi(
                 ctx.pubs["lfr_pc"].publish(create_pc2_msg(header, pc_LFR))
                 ctx.pubs["ubd_pc"].publish(create_pc2_msg(header, pc_UBD))
 
-                ctx.pubs["lfr_img"].publish(create_image_msg(header, ctx.lidar_list[0].get_depth()))
-                ctx.pubs["ubd_img"].publish(create_image_msg(header, ctx.lidar_list[1].get_depth()))
+                ctx.pubs["lfr_img"].publish(
+                    create_image_msg(header, ctx.lidar_list[0].get_depth())
+                )
+                ctx.pubs["ubd_img"].publish(
+                    create_image_msg(header, ctx.lidar_list[1].get_depth())
+                )
 
         # ------------------------------------------------------------------
         # Viewer camera follow first drone (if GUI enabled)

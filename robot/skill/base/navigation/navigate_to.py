@@ -1,6 +1,7 @@
 import json
 
 from log.log_manager import LogManager
+
 logger = LogManager().get_logger(__name__)
 
 # ROS2 Message
@@ -13,7 +14,7 @@ from nav2_msgs.action import ComputePathToPose
 def navigate_to_skill(**kwargs):
     robot = kwargs.get("robot")
     skill_name = "navigate_to_skill"  # 直接使用函数名
-    
+
     current_state = robot.skill_states.get(skill_name)
 
     # 初始化状态机（只在第一次调用时执行）
@@ -79,18 +80,17 @@ def _init_navigation(robot, skill_name, kwargs):
     # 发送规划请求
     nav_send_future = robot.action_client_path_planner.send_goal_async(goal_msg)
     nav_start_time = robot.sim_time
-    
+
     # 存储导航状态到技能私有数据
     robot.set_skill_data(skill_name, "nav_send_future", nav_send_future)
     robot.set_skill_data(skill_name, "nav_start_time", nav_start_time)
 
-
     """处理初始化状态 - 检查路径规划结果"""
     nav_send_future = robot.get_skill_data(skill_name, "nav_send_future")
     nav_start_time = robot.get_skill_data(skill_name, "nav_start_time")
-    
+
     nav_result_future = robot.get_skill_data(skill_name, "nav_result_future")
-    
+
     if nav_result_future is None:
         if nav_send_future.done():
             goal_handle = nav_send_future.result()
@@ -130,7 +130,6 @@ def _init_navigation(robot, skill_name, kwargs):
             robot.skill_states[skill_name] = "FAILED"
             robot.skill_errors[skill_name] = "Planning timeout"
 
-
     return robot.form_feedback("processing", "Planning path...", 30)
 
 
@@ -147,7 +146,9 @@ def _handle_executing(robot, skill_name):
             robot.skill_errors[skill_name] = "Navigation timeout"
         else:
             progress = min(50 + (elapsed / 120.0) * 45, 95)
-            return robot.form_feedback("processing", f"Moving... ({elapsed:.1f}s)", int(progress))
+            return robot.form_feedback(
+                "processing", f"Moving... ({elapsed:.1f}s)", int(progress)
+            )
 
     return robot.form_feedback("processing", "Executing...", 50)
 

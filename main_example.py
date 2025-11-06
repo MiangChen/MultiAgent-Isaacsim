@@ -11,7 +11,9 @@
 try:
     import pydevd_pycharm
 
-    pydevd_pycharm.settrace('localhost', port=12345, stdout_to_server=True, stderr_to_server=True)
+    pydevd_pycharm.settrace(
+        "localhost", port=12345, stdout_to_server=True, stderr_to_server=True
+    )
 except Exception as e:
     print(f"no pydevd found: {repr(e)}")
 ###################################################################################################################
@@ -55,10 +57,10 @@ PROJECT_ROOT = config_manager.get("project_root")
 
 @inject
 def setup_simulation(
-        swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
-        env: Env = Provide[AppContainer.env],
-        world: World = Provide[AppContainer.world],
-        loop: asyncio.AbstractEventLoop = Provide[AppContainer.loop],
+    swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
+    env: Env = Provide[AppContainer.env],
+    world: World = Provide[AppContainer.world],
+    loop: asyncio.AbstractEventLoop = Provide[AppContainer.loop],
 ) -> None:
     """
     Setup simulation environment with injected dependencies.
@@ -180,7 +182,9 @@ def create_car_objects(scene_manager: SceneManager, map_semantic: MapSemantic) -
     return created_prim_paths
 
 
-def process_semantic_detection(semantic_camera, map_semantic: MapSemantic, target_semantic_class: str) -> None:
+def process_semantic_detection(
+    semantic_camera, map_semantic: MapSemantic, target_semantic_class: str
+) -> None:
     """
     Process semantic detection and car pose extraction using injected dependencies.
 
@@ -195,7 +199,8 @@ def process_semantic_detection(semantic_camera, map_semantic: MapSemantic, targe
             print("get bounding box 2d loose", result)
             if result:
                 prim_target, target_pose = map_semantic.get_prim_and_pose_by_semantic(
-                    result, target_semantic_class=target_semantic_class,
+                    result,
+                    target_semantic_class=target_semantic_class,
                 )
                 if prim_target is not None and target_pose is not None:
                     print("get car prim and pose\n", prim_target, "\n", target_pose)
@@ -331,6 +336,7 @@ def main():
 
     # wait for node planner ompl to receive message
     import time
+
     time.sleep(2)
 
     result = True

@@ -123,7 +123,6 @@ class RobotDroneAutel:
         # sensor
         self.lidar = None
 
-
     def create_robot_entity(self, prim_path: str = None):
         """
         内部辅助函数，负责创建无人机的程序化视觉模型。

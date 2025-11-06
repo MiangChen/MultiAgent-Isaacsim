@@ -26,6 +26,7 @@ from physics_engine.pxr_utils import Usd
 
 logger = LogManager.get_logger(__name__)
 
+
 class MapSemantic:
     def __init__(self):
         self.dict_map_semantic = config_manager.get("dict_map_semantic")

@@ -51,7 +51,7 @@ def _init_take_off(robot, skill_name, kwargs):
             return
 
         # 检查机器人身体组件
-        if not hasattr(robot, 'body') or robot.body is None:
+        if not hasattr(robot, "body") or robot.body is None:
             robot.skill_states[skill_name] = "FAILED"
             robot.skill_errors[skill_name] = "Robot body is not available"
             return
@@ -67,18 +67,19 @@ def _init_take_off(robot, skill_name, kwargs):
         # 构造目标位置：保持XY，改变Z
         take_off_goal = [
             current_pos[0],  # 保持当前X
-            current_pos[1],  # 保持当前Y  
-            float(altitude)  # 目标高度
+            current_pos[1],  # 保持当前Y
+            float(altitude),  # 目标高度
         ]
 
         logger.info(f"Take off: current={current_pos}, target={take_off_goal}")
 
         # 存储目标位置和导航参数
         robot.set_skill_data(skill_name, "take_off_goal", take_off_goal)
-        robot.set_skill_data(skill_name, "nav_kwargs", {
-            "goal_pos": take_off_goal,
-            "goal_quat_wxyz": current_quat  # 保持当前朝向
-        })
+        robot.set_skill_data(
+            skill_name,
+            "nav_kwargs",
+            {"goal_pos": take_off_goal, "goal_quat_wxyz": current_quat},  # 保持当前朝向
+        )
 
     except Exception as e:
         robot.skill_states[skill_name] = "FAILED"
@@ -94,7 +95,9 @@ def _handle_executing_1(robot, skill_name):
         if not nav_skill_started:
             # 检查是否已有导航技能在运行
             if "navigate_to_skill" in robot.skill_states:
-                return robot.form_feedback("processing", "navigation busy, wait to be available...", 20)
+                return robot.form_feedback(
+                    "processing", "navigation busy, wait to be available...", 20
+                )
 
             # 启动导航子技能
             nav_kwargs = robot.get_skill_data(skill_name, "nav_kwargs")
@@ -102,7 +105,9 @@ def _handle_executing_1(robot, skill_name):
             robot.set_skill_data(skill_name, "nav_skill_started", True)
             robot.set_skill_data(skill_name, "nav_start_time", robot.sim_time)
 
-            return robot.form_feedback("processing", "Starting navigation for take off...", 30)
+            return robot.form_feedback(
+                "processing", "Starting navigation for take off...", 30
+            )
 
         # 检查导航子技能状态
         nav_state = robot.skill_states.get("navigate_to_skill")
@@ -111,21 +116,31 @@ def _handle_executing_1(robot, skill_name):
             return robot.form_feedback("processing", "Navigation initializing...", 40)
         elif nav_state == "EXECUTING":
             robot.skill_states[skill_name] = "EXECUTING"
-            return robot.form_feedback("processing", "Navigation started, taking off...", 50)
+            return robot.form_feedback(
+                "processing", "Navigation started, taking off...", 50
+            )
         elif nav_state == "FAILED":
-            nav_error = robot.skill_errors.get("navigate_to_skill", "Unknown navigation error")
+            nav_error = robot.skill_errors.get(
+                "navigate_to_skill", "Unknown navigation error"
+            )
             robot.skill_states[skill_name] = "FAILED"
-            robot.skill_errors[skill_name] = f"Navigation initialization failed: {nav_error}"
+            robot.skill_errors[skill_name] = (
+                f"Navigation initialization failed: {nav_error}"
+            )
             return robot.form_feedback("failed", robot.skill_errors[skill_name])
         else:
             # 导航还在初始化中
-            elapsed = robot.sim_time - robot.get_skill_data(skill_name, "nav_start_time", robot.sim_time)
+            elapsed = robot.sim_time - robot.get_skill_data(
+                skill_name, "nav_start_time", robot.sim_time
+            )
             if elapsed > 30.0:  # 30秒超时
                 robot.skill_states[skill_name] = "FAILED"
                 robot.skill_errors[skill_name] = "Navigation initialization timeout"
                 return robot.form_feedback("failed", robot.skill_errors[skill_name])
 
-            return robot.form_feedback("processing", "Waiting for navigation initialization...", 35)
+            return robot.form_feedback(
+                "processing", "Waiting for navigation initialization...", 35
+            )
 
     except Exception as e:
         robot.skill_states[skill_name] = "FAILED"
@@ -145,22 +160,28 @@ def _handle_executing(robot, skill_name):
             robot.skill_states[skill_name] = "COMPLETED"
             return robot.form_feedback("processing", "Take off completed", 95)
         elif nav_state == "FAILED":
-            nav_error = robot.skill_errors.get("navigate_to_skill", "Unknown navigation error")
+            nav_error = robot.skill_errors.get(
+                "navigate_to_skill", "Unknown navigation error"
+            )
             robot.skill_states[skill_name] = "FAILED"
             robot.skill_errors[skill_name] = f"Navigation failed: {nav_error}"
             return robot.form_feedback("failed", robot.skill_errors[skill_name])
         elif nav_state == "EXECUTING":
             # 传递导航的进度，但调整消息
-            nav_progress = nav_feedback.get('progress', 50)
-            nav_message = nav_feedback.get('message', 'Moving...')
+            nav_progress = nav_feedback.get("progress", 50)
+            nav_message = nav_feedback.get("message", "Moving...")
 
             # 调整进度范围到50-95
             adjusted_progress = 50 + (nav_progress / 100) * 45
 
-            return robot.form_feedback("processing", f"Taking off: {nav_message}", int(adjusted_progress))
+            return robot.form_feedback(
+                "processing", f"Taking off: {nav_message}", int(adjusted_progress)
+            )
         else:
             # 导航状态异常，检查超时
-            nav_start_time = robot.get_skill_data(skill_name, "nav_start_time", robot.sim_time)
+            nav_start_time = robot.get_skill_data(
+                skill_name, "nav_start_time", robot.sim_time
+            )
             elapsed = robot.sim_time - nav_start_time
 
             if elapsed > 120.0:  # 2分钟超时
