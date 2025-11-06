@@ -1,0 +1,36 @@
+# 技能配置文件 - 定义技能和机器人类型的映射关系
+
+# 基础技能 - 大多数机器人都支持
+base_skills:
+  robot_types: ['jetbot', 'g1', 'h1', 'cf2x']
+  skills:
+    - navigate_to_skill
+    - detect_skill
+    - take_photo
+    - object_detection_skill
+    - explore_skill
+    - track_skill
+    - broadcast
+
+# 无人机专用技能
+drone_skills:
+  robot_types: ['cf2x']
+  skills:
+    - take_off
+    - land_skill
+    - hover_skill
+
+# 操作技能 - 只有有手臂的机器人支持
+manipulation_skills:
+  robot_types: ['g1', 'h1']
+  skills:
+    - pick_up_skill
+    - put_down_skill
+    - grasp_skill
+
+# 地面机器人专用技能
+ground_robot_skills:
+  robot_types: ['jetbot', 'g1', 'h1']
+  skills:
+    - follow_line_skill
+    - avoid_obstacle_skill

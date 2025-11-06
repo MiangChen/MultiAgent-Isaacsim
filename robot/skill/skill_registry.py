@@ -9,6 +9,8 @@
 
 # Standard library imports
 from typing import Dict, List, Callable, Optional
+import os
+import yaml
 
 # Local project imports
 from log.log_manager import LogManager
@@ -93,75 +95,9 @@ class SkillRegistry:
         return list(cls._skills.get(robot_type, {}).keys())
 
     @classmethod
-    def is_skill_supported(cls, robot_type: str, skill_name: str) -> bool:
-        """
-        检查指定机器人类型是否支持某个技能
-        
-        Args:
-            robot_type: 机器人类型
-            skill_name: 技能名称
-            
-        Returns:
-            是否支持该技能
-        """
-        return skill_name in cls._skills.get(robot_type, {})
-
-    @classmethod
-    def get_registry_info(cls) -> Dict[str, List[str]]:
-        """
-        获取注册表信息概览
-        
-        Returns:
-            {robot_type: [skill_names]} 格式的字典
-        """
-        return {
-            robot_type: list(skills.keys())
-            for robot_type, skills in cls._skills.items()
-        }
-
-    @classmethod
-    def register_skill_module(cls, skill_name: str, module_path: str):
-        """
-        注册技能模块路径
-        
-        Args:
-            skill_name: 技能名称
-            module_path: 模块路径
-        """
-        cls._skill_module_mapping[skill_name] = module_path
-        logger.debug(f"Registered skill module mapping: {skill_name} -> {module_path}")
-
-    @classmethod
     def get_skill_module_mapping(cls) -> Dict[str, str]:
         """获取技能模块路径映射"""
         return cls._skill_module_mapping.copy()
-
-    @classmethod
-    def load_skill_config(cls, config_path: str = None):
-        """
-        从配置文件加载技能映射关系
-        
-        Args:
-            config_path: 配置文件路径，默认使用内置配置
-        """
-        import yaml
-        import os
-
-        if config_path is None:
-            # 使用默认配置文件路径
-            current_dir = os.path.dirname(__file__)
-            config_path = os.path.join(current_dir, 'skill_config.yaml')
-
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                config = yaml.safe_load(f)
-
-            cls._skill_config = config
-            logger.info(f"Loaded skill configuration from {config_path}")
-
-        except Exception as e:
-            logger.error(f"Failed to load skill config from {config_path}: {e}")
-            cls._skill_config = {}
 
     @classmethod
     def _infer_robot_types_from_config(cls, skill_name: str) -> List[str]:
@@ -175,18 +111,21 @@ class SkillRegistry:
             支持的机器人类型列表
         """
         if not hasattr(cls, '_skill_config'):
-            cls.load_skill_config()
+            current_dir = os.path.dirname(__file__)
+            config_path = os.path.join(current_dir, 'skill_config.yaml')
 
-        # 在配置中查找技能
-        for category, info in cls._skill_config.items():
-            if 'skills' in info and skill_name in info['skills']:
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = yaml.safe_load(f)
+
+                cls._skill_config = config
+                logger.info(f"Loaded skill configuration from {config_path}")
+
+            except Exception as e:
+                raise f"Failed to load skill config from {config_path}: {repr(e)}"
+
+        for skill_category, info in cls._skill_config.items():
+            if skill_name in info.get('skills'):
                 return info['robot_types']
 
-        # 如果配置中没找到，使用路径推断
-        return None
-
-    @classmethod
-    def clear_registry(cls):
-        """清空注册表（主要用于测试）"""
-        cls._skills.clear()
-        logger.info("Skill registry cleared")
+        raise ValueError(f"Skill {skill_name} not found in skill config")
