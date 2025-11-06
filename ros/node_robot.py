@@ -161,6 +161,5 @@ class NodeRobot(Node):
         if skill_function is None:
             logger.warning(f"Skill '{task_name}' not found for robot type '{robot_type}'")
             logger.info(f"Available skills for {robot_type}: {SkillRegistry.get_skill_names_for_robot(robot_type)}")
-            logger.info(f"Available skill modules: {list(SkillRegistry.get_skill_module_mapping().keys())}")
         
         return skill_function

@@ -28,19 +28,6 @@ class SkillRegistry:
 
     _skills: Dict[str, Dict[str, Callable]] = {}
 
-    # 技能模块路径映射
-    _skill_module_mapping = {
-        "navigate_to_skill": "robot.skill.base.navigation.navigate_to",
-        "detect_skill": "robot.skill.base.detection.detect",
-        "take_off": "robot.skill.drone.take_off.take_off",
-        "pick_up_skill": "robot.skill.base.manipulation.pick_up",
-        "put_down_skill": "robot.skill.base.manipulation.put_down",
-        "take_photo": "robot.skill.base.take_photo",
-        "object_detection_skill": "robot.skill.base.object_detection",
-        "explore_skill": "robot.skill.base.exploration.explore",
-        "track_skill": "robot.skill.base.track",
-    }
-
     @classmethod
     def register(cls, robot_types: List[str] = None):
         """
@@ -93,11 +80,6 @@ class SkillRegistry:
             技能名称列表
         """
         return list(cls._skills.get(robot_type, {}).keys())
-
-    @classmethod
-    def get_skill_module_mapping(cls) -> Dict[str, str]:
-        """获取技能模块路径映射"""
-        return cls._skill_module_mapping.copy()
 
     @classmethod
     def _infer_robot_types_from_config(cls, skill_name: str) -> List[str]:
