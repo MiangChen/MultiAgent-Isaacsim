@@ -205,12 +205,16 @@ def _handle_executing2(robot, skill_name):
             robot.set_skill_data(skill_name, "exploration_start_time", robot.sim_time)
             return robot.form_feedback("processing", "Starting exploration coverage...", 70)
 
-        # 是否完成（控制器在到达末端或完成策略时会 set 该事件）
+
+        elapsed = robot.sim_time - start_time
+        if elapsed < 1:
+            return robot.form_feedback("processing", "Waiting for publish path...", 70)
+
+        # 是否完成（控制器在到达末端或完成策略时会 set 该事件, 并且需要等待1秒种, 确保信号接受到了
         if robot.node_controller_mpc.move_event.is_set():
             robot.skill_states[skill_name] = "COMPLETED"
             return robot.form_feedback("processing", "Exploration in progress...", 95)
 
-        elapsed = robot.sim_time - start_time
         timeout_sec = 120.0  # 增加超时时间，因为现在包含了更多路径点
         if elapsed > timeout_sec:
             robot.skill_states[skill_name] = "FAILED"
