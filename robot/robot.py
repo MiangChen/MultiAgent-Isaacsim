@@ -179,7 +179,7 @@ class Robot:
         odom_msg.twist.twist.angular.y = float(vel_angular[1])
         odom_msg.twist.twist.angular.z = float(vel_angular[2])
 
-        self.node.publisher_odom.publish(odom_msg)
+        self.node.publisher_dict["odom"].publish(odom_msg)
 
     ########################## Subscriber Velocity  ############################
     def set_velocity_command(self, linear_vel, angular_vel):
@@ -192,7 +192,7 @@ class Robot:
 
     def _init_ros(self):
         # ROS节点基础设施
-        self.node = NodeRobot(namespace=self.namespace)
+        self.node = NodeRobot(namespace=self.namespace, topics=self.cfg_robot.topics)
         self.node.set_robot_instance(self)
 
         # 导航基础设施节点

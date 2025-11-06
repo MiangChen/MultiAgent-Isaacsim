@@ -8,6 +8,7 @@ from robot.sensor.camera import CfgCamera, CfgCameraThird
 from robot.sensor.lidar import CfgLidar
 
 ASSET_PATH = config_manager.get("path_asset")
+ROBOT_TOPICS = config_manager.get("robot_topics")
 
 
 @dataclass
@@ -30,6 +31,9 @@ class CfgRobot:
 
     disable_gravity: bool = False # 这个参数通常是在不使用物理引擎动力学的条件下用
     use_simplified_controller: bool = False
+    
+    # ROS Topics配置 (从全局配置中获取)
+    topics: Dict[str, str] = field(default_factory=dict)
     def __post_init__(self):
         # 处理从字典加载时的类型转换
         if self.cfg_dict_camera:
@@ -49,3 +53,7 @@ class CfgRobot:
                 name: CfgCameraThird(**camera_data)
                 for name, camera_data in self.cfg_dict_camera_third.items()
             }
+        
+        # 根据机器人类型设置ROS topics
+        if not self.topics and self.type in ROBOT_TOPICS:
+            self.topics = ROBOT_TOPICS[self.type].copy()

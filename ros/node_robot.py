@@ -21,27 +21,53 @@ class NodeRobot(Node):
     为单个机器人实体管理所有ROS2通信的节点。
     """
 
-    def __init__(self, namespace: str):
+    def __init__(self, namespace: str, topics: dict = None):
         super().__init__(node_name=f"node_{namespace}", namespace=namespace)
         self.namespace = namespace
         self.robot_instance = None
+        self.topics = topics or {}
+        
+        # 创建publishers和subscribers
+        self._create_publishers()
+        self._create_subscribers()
+        self._create_action_servers()
 
-        self.publisher_odom = self.create_publisher(Odometry, "odom", 10)
-        self.subscriber_cmd_vel = self.create_subscription(
-            Twist, "cmd_vel", self.callback_cmd_vel, 10
+        logger.info(f"ROS2 Node for {self.namespace} has been created with topics: {list(self.topics.keys())}")
+
+    def _create_publishers(self):
+        """根据配置创建publishers"""
+        self.publisher_dict = {}
+
+        if "odom" in self.topics:
+            self.publisher_odom = self.create_publisher(Odometry, self.topics["odom"], 10)
+            self.publisher_dict["odom"] = self.publisher_odom
+
+    def _create_subscribers(self):
+        """根据配置创建subscribers"""
+        self.subscriber_dict = {}
+
+        if "cmd_vel" in self.topics:
+            self.subscriber_cmd_vel = self.create_subscription(
+                Twist, self.topics["cmd_vel"], self.callback_cmd_vel, 10
+            )
+            self.subscriber_dict["cmd_vel"] = self.subscriber_cmd_vel
+
+        self.subscriber_sim_clock = self.create_subscription(
+            Clock, "/isaacsim_simulation_clock", self.callback_sim_clock, 10
         )
+        self.subscriber_dict["sim_clock"] = self.subscriber_sim_clock
+
+    def _create_action_servers(self):
+        """创建action servers"""
+        self.action_server_dict = {}
+
         self.action_server_skill = ActionServer(
             self,
             action_type=SkillExecution,
             action_name=f"skill_execution",
             execute_callback=self.execute_callback_wrapper,
         )
-
-        self.subscriber_sim_clock = self.create_subscription(
-            Clock, "/isaacsim_simulation_clock", self.callback_sim_clock, 10
-        )
-
-        logger.info(f"ROS2 Node for {self.namespace} has been created.")
+        self.action_server_dict["skill_execution"] = self.action_server_skill
 
     def callback_cmd_vel(self, msg):
         linear_vel = [msg.linear.x, msg.linear.y, msg.linear.z]
