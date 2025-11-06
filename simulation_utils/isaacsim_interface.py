@@ -78,7 +78,7 @@ from physics_engine.isaacsim_utils import (
     get_assets_root_path,
 )
 
-from minimal_camera import (
+from simulation_utils.minimal_camera import (
     MinimalCamera,
 )  # a stripped down version of isaacsim.sensors.camera
 
@@ -705,9 +705,6 @@ def add_drone_cameras(curr_stage, rig_comps: list[CamRigComponent]):
     g_simulation_app.update()
 
     return gimbal_prim
-
-
-from physics_engine.isaacsim_simulation_app import create_clock_graph
 
 
 def callback_gazebo_linkstate_msg(linkstate_msg):
