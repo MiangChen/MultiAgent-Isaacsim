@@ -25,12 +25,12 @@ class ConfigManager:
         self.config_path = Path(__file__).parent / "config_parameter.yaml"
         self.load()
 
-    def load(self):
+    def load(self) -> None:
         with open(self.config_path, "r") as f:
             self.config = yaml.safe_load(f)
 
         self._derive_paths()
-        return self
+        return
 
     def get(self, key: str) -> Any:
         """
@@ -42,7 +42,7 @@ class ConfigManager:
             value = value[k]
         return value
 
-    def _derive_paths(self):
+    def _derive_paths(self) -> None:
         """
         计算所有派生路径
         """
@@ -56,19 +56,25 @@ class ConfigManager:
         if not world_name:
             raise ValueError("配置中必须提供 'world.name'")
 
-        # 获取场景 USD 文件的绝对路径
-        user_usd_files_json_path = project_root / "asset" / "User_assets.json"
-        if not user_usd_files_json_path.exists():
-            raise FileNotFoundError(f"找不到场景定义文件: {user_usd_files_json_path}")
+        # 动态搜索 asset 目录下所有 JSON 文件
+        asset_dir = project_root / "asset"
+        world_usd_path = None
+        
+        for json_file in asset_dir.glob("*.json"):
+            try:
+                with open(json_file, "r") as f:
+                    world_name_dic = yaml.safe_load(f)
+                if isinstance(world_name_dic, dict) and world_name in world_name_dic:
+                    world_usd_path = world_name_dic[world_name]
+                    break
+            except Exception:
+                continue
+        
+        if world_usd_path is None:
+            raise ValueError(f"在 asset 目录的所有 JSON 文件中都找不到名为 '{world_name}' 的场景")
+        self.config["world_usd_path"] = world_usd_path
 
-        with open(user_usd_files_json_path, "r") as f:
-            world_name_dic = yaml.safe_load(f)
-
-        if world_name not in world_name_dic:
-            raise ValueError(
-                f"在 {user_usd_files_json_path} 中找不到名为 '{world_name}' 的场景"
-            )
-        self.config["world_usd_path"] = world_name_dic[world_name]
+        return
 
     def get_summary(self) -> str:
         summary = "=== Configuration Summary ===\n"
