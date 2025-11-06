@@ -111,8 +111,6 @@ robot_topics:
   cf2x:
     cmd_vel: "cmd_vel"
     odom: "odom"
-#    takeoff: "takeoff"
-#    land: "land"
     camera: "camera"
   g1:
     cmd_vel: "cmd_vel"

@@ -122,7 +122,7 @@ class SkillRegistry:
     @classmethod
     def get_skill(cls, robot_type: str, skill_name: str) -> Optional[Callable]:
         """
-        获取指定机器人类型的技能函数，支持按需导入
+        获取指定机器人类型的技能函数
         
         Args:
             robot_type: 机器人类型
@@ -131,44 +131,9 @@ class SkillRegistry:
         Returns:
             技能函数，如果不存在则返回None
         """
-        # 先尝试从已注册的技能中获取
-        skill_func = cls._skills.get(robot_type, {}).get(skill_name)
-        
-        # 如果没找到，尝试按需导入
-        if skill_func is None:
-            skill_func = cls._import_skill_on_demand(skill_name, robot_type)
-            
-        return skill_func
+        return cls._skills.get(robot_type, {}).get(skill_name)
     
-    @classmethod
-    def _import_skill_on_demand(cls, skill_name: str, robot_type: str) -> Optional[Callable]:
-        """
-        按需导入技能模块
-        
-        Args:
-            skill_name: 技能名称
-            robot_type: 机器人类型（用于日志）
-            
-        Returns:
-            技能函数，如果导入失败则返回None
-        """
-        try:
-            module_path = cls._skill_module_mapping.get(skill_name)
-            if module_path:
-                # 动态导入模块，这会触发装饰器执行
-                import importlib
-                importlib.import_module(module_path)
-                logger.info(f"Imported skill module: {module_path}")
-                
-                # 重新尝试从注册表获取
-                return cls._skills.get(robot_type, {}).get(skill_name)
-            else:
-                logger.warning(f"No module mapping found for skill '{skill_name}'")
-                
-        except Exception as e:
-            logger.error(f"Failed to import skill '{skill_name}': {e}")
-            
-        return None
+
     
     @classmethod
     def get_skills_for_robot(cls, robot_type: str) -> Dict[str, Callable]:
