@@ -30,3 +30,22 @@ class CfgRobot:
 
     disable_gravity: bool = False # 这个参数通常是在不使用物理引擎动力学的条件下用
     use_simplified_controller: bool = False
+    def __post_init__(self):
+        # 处理从字典加载时的类型转换
+        if self.cfg_dict_camera:
+            self.cfg_dict_camera = {
+                name: CfgCamera(**camera_data) 
+                for name, camera_data in self.cfg_dict_camera.items()
+            }
+
+        if self.cfg_dict_lidar:
+            self.cfg_dict_lidar = {
+                name: CfgLidar(**lidar_data)
+                for name, lidar_data in self.cfg_dict_lidar.items()
+            }
+
+        if self.cfg_dict_camera_third:
+            self.cfg_dict_camera_third = {
+                name: CfgCameraThird(**camera_data)
+                for name, camera_data in self.cfg_dict_camera_third.items()
+            }

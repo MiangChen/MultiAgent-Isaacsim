@@ -1,6 +1,6 @@
 cf2x:
   - id: 0
-    name: "cf2x_0"
+    namespace: "cf2x_0"
     position: [ 7, 4 , 0.05 ]
     quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
     disable_gravity: True
@@ -8,7 +8,7 @@ cf2x:
     cfg_dict_camera: {}
 
   - id: 1
-    name: "cf2x_1"
+    namespace: "cf2x_1"
     position: [ 7, 3 , 0.05 ]
     quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
     disable_gravity: True
@@ -17,7 +17,7 @@ cf2x:
 
 jetbot:
   - id: 0
-    name: Allen
+    namespace: Allen
     position: [ 7, 5, 0.035 ]
 #    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
     quat: [1, 0.0, 0.0, 0]
@@ -33,7 +33,7 @@ jetbot:
         enable_semantic_detection: False
 
 #  - id: 1
-#    name: Bob
+#    namespace: Bob
 #    position: [ 5, 3, 0.035 ]
 #    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
 #    disable_gravity: True
@@ -48,7 +48,7 @@ jetbot:
 #        enable_semantic_detection: True
 #
 #  - id: 2
-#    name: Candy
+#    namespace: Candy
 #    position: [ 5, 2, 0.035 ]
 #    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
 #    disable_gravity: True
@@ -63,7 +63,7 @@ jetbot:
 #        enable_semantic_detection: True
 #
 #  - id: 3
-#    name: David
+#    namespace: David
 #    position: [ 5, 1, 0.035 ]
 #    quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
 #    disable_gravity: True
@@ -79,7 +79,7 @@ jetbot:
 
 target:
   - id: 0
-    name: 11g
+    namespace: 11g
     position: [ 5, 1, 0.035 ]
     quat: [1.0, 0.0, 0.0, 0.0]
     disable_gravity: True
@@ -96,7 +96,7 @@ target:
 
 h1:
   - id: 0
-    name: Hellen
+    namespace: Hellen
     position: [ 3, 2, 1.05 ]
     quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
     disable_gravity: True
