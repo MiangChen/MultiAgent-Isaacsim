@@ -101,3 +101,29 @@ frames:
 
 # 命名空间配置 (用于多无人机仿真)
 namespace: ["uav1", "uav2", "uav3"]
+
+# 机器人ROS Topic配置 (只需要写topic名称，namespace会自动添加)
+robot_topics:
+  jetbot:
+    cmd_vel: "cmd_vel"
+    odom: "odom"
+    camera: "camera"
+  cf2x:
+    cmd_vel: "cmd_vel"
+    odom: "odom"
+#    takeoff: "takeoff"
+#    land: "land"
+    camera: "camera"
+  g1:
+    cmd_vel: "cmd_vel"
+    odom: "odom"
+#    joint_states: "joint_states"
+    camera: "camera"
+  h1:
+    cmd_vel: "cmd_vel"
+    odom: "odom"
+#    joint_states: "joint_states"
+    camera: "camera"
+  target:
+    cmd_vel: "cmd_vel"
+    odom: "odom"
