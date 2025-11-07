@@ -8,7 +8,7 @@ from gsi_msgs.gsi_msgs_helper import Parameter
 logger = LogManager.get_logger(__name__)
 
 
-@SkillRegistry.register(["jetbot", "g1", "h1", "cf2x"])
+@SkillRegistry.register()
 def put_down(**kwargs):
     robot = kwargs.get("robot")
     skill_name = "put_down"

@@ -9,7 +9,7 @@ from nav2_msgs.action import ComputePathToPose
 from nav_msgs.msg import Odometry
 
 
-@SkillRegistry.register(["jetbot", "g1", "h1", "cf2x"])
+@SkillRegistry.register()
 def track_callback(robot, msg):
     pos = (
         msg.pose.pose.position.x,
