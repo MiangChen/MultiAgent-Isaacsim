@@ -28,7 +28,7 @@ class SkillRegistry:
     _skills: Dict[str, Dict[str, Callable]] = {}
 
     @classmethod
-    def register(cls, robot_types: List[str] = None):
+    def register(cls):
         """
         装饰器：为指定的机器人类型注册技能
 
