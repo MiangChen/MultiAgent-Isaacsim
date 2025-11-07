@@ -1,3 +1,3 @@
-from .land import land_skill
+from .land import land
 
-__all__ = ["land_skill"]
+__all__ = ["land"]

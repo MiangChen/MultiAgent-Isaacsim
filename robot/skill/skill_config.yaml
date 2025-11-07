@@ -4,12 +4,12 @@
 base_skills:
   robot_types: ['jetbot', 'g1', 'h1', 'cf2x']
   skills:
-    - navigate_to_skill
-    - detect_skill
+    - navigate_to
+    - detect
     - take_photo
-    - object_detection_skill
-    - explore_skill
-    - track_skill
+    - object_detection
+    - explore
+    - track
     - broadcast
 
 # 无人机专用技能
@@ -17,20 +17,20 @@ drone_skills:
   robot_types: ['cf2x']
   skills:
     - take_off
-    - land_skill
-    - hover_skill
+    - land
+    - hover
 
 # 操作技能 - 只有有手臂的机器人支持
 manipulation_skills:
   robot_types: ['g1', 'h1']
   skills:
-    - pick_up_skill
-    - put_down_skill
-    - grasp_skill
+    - pick_up
+    - put_down
+    - grasp
 
 # 地面机器人专用技能
 ground_robot_skills:
   robot_types: ['jetbot', 'g1', 'h1']
   skills:
-    - follow_line_skill
-    - avoid_obstacle_skill
+    - follow_line
+    - avoid_obstacle

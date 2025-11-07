@@ -5,9 +5,9 @@ logger = LogManager.get_logger(__name__)
 
 
 @SkillRegistry.register()
-def detect_skill(**kwargs):
+def detect(**kwargs):
     robot = kwargs.get("robot")
-    skill_name = "detect_skill"
+    skill_name = "detect"
 
     current_state = robot.skill_states.get(skill_name)
 

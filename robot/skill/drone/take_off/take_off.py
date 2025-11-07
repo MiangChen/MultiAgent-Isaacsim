@@ -1,5 +1,5 @@
 import json
-from robot.skill.base.navigation.navigate_to import navigate_to_skill
+from robot.skill.base.navigation.navigate_to import navigate_to
 from robot.skill.skill_registry import SkillRegistry
 from log.log_manager import LogManager
 
@@ -96,14 +96,14 @@ def _handle_executing_1(robot, skill_name):
 
         if not nav_skill_started:
             # 检查是否已有导航技能在运行
-            if "navigate_to_skill" in robot.skill_states:
+            if "navigate_to" in robot.skill_states:
                 return robot.form_feedback(
                     "processing", "navigation busy, wait to be available...", 20
                 )
 
             # 启动导航子技能
             nav_kwargs = robot.get_skill_data(skill_name, "nav_kwargs")
-            robot.start_skill(navigate_to_skill, **nav_kwargs)
+            robot.start_skill(navigate_to, **nav_kwargs)
             robot.set_skill_data(skill_name, "nav_skill_started", True)
             robot.set_skill_data(skill_name, "nav_start_time", robot.sim_time)
 
@@ -112,7 +112,7 @@ def _handle_executing_1(robot, skill_name):
             )
 
         # 检查导航子技能状态
-        nav_state = robot.skill_states.get("navigate_to_skill")
+        nav_state = robot.skill_states.get("navigate_to")
 
         if nav_state == "INITIALIZING":
             return robot.form_feedback("processing", "Navigation initializing...", 40)
@@ -123,7 +123,7 @@ def _handle_executing_1(robot, skill_name):
             )
         elif nav_state == "FAILED":
             nav_error = robot.skill_errors.get(
-                "navigate_to_skill", "Unknown navigation error"
+                "navigate_to", "Unknown navigation error"
             )
             robot.skill_states[skill_name] = "FAILED"
             robot.skill_errors[skill_name] = (
@@ -155,15 +155,15 @@ def _handle_executing(robot, skill_name):
     """执行起飞 - 监控导航子技能"""
     try:
         # 检查导航子技能状态
-        nav_state = robot.skill_states.get("navigate_to_skill")
-        nav_feedback = robot.skill_feedbacks.get("navigate_to_skill", {})
+        nav_state = robot.skill_states.get("navigate_to")
+        nav_feedback = robot.skill_feedbacks.get("navigate_to", {})
 
         if nav_state == "COMPLETED":
             robot.skill_states[skill_name] = "COMPLETED"
             return robot.form_feedback("processing", "Take off completed", 95)
         elif nav_state == "FAILED":
             nav_error = robot.skill_errors.get(
-                "navigate_to_skill", "Unknown navigation error"
+                "navigate_to", "Unknown navigation error"
             )
             robot.skill_states[skill_name] = "FAILED"
             robot.skill_errors[skill_name] = f"Navigation failed: {nav_error}"

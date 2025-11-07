@@ -16,7 +16,7 @@ def track_callback(robot, msg):
         msg.pose.pose.position.y,
         msg.pose.pose.position.z,
     )
-    skill_name = "track_skill"
+    skill_name = "track"
     track_counter = robot.get_skill_data(skill_name, "track_counter", 0)
     track_period = robot.get_skill_data(skill_name, "track_period", 10)
     track_waypoint_list = robot.get_skill_data(skill_name, "track_waypoint_list", [])
@@ -29,9 +29,9 @@ def track_callback(robot, msg):
         robot.set_skill_data(skill_name, "track_waypoint_list", track_waypoint_list)
 
 
-def track_skill(**kwargs):
+def track(**kwargs):
     robot = kwargs.get("robot")
-    skill_name = "track_skill"
+    skill_name = "track"
 
     current_state = robot.skill_states.get(skill_name)
 

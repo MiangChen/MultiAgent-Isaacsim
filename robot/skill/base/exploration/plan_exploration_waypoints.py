@@ -1,4 +1,4 @@
-def plan_exploration_waypoints_skill(**kwargs):
+def plan_exploration_waypoints(**kwargs):
     robot = kwargs.get("robot")
     polygon_coords = kwargs.get("polygon_coords")
     holes = kwargs.get("holes", [])

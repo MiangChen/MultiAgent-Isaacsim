@@ -13,9 +13,9 @@ from nav2_msgs.action import ComputePathToPose
 
 
 @SkillRegistry.register()
-def navigate_to_skill(**kwargs):
+def navigate_to(**kwargs):
     robot = kwargs.get("robot")
-    skill_name = "navigate_to_skill"  # 直接使用函数名
+    skill_name = "navigate_to"  # 直接使用函数名
 
     current_state = robot.skill_states.get(skill_name)
 

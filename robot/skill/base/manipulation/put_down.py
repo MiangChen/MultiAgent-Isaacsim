@@ -9,9 +9,9 @@ logger = LogManager.get_logger(__name__)
 
 
 @SkillRegistry.register(["jetbot", "g1", "h1", "cf2x"])
-def put_down_skill(**kwargs):
+def put_down(**kwargs):
     robot = kwargs.get("robot")
-    skill_name = "put_down_skill"
+    skill_name = "put_down"
 
     current_state = robot.skill_states.get(skill_name)
 

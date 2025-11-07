@@ -30,8 +30,8 @@ from robot.body import BodyRobot
 from robot.skill.base.navigation import NodePlannerOmpl
 from robot.skill.base.navigation import NodeTrajectoryGenerator
 from robot.skill.base.navigation import NodeMpcController
-from robot.skill.base.detection import detect_skill
-from robot.skill.base.navigation import navigate_to_skill
+from robot.skill.base.detection import detect
+from robot.skill.base.navigation import navigate_to
 from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
 
@@ -105,24 +105,24 @@ class Robot:
         # 字典化的技能管理 - 以函数名为key
         self.skill_states = (
             {}
-        )  # {"navigate_to_skill": "EXECUTING", "take_off_skill": "COMPLETED", ...}
+        )  # {"navigate_to": "EXECUTING", "take_off": "COMPLETED", ...}
         self.skill_functions = (
             {}
-        )  # {"navigate_to_skill": navigate_to_skill, "take_off_skill": take_off_skill, ...}
+        )  # {"navigate_to": navigate_to, "take_off": take_off, ...}
         self.skill_params = (
             {}
-        )  # {"navigate_to_skill": {...params...}, "take_off_skill": {...params...}, ...}
+        )  # {"navigate_to": {...params...}, "take_off": {...params...}, ...}
         self.skill_errors = (
             {}
-        )  # {"navigate_to_skill": "error_message", "take_off_skill": None, ...}
+        )  # {"navigate_to": "error_message", "take_off": None, ...}
         self.skill_feedbacks = (
             {}
-        )  # {"navigate_to_skill": {...feedback...}, "take_off_skill": {...feedback...}, ...}
+        )  # {"navigate_to": {...feedback...}, "take_off": {...feedback...}, ...}
 
         # 技能私有数据存储
         self.skill_data = (
             {}
-        )  # {"navigate_to_skill": {...private_data...}, "take_off_skill": {...private_data...}, ...}
+        )  # {"navigate_to": {...private_data...}, "take_off": {...private_data...}, ...}
 
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
@@ -382,13 +382,13 @@ class Robot:
 
     def execute_frame_skill(self) -> None:
         if self.is_detecting:
-            detect_skill(self, self.target_prim)
+            detect(self, self.target_prim)
         if (
             self.is_tracking
             and self.node_controller_mpc.has_reached_goal
             and self.track_waypoint_index < len(self.track_waypoint_list)
         ):
-            self.skill_function = navigate_to_skill
+            self.skill_function = navigate_to
             self.skill_params = {
                 "robot": self,
                 "goal_pos": self.track_waypoint_list[self.track_waypoint_index],

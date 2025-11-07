@@ -2,10 +2,10 @@ from robot.skill.skill_registry import SkillRegistry
 
 
 @SkillRegistry.register(["jetbot", "g1", "h1", "cf2x"])
-def object_detection_skill(**kwargs):
+def object_detection(**kwargs):
     """物体检测技能 - 使用字典化状态管理"""
     robot = kwargs.get("robot")
-    skill_name = "object_detection_skill"
+    skill_name = "object_detection"
 
     current_state = robot.skill_states.get(skill_name)
 

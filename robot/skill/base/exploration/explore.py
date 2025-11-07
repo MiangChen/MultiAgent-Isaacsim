@@ -1,7 +1,7 @@
 import ast
 import json
-from .plan_exploration_waypoints import plan_exploration_waypoints_skill
-from ..navigation.navigate_to import navigate_to_skill
+from .plan_exploration_waypoints import plan_exploration_waypoints
+from ..navigation.navigate_to import navigate_to
 from log.log_manager import LogManager
 from robot.skill.skill_registry import SkillRegistry
 
@@ -9,9 +9,9 @@ logger = LogManager.get_logger(__name__)
 
 
 @SkillRegistry.register(["jetbot", "g1", "h1", "cf2x"])
-def explore_skill(**kwargs):
+def explore(**kwargs):
     robot = kwargs.get("robot")
-    skill_name = "explore_skill"
+    skill_name = "explore"
 
     current_state = robot.skill_states.get(skill_name)
 
@@ -76,7 +76,7 @@ def _init_explore(robot, skill_name, kwargs):
         )  # 默认线性插值
 
         # 规划探索路径点
-        waypoints = plan_exploration_waypoints_skill(
+        waypoints = plan_exploration_waypoints(
             robot=robot,
             polygon_coords=boundary,
             holes=holes,
@@ -143,14 +143,14 @@ def _handle_executing1(robot, skill_name):
 
         if not nav_skill_started:
             # 检查是否已有导航技能在运行
-            if "navigate_to_skill" in robot.skill_states:
+            if "navigate_to" in robot.skill_states:
                 return robot.form_feedback(
                     "processing", "Waiting for navigation to be available...", 25
                 )
 
             # 启动导航子技能
             nav_kwargs = robot.get_skill_data(skill_name, "nav_to_start_kwargs")
-            robot.start_skill(navigate_to_skill, **nav_kwargs)
+            robot.start_skill(navigate_to, **nav_kwargs)
             robot.set_skill_data(skill_name, "nav_to_start_skill_started", True)
             robot.set_skill_data(skill_name, "nav_to_start_time", robot.sim_time)
 
@@ -159,8 +159,8 @@ def _handle_executing1(robot, skill_name):
             )
 
         # 检查导航子技能状态
-        nav_state = robot.skill_states.get("navigate_to_skill")
-        nav_feedback = robot.skill_feedbacks.get("navigate_to_skill", {})
+        nav_state = robot.skill_states.get("navigate_to")
+        nav_feedback = robot.skill_feedbacks.get("navigate_to", {})
 
         if nav_state == "INITIALIZING":
             return robot.form_feedback(
@@ -190,7 +190,7 @@ def _handle_executing1(robot, skill_name):
             )
         elif nav_state == "FAILED":
             nav_error = robot.skill_errors.get(
-                "navigate_to_skill", "Unknown navigation error"
+                "navigate_to", "Unknown navigation error"
             )
             robot.skill_states[skill_name] = "FAILED"
             robot.skill_errors[skill_name] = (

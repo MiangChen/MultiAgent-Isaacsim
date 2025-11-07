@@ -14,9 +14,9 @@ logger = LogManager.get_logger(__name__)
 
 
 @SkillRegistry.register(["jetbot", "g1", "h1", "cf2x"])
-def pick_up_skill(**kwargs):
+def pick_up(**kwargs):
     robot = kwargs.get("robot")
-    skill_name = "pick_up_skill"
+    skill_name = "pick_up"
 
     current_state = robot.skill_states.get(skill_name)
 
