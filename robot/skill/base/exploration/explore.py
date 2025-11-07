@@ -107,7 +107,7 @@ def _init_explore(robot, skill_name, kwargs):
         # 存储导航到起点的参数
         robot.set_skill_data(
             skill_name,
-            "nav_to_start_kwargs",
+            "navigate_to_start_kwargs",
             {"goal_pos": start_pos, "goal_quat_wxyz": start_quat},
         )
 
@@ -117,7 +117,7 @@ def _init_explore(robot, skill_name, kwargs):
         robot.set_skill_data(skill_name, "target_prim", target_prim)
         robot.set_skill_data(skill_name, "waypoints", waypoints)
         robot.set_skill_data(skill_name, "exploration_start_time", None)
-        robot.set_skill_data(skill_name, "nav_to_start_completed", False)
+        robot.set_skill_data(skill_name, "navigate_to_start_completed", False)
 
         # 初始化完成，进入导航到起点阶段
         robot.skill_states[skill_name] = "EXECUTING1"
@@ -137,84 +137,84 @@ def _handle_executing1(robot, skill_name):
     """处理导航到起点状态 - 模仿take_off的导航逻辑"""
     try:
         # 检查是否已经启动导航子技能
-        nav_skill_started = robot.get_skill_data(
-            skill_name, "nav_to_start_skill_started", False
+        navigate_to_skill_started = robot.get_skill_data(
+            skill_name, "navigate_to_start_skill_started", False
         )
 
-        if not nav_skill_started:
+        if not navigate_to_skill_started:
             # 检查是否已有导航技能在运行
             if "navigate_to" in robot.skill_states:
                 return robot.form_feedback(
-                    "processing", "Waiting for navigation to be available...", 25
+                    "processing", "Waiting for navigate_to to be available...", 25
                 )
 
             # 启动导航子技能
-            nav_kwargs = robot.get_skill_data(skill_name, "nav_to_start_kwargs")
-            robot.start_skill(navigate_to, **nav_kwargs)
-            robot.set_skill_data(skill_name, "nav_to_start_skill_started", True)
-            robot.set_skill_data(skill_name, "nav_to_start_time", robot.sim_time)
+            navigate_to_kwargs = robot.get_skill_data(skill_name, "navigate_to_start_kwargs")
+            robot.start_skill(navigate_to, **navigate_to_kwargs)
+            robot.set_skill_data(skill_name, "navigate_to_start_skill_started", True)
+            robot.set_skill_data(skill_name, "navigate_to_start_time", robot.sim_time)
 
             return robot.form_feedback(
-                "processing", "Starting navigation to exploration start point...", 30
+                "processing", "Starting navigate_to to exploration start point...", 30
             )
 
         # 检查导航子技能状态
-        nav_state = robot.skill_states.get("navigate_to")
-        nav_feedback = robot.skill_feedbacks.get("navigate_to", {})
+        navigate_to_state = robot.skill_states.get("navigate_to")
+        navigate_to_feedback = robot.skill_feedbacks.get("navigate_to", {})
 
-        if nav_state == "INITIALIZING":
+        if navigate_to_state == "INITIALIZING":
             return robot.form_feedback(
-                "processing", "Navigation to start point initializing...", 35
+                "processing", "Navigate_to to start point initializing...", 35
             )
-        elif nav_state == "EXECUTING":
+        elif navigate_to_state == "EXECUTING":
             # 传递导航的进度，但调整消息和进度范围
-            nav_progress = nav_feedback.get("progress", 50)
-            nav_message = nav_feedback.get("message", "Moving to start point...")
+            navigate_to_progress = navigate_to_feedback.get("progress", 50)
+            navigate_to_message = navigate_to_feedback.get("message", "Moving to start point...")
 
             # 调整进度范围到35-60
-            adjusted_progress = 35 + (nav_progress / 100) * 25
+            adjusted_progress = 35 + (navigate_to_progress / 100) * 25
 
             return robot.form_feedback(
                 "processing",
-                f"Navigating to start: {nav_message}",
+                f"Navigate_to to start: {navigate_to_message}",
                 int(adjusted_progress),
             )
-        elif nav_state == "COMPLETED":
+        elif navigate_to_state == "COMPLETED":
             # 导航到起点完成，开始探索
-            robot.set_skill_data(skill_name, "nav_to_start_completed", True)
+            robot.set_skill_data(skill_name, "navigate_to_start_completed", True)
             robot.skill_states[skill_name] = "EXECUTING2"
             return robot.form_feedback(
                 "processing",
                 "Reached exploration start point, beginning exploration...",
                 65,
             )
-        elif nav_state == "FAILED":
-            nav_error = robot.skill_errors.get(
-                "navigate_to", "Unknown navigation error"
+        elif navigate_to_state == "FAILED":
+            navigate_to_error = robot.skill_errors.get(
+                "navigate_to", "Unknown navigate_to error"
             )
             robot.skill_states[skill_name] = "FAILED"
             robot.skill_errors[skill_name] = (
-                f"Navigation to start point failed: {nav_error}"
+                f"Navigate_to to start point failed: {navigate_to_error}"
             )
             return robot.form_feedback("failed", robot.skill_errors[skill_name])
         else:
             # 导航还在初始化中，检查超时
             elapsed = robot.sim_time - robot.get_skill_data(
-                skill_name, "nav_to_start_time", robot.sim_time
+                skill_name, "navigate_to_start_time", robot.sim_time
             )
             if elapsed > 60.0:  # 60秒超时
                 robot.skill_states[skill_name] = "FAILED"
-                robot.skill_errors[skill_name] = "Navigation to start point timeout"
+                robot.skill_errors[skill_name] = "Navigate_to to start point timeout"
                 return robot.form_feedback("failed", robot.skill_errors[skill_name])
 
             return robot.form_feedback(
-                "processing", "Waiting for navigation to start point...", 32
+                "processing", "Waiting for navigate_to to start point...", 32
             )
 
     except Exception as e:
         robot.skill_states[skill_name] = "FAILED"
-        robot.skill_errors[skill_name] = f"Navigation to start point failed: {str(e)}"
-        logger.error(f"Navigation to start point error: {e}")
+        robot.skill_errors[skill_name] = f"Navigate_to to start point failed: {str(e)}"
+        logger.error(f"Navigate_to to start point error: {e}")
         return robot.form_feedback("failed", robot.skill_errors[skill_name])
 
 

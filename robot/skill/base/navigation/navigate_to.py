@@ -21,7 +21,7 @@ def navigate_to(**kwargs):
 
     # 初始化状态机（只在第一次调用时执行）
     if current_state in [None, "INITIALIZING"]:
-        _init_navigation(robot, skill_name, kwargs)
+        _init_navigate_to(robot, skill_name, kwargs)
 
     current_state = robot.skill_states.get(skill_name)
     if current_state == "EXECUTING":
@@ -32,7 +32,7 @@ def navigate_to(**kwargs):
         return _handle_failed(robot, skill_name)
 
 
-def _init_navigation(robot, skill_name, kwargs):
+def _init_navigate_to(robot, skill_name, kwargs):
     robot.node_controller_mpc.has_reached_goal = False
     robot.skill_states[skill_name] = "EXECUTING"
     start_pos = kwargs.get("start_pos", None)
@@ -80,33 +80,33 @@ def _init_navigation(robot, skill_name, kwargs):
     robot.set_skill_data(skill_name, "start_quat", start_quat)
 
     # 发送规划请求
-    nav_send_future = robot.action_client_path_planner.send_goal_async(goal_msg)
-    nav_start_time = robot.sim_time
+    navigate_to_send_future = robot.action_client_path_planner.send_goal_async(goal_msg)
+    navigate_to_start_time = robot.sim_time
 
     # 存储导航状态到技能私有数据
-    robot.set_skill_data(skill_name, "nav_send_future", nav_send_future)
-    robot.set_skill_data(skill_name, "nav_start_time", nav_start_time)
+    robot.set_skill_data(skill_name, "navigate_to_send_future", navigate_to_send_future)
+    robot.set_skill_data(skill_name, "navigate_to_start_time", navigate_to_start_time)
 
     """处理初始化状态 - 检查路径规划结果"""
-    nav_send_future = robot.get_skill_data(skill_name, "nav_send_future")
-    nav_start_time = robot.get_skill_data(skill_name, "nav_start_time")
+    navigate_to_send_future = robot.get_skill_data(skill_name, "navigate_to_send_future")
+    navigate_to_start_time = robot.get_skill_data(skill_name, "navigate_to_start_time")
 
-    nav_result_future = robot.get_skill_data(skill_name, "nav_result_future")
+    navigate_to_result_future = robot.get_skill_data(skill_name, "navigate_to_result_future")
 
-    if nav_result_future is None:
-        if nav_send_future.done():
-            goal_handle = nav_send_future.result()
+    if navigate_to_result_future is None:
+        if navigate_to_send_future.done():
+            goal_handle = navigate_to_send_future.result()
             if goal_handle.accepted:
-                nav_result_future = goal_handle.get_result_async()
-                robot.set_skill_data(skill_name, "nav_result_future", nav_result_future)
-                robot.set_skill_data(skill_name, "nav_goal_handle", goal_handle)
+                navigate_to_result_future = goal_handle.get_result_async()
+                robot.set_skill_data(skill_name, "navigate_to_result_future", navigate_to_result_future)
+                robot.set_skill_data(skill_name, "navigate_to_goal_handle", goal_handle)
                 return robot.form_feedback("processing", "Planning path...", 15)
             else:
                 robot.skill_states[skill_name] = "FAILED"
                 robot.skill_errors[skill_name] = "Request rejected"
                 return robot.form_feedback("failed", "Request rejected")
         else:
-            elapsed = robot.sim_time - nav_start_time
+            elapsed = robot.sim_time - navigate_to_start_time
             if elapsed > 3.0:
                 robot.skill_states[skill_name] = "FAILED"
                 robot.skill_errors[skill_name] = "No response from planner"
@@ -114,21 +114,21 @@ def _init_navigation(robot, skill_name, kwargs):
             return robot.form_feedback("processing", "Sending request...", 5)
 
     # 检查规划结果
-    if nav_result_future.done():
-        result = nav_result_future.result()
+    if navigate_to_result_future.done():
+        result = navigate_to_result_future.result()
         if result.status == GoalStatus.STATUS_SUCCEEDED and result.result.path.poses:
             robot.node_controller_mpc.move_event.clear()
-            robot.set_skill_data(skill_name, "nav_move_start_time", robot.sim_time)
+            robot.set_skill_data(skill_name, "navigate_to_move_start_time", robot.sim_time)
             robot.skill_states[skill_name] = "EXECUTING"
         else:
             robot.skill_states[skill_name] = "FAILED"
             robot.skill_errors[skill_name] = "Planning failed"
     else:
-        elapsed = robot.sim_time - nav_start_time
+        elapsed = robot.sim_time - navigate_to_start_time
         if elapsed > 15.0:
-            nav_goal_handle = robot.get_skill_data(skill_name, "nav_goal_handle")
-            if nav_goal_handle:
-                nav_goal_handle.cancel_goal_async()
+            navigate_to_goal_handle = robot.get_skill_data(skill_name, "navigate_to_goal_handle")
+            if navigate_to_goal_handle:
+                navigate_to_goal_handle.cancel_goal_async()
             robot.skill_states[skill_name] = "FAILED"
             robot.skill_errors[skill_name] = "Planning timeout"
 
@@ -141,11 +141,11 @@ def _handle_executing(robot, skill_name):
         robot.skill_states[skill_name] = "COMPLETED"
         return robot.form_feedback("processing", "Executing...", 50)
     else:
-        nav_move_start_time = robot.get_skill_data(skill_name, "nav_move_start_time", 0)
-        elapsed = robot.sim_time - nav_move_start_time
+        navigate_to_move_start_time = robot.get_skill_data(skill_name, "navigate_to_move_start_time", 0)
+        elapsed = robot.sim_time - navigate_to_move_start_time
         if elapsed > 120.0:
             robot.skill_states[skill_name] = "FAILED"
-            robot.skill_errors[skill_name] = "Navigation timeout"
+            robot.skill_errors[skill_name] = "Navigate to timeout"
         else:
             progress = min(50 + (elapsed / 120.0) * 45, 95)
             return robot.form_feedback(
@@ -157,7 +157,7 @@ def _handle_executing(robot, skill_name):
 
 def _handle_completed(robot, skill_name):
     """处理完成状态"""
-    return robot.form_feedback("completed", "Navigation completed", 100)
+    return robot.form_feedback("completed", "Navigate to completed", 100)
 
 
 def _handle_failed(robot, skill_name):
