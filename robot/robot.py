@@ -295,7 +295,19 @@ class Robot:
         """Apply CARLA-style control: Control object -> velocity command"""
         from simulation.control import RobotControl
         if isinstance(control, RobotControl):
+            self._current_control = control  # Cache for get_control()
             self.set_velocity_command(control.linear_velocity, control.angular_velocity)
+    
+    def get_control(self):
+        """Get current control (CARLA-style)"""
+        from simulation.control import RobotControl
+        if not hasattr(self, '_current_control'):
+            # Return default control if none applied yet
+            control = RobotControl()
+            control.linear_velocity = self.vel_linear.tolist()
+            control.angular_velocity = self.vel_angular.tolist()
+            return control
+        return self._current_control
 
     def on_physics_step(self, step_size) -> None:
         """
