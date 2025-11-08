@@ -35,16 +35,14 @@ class RobotCf2x(Robot):
     def __init__(
         self,
         cfg_robot: Dict = {},
-        scene: Scene = None,
         scene_manager=None,
     ) -> None:
         self.cfg_robot = CfgDroneCf2X(**cfg_robot)
         super().__init__(
-            scene=scene,
             scene_manager=scene_manager,
         )
 
-        self.body = BodyDroneCf2X(cfg_robot=self.cfg_robot, scene=self.scene)
+        self.body = BodyDroneCf2X(cfg_robot=self.cfg_robot)
         self.is_drone = True
 
         # 无人机基本属性

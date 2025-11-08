@@ -99,14 +99,12 @@ class SwarmManager:
                     # 如果是，使用 await 调用异步工厂 create 方法
                     robot = await robot_cls.create(
                         cfg_robot=cfg_robot,
-                        scene=self.scene,
                         scene_manager=self.scene_manager,
                     )
                 else:
                     # 如果不是，使用传统的同步 __init__ 方法
                     robot = robot_cls(
                         cfg_robot=cfg_robot,
-                        scene=self.scene,
                         scene_manager=self.scene_manager,
                     )
 

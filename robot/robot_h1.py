@@ -39,13 +39,11 @@ class RobotH1(Robot):
     def __init__(
         self,
         cfg_robot: Dict = {},
-        scene: Scene = None,
         scene_manager=None,
     ) -> None:
         self.cfg_robot = CfgH1(**cfg_robot)
         super().__init__(
-            scene,
-            scene_manager,
+            scene_manager=scene_manager,
         )
         # self.create_robot_entity()
         self.control_mode = "joint_positions"

@@ -35,19 +35,13 @@ class RobotJetbot(Robot):
     def __init__(
         self,
         cfg_robot: Dict = {},
-        # cfg_camera: CfgCamera = None,
-        # cfg_camera_third_person: CfgCameraThird = None,
-        scene: Scene = None,
         scene_manager=None,
     ) -> None:
         self.cfg_robot = CfgJetbot(**cfg_robot)
         super().__init__(
-            # cfg_camera,
-            # cfg_camera_third_person,
-            scene=scene,
             scene_manager=scene_manager,
         )
-        self.body = BodyJetbot(cfg_robot=self.cfg_robot, scene=scene)
+        self.body = BodyJetbot(cfg_robot=self.cfg_robot)
         self.control_mode = "joint_velocities"
 
         self.counter = 0

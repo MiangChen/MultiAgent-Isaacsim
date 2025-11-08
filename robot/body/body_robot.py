@@ -26,11 +26,9 @@ class BodyRobot:
     def __init__(
         self,
         cfg_robot: CfgRobot = None,
-        scene: Scene = None,
     ):
         self.cfg_robot = cfg_robot
         self.robot_articulation: Articulation = None
-        self.scene = scene
 
     def create_robot_body(self):
         """
