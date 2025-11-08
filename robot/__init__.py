@@ -11,7 +11,6 @@ from .robot_h1 import RobotH1
 from .robot_jetbot import RobotJetbot
 
 from .target import Target
-from .swarm_manager import SwarmManager
 
 # Robot components
 from .body import *
@@ -29,5 +28,4 @@ __all__ = [
     "RobotH1",
     "RobotJetbot",
     "Target",
-    "SwarmManager",
 ]

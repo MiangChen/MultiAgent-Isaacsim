@@ -161,35 +161,16 @@ def main():
     loop = container.loop()
     server = container.server()
     ros_manager = container.ros_manager()
-    swarm_manager = container.swarm_manager()
     scene_manager = container.scene_manager()
     grid_map = container.grid_map()
     semantic_map = container.semantic_map()
-    # skill_manager = container.skill_manager()
     viewport_manager = container.viewport_manager()
 
-    # 使用simulation层的World（已整合Env功能）
     world = container.world_configured()
     simulation_app = server.get_simulation_app()
 
-    # Register robot classes - CARLA style: direct operations in main
-    from robot.robot_drone_cf2x import RobotCf2x
-    from robot.robot_h1 import RobotH1
-    from robot.robot_jetbot import RobotJetbot
-    from robot.target import Target
-
-    swarm_manager.register_robot_class("jetbot", RobotJetbot)
-    swarm_manager.register_robot_class("h1", RobotH1)
-    swarm_manager.register_robot_class("cf2x", RobotCf2x)
-    swarm_manager.register_robot_class("target", Target)
-
-    # Load robot swarm from config - CARLA style: synchronous
-    logger.info("Loading robot swarm...")
-    swarm_manager.initialize(
-        scene=world.scene,
-        robot_swarm_cfg_path=f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml",
-    )
-    logger.info("Robot swarm loaded")
+    # Load robots from config - CARLA style (blueprints auto-registered)
+    robots = world.load_actors_from_config(f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml")
 
     ros_manager.start()
 
@@ -206,13 +187,12 @@ def main():
     world.initialize_robots()
     world.initialize_map()
 
-    # Add physics callbacks for active robots
-    for robot_class in swarm_manager.robot_class:
-        for i, robot in enumerate(swarm_manager.robot_warehouse[robot_class]):
-            callback_name = f"physics_step_{robot_class}_{i}"
-            world.get_isaac_world().add_physics_callback(
-                callback_name, callback_fn=robot.on_physics_step
-            )
+    # Add physics callbacks for active robots - CARLA style: iterate actors
+    for i, robot in enumerate(robots):
+        callback_name = f"physics_step_robot_{i}"
+        world.get_isaac_world().add_physics_callback(
+            callback_name, callback_fn=robot.on_physics_step
+        )
 
     # Create and initialize semantic camera
     create_car_objects(scene_manager, semantic_map, logger)
@@ -241,7 +221,6 @@ def main():
     )
 
     count = 0
-    logger.info("Starting main simulation loop...")
 
     object_name = "Critical-Package"
     object_prim_path = "/World/Critical_Package"
@@ -308,15 +287,12 @@ def main():
 
     ros_manager.stop()
 
-    # 统一关闭rclpy上下文
     if rclpy.ok():
         rclpy.shutdown()
-        logger.info("ROS context shutdown completed")
 
     container.unwire()
     loop.close()
 
-    logger.info("--- Simulation finished. Manually closing application. ---")
     if simulation_app:
         simulation_app.__exit__(None, None, None)
 

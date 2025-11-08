@@ -78,18 +78,12 @@ class AppContainer(containers.DeclarativeContainer):
         lambda: _import_and_create_viewport_manager()
     )
 
-    swarm_manager = providers.Singleton(
-        lambda map_semantic, scene_manager: _import_and_create_swarm_manager(map_semantic, scene_manager),
-        map_semantic=semantic_map,
-        scene_manager=scene_manager,
-    )
-    
     # 配置World的组件（整合原Env的功能）
     world_configured = providers.Singleton(
-        lambda w, sm, swm, gm: _configure_world(w, sm, swm, gm),
+        lambda w, sm, semantic_map, gm: _configure_world(w, sm, semantic_map, gm),
         w=world,
         sm=scene_manager,
-        swm=swarm_manager,
+        semantic_map=semantic_map,
         gm=grid_map
     )
 
@@ -126,14 +120,10 @@ def _import_and_create_viewport_manager():
     from ui.viewport_manager import ViewportManager
     return ViewportManager()
 
-def _import_and_create_swarm_manager(map_semantic, scene_manager):
-    from robot.swarm_manager import SwarmManager
-    return SwarmManager(map_semantic=map_semantic, scene_manager=scene_manager)
-
-def _configure_world(world, scene_manager, swarm_manager, grid_map):
+def _configure_world(world, scene_manager, semantic_map, grid_map):
     """配置World的组件"""
     world.set_scene_manager(scene_manager)
-    world.set_swarm_manager(swarm_manager)
+    world.set_semantic_map(semantic_map)
     world.set_grid_map(grid_map)
     return world
 
