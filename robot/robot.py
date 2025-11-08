@@ -180,11 +180,11 @@ class Robot:
         self.node.publisher_dict["odom"].publish(odom_msg)
 
     ########################## Subscriber Velocity  ############################
-    # def set_velocity_command(self, linear_vel, angular_vel):
-    #     """设置机器人速度命令 - 业务逻辑接口"""
-    #     self.vel_linear = torch.tensor(linear_vel)
-    #     self.vel_angular = torch.tensor(angular_vel)
-    #     logger.debug(f"set linear vel: {linear_vel}, angular vel: {angular_vel}")
+    def set_velocity_command(self, linear_vel, angular_vel):
+        """设置机器人速度命令 - 业务逻辑接口"""
+        self.vel_linear = torch.tensor(linear_vel)
+        self.vel_angular = torch.tensor(angular_vel)
+        logger.debug(f"set linear vel: {linear_vel}, angular vel: {angular_vel}")
 
     ########################## Infrastructure Initialization ############################
 

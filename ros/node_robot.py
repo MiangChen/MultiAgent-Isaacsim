@@ -73,10 +73,10 @@ class NodeRobot(Node):
         )
         self.action_server_dict["skill_execution"] = self.action_server_skill
 
-    def callback_cmd_vel(self, msg):
-        linear_vel = [msg.linear.x, msg.linear.y, msg.linear.z]
-        angular_vel = [msg.angular.x, msg.angular.y, msg.angular.z]
-        self.robot_instance.set_velocity_command(linear_vel, angular_vel)
+    # def callback_cmd_vel(self, msg):
+    #     linear_vel = [msg.linear.x, msg.linear.y, msg.linear.z]
+    #     angular_vel = [msg.angular.x, msg.angular.y, msg.angular.z]
+    #     self.robot_instance.set_velocity_command(linear_vel, angular_vel)
 
     def callback_sim_clock(self, msg: Clock):
         sim_time = msg.clock.sec + msg.clock.nanosec / 1e9
