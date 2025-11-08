@@ -37,9 +37,9 @@ class RobotH1(Robot):
     """
 
     def __init__(
-        self,
-        cfg_robot: Dict = {},
-        scene_manager=None,
+            self,
+            cfg_robot,
+            scene_manager=None,
     ) -> None:
         self.cfg_robot = CfgH1(**cfg_robot)
         super().__init__(
@@ -59,7 +59,7 @@ class RobotH1(Robot):
         self.movement_threshold = (
             0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
         )
-        self.body = BodyH1(cfg_robot=self.cfg_robot, scene=self.scene)
+        self.body = BodyH1(cfg_robot=self.cfg_robot)
         if self.cfg_robot.disable_gravity:
             self.scene_manager.disable_gravity_for_hierarchy(
                 self.cfg_robot.path_prim_robot
@@ -67,12 +67,12 @@ class RobotH1(Robot):
 
     @classmethod
     async def create(
-        cls,
-        cfg_robot: CfgH1,
-        # cfg_camera: CfgCamera = None,
-        # cfg_camera_third_person: CfgCameraThird = None,
-        scene: Scene = None,
-        scene_manager=None,
+            cls,
+            cfg_robot: CfgH1,
+            # cfg_camera: CfgCamera = None,
+            # cfg_camera_third_person: CfgCameraThird = None,
+            scene: Scene = None,
+            scene_manager=None,
     ) -> "RobotH1":
         """
         Asynchronously creates and fully initializes a RobotH1 instance,
@@ -82,7 +82,7 @@ class RobotH1(Robot):
             cfg_robot=cfg_robot,
             # cfg_camera=cfg_camera,
             # cfg_camera_third_person=cfg_camera_third_person,
-            scene=scene,
+            # scene=scene,
             scene_manager=scene_manager,
         )
 
