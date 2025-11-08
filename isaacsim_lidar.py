@@ -6,15 +6,9 @@ except:
 
 import math
 import time
-import numpy as np
-import carb
 import rclpy
 from gazebo_msgs.msg import ContactsState, ContactState
 from std_msgs.msg import Header
-from physics_engine.isaacsim_utils import set_camera_view
-from physics_engine.pxr_utils import Gf
-from robot.robot_drone_autel import DronePose
-from simulation_utils.message_convert import create_pc2_msg, create_image_msg
 
 
 class Rate:
@@ -22,7 +16,7 @@ class Rate:
         self.period = 1.0 / frequency
         self.start_time = time.time()
 
-    @carb.profiler.profile
+    # @carb.profiler.profile
     def sleep(self):
         elapsed = time.time() - self.start_time
         sleep_duration = self.period - elapsed
@@ -46,6 +40,10 @@ def run_simulation_loop(simulation_app, world, drone_ctxs, semantic_camera,
     rate = Rate(1.0 / world.get_rendering_dt())
 
     grid_size = int(math.ceil(math.sqrt(len(drone_ctxs))))
+
+    from physics_engine.pxr_utils import Gf
+
+    from robot.robot_drone_autel import DronePose
     for i, ctx in enumerate(drone_ctxs):
         row, col = i // grid_size, i % grid_size
         x_pos = (col - grid_size // 2) * 4.0
@@ -82,7 +80,8 @@ def run_simulation_loop(simulation_app, world, drone_ctxs, semantic_camera,
             if ctx.lidar_list:
                 pc_lfr, pc_ubd = ctx.lidar_list[0].get_pointcloud(), ctx.lidar_list[1].get_pointcloud()
                 header = Header(stamp=t_now.to_msg(), frame_id="map")
-                
+
+                from simulation_utils.message_convert import create_pc2_msg, create_image_msg
                 ctx.pubs["lfr_pc"].publish(create_pc2_msg(header, pc_lfr))
                 ctx.pubs["ubd_pc"].publish(create_pc2_msg(header, pc_ubd))
                 ctx.pubs["lfr_img"].publish(create_image_msg(header, ctx.lidar_list[0].get_depth()))
