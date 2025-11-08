@@ -1,10 +1,22 @@
 # =============================================================================
-# Scene Manager Module - USD Stage Management and Scene Operations
+# Scene Manager Module - Isaac Sim Backend
 # =============================================================================
 #
-# This module provides comprehensive scene management functionality for Isaac Sim,
-# handling USD stage operations, object creation, semantic labeling, and scene
-# manipulation within the simulation environment.
+# 这个模块是Isaac Sim专用的场景管理器，直接使用Isaac Sim API。
+# 它作为simulation层的后端实现，提供场景操作的底层功能。
+#
+# 使用规则：
+# - 用户代码应该使用 simulation.World 提供的CARLA风格API
+# - simulation/ 内部可以调用 scene_manager 的方法
+# - scene_manager 可以自由使用 Isaac Sim API，不需要过度封装
+#
+# 职责：
+# - 场景加载和管理（load_scene, save_scene）
+# - 物体创建（create_shape_unified, create_robot）
+# - 相机和传感器管理（add_camera）
+# - 碰撞检测（check_prim_collision）
+# - 语义标签管理（通过semantic_map）
+# - USD prim操作（adjust_prim, adjust_pose）
 #
 # =============================================================================
 
@@ -45,84 +57,26 @@ ASSET_PATH = config_manager.get("path_asset")
 
 class SceneManager:
     """
-    Handles all direct interactions and manipulations of the Isaac Sim USD stage.
-    This class contains the "business logic" for scene creation, modification,
-    and querying, but knows nothing about networking.
+    Scene Manager - Isaac Sim Backend
+    
+    这个模块是Isaac Sim专用的场景管理器，直接使用Isaac Sim API。
+    它作为simulation层的后端实现，不应该被用户代码直接调用。
+    
+    用户代码应该使用 simulation.World 提供的CARLA风格API。
+    
+    职责：
+    - 场景加载和管理
+    - 物体创建（使用Isaac Sim原生API）
+    - 相机和传感器管理
+    - 碰撞检测
+    - 语义标签管理
     """
 
     def __init__(self, world):
         self.prim_info = []
         self.stage = omni.usd.get_context().get_stage()
         self.world = world
-        # 设置场景保存路径，默认为项目根目录下的scenes文件夹
         self.scene_repository_path = "./scenes"
-        # todo: add a handler for extend simulation method if necessary
-        self.handlers = {
-            # "modify_object": self.modify_object,
-            # "delete_object": self.delete_object,
-            # "get_object_info": self.get_object_info,
-            # "execute_script": self.execute_script,
-            "get_scene_info": self.get_scene_info,
-            ## create ##
-            "add_camera": self.add_camera,
-            "create_robot": self.create_robot,
-            "create_shape_components": self.create_shape_components,
-            # "create_shape": self.create_shape_single,
-            "create_shape_unified": self.create_shape_unified,
-            "browse_scene_repository": self.browse_scene_repository,
-            "load_usd": self.load_usd,
-            "load_scene": self.load_scene,
-            "save_scene": self.save_scene,
-            ## prim ##
-            "delete_prim": self.delete_prim,
-            "active_prim": self.active_prim,
-            # "set_prim_scale": self.set_prim_scale,
-            # "move_prim": self.move_prim,
-            "adjust_prim": self.adjust_prim,
-            "set_prim_activate_state": self.set_prim_activate_state,
-            "get_selected_prim": self.get_selected_prim,
-            "focus_on_prim": self.focus_on_prim,
-            "check_prim_overlap": self.check_prim_overlap,
-            "check_prim_collision": self.check_prim_collision,
-            ## transpose ##
-            "adjust_pose": self.adjust_pose,
-            "set_collision_enabled": self.set_collision_enabled,
-            "set_collision_offsets": self.set_collision_offsets,
-            "set_collision_approximation": self.set_collision_approximation,
-            "set_material_properties": self.set_material_properties,
-            "set_physics_properties": self.set_physics_properties,
-            "set_physics_scene_config": self.set_physics_scene_config,
-            "create_joint": self.create_joint,
-            "set_drive_parameters": self.set_drive_parameters,
-        }
-
-    def execute_command(self, command_type: str, params: dict) -> Dict[str, Any]:
-        """
-        Finds and executes the correct handler method for a given command.
-        This is the single entry point for the network server.
-        """
-        handler = self.handlers.get(command_type)
-        if handler:
-            try:
-                print(f"SceneManager executing handler for {command_type}")
-                result = handler(**params)
-                print(f"Handler execution complete: {result}")
-
-                # Ensure the result is always a dictionary with a status
-                if isinstance(result, dict) and "status" in result:
-                    return result
-                else:
-                    # If a handler just returns, we wrap it in a success message
-                    return {"status": "success", "result": result}
-            except Exception as e:
-                print(f"Error in SceneManager handler '{command_type}': {str(e)}")
-                traceback.print_exc()
-                return {"status": "error", "message": str(e)}
-        else:
-            return {
-                "status": "error",
-                "message": f"Unknown command type: {command_type}",
-            }
 
     def delete_prim(self, prim_path: str):
         """
