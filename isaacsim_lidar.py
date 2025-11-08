@@ -199,9 +199,10 @@ def main():  # Needed in build_drone_ctx
     semantic_map = container.semantic_map()
     # skill_manager = container.skill_manager()
     viewport_manager = container.viewport_manager()
-    world = container.world()
-    env = container.env()
-    env.simulation_app = simulation_app
+    
+    # 使用simulation层的World（已整合Env功能）
+    world = container.world_configured()
+    
     # setup_simulation()
     ros_manager.start()
 

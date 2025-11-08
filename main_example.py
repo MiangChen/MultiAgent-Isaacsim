@@ -16,92 +16,9 @@ try:
     )
 except Exception as e:
     print(f"no pydevd found: {repr(e)}")
-###################################################################################################################
-
-from physics_engine.isaacsim_simulation_app import start_isaacsim_simulation_app
-
-simulation_app = start_isaacsim_simulation_app()
-
-###################################################################################################################
-# Standard library imports
-import asyncio
-
-# Third-party library imports
-from dependency_injector.wiring import inject, Provide
-
-# Local project imports
-from config.config_manager import config_manager
-from containers import AppContainer, get_container, reset_container
-from environment.env import Env
-from log.log_manager import LogManager
-from map.map_grid_map import GridMap
-from map.map_semantic_map import MapSemantic
-from physics_engine.isaacsim_utils import World
-from robot.robot_drone_cf2x import RobotCf2x, CfgDroneCf2X
-from robot.robot_h1 import RobotH1, CfgH1
-from robot.robot_jetbot import CfgJetbot, RobotJetbot
-from robot.target import Target
-from robot.swarm_manager import SwarmManager
-from scene.scene_manager import SceneManager
-from utils import euler_to_quat
-
-# ROS2 imports
-import rclpy
-
-rclpy.init(args=None)
-logger = LogManager.get_logger(__name__)
-
-WORLD_USD_PATH = config_manager.get("world_usd_path")
-PROJECT_ROOT = config_manager.get("project_root")
 
 
-@inject
-def setup_simulation(
-    swarm_manager: SwarmManager = Provide[AppContainer.swarm_manager],
-    env: Env = Provide[AppContainer.env],
-    world: World = Provide[AppContainer.world],
-    loop: asyncio.AbstractEventLoop = Provide[AppContainer.loop],
-) -> None:
-    """
-    Setup simulation environment with injected dependencies.
-    """
-    # Register robot classes to swarm manager
-    swarm_manager.register_robot_class(
-        robot_class_name="jetbot",
-        robot_class=RobotJetbot,
-    )
-    swarm_manager.register_robot_class(robot_class_name="h1", robot_class=RobotH1)
-    swarm_manager.register_robot_class(robot_class_name="cf2x", robot_class=RobotCf2x)
-    swarm_manager.register_robot_class(robot_class_name="target", robot_class=Target)
-
-    # Create initialization tasks
-    async def init_env_and_swarm():
-        await env.initialize_async()
-        await swarm_manager.initialize_async(
-            scene=world.scene,
-            robot_swarm_cfg_path=f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml",
-        )
-
-    # Schedule the initialization in Isaac Sim's event loop
-    # Create a task but don't wait for it to complete immediately
-    init_task = loop.create_task(init_env_and_swarm())
-
-    # Wait for initialization to complete before proceeding
-    # We'll do this by running a few simulation steps to let the async tasks execute
-    logger.info("Waiting for async initialization to complete...")
-    while True:  # Give some time for async initialization
-        simulation_app.update()
-        if init_task.done():
-            if init_task.exception():
-                raise init_task.exception()
-            else:
-                logger.info("Async initialization completed successfully")
-                break
-        else:
-            logger.warning("Warning: Async initialization may still be running")
-
-
-def create_car_objects(scene_manager: SceneManager, map_semantic: MapSemantic) -> list:
+def create_car_objects(scene_manager, map_semantic, logger) -> list:
     """
     Create car objects in the scene with semantic labels using injected dependencies.
 
@@ -183,7 +100,7 @@ def create_car_objects(scene_manager: SceneManager, map_semantic: MapSemantic) -
 
 
 def process_semantic_detection(
-    semantic_camera, map_semantic: MapSemantic, target_semantic_class: str
+        semantic_camera, map_semantic, target_semantic_class: str
 ) -> None:
     """
     Process semantic detection and car pose extraction using injected dependencies.
@@ -216,6 +133,21 @@ def process_semantic_detection(
 
 def main():
     print("\n\n\n\ninto the main\n\n\n\n")
+
+    # Import after simulation_app is created by Server
+    from containers import get_container, reset_container
+    from config.config_manager import config_manager
+    from log.log_manager import LogManager
+    from utils import euler_to_quat
+    import rclpy
+
+    # Initialize ROS2
+    rclpy.init(args=None)
+    logger = LogManager.get_logger(__name__)
+
+    WORLD_USD_PATH = config_manager.get("world_usd_path")
+    PROJECT_ROOT = config_manager.get("project_root")
+
     # Setup dependency injection container
     reset_container()
     container = get_container()
@@ -227,6 +159,7 @@ def main():
     config_manager = container.config_manager()
     log_manager = container.log_manager()
     loop = container.loop()
+    server = container.server()
     ros_manager = container.ros_manager()
     swarm_manager = container.swarm_manager()
     scene_manager = container.scene_manager()
@@ -234,10 +167,36 @@ def main():
     semantic_map = container.semantic_map()
     # skill_manager = container.skill_manager()
     viewport_manager = container.viewport_manager()
-    world = container.world()
-    env = container.env()
-    env.simulation_app = simulation_app
-    setup_simulation()
+
+    # 使用simulation层的World（已整合Env功能）
+    world = container.world_configured()
+    simulation_app = server.get_simulation_app()
+
+    # Register robot classes - CARLA style: direct operations in main
+    from robot.robot_drone_cf2x import RobotCf2x
+    from robot.robot_h1 import RobotH1
+    from robot.robot_jetbot import RobotJetbot
+    from robot.target import Target
+
+    swarm_manager.register_robot_class("jetbot", RobotJetbot)
+    swarm_manager.register_robot_class("h1", RobotH1)
+    swarm_manager.register_robot_class("cf2x", RobotCf2x)
+    swarm_manager.register_robot_class("target", Target)
+
+    # Load robot swarm from config - CARLA style: synchronous
+    logger.info("Loading robot swarm...")
+    
+    # 临时方案：使用 run_until_complete 包装异步方法
+    # TODO: 将 swarm_manager.initialize_async 改为同步方法以符合 CARLA 风格
+    loop.run_until_complete(
+        swarm_manager.initialize_async(
+            scene=world.scene,
+            robot_swarm_cfg_path=f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml",
+        )
+    )
+    
+    logger.info("Robot swarm loaded")
+
     ros_manager.start()
 
     # Load scene
@@ -249,19 +208,20 @@ def main():
     # print("All prims with 'car' label:", created_prim_paths)
     # print(scene_manager.count_semantics_in_scene().get("result"))
 
-    # Reset environment to ensure all objects are properly initialized
-    env.reset()
+    world.reset()
+    world.initialize_robots()
+    world.initialize_map()
 
     # Add physics callbacks for active robots
     for robot_class in swarm_manager.robot_class:
         for i, robot in enumerate(swarm_manager.robot_warehouse[robot_class]):
             callback_name = f"physics_step_{robot_class}_{i}"
-            env.world.add_physics_callback(
+            world.get_isaac_world().add_physics_callback(
                 callback_name, callback_fn=robot.on_physics_step
             )
 
     # Create and initialize semantic camera
-    create_car_objects(scene_manager, semantic_map)
+    create_car_objects(scene_manager, semantic_map, logger)
     result = scene_manager.add_camera(
         translation=[1, 4, 2], orientation=euler_to_quat(roll=90)
     )
@@ -271,7 +231,7 @@ def main():
 
     # Wait for camera and rendering pipeline to fully initialize
     for _ in range(10):
-        env.step(action=None)
+        world.tick()
 
     # Enable bounding box detection after initialization period
     semantic_camera.add_bounding_box_2d_loose_to_frame()
@@ -342,7 +302,7 @@ def main():
     result = True
     # Main simulation loop
     while simulation_app.is_running():
-        env.step(action=None)
+        world.tick()
         ##### navigation usage ex
         if count % 120 == 0 and count > 0:
             result = process_semantic_detection(semantic_camera, semantic_map, "robot")

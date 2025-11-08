@@ -17,15 +17,7 @@ from dependency_injector import containers, providers
 
 # Local project imports
 from config.config_manager import config_manager
-from environment.env import Env
 from log.log_manager import LogManager
-from map.map_semantic_map import MapSemantic
-from map.map_grid_map import GridMap
-from physics_engine.isaacsim_utils import World
-from robot.swarm_manager import SwarmManager
-from ros.ros_manager import RosManager
-from scene.scene_manager import SceneManager
-from ui.viewport_manager import ViewportManager
 
 
 class AppContainer(containers.DeclarativeContainer):
@@ -45,50 +37,105 @@ class AppContainer(containers.DeclarativeContainer):
 
     loop = providers.Singleton(asyncio.get_event_loop)
 
+    # 使用simulation层的Server和World（延迟import避免在simulation_app启动前加载Isaac Sim模块）
+    server = providers.Singleton(
+        lambda: _import_and_create_server(),
+    )
+    
     world = providers.Singleton(
-        World,
-        physics_dt=config.provided["world"]["physics_dt"],
-        rendering_dt=config.provided["world"]["rendering_dt"],
-        stage_units_in_meters=config.provided["world"]["stage_units_in_meters"],
-        sim_params=config.provided["world"]["sim_params"],
-        backend=config.provided["world"]["backend"],
+        lambda server, cfg: server.get_world(
+            physics_dt=cfg["world"]["physics_dt"],
+            rendering_dt=cfg["world"]["rendering_dt"],
+            stage_units_in_meters=cfg["world"]["stage_units_in_meters"],
+            sim_params=cfg["world"]["sim_params"],
+            backend=cfg["world"]["backend"]
+        ),
+        server=server,
+        cfg=config
     )
 
     grid_map = providers.Singleton(
-        GridMap,
-        cell_size=config.provided["map"]["cell_size"],
-        start_point=config.provided["map"]["start_point"],
-        min_bound=config.provided["map"]["min_bound"],
-        max_bound=config.provided["map"]["max_bound"],
-        occupied_value=config.provided["map"]["occupied_cell"],
-        free_value=config.provided["map"]["free_cell"],
-        unknown_value=config.provided["map"]["unknown_cell"],
+        lambda cfg: _import_and_create_grid_map(cfg),
+        cfg=config
     )
 
     ros_manager = providers.Singleton(
-        RosManager,
+        lambda loop, ros_config: _import_and_create_ros_manager(loop, ros_config),
         loop=loop,
-        config=config.provided["ros"],
+        ros_config=config.provided["ros"],
     )
 
-    scene_manager = providers.Singleton(SceneManager, world=world)
-    semantic_map = providers.Singleton(MapSemantic)
-    viewport_manager = providers.Singleton(ViewportManager)
+    scene_manager = providers.Singleton(
+        lambda world: _import_and_create_scene_manager(world),
+        world=world
+    )
+    
+    semantic_map = providers.Singleton(
+        lambda: _import_and_create_semantic_map()
+    )
+    
+    viewport_manager = providers.Singleton(
+        lambda: _import_and_create_viewport_manager()
+    )
 
     swarm_manager = providers.Singleton(
-        SwarmManager,
+        lambda map_semantic, scene_manager: _import_and_create_swarm_manager(map_semantic, scene_manager),
         map_semantic=semantic_map,
         scene_manager=scene_manager,
     )
-
-    env = providers.Factory(
-        Env,
-        simulation_app=providers.Object(None),  # 保持不变，由 main.py 运行时提供
-        world=world,
-        scene_manager=scene_manager,
-        swarm_manager=swarm_manager,
-        grid_map=grid_map,
+    
+    # 配置World的组件（整合原Env的功能）
+    world_configured = providers.Singleton(
+        lambda w, sm, swm, gm: _configure_world(w, sm, swm, gm),
+        w=world,
+        sm=scene_manager,
+        swm=swarm_manager,
+        gm=grid_map
     )
+
+
+def _import_and_create_server():
+    from simulation.server import Server
+    return Server()
+
+def _import_and_create_grid_map(cfg):
+    from map.map_grid_map import GridMap
+    return GridMap(
+        cell_size=cfg["map"]["cell_size"],
+        start_point=cfg["map"]["start_point"],
+        min_bound=cfg["map"]["min_bound"],
+        max_bound=cfg["map"]["max_bound"],
+        occupied_value=cfg["map"]["occupied_cell"],
+        free_value=cfg["map"]["free_cell"],
+        unknown_value=cfg["map"]["unknown_cell"],
+    )
+
+def _import_and_create_ros_manager(loop, ros_config):
+    from ros.ros_manager import RosManager
+    return RosManager(loop=loop, config=ros_config)
+
+def _import_and_create_scene_manager(world):
+    from scene.scene_manager import SceneManager
+    return SceneManager(world=world)
+
+def _import_and_create_semantic_map():
+    from map.map_semantic_map import MapSemantic
+    return MapSemantic()
+
+def _import_and_create_viewport_manager():
+    from ui.viewport_manager import ViewportManager
+    return ViewportManager()
+
+def _import_and_create_swarm_manager(map_semantic, scene_manager):
+    from robot.swarm_manager import SwarmManager
+    return SwarmManager(map_semantic=map_semantic, scene_manager=scene_manager)
+
+def _configure_world(world, scene_manager, swarm_manager, grid_map):
+    """配置World的组件"""
+    world.set_scene_manager(scene_manager)
+    world.set_swarm_manager(swarm_manager)
+    world.set_grid_map(grid_map)
+    return world
 
 
 # 全局容器实例
