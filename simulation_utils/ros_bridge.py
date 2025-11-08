@@ -71,10 +71,6 @@ def setup_ros(namespace: str = "", ctx=None):
 
     global g_node
 
-    # # Initialise rclpy exactly once
-    # if not rclpy.ok():
-    #     rclpy.init(signal_handler_options=rclpy.signals.SignalHandlerOptions.NO)
-
     if namespace and not namespace.startswith("/"):
         namespace = "/" + namespace
 

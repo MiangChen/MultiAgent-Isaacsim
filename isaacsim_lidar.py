@@ -59,11 +59,11 @@ def run_simulation_loop(simulation_app, world, drone_ctxs, semantic_camera,
 
         t_now = drone_ctxs[0].ros_node.get_clock().now()
 
-        for ctx in drone_ctxs:
-            if ctx.is_pose_dirty and ctx.des_pose and ctx.drone_prim:
-                ctx.drone_prim.GetAttribute("xformOp:translate").Set(ctx.des_pose.pos)
-                ctx.drone_prim.GetAttribute("xformOp:orient").Set(ctx.des_pose.quat)
-                ctx.is_pose_dirty = False
+        # for ctx in drone_ctxs:
+        #     if ctx.is_pose_dirty and ctx.des_pose and ctx.drone_prim:
+        #         ctx.drone_prim.GetAttribute("xformOp:translate").Set(ctx.des_pose.pos)
+        #         ctx.drone_prim.GetAttribute("xformOp:orient").Set(ctx.des_pose.quat)
+        #         ctx.is_pose_dirty = False
 
         world.tick()
 

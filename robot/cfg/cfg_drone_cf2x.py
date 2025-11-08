@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 
+# Local project imports
 from .cfg_robot import CfgRobot, ASSET_PATH
 
 
 @dataclass
 class CfgDroneCf2X(CfgRobot):
-    type: str = "cf2x"
-    path_prim_robot: str = "/World/robot/cf2x"
+    type: str = "drone_cf2x"
+    path_prim_robot: str = "/World/robot/drone_cf2x"
     path_usd: str = ASSET_PATH + "/Isaac/Robots/Crazyflie/cf2x.usd"
 
     default_speed: float = 1.0
