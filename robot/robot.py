@@ -65,8 +65,8 @@ def _get_viewport_manager_from_container():
 
 class Robot:
     def __init__(
-        self,
-        scene_manager: SceneManager = None,
+            self,
+            scene_manager: SceneManager = None,
     ):
 
         self.cfg_dict_camera = self.cfg_robot.cfg_dict_camera
@@ -77,9 +77,9 @@ class Robot:
         self.scene_manager = scene_manager
         self.viewport_manager = _get_viewport_manager_from_container()
         self.cfg_robot.path_prim_robot = (
-            self.cfg_robot.path_prim_swarm
-            + f"/{self.cfg_robot.type}"
-            + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
+                self.cfg_robot.path_prim_swarm
+                + f"/{self.cfg_robot.type}"
+                + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
         )
         self.cfg_robot.namespace = self.cfg_robot.type + f"_{self.cfg_robot.id}"
         self.namespace = self.cfg_robot.namespace
@@ -283,7 +283,7 @@ class Robot:
         #     self._initialize_third_person_camera()
 
     def form_feedback(
-        self, status: str = "processing", message: str = "none", progress: int = 100
+            self, status: str = "processing", message: str = "none", progress: int = 100
     ) -> Dict[str, Any]:
         return dict(
             status=str(status),
@@ -382,9 +382,9 @@ class Robot:
         if self.is_detecting:
             detect(self, self.target_prim)
         if (
-            self.is_tracking
-            and self.node_controller_mpc.has_reached_goal
-            and self.track_waypoint_index < len(self.track_waypoint_list)
+                self.is_tracking
+                and self.node_controller_mpc.has_reached_goal
+                and self.track_waypoint_index < len(self.track_waypoint_list)
         ):
             self.skill_function = navigate_to
             self.skill_params = {
@@ -453,7 +453,7 @@ class Robot:
 
             # 2. 计算相机的位置 (eye) 和目标位置 (target)
             camera_eye_position = (
-                robot_position + self.relative_camera_pos + self.transform_camera_pos
+                    robot_position + self.relative_camera_pos + self.transform_camera_pos
             )
             camera_target_position = robot_position
 
