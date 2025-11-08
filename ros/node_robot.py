@@ -50,11 +50,11 @@ class NodeRobot(Node):
         """根据配置创建subscribers"""
         self.subscriber_dict = {}
 
-        if "cmd_vel" in self.topics:
-            self.subscriber_cmd_vel = self.create_subscription(
-                Twist, self.topics["cmd_vel"], self.callback_cmd_vel, 10
-            )
-            self.subscriber_dict["cmd_vel"] = self.subscriber_cmd_vel
+        # if "cmd_vel" in self.topics:
+        #     self.subscriber_cmd_vel = self.create_subscription(
+        #         Twist, self.topics["cmd_vel"], self.callback_cmd_vel, 10
+        #     )
+        #     self.subscriber_dict["cmd_vel"] = self.subscriber_cmd_vel
 
         self.subscriber_sim_clock = self.create_subscription(
             Clock, "/isaacsim_simulation_clock", self.callback_sim_clock, 10
