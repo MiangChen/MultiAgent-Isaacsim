@@ -48,7 +48,7 @@ def run_simulation_loop(simulation_app, world, drone_ctxs, semantic_camera,
         row, col = i // grid_size, i % grid_size
         x_pos = (col - grid_size // 2) * 4.0
         y_pos = (row - grid_size // 2) * 4.0 + 5
-        ctx.des_pose = DronePose(pos=Gf.Vec3d(x_pos, y_pos, 2.0), quat=Gf.Quatf.GetIdentity())
+        ctx.des_pose = DronePose(pos=Gf.Vec3d(x_pos, y_pos, 2.0), quat=Gf.Quatd.GetIdentity())
         ctx.is_pose_dirty = True
 
     while simulation_app.is_running():
@@ -60,7 +60,7 @@ def run_simulation_loop(simulation_app, world, drone_ctxs, semantic_camera,
         t_now = drone_ctxs[0].ros_node.get_clock().now()
 
         for ctx in drone_ctxs:
-            if ctx.is_pose_dirty and ctx.des_pose:
+            if ctx.is_pose_dirty and ctx.des_pose and ctx.drone_prim:
                 ctx.drone_prim.GetAttribute("xformOp:translate").Set(ctx.des_pose.pos)
                 ctx.drone_prim.GetAttribute("xformOp:orient").Set(ctx.des_pose.quat)
                 ctx.is_pose_dirty = False
@@ -88,34 +88,7 @@ def run_simulation_loop(simulation_app, world, drone_ctxs, semantic_camera,
                 ctx.pubs["ubd_img"].publish(create_image_msg(header, ctx.lidar_list[1].get_depth()))
 
 
-def build_drone_ctx(namespace: str, idx: int, world, setup_ros):
-    from robot.sensor.lidar.lidar_omni import LidarOmni
-    from robot.sensor.lidar.cfg_lidar import CfgLidar
-    from robot.robot_drone_autel import RobotDroneAutel
-    
-    prim_path = f"/{namespace}/drone" if namespace else "/drone" if idx == 0 else f"/drone_{idx}"
-    
-    drone = RobotDroneAutel(
-        scene_manager=world.get_scene_manager(),
-        namespace=namespace,
-        prim_path=prim_path,
-        color_scheme_id=idx,
-    )
-    
-    cfg_lfr = CfgLidar(name="lfr", prim_path=prim_path + "/lfr", output_size=(352, 120), 
-                       quat=(1, 0, 0, 0), config_file_name="autel_perception_120x352")
-    cfg_ubd = CfgLidar(name="ubd", prim_path=prim_path + "/ubd", output_size=(352, 120),
-                       quat=(0, 0, 0.7071067811865476, 0.7071067811865476), config_file_name="autel_perception_120x352")
-    
-    node, pubs, subs, srvs = setup_ros(namespace, ctx=drone)
-    
-    drone.ros_node = node
-    drone.pubs = pubs
-    drone.subs = subs
-    drone.srvs = srvs
-    drone.lidar_list = [LidarOmni(cfg_lidar=cfg_lfr), LidarOmni(cfg_lidar=cfg_ubd)]
-    
-    return drone
+
 
 
 def create_car_objects(scene_manager, map_semantic):
@@ -210,8 +183,23 @@ def main():
     camera_result = result.get("result")
 
     from simulation_utils.ros_bridge import setup_ros
-    drone_ctxs = [build_drone_ctx(ns, idx, world, setup_ros) 
-                  for idx, ns in enumerate(config_manager.get("namespace"))]
+    
+    # Create drones using blueprint - CARLA style (same as main_example.py)
+    blueprint_library = world.get_blueprint_library()
+    drone_bp = blueprint_library.find('robot.autel')
+    
+    drone_ctxs = []
+    for idx, ns in enumerate(config_manager.get("namespace")):
+        drone_bp.set_attribute('type', 'autel')
+        drone_bp.set_attribute('id', idx)
+        drone_bp.set_attribute('namespace', ns)
+        drone_bp.set_attribute('color_scheme_id', idx)
+        drone_bp.set_attribute('disable_gravity', True)
+        
+        drone = world.spawn_actor(drone_bp)
+        drone.setup_lidar_and_ros(setup_ros)
+        drone.initialize()
+        drone_ctxs.append(drone)
 
     # Run simulation loop
     run_simulation_loop(simulation_app, world, drone_ctxs, camera_result.get("camera_instance"),
