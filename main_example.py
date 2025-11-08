@@ -196,10 +196,25 @@ def main():
     # Build grid map for planning
     grid_map.generate()
 
+    # Setup ROS control bridge (Application layer: ROS -> Control -> Simulation)
+    from ros.ros_control_bridge import RosControlBridgeManager
+    from simulation.control import RobotControl
+    
+    ros_bridge_manager = RosControlBridgeManager()
+    ros_bridge_manager.add_robots(robots)
+    ros_bridge_manager.start()
+
     result = True
     # Main simulation loop
     while simulation_app.is_running():
         world.tick()
+        
+        # Optional: Direct control via Python API
+        # if count % 300 == 0 and count > 0 and len(robots) > 0:
+        #     control = RobotControl()
+        #     control.linear_velocity = [0.5, 0.0, 0.0]
+        #     robots[0].apply_control(control)
+        
         ##### navigation usage ex
         if count % 120 == 0 and count > 0:
             result = process_semantic_detection(semantic_camera, semantic_map, "robot")
@@ -209,6 +224,8 @@ def main():
 
         count += 1
 
+    # Cleanup
+    ros_bridge_manager.stop()
     ros_manager.stop()
 
     if rclpy.ok():

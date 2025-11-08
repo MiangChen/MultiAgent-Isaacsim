@@ -291,6 +291,12 @@ class Robot:
             progress=progress,
         )
 
+    def apply_control(self, control):
+        """Apply CARLA-style control: Control object -> velocity command"""
+        from simulation.control import RobotControl
+        if isinstance(control, RobotControl):
+            self.set_velocity_command(control.linear_velocity, control.angular_velocity)
+
     def on_physics_step(self, step_size) -> None:
         """
         Args:
