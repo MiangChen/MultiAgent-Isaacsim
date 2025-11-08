@@ -42,6 +42,23 @@ class BlueprintLibrary:
         self.register_robot_class("cf2x", RobotCf2x)
         self.register_robot_class("autel", RobotDroneAutel)
         self.register_robot_class("target", Target)
+        
+        # Register static props (CARLA style: static.prop.*)
+        self._register_static_props()
+    
+    def _register_static_props(self):
+        """注册静态物体 Register static props (CARLA style)"""
+        # Box
+        bp = Blueprint('static.prop.box', robot_class=None, tags=['static', 'prop'])
+        bp.set_attribute('shape_type', 'cuboid')
+        bp.set_attribute('entity_type', 'visual')
+        self._blueprints[bp.id] = bp
+        
+        # Car
+        bp = Blueprint('static.prop.car', robot_class=None, tags=['static', 'prop', 'vehicle'])
+        bp.set_attribute('shape_type', 'cuboid')
+        bp.set_attribute('entity_type', 'visual')
+        self._blueprints[bp.id] = bp
     
     def register_robot_class(self, robot_type: str, robot_class: type):
         tags = ['robot']

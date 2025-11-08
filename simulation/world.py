@@ -48,9 +48,11 @@ class World:
         return getattr(robot, 'actor', None)
     
     def spawn_actor(self, blueprint, transform=None, attach_to=None):
+        # Static props (CARLA style: static.prop.*)
         if blueprint.robot_class is None:
-            raise ValueError(f"Blueprint {blueprint.id} has no robot_class")
+            return self._spawn_static_prop(blueprint, transform)
         
+        # Robots
         cfg_robot = blueprint.get_all_attributes()
         
         if transform is not None:
@@ -69,6 +71,34 @@ class World:
         RobotActor(robot, world=self)
         
         return robot
+    
+    def _spawn_static_prop(self, blueprint, transform):
+        """创建静态物体 Spawn static prop (CARLA style)"""
+        attrs = blueprint.get_all_attributes()
+        
+        # Generate prim_path if not provided
+        if 'prim_path' not in attrs:
+            name = attrs.get('name', f'prop_{id(blueprint)}')
+            # Sanitize name for USD prim path (replace invalid characters)
+            name = name.replace('-', '_').replace(' ', '_')
+            attrs['prim_path'] = f"/World/{name}"
+        
+        if transform:
+            attrs['position'] = [transform.location.x, transform.location.y, transform.location.z]
+            if hasattr(transform, 'rotation'):
+                attrs['orientation'] = transform.rotation.to_quaternion()
+        
+        # Extract semantic_label before passing to create_shape_unified
+        semantic_label = attrs.pop('semantic_label', None)
+        
+        result = self._scene_manager.create_shape_unified(**attrs)
+        
+        if result.get("status") == "success":
+            prim_path = result.get("result")
+            if self._semantic_map and semantic_label:
+                self._semantic_map.add_semantic(prim_path=prim_path, semantic_label=semantic_label)
+            return prim_path
+        return None
     
     def get_blueprint_library(self):
         if self._blueprint_library is None:

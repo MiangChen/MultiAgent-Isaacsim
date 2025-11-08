@@ -18,85 +18,36 @@ except Exception as e:
     print(f"no pydevd found: {repr(e)}")
 
 
-def create_car_objects(scene_manager, map_semantic, logger) -> list:
-    """
-    Create car objects in the scene with semantic labels using injected dependencies.
-
-    Args:
-        scene_manager: Injected scene manager instance for creating objects
-
-    Returns:
-        list: List of created prim paths
-    """
-    scale = [2, 5, 1.0]
-    cubes_config = {
-        "car0": {
-            "shape_type": "cuboid",
-            "prim_path": "/World/car0",
-            "scale": scale,
-            "name": "car0",
-            "position": [11.6, 3.5, 0],
-            "color": [255, 255, 255],
-            "entity_type": "visual",
-        },
-        "car1": {
-            "shape_type": "cuboid",
-            "prim_path": "/World/car1",
-            "scale": scale,
-            "name": "car1",
-            "position": [0.3, 3.5, 0],
-            "color": [255, 255, 255],
-            "entity_type": "visual",
-        },
-        "car2": {
-            "shape_type": "cuboid",
-            "prim_path": "/World/car2",
-            "scale": scale,
-            "name": "car2",
-            "position": [-13.2, 3.5, 0],
-            "color": [255, 255, 255],
-            "entity_type": "visual",
-        },
-        "car3": {
-            "shape_type": "cuboid",
-            "prim_path": "/World/car3",
-            "name": "car3",
-            "scale": scale,
-            "position": [-7.1, 10, 0],
-            "color": [255, 255, 255],
-            "entity_type": "visual",
-        },
-        "car4": {
-            "shape_type": "cuboid",
-            "prim_path": "/World/car4",
-            "name": "car4",
-            "scale": scale,
-            "position": [-0.9, 30, 0],
-            "orientation": [0.707, 0, 0, 0.707],
-            "color": [255, 255, 255],
-            "entity_type": "visual",
-        },
-    }
-
-    created_prim_paths = []
-    logger.info(
-        f"All semantics in scene:{map_semantic.count_semantics_in_scene().get('result')}"
-    )
-
-    for cube_name, config in cubes_config.items():
-        creation_result = scene_manager.create_shape_unified(**config)
-
-        if creation_result.get("status") == "success":
-            prim_path = creation_result.get("prim_path")
-            created_prim_paths.append(prim_path)
-
-            # Add semantic label
-            semantic_result = map_semantic.add_semantic(
-                prim_path=prim_path, semantic_label="car"
-            )
-            logger.info(semantic_result)
-
-    return created_prim_paths
+def create_car_objects(world):
+    """Create car objects using blueprint - CARLA style"""
+    from simulation import Transform, Location, Rotation
+    
+    blueprint_library = world.get_blueprint_library()
+    
+    cars_config = [
+        {"name": "car0", "position": [11.6, 3.5, 0]},
+        {"name": "car1", "position": [0.3, 3.5, 0]},
+        {"name": "car2", "position": [-13.2, 3.5, 0]},
+        {"name": "car3", "position": [-7.1, 10, 0]},
+        {"name": "car4", "position": [-0.9, 30, 0], "orientation": [0.707, 0, 0, 0.707]},
+    ]
+    
+    cars = []
+    for cfg in cars_config:
+        car_bp = blueprint_library.find('static.prop.car')
+        car_bp.set_attribute('name', cfg['name'])
+        car_bp.set_attribute('scale', [2, 5, 1.0])
+        car_bp.set_attribute('color', [255, 255, 255])
+        car_bp.set_attribute('semantic_label', 'car')
+        
+        transform = Transform(location=Location(*cfg['position']))
+        if 'orientation' in cfg:
+            transform.rotation = Rotation(quaternion=cfg['orientation'])
+        
+        car = world.spawn_actor(car_bp, transform)
+        cars.append(car)
+    
+    return cars
 
 
 def process_semantic_detection(
@@ -194,8 +145,9 @@ def main():
             callback_name, callback_fn=robot.on_physics_step
         )
 
-    # Create and initialize semantic camera
-    create_car_objects(scene_manager, semantic_map, logger)
+    # Create cars using blueprint - CARLA style
+    cars = create_car_objects(world)
+    
     result = scene_manager.add_camera(
         translation=[1, 4, 2], orientation=euler_to_quat(roll=90)
     )
@@ -222,55 +174,27 @@ def main():
 
     count = 0
 
+    # Create critical package using blueprint - CARLA style
+    from simulation import Transform, Location, Rotation
+    
     object_name = "Critical-Package"
-    object_prim_path = "/World/Critical_Package"
-    object = {
-        "shape_type": "cuboid",
-        "prim_path": object_prim_path,
-        # "scene_name": "object",
-        "name": object_name,
-        "scale": [0.5, 0.5, 0.5],
-        "position": [3, 4.5, 0.25],
-        "orientation": [0.707, 0, 0, 0.707],
-        "color": [255, 255, 255],
-        "mass": 0.1,
-        "entity_type": "rigid",
-    }
-    # 在semantic map中添加这个物体的prim path
-    semantic_map.dict_map_semantic[object_name] = object_prim_path
-    scene_manager.create_shape_unified(**object)
-
-    # flag = 0
-    # LiDAR -------------------------------------------------------------
-    # from robot.sensor.lidar.lidar_isaac import CfgLidar, LidarIsaac
-    # prim_path = "/World/Critical_Package_Alpha2"
-    # lidar_config = "autel_perception_120x352"
-    # lidar_cfg = CfgLidar()
-    # lidar_cfg.position = [5, 5, 1]
-    # lidar_cfg.prim_path = prim_path + "/Lidar/lfr"
-    # lidar_cfg.config_file_name = lidar_config
-    # lidar = LidarIsaac(
-    #     cfg_robot=None,
-    #     cfg_lidar=lidar_cfg,
-    # )
-    # # lidar.copy_lidar_config(lidar_config=lidar_config)
-    # lidar.create_lidar(prim_path=lidar_cfg.prim_path)
-    # # lidar.lidar.add_linear_depth_data_to_frame()
-    # lidar.lidar.add_point_cloud_data_to_frame()
-    # lidar.lidar.add_range_data_to_frame()
-    # lidar.lidar.add_intensities_data_to_frame()
-    # lidar.lidar.add_azimuth_range_to_frame()
-    # # lidar.lidar.add_horizontal_resolution_to_frame()
-    # lidar.lidar.enable_visualization()
-    # lidar.initialize()
+    blueprint_library = world.get_blueprint_library()
+    package_bp = blueprint_library.find('static.prop.box')
+    package_bp.set_attribute('name', object_name)
+    package_bp.set_attribute('scale', [0.5, 0.5, 0.5])
+    package_bp.set_attribute('color', [255, 255, 255])
+    package_bp.set_attribute('mass', 0.1)
+    package_bp.set_attribute('entity_type', 'rigid')
+    package_bp.set_attribute('semantic_label', 'package')
+    
+    transform = Transform(
+        location=Location(3, 4.5, 0.25),
+        rotation=Rotation(quaternion=[0.707, 0, 0, 0.707])
+    )
+    package = world.spawn_actor(package_bp, transform)
 
     # Build grid map for planning
     grid_map.generate()
-
-    # wait for node planner ompl to receive message
-    import time
-
-    time.sleep(2)
 
     result = True
     # Main simulation loop

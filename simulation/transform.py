@@ -14,12 +14,55 @@ class Location:
 
 class Rotation:
     
-    def __init__(self, pitch: float = 0.0, yaw: float = 0.0, roll: float = 0.0):
-        self.pitch = float(pitch)
-        self.yaw = float(yaw)
-        self.roll = float(roll)
+    def __init__(self, pitch: float = 0.0, yaw: float = 0.0, roll: float = 0.0, quaternion: list = None):
+        """
+        Initialize rotation with either Euler angles or quaternion.
+        
+        Args:
+            pitch: Pitch angle in degrees
+            yaw: Yaw angle in degrees
+            roll: Roll angle in degrees
+            quaternion: Quaternion [x, y, z, w] (overrides Euler angles if provided)
+        """
+        if quaternion is not None:
+            self._quaternion = list(quaternion)
+            self.pitch = 0.0
+            self.yaw = 0.0
+            self.roll = 0.0
+        else:
+            self.pitch = float(pitch)
+            self.yaw = float(yaw)
+            self.roll = float(roll)
+            self._quaternion = None
+    
+    def to_quaternion(self):
+        """Return quaternion representation [x, y, z, w]"""
+        if self._quaternion is not None:
+            return self._quaternion
+        
+        # Convert Euler angles to quaternion
+        from math import cos, sin, radians
+        pitch_rad = radians(self.pitch)
+        yaw_rad = radians(self.yaw)
+        roll_rad = radians(self.roll)
+        
+        cy = cos(yaw_rad * 0.5)
+        sy = sin(yaw_rad * 0.5)
+        cp = cos(pitch_rad * 0.5)
+        sp = sin(pitch_rad * 0.5)
+        cr = cos(roll_rad * 0.5)
+        sr = sin(roll_rad * 0.5)
+        
+        w = cr * cp * cy + sr * sp * sy
+        x = sr * cp * cy - cr * sp * sy
+        y = cr * sp * cy + sr * cp * sy
+        z = cr * cp * sy - sr * sp * cy
+        
+        return [x, y, z, w]
     
     def __repr__(self):
+        if self._quaternion is not None:
+            return f"Rotation(quaternion={self._quaternion})"
         return f"Rotation(pitch={self.pitch:.2f}, yaw={self.yaw:.2f}, roll={self.roll:.2f})"
 
 
