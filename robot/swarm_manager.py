@@ -64,23 +64,23 @@ class SwarmManager:
         self.robot_warehouse[robot_class_name] = []
         self.robot_class[robot_class_name] = robot_class
 
-    async def initialize_async(
+    def initialize(
         self,
         scene: Scene,
         robot_swarm_cfg_path: str = None,
     ) -> None:
         """
-        Complete async initialization of the swarm manager.
+        Initialize the swarm manager
         """
         # Set scene reference
         self.scene = scene
 
         # Load robot swarm configuration if path provided
         if robot_swarm_cfg_path is not None:
-            await self.load_robot_swarm_cfg(robot_swarm_cfg_path)
+            self.load_robot_swarm_cfg(robot_swarm_cfg_path)
 
-    async def load_robot_swarm_cfg(self, robot_swarm_cfg_file: str = None) -> None:
-        """异步加载并创建配置文件中定义的所有机器人。"""
+    def load_robot_swarm_cfg(self, robot_swarm_cfg_file: str = None) -> None:
+        """加载并创建配置文件中定义的所有机器人"""
         with open(robot_swarm_cfg_file, "r") as file:
             dict = yaml.safe_load(file)
 
@@ -89,24 +89,13 @@ class SwarmManager:
                 if robot_class_name not in self.robot_class:
                     raise ValueError(f"Unknown robot type: {robot_class_name}")
 
-                # 选择同步或异步创建
                 robot_cls = self.robot_class[robot_class_name]
 
-                # 检查机器人class是否有 'create' 方法，并且它是一个异步函数
-                if hasattr(robot_cls, "create") and inspect.iscoroutinefunction(
-                    robot_cls.create
-                ):
-                    # 如果是，使用 await 调用异步工厂 create 方法
-                    robot = await robot_cls.create(
-                        cfg_robot=cfg_robot,
-                        scene_manager=self.scene_manager,
-                    )
-                else:
-                    # 如果不是，使用传统的同步 __init__ 方法
-                    robot = robot_cls(
-                        cfg_robot=cfg_robot,
-                        scene_manager=self.scene_manager,
-                    )
+                # 直接使用同步 __init__ 方法创建机器人
+                robot = robot_cls(
+                    cfg_robot=cfg_robot,
+                    scene_manager=self.scene_manager,
+                )
 
                 self.robot_warehouse[robot_class_name].append(robot)
                 self.scene.add(robot.body.robot_articulation)

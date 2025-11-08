@@ -65,32 +65,7 @@ class RobotH1(Robot):
                 self.cfg_robot.path_prim_robot
             )
 
-    @classmethod
-    async def create(
-            cls,
-            cfg_robot: CfgH1,
-            # cfg_camera: CfgCamera = None,
-            # cfg_camera_third_person: CfgCameraThird = None,
-            scene: Scene = None,
-            scene_manager=None,
-    ) -> "RobotH1":
-        """
-        Asynchronously creates and fully initializes a RobotH1 instance,
-        including its asynchronous policy controller.
-        """
-        instance = cls(
-            cfg_robot=cfg_robot,
-            # cfg_camera=cfg_camera,
-            # cfg_camera_third_person=cfg_camera_third_person,
-            # scene=scene,
-            scene_manager=scene_manager,
-        )
 
-        # 异步地创建并加载 H1FlatTerrainPolicy 控制器
-        # instance.controller_policy = await H1FlatTerrainPolicy.create(
-        #     prim_path=instance.cfg_robot.path_prim_swarm
-        # )
-        return instance
 
     def initialize(self):
         """

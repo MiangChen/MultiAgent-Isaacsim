@@ -185,16 +185,10 @@ def main():
 
     # Load robot swarm from config - CARLA style: synchronous
     logger.info("Loading robot swarm...")
-    
-    # 临时方案：使用 run_until_complete 包装异步方法
-    # TODO: 将 swarm_manager.initialize_async 改为同步方法以符合 CARLA 风格
-    loop.run_until_complete(
-        swarm_manager.initialize_async(
-            scene=world.scene,
-            robot_swarm_cfg_path=f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml",
-        )
+    swarm_manager.initialize(
+        scene=world.scene,
+        robot_swarm_cfg_path=f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml",
     )
-    
     logger.info("Robot swarm loaded")
 
     ros_manager.start()
