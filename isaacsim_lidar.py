@@ -91,61 +91,37 @@ def run_simulation_loop(simulation_app, world, drone_ctxs, semantic_camera,
 
 
 
-def create_car_objects(scene_manager, map_semantic):
-    scale = [2, 5, 1.0]
-    cubes_config = {
-        "car0": {
-            "shape_type": "cuboid",
-            "prim_path": "/World/car0",
-            "scale": scale,
-            "name": "car0_LKN1111_pink",
-            "position": [11.6, 3.5, 0],
-            "color": [255, 255, 255],
-            "entity_type": "visual",
-        },
-        "car1": {
-            "shape_type": "cuboid",
-            "prim_path": "/World/car1",
-            "scale": scale,
-            "name": "car1_ZN3J3W_blue",
-            "position": [0.3, 3.5, 0],
-            "color": [255, 255, 255],
-            "entity_type": "visual",
-        },
-        "car2": {
-            "shape_type": "cuboid",
-            "prim_path": "/World/car2",
-            "scale": scale,
-            "name": "car2_JN3839_yellow",
-            "position": [-13.2, 3.5, 0],
-            "color": [255, 255, 255],
-            "entity_type": "visual",
-        },
-        "car3": {
-            "shape_type": "cuboid",
-            "prim_path": "/World/car3",
-            "name": "car3_QBZ666_black",
-            "scale": scale,
-            "position": [-7.1, 10, 0],
-            "color": [255, 255, 255],
-            "entity_type": "visual",
-        },
-        "car4": {
-            "shape_type": "cuboid",
-            "prim_path": "/World/car4",
-            "name": "car4_PN3S39_white",
-            "scale": scale,
-            "position": [-0.9, 30, 0],
-            "orientation": [0.707, 0, 0, 0.707],
-            "color": [255, 255, 255],
-            "entity_type": "visual",
-        },
-    }
+def create_car_objects(world):
+    """Create car objects using blueprint - CARLA style"""
+    from simulation import Transform, Location, Rotation
+    
+    blueprint_library = world.get_blueprint_library()
+    
+    cars_config = [
+        {"name": "car0", "position": [11.6, 3.5, 0]},
+        {"name": "car1", "position": [0.3, 3.5, 0]},
+        {"name": "car2", "position": [-13.2, 3.5, 0]},
+        {"name": "car3", "position": [-7.1, 10, 0]},
+        {"name": "car4", "position": [-0.9, 30, 0], "orientation": [0.707, 0, 0, 0.707]},
+    ]
+    
+    cars = []
+    for cfg in cars_config:
+        car_bp = blueprint_library.find('static.prop.car')
+        car_bp.set_attribute('name', cfg['name'])
+        car_bp.set_attribute('scale', [2, 5, 1.0])
+        car_bp.set_attribute('color', [255, 255, 255])
+        car_bp.set_attribute('semantic_label', 'car')
+        
+        transform = Transform(location=Location(*cfg['position']))
+        if 'orientation' in cfg:
+            transform.rotation = Rotation(quaternion=cfg['orientation'])
+        
+        car = world.spawn_actor(car_bp, transform)
+        cars.append(car)
+    
+    return cars
 
-    for config in cubes_config.values():
-        result = scene_manager.create_shape_unified(**config)
-        if result.get("status") == "success":
-            map_semantic.add_semantic(prim_path=result.get("result"), semantic_label="car")
 
 
 def main():
@@ -177,7 +153,9 @@ def main():
     ros_manager.start()
 
     scene_manager.load_scene(usd_path=config_manager.get("world_usd_path"), prim_path_root="/World/Scene")
-    create_car_objects(scene_manager, semantic_map)
+    
+    # Create objects using blueprint - CARLA style
+    cars = create_car_objects(world)
 
     result = scene_manager.add_camera(translation=[1, 4, 2], orientation=[1, 0, 0, 0])
     camera_result = result.get("result")
