@@ -4,6 +4,90 @@ try:
 except:
     pass
 
+import math
+import time
+import numpy as np
+import carb
+import rclpy
+from gazebo_msgs.msg import ContactsState, ContactState
+from std_msgs.msg import Header
+from physics_engine.isaacsim_utils import set_camera_view
+from physics_engine.pxr_utils import Gf
+from robot.robot_drone_autel import DronePose
+from simulation_utils.message_convert import create_pc2_msg, create_image_msg
+
+
+class Rate:
+    def __init__(self, frequency):
+        self.period = 1.0 / frequency
+        self.start_time = time.time()
+
+    @carb.profiler.profile
+    def sleep(self):
+        elapsed = time.time() - self.start_time
+        sleep_duration = self.period - elapsed
+        if sleep_duration > 0:
+            time.sleep(sleep_duration)
+        self.start_time = time.time()
+
+
+def run_simulation_loop(simulation_app, world, drone_ctxs, semantic_camera, 
+                       semantic_camera_prim_path, semantic_map, scene_manager, viewport_manager):
+    world.reset()
+    for _ in range(10):
+        simulation_app.update()
+
+    semantic_camera.initialize()
+
+    from omni.kit.viewport.utility import get_viewport_from_window_name
+    viewport_manager.register_viewport(name="Viewport", viewport_obj=get_viewport_from_window_name("Viewport"))
+    viewport_manager.change_viewport(camera_prim_path=semantic_camera_prim_path, viewport_name="Viewport")
+
+    rate = Rate(1.0 / world.get_rendering_dt())
+
+    grid_size = int(math.ceil(math.sqrt(len(drone_ctxs))))
+    for i, ctx in enumerate(drone_ctxs):
+        row, col = i // grid_size, i % grid_size
+        x_pos = (col - grid_size // 2) * 4.0
+        y_pos = (row - grid_size // 2) * 4.0 + 5
+        ctx.des_pose = DronePose(pos=Gf.Vec3d(x_pos, y_pos, 2.0), quat=Gf.Quatf.GetIdentity())
+        ctx.is_pose_dirty = True
+
+    while simulation_app.is_running():
+        rate.sleep()
+
+        for ctx in drone_ctxs:
+            rclpy.spin_once(ctx.ros_node, timeout_sec=0.01)
+
+        t_now = drone_ctxs[0].ros_node.get_clock().now()
+
+        for ctx in drone_ctxs:
+            if ctx.is_pose_dirty and ctx.des_pose:
+                ctx.drone_prim.GetAttribute("xformOp:translate").Set(ctx.des_pose.pos)
+                ctx.drone_prim.GetAttribute("xformOp:orient").Set(ctx.des_pose.quat)
+                ctx.is_pose_dirty = False
+
+        world.tick()
+
+        for ctx in drone_ctxs:
+            header = Header()
+            header.stamp = t_now.to_msg()
+            header.frame_id = "map"
+
+            msg = ContactsState(header=header)
+            if scene_manager.check_prim_collision(prim_path=ctx.prim_path):
+                msg.states.append(ContactState(collision1_name=f"drone_{ctx.namespace}"))
+            ctx.pubs["collision"].publish(msg)
+
+            if ctx.lidar_list:
+                pc_lfr, pc_ubd = ctx.lidar_list[0].get_pointcloud(), ctx.lidar_list[1].get_pointcloud()
+                header = Header(stamp=t_now.to_msg(), frame_id="map")
+                
+                ctx.pubs["lfr_pc"].publish(create_pc2_msg(header, pc_lfr))
+                ctx.pubs["ubd_pc"].publish(create_pc2_msg(header, pc_ubd))
+                ctx.pubs["lfr_img"].publish(create_image_msg(header, ctx.lidar_list[0].get_depth()))
+                ctx.pubs["ubd_img"].publish(create_image_msg(header, ctx.lidar_list[1].get_depth()))
+
 
 def build_drone_ctx(namespace: str, idx: int, world, setup_ros):
     from robot.sensor.lidar.lidar_omni import LidarOmni
@@ -126,14 +210,13 @@ def main():
     result = scene_manager.add_camera(translation=[1, 4, 2], orientation=[1, 0, 0, 0])
     camera_result = result.get("result")
 
-    # Import after simulation_app is started by Server
-    from simulation_utils.simulation_core import run_simulation_loop_multi
     from simulation_utils.ros_bridge import setup_ros
     drone_ctxs = [build_drone_ctx(ns, idx, world, setup_ros) 
                   for idx, ns in enumerate(config_manager.get("namespace"))]
 
-    run_simulation_loop_multi(simulation_app, drone_ctxs, camera_result.get("camera_instance"),
-                              camera_result.get("prim_path"), semantic_map)
+    # Run simulation loop
+    run_simulation_loop(simulation_app, world, drone_ctxs, camera_result.get("camera_instance"),
+                       camera_result.get("prim_path"), semantic_map, scene_manager, viewport_manager)
 
 
 if __name__ == "__main__":
