@@ -1,113 +1,41 @@
-# =============================================================================
-# Isaac Sim LiDAR Module - LiDAR Simulation and ROS Integration
-# =============================================================================
-#
-# This module provides LiDAR simulation capabilities within Isaac Sim,
-# integrating with ROS2 for sensor data publishing and multi-robot
-# coordination.
-#
-# =============================================================================
 try:
     import pydevd_pycharm
-
-    pydevd_pycharm.settrace(
-        "localhost", port=12345, stdout_to_server=True, stderr_to_server=True
-    )
-except Exception as e:
-    print(f"no pydevd found: {repr(e)}")
-##########################################################################################################################
-from physics_engine.isaacsim_simulation_app import start_isaacsim_simulation_app
-
-simulation_app = start_isaacsim_simulation_app()
-
-# ROS2 imports
-import rclpy
-
-rclpy.init(args=None)
-##########################################################################################################################
-
-# Local project imports
-from config.config_manager import config_manager
-from log.log_manager import LogManager
-from map.map_semantic_map import MapSemantic
-from robot.robot_drone_autel import RobotDroneAutel
-from scene.scene_manager import SceneManager
-from simulation_utils.ros_bridge import setup_ros
-from simulation_utils.simulation_core import run_simulation_loop_multi
-
-logger = LogManager.get_logger(__name__)
-
-#############################################################
+    pydevd_pycharm.settrace("localhost", port=12345, stdout_to_server=True, stderr_to_server=True)
+except:
+    pass
 
 
-def build_drone_ctx(namespace: str, idx: int, scene_manager):
-    """Create prim, ROS node and sensor annotators for one UAV."""
-
-    prim_path = (
-        f"/{namespace}/drone"
-        if namespace
-        else "/drone" if idx == 0 else f"/drone_{idx}"
-    )
-
+def build_drone_ctx(namespace: str, idx: int, world, setup_ros):
     from robot.sensor.lidar.lidar_omni import LidarOmni
     from robot.sensor.lidar.cfg_lidar import CfgLidar
-
-    cfg_lfr = CfgLidar(
-        name="lfr",
-        prim_path=prim_path + "/lfr",
-        output_size=(352, 120),
-        quat=(1, 0, 0, 0),
-        config_file_name="autel_perception_120x352",
-    )
-
-    cfg_ubd = CfgLidar(
-        name="ubd",
-        prim_path=prim_path + "/ubd",
-        output_size=(352, 120),
-        quat=(0, 0, 0.7071067811865476, 0.7071067811865476),
-        config_file_name="autel_perception_120x352",
-    )
-
-    lidar_lfr = LidarOmni(cfg_lidar=cfg_lfr)
-    lidar_ubd = LidarOmni(cfg_lidar=cfg_ubd)
-
-    partial_ctx = RobotDroneAutel(
-        scene_manager=scene_manager,
+    from robot.robot_drone_autel import RobotDroneAutel
+    
+    prim_path = f"/{namespace}/drone" if namespace else "/drone" if idx == 0 else f"/drone_{idx}"
+    
+    drone = RobotDroneAutel(
+        scene_manager=world.get_scene_manager(),
         namespace=namespace,
         prim_path=prim_path,
         color_scheme_id=idx,
     )
-
-    # ROS ---------------------------------------------------------------
-    node, pubs, subs, srvs = setup_ros(namespace, ctx=partial_ctx)
-
-    # Complete the context with all the ROS and LiDAR information
-    partial_ctx.ros_node = node
-    partial_ctx.pubs = pubs
-    partial_ctx.subs = subs
-    partial_ctx.srvs = srvs
-    partial_ctx.lidar_list = [lidar_lfr, lidar_ubd]
-
-    print(f"Drone {namespace} set up with callbacks for:")
-    print(
-        f"  - EntityState entity names: {[namespace, f'{namespace}/quadrotor', f'{namespace}_quadrotor']}"
-    )
-    print(
-        f"  - LinkState link names: {[f'{namespace}::base_link', f'{namespace}/quadrotor::base_link', f'{namespace}_quadrotor::base_link']}"
-    )
-    return partial_ctx
+    
+    cfg_lfr = CfgLidar(name="lfr", prim_path=prim_path + "/lfr", output_size=(352, 120), 
+                       quat=(1, 0, 0, 0), config_file_name="autel_perception_120x352")
+    cfg_ubd = CfgLidar(name="ubd", prim_path=prim_path + "/ubd", output_size=(352, 120),
+                       quat=(0, 0, 0.7071067811865476, 0.7071067811865476), config_file_name="autel_perception_120x352")
+    
+    node, pubs, subs, srvs = setup_ros(namespace, ctx=drone)
+    
+    drone.ros_node = node
+    drone.pubs = pubs
+    drone.subs = subs
+    drone.srvs = srvs
+    drone.lidar_list = [LidarOmni(cfg_lidar=cfg_lfr), LidarOmni(cfg_lidar=cfg_ubd)]
+    
+    return drone
 
 
-def create_car_objects(scene_manager: SceneManager, map_semantic: MapSemantic) -> list:
-    """
-    Create car objects in the scene with semantic labels using injected dependencies.
-
-    Args:
-        scene_manager: Injected scene manager instance for creating objects
-
-    Returns:
-        list: List of created prim paths
-    """
+def create_car_objects(scene_manager, map_semantic):
     scale = [2, 5, 1.0]
     cubes_config = {
         "car0": {
@@ -158,85 +86,54 @@ def create_car_objects(scene_manager: SceneManager, map_semantic: MapSemantic) -
         },
     }
 
-    created_prim_paths = []
-    logger.info(
-        f"All semantics in scene:{map_semantic.count_semantics_in_scene().get('result')}"
-    )
-
-    for cube_name, config in cubes_config.items():
-        creation_result = scene_manager.create_shape_unified(**config)
-
-        if creation_result.get("status") == "success":
-            prim_path = creation_result.get("result")
-            created_prim_paths.append(prim_path)
-
-            # Add semantic label
-            semantic_result = map_semantic.add_semantic(
-                prim_path=prim_path, semantic_label="car"
-            )
-            logger.info(semantic_result)
-
-    return created_prim_paths
+    for config in cubes_config.values():
+        result = scene_manager.create_shape_unified(**config)
+        if result.get("status") == "success":
+            map_semantic.add_semantic(prim_path=result.get("result"), semantic_label="car")
 
 
-def main():  # Needed in build_drone_ctx
+def main():
+    from containers import get_container, reset_container
+    from config.config_manager import config_manager
+    from log.log_manager import LogManager
+    import rclpy
+    
+    rclpy.init(args=None)
+    logger = LogManager.get_logger(__name__)
 
-    from containers import get_container
-
+    reset_container()
     container = get_container()
-
-    # Wire the container to this module for @inject decorators in skill functions
     container.wire(modules=[__name__])
 
-    # Get services from container
-    config_manager = container.config_manager()
 
+    config_manager = container.config_manager()
     log_manager = container.log_manager()
+    server = container.server()
     ros_manager = container.ros_manager()
-    swarm_manager = container.swarm_manager()
     scene_manager = container.scene_manager()
     grid_map = container.grid_map()
     semantic_map = container.semantic_map()
-    # skill_manager = container.skill_manager()
     viewport_manager = container.viewport_manager()
     
-    # 使用simulation层的World（已整合Env功能）
     world = container.world_configured()
+    simulation_app = server.get_simulation_app()
     
-    # setup_simulation()
     ros_manager.start()
 
-    WORLD_USD_PATH = config_manager.get("world_usd_path")
-    scene_manager.load_scene(usd_path=WORLD_USD_PATH, prim_path_root="/World/Scene")
+    scene_manager.load_scene(usd_path=config_manager.get("world_usd_path"), prim_path_root="/World/Scene")
+    create_car_objects(scene_manager, semantic_map)
 
-    created_prim_paths = create_car_objects(scene_manager, semantic_map)
-    # print("All prims with 'car' label:", created_prim_paths)
-    print(semantic_map.count_semantics_in_scene().get("result"))
-
-    # Create and initialize semantic camera
     result = scene_manager.add_camera(translation=[1, 4, 2], orientation=[1, 0, 0, 0])
+    camera_result = result.get("result")
 
-    semantic_camera = result.get("result").get("camera_instance")
-    semantic_camera_prim_path = result.get("result").get("prim_path")
+    # Import after simulation_app is started by Server
+    from simulation_utils.simulation_core import run_simulation_loop_multi
+    from simulation_utils.ros_bridge import setup_ros
+    drone_ctxs = [build_drone_ctx(ns, idx, world, setup_ros) 
+                  for idx, ns in enumerate(config_manager.get("namespace"))]
 
-    drone_ctxs: list[RobotDroneAutel] = []
-    for idx, ns in enumerate(config_manager.get("namespace")):
-        drone_ctxs.append(build_drone_ctx(ns, idx, scene_manager=scene_manager))
-
-    # ---------------- Run simulation -----------------------------------
-    run_simulation_loop_multi(
-        simulation_app,
-        drone_ctxs,
-        semantic_camera,
-        semantic_camera_prim_path,
-        semantic_map,
-    )
-
-    # Cleanup copied lidar config files ---------------------------------
-    # for ctx in drone_ctxs:
-    #     cfg = getattr(ctx, "_lidar_cfg_path", None)
-    #     if cfg and os.path.exists(cfg):
-    #         os.remove(cfg)
+    run_simulation_loop_multi(simulation_app, drone_ctxs, camera_result.get("camera_instance"),
+                              camera_result.get("prim_path"), semantic_map)
 
 
 if __name__ == "__main__":

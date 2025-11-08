@@ -114,6 +114,12 @@ class World:
     def scene(self):
         return self._isaac_world.scene
     
+    def get_rendering_dt(self) -> float:
+        return self._isaac_world.get_rendering_dt()
+    
+    def get_physics_dt(self) -> float:
+        return self._isaac_world.get_physics_dt()
+    
     def is_playing(self) -> bool:
         return self._isaac_world.is_playing()
     

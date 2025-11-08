@@ -33,12 +33,14 @@ class BlueprintLibrary:
         from robot.robot_h1 import RobotH1
         from robot.robot_g1 import RobotG1
         from robot.robot_drone_cf2x import RobotCf2x
+        from robot.robot_drone_autel import RobotDroneAutel
         from robot.target import Target
         
         self.register_robot_class("jetbot", RobotJetbot)
         self.register_robot_class("h1", RobotH1)
         self.register_robot_class("g1", RobotG1)
         self.register_robot_class("cf2x", RobotCf2x)
+        self.register_robot_class("autel", RobotDroneAutel)
         self.register_robot_class("target", Target)
     
     def register_robot_class(self, robot_type: str, robot_class: type):

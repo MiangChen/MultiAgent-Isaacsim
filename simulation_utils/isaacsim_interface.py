@@ -16,47 +16,6 @@ import argparse
 import os
 import sys
 
-print("isaacsim_interface args: ", sys.argv)
-# Parse arguments *before* SimulationApp initialization
-parser = argparse.ArgumentParser(description="Setup Isaac Sim environment for Planner.")
-parser.add_argument(
-    "--world",
-    type=str,
-    default="default_world",
-    help="Name or path of the world/scene to load.",
-)
-parser.add_argument("--gui", action="store_true", help="Run simulation in GUI mode.")
-parser.add_argument("--robot_model", type=str, default="modelx", help="robot model.")
-# Use parse_known_args to ignore extra args potentially passed by ROS launch
-args, unknown = parser.parse_known_args()
-
-# Local project imports
-from physics_engine.isaacsim_utils import SimulationApp
-
-CONFIG = {"renderer": "RaytracedLighting", "headless": not args.gui}
-print(f"Initializing Isaac Sim with headless={not args.gui}")
-g_simulation_app = SimulationApp(CONFIG)
-
-# Set some settings to reduce the GPU/CPU usage
-g_simulation_app.set_setting("/rtx/ecoMode/enabled", False)
-
-g_simulation_app.set_setting("/rtx/directLighting/enabled", False)
-g_simulation_app.set_setting("/rtx/indirectDiffuse/enabled", False)
-g_simulation_app.set_setting("/rtx/sceneDb/ambientLightIntensity", 3.0)
-
-g_simulation_app.set_setting("/rtx/reflections/enabled", False)
-g_simulation_app.set_setting("/rtx/translucency/enabled", False)
-g_simulation_app.set_setting("/rtx/raytracing/subsurface/enabled", False)
-g_simulation_app.set_setting("/rtx/caustics/enabled", False)
-
-g_simulation_app.set_setting("/persistent/physics/numThreads", 0)
-
-if not args.gui:
-    # disable the viewport if not using any gui
-    from omni.kit.viewport.utility import get_active_viewport
-
-    get_active_viewport().set_updates_enabled(False)
-
 import carb
 
 import math
