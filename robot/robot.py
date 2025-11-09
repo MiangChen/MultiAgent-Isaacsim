@@ -8,8 +8,6 @@
 # =============================================================================
 
 # Standard library imports
-import json
-import threading
 from typing import Any, Dict
 
 # Third-party library imports
