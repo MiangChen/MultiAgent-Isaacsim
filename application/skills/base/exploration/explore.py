@@ -5,10 +5,10 @@ Flow: Plan waypoints -> Navigate to start -> Follow path -> Complete
 
 import json
 from action_msgs.msg import GoalStatus
-from application.skill_registry import SkillRegistry
+from application import SkillManager
 
 
-@SkillRegistry.register()
+@SkillManager.register()
 def explore(**kwargs):
     robot = kwargs.get("robot")
     skill_manager = kwargs.get("skill_manager")

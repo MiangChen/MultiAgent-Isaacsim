@@ -1,8 +1,8 @@
-from application.skill_registry import SkillRegistry
+from application import SkillManager
 from simulation.control import RobotControl
 
 
-@SkillRegistry.register()
+@SkillManager.register()
 def take_off(**kwargs):
     robot = kwargs.get("robot")
     skill_manager = kwargs.get("skill_manager")

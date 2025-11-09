@@ -3,10 +3,10 @@
 Flow: Check camera -> Get semantic detection -> Complete
 """
 
-from application.skill_registry import SkillRegistry
+from application import SkillManager
 
 
-@SkillRegistry.register()
+@SkillManager.register()
 def object_detection(**kwargs):
     robot = kwargs.get("robot")
     skill_manager = kwargs.get("skill_manager")

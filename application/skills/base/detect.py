@@ -1,7 +1,7 @@
-from application.skill_registry import SkillRegistry
+from application import SkillManager
 
 
-@SkillRegistry.register()
+@SkillManager.register()
 def detect(**kwargs):
     robot = kwargs.get("robot")
     skill_manager = kwargs.get("skill_manager")

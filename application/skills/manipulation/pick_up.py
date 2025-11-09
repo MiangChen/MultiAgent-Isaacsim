@@ -8,10 +8,10 @@ import numpy as np
 import torch
 from physics_engine.isaacsim_utils import RigidPrim
 from physics_engine.pxr_utils import UsdPhysics, Gf
-from application.skill_registry import SkillRegistry
+from application import SkillManager
 
 
-@SkillRegistry.register()
+@SkillManager.register()
 def pick_up(**kwargs):
     robot = kwargs.get("robot")
     skill_manager = kwargs.get("skill_manager")

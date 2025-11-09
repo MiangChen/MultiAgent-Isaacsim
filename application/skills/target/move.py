@@ -10,13 +10,13 @@ from builtin_interfaces.msg import Time
 from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import ComputePathToPose
 
-from application.skill_registry import SkillRegistry
+from application import SkillManager
 from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
 
 
-@SkillRegistry.register()
+@SkillManager.register()
 def move(**kwargs):
     """
     Move through a predefined path

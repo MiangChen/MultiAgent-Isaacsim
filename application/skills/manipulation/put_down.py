@@ -5,10 +5,10 @@ Flow: Check joint -> Disable joint -> Restore physics -> Complete
 
 from physics_engine.isaacsim_utils import RigidPrim
 from physics_engine.pxr_utils import UsdPhysics
-from application.skill_registry import SkillRegistry
+from application import SkillManager
 
 
-@SkillRegistry.register()
+@SkillManager.register()
 def put_down(**kwargs):
     robot = kwargs.get("robot")
     skill_manager = kwargs.get("skill_manager")

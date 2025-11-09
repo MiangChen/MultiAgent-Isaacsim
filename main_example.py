@@ -247,7 +247,7 @@ def main():
     # Create skill managers with auto-registration
     skill_managers = {}
     for robot in robots:
-        # SkillManager auto-registers all skills from SkillRegistry
+        # SkillManager auto-registers all skills from global registry
         skill_manager = SkillManager(robot, auto_register=True)
         
         # Attach to robot for ROS action server

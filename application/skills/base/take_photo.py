@@ -3,10 +3,10 @@
 Flow: Check camera -> Capture image -> Save (optional) -> Complete
 """
 
-from application.skill_registry import SkillRegistry
+from application import SkillManager
 
 
-@SkillRegistry.register()
+@SkillManager.register()
 def take_photo(**kwargs):
     robot = kwargs.get("robot")
     skill_manager = kwargs.get("skill_manager")

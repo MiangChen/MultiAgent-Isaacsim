@@ -12,7 +12,7 @@ from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import ComputePathToPose
 from nav_msgs.msg import Odometry
 
-from application.skill_registry import SkillRegistry
+from application import SkillManager
 from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)
@@ -38,7 +38,7 @@ def track_callback(robot, skill_manager, msg):
         skill_manager.set_skill_data(skill_name, "track_waypoint_list", track_waypoint_list)
 
 
-@SkillRegistry.register()
+@SkillManager.register()
 def track(**kwargs):
     """
     Track a moving target

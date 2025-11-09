@@ -8,7 +8,7 @@
 │  ┌──────────────────┐  ┌──────────────────┐                │
 │  │  Skill System    │  │  ROS Bridge      │                │
 │  │  - SkillManager  │  │  - cmd_vel       │                │
-│  │  - SkillRegistry │  │  - action server │                │
+│  │  - @register     │  │  - action server │                │
 │  └──────────────────┘  └──────────────────┘                │
 └─────────────────────────────────────────────────────────────┘
                             ↓
@@ -146,32 +146,43 @@ ros2 topic pub /robot_0/cmd_vel geometry_msgs/msg/Twist \
 
 ### 4. Skill System
 
-#### SkillRegistry（装饰器注册）
-```python
-from application import skill_registry
+#### SkillManager（装饰器注册 + 管理）
 
-@skill_registry.register(
-    name="navigate_to",
-    description="Navigate to target position",
-    category="navigation",
-    requires_ros=True
-)
-def navigate_to_skill(robot, goal_pos, **kwargs):
-    # 技能实现
-    pass
-```
-
-#### SkillManager（自动注册）
+**装饰器注册技能：**
 ```python
 from application import SkillManager
 
-# 自动注册所有技能
+@SkillManager.register()
+def navigate_to(robot, goal_pos, **kwargs):
+    """技能实现"""
+    pass
+
+# 或指定自定义名称
+@SkillManager.register("custom_name")
+def my_skill(robot, **kwargs):
+    pass
+```
+
+**创建管理器并执行技能：**
+```python
+from application import SkillManager
+
+# 自动注册所有全局技能
 skill_manager = SkillManager(robot, auto_register=True)
 robot.skill_manager = skill_manager
 
 # 执行技能
 result = skill_manager.execute_skill('navigate_to', goal_pos=[10, 20, 0])
+
+# 列出可用技能
+print(skill_manager.list_skills())
 ```
+
+**设计特点：**
+- 使用类变量存储全局技能注册表
+- 装饰器自动注册到全局注册表
+- 每个机器人实例可选择性使用全局技能
+- 简化架构，无需单独的 Registry 类
 
 #### 已实现的技能
 
@@ -288,9 +299,9 @@ ros/                                 # ROS 层
 
 application/                         # 应用层
 ├── skill_manager.py                # 技能管理器
-│   └── SkillManager               # 自动注册和执行技能
-├── skill_registry.py               # 技能注册表
-│   └── SkillRegistry              # 装饰器注册系统
+│   ├── SkillManager               # 技能管理和执行
+│   ├── @register 装饰器           # 全局技能注册
+│   └── _global_skills             # 全局技能注册表（类变量）
 └── skills/                         # 技能实现
     ├── base/                       # 基础技能
     │   ├── navigation/            # 导航技能
@@ -442,7 +453,13 @@ ros2 action send_goal /jetbot_0/skill_execution plan_msgs/action/SkillExecution 
 - ROS 速度控制（cmd_vel）
 - ROS 技能控制（action）
 
-### 5. 自动化管理
+### 5. 技能系统
+- **装饰器注册**：`@SkillManager.register()` 自动注册技能
+- **全局注册表**：使用类变量 `_global_skills` 存储所有技能
+- **实例管理**：每个机器人有独立的 SkillManager 实例
+- **自动加载**：`application/__init__.py` 导入所有技能模块触发注册
+
+### 6. 自动化管理
 - 自动技能注册（装饰器）
 - 自动 ROS 节点管理
 - 自动 topic 映射
@@ -457,6 +474,9 @@ ros2 action send_goal /jetbot_0/skill_execution plan_msgs/action/SkillExecution 
 4. **解耦设计** - 仿真层、ROS 层、应用层职责清晰
 5. **类型安全** - 使用 Transform 等数据类，避免裸数组
 6. **配置驱动** - 通过配置文件管理机器人类型和 topics
+7. **简化架构** - 避免过度设计，合并相关功能到单一类
+
+
 
 ---
 
@@ -480,28 +500,81 @@ ros2 action send_goal /jetbot_0/skill_execution plan_msgs/action/SkillExecution 
 - `pick_up` - 抓取物体
 - `put_down` - 放置物体
 
-### 技能注册流程
+### 技能系统架构
 
+**核心概念：**
+- **全局注册表**：`SkillManager._global_skills`（类变量）存储所有已注册的技能
+- **装饰器注册**：`@SkillManager.register()` 在模块导入时自动注册技能
+- **实例管理**：每个机器人有独立的 SkillManager 实例，管理该机器人的技能执行
+
+**工作流程：**
+```
+1. 模块导入
+   application/__init__.py imports application.skills
+   ↓
+2. 装饰器执行
+   @SkillManager.register() 注册技能到 _global_skills
+   ↓
+3. 创建实例
+   skill_manager = SkillManager(robot, auto_register=True)
+   ↓
+4. 复制技能
+   从 _global_skills 复制到实例的 self.skills
+   ↓
+5. 执行技能
+   skill_manager.execute_skill('navigate_to', ...)
+```
+
+### 使用示例
+
+**1. 定义技能**
 ```python
-# 1. 定义技能（使用装饰器）
-from application import skill_registry
+from application import SkillManager
 
-@skill_registry.register(
-    name="my_skill",
-    description="My custom skill",
-    category="custom",
-    requires_ros=False
-)
+@SkillManager.register()
 def my_skill(robot, param1, param2, **kwargs):
-    # 技能实现
-    return {"status": "success"}
+    """
+    自定义技能实现
+    
+    Args:
+        robot: 机器人实例（自动注入）
+        param1, param2: 技能参数
+        skill_manager: 技能管理器（自动注入）
+    """
+    skill_manager = kwargs.get('skill_manager')
+    
+    # 技能逻辑
+    result = do_something(robot, param1, param2)
+    
+    return {"status": "success", "result": result}
+```
 
-# 2. 自动注册（SkillManager）
+**2. 创建管理器**
+```python
+from application import SkillManager
+
+# 自动注册所有全局技能
 skill_manager = SkillManager(robot, auto_register=True)
-# 自动注册所有装饰器标记的技能
+robot.skill_manager = skill_manager
+```
 
-# 3. 执行技能
+**3. 执行技能**
+```python
+# Python API
 result = skill_manager.execute_skill('my_skill', param1=value1, param2=value2)
+
+# ROS Action
+# ros2 action send_goal /robot_0/skill_execution plan_msgs/action/SkillExecution \
+#   '{skill_request: {skill_list: [{skill: "my_skill", params: [...]}]}}' --feedback
+```
+
+**4. 查看可用技能**
+```python
+# 全局注册的所有技能
+print(SkillManager.list_global_skills())
+
+# 当前机器人实例的技能
+print(skill_manager.list_skills())
 ```
 
 ### 技能执行流程
@@ -520,26 +593,49 @@ SkillManager.execute_skill()
 ROS Action Response
 ```
 
-### 技能依赖注入
+### 依赖注入
 
 技能函数可以使用 `@inject` 装饰器自动注入依赖：
 
 ```python
 from dependency_injector.wiring import inject, Provide
-from application import skill_registry
+from application import SkillManager
 
-@skill_registry.register(name="navigate_to", requires_ros=True)
+@SkillManager.register()
 @inject
-def navigate_to_skill(
+def navigate_to(
     robot,
     goal_pos,
     grid_map=Provide["grid_map"],
     scene_manager=Provide["scene_manager"],
     **kwargs
 ):
-    # 自动注入 grid_map 和 scene_manager
+    """导航技能 - 自动注入 grid_map 和 scene_manager"""
     path = grid_map.plan_path(robot.pos, goal_pos)
     # ...
+```
+
+**注意：** 装饰器顺序很重要，`@inject` 应该在 `@SkillManager.register()` 之后。
+
+### 技能状态管理
+
+SkillManager 提供状态管理功能，用于跟踪技能执行状态：
+
+```python
+# 设置/获取技能状态
+skill_manager.set_skill_state('navigate_to', 'EXECUTING')
+state = skill_manager.get_skill_state('navigate_to')
+
+# 设置/获取技能数据
+skill_manager.set_skill_data('navigate_to', 'target_pos', [10, 20, 0])
+target = skill_manager.get_skill_data('navigate_to', 'target_pos')
+
+# 构造反馈消息
+feedback = skill_manager.form_feedback(
+    status="processing",
+    message="Navigating to target",
+    progress=50
+)
 ```
 
 ---
@@ -601,7 +697,7 @@ Isaac Sim 执行
 ## 📚 参考文档
 
 - `docs/ROS_DECOUPLING_FINAL_SUMMARY.md` - ROS 解耦总结
-- `docs/SKILL_REGISTRY_DECORATOR_GUIDE.md` - 技能注册指南
 - `docs/APPLICATION_LAYER_REFACTOR.md` - 应用层重构
 - `docs/ROS_ACTION_INTERFACE.md` - ROS Action 接口
 - `docs/QUICK_REFERENCE.md` - 快速参考
+- `application/skills/README.md` - 技能开发指南
