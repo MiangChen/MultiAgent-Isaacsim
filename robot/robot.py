@@ -27,19 +27,9 @@ from physics_engine.isaacsim_utils import (
 )
 from robot.sensor.camera import Camera
 from robot.body import BodyRobot
-from robot.skill.base.navigation import NodePlannerOmpl
-from robot.skill.base.navigation import NodeTrajectoryGenerator
-from robot.skill.base.navigation import NodeMpcController
-from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
 
-# ROS2 imports
-from rclpy.action import ActionClient
-from rclpy.executors import MultiThreadedExecutor
-from nav_msgs.msg import Odometry
-from nav2_msgs.action import ComputePathToPose
-
-# Custom ROS message imports
+# Custom ROS message imports (for type hints only)
 from gsi_msgs.gsi_msgs_helper import (
     RobotFeedback,
     SkillExecution,
@@ -106,7 +96,10 @@ class Robot:
         self.viewport_name = None  # 存储viewport名称
         self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
         self.transform_camera_pos = np.array([0, 0, 0])
-        self._init_ros()
+        
+        # ROS manager (optional, injected from outside)
+        self.ros_manager = None
+        
         self.is_detecting = False
         self.target_prim = None
 
@@ -120,40 +113,21 @@ class Robot:
 
     ########################## Publisher Odom  ############################
     def publish_robot_state(self):
+        """Publish robot state (if ROS is enabled)"""
         pos, quat = self.body.get_world_pose()
         vel_linear, vel_angular = self.body.get_world_vel()
 
         self.pos = pos
-        self.quta = quat
+        self.quat = quat
 
-        pos = pos.detach().cpu().numpy()
-        quat = quat.detach().cpu().numpy()
-        vel_linear = vel_linear.detach().cpu().numpy()
-        vel_angular = vel_angular.detach().cpu().numpy()
-
-        odom_msg = Odometry()
-        odom_msg.header.stamp = self.node.get_clock().now().to_msg()
-        odom_msg.header.frame_id = "map"  # or "odom"
-        odom_msg.child_frame_id = self.namespace
-
-        odom_msg.pose.pose.position.x = float(pos[0])
-        odom_msg.pose.pose.position.y = float(pos[1])
-        odom_msg.pose.pose.position.z = float(pos[2])
-
-        odom_msg.pose.pose.orientation.x = float(quat[1])  # xyzw <- wxyz
-        odom_msg.pose.pose.orientation.y = float(quat[2])
-        odom_msg.pose.pose.orientation.z = float(quat[3])
-        odom_msg.pose.pose.orientation.w = float(quat[0])
-
-        odom_msg.twist.twist.linear.x = float(vel_linear[0])
-        odom_msg.twist.twist.linear.y = float(vel_linear[1])
-        odom_msg.twist.twist.linear.z = float(vel_linear[2])
-
-        odom_msg.twist.twist.angular.x = float(vel_angular[0])
-        odom_msg.twist.twist.angular.y = float(vel_angular[1])
-        odom_msg.twist.twist.angular.z = float(vel_angular[2])
-
-        self.node.publisher_dict["odom"].publish(odom_msg)
+        # Publish to ROS if available
+        if self.has_ros():
+            pos = pos.detach().cpu().numpy()
+            quat = quat.detach().cpu().numpy()
+            vel_linear = vel_linear.detach().cpu().numpy()
+            vel_angular = vel_angular.detach().cpu().numpy()
+            
+            self.ros_manager.publish_odometry(pos, quat, vel_linear, vel_angular)
 
     ########################## Subscriber Velocity  ############################
     def set_velocity_command(self, linear_vel, angular_vel):
@@ -162,83 +136,24 @@ class Robot:
         self.vel_angular = torch.tensor(angular_vel)
         logger.debug(f"set linear vel: {linear_vel}, angular vel: {angular_vel}")
 
-    ########################## Infrastructure Initialization ############################
-
-    def _init_ros(self):
-        # ROS节点基础设施
-        self.node = NodeRobot(namespace=self.namespace, topics=self.cfg_robot.topics)
-        self.node.set_robot_instance(self)
-
-        # 导航基础设施节点
-        self.action_client_path_planner = ActionClient(
-            self.node, ComputePathToPose, "action_compute_path_to_pose"
-        )
-        self.node_planner_ompl = NodePlannerOmpl(namespace=self.namespace)
-        self.node_trajectory_generator = NodeTrajectoryGenerator(
-            namespace=self.namespace
-        )
-        self.node_controller_mpc = NodeMpcController(namespace=self.namespace)
-
-        # 执行器和线程管理
-        self.executor = MultiThreadedExecutor()
-        self.ros_thread = None
-        self.stop_event = threading.Event()
-
-        # 设置执行器并启动ROS
-        self.executor.add_node(self.node)
-        self.executor.add_node(self.node_planner_ompl)
-        self.executor.add_node(self.node_trajectory_generator)
-        self.executor.add_node(self.node_controller_mpc)
-
-        self.start_ros()
-
-    ########################## Start ROS  ############################
-
-    def start_ros(self):
-        if self.ros_thread is None or not self.ros_thread.is_alive():
-            self.ros_thread = threading.Thread(
-                target=self._spin_ros, daemon=True, name=f"ROS_{self.namespace}"
-            )
-            self.ros_thread.start()
-            logger.info(f"Robot {self.namespace} ROS thread started")
-            import time
-
-            time.sleep(0.1)
-
-    def _spin_ros(self):
-        logger.info(f"Robot {self.namespace} ROS thread started spinning")
-        try:
-            while not self.stop_event.is_set():
-                self.executor.spin_once(timeout_sec=0.05)
-        except Exception as e:
-            logger.error(f"Robot {self.namespace} ROS thread error: {e}")
-        finally:
-            logger.info(f"Robot {self.namespace} ROS thread stopped")
-
-    def stop_ros(self):
-        if self.ros_thread and self.ros_thread.is_alive():
-            self.stop_event.set()
-            self.ros_thread.join(timeout=2.0)
-            if self.ros_thread.is_alive():
-                logger.warning(
-                    f"Robot {self.namespace} ROS thread did not stop gracefully"
-                )
-
+    ########################## ROS Manager Interface ############################
+    
+    def set_ros_manager(self, ros_manager):
+        """Set ROS manager (dependency injection)"""
+        self.ros_manager = ros_manager
+    
+    def get_ros_manager(self):
+        """Get ROS manager"""
+        return self.ros_manager
+    
+    def has_ros(self):
+        """Check if ROS is enabled"""
+        return self.ros_manager is not None
+    
     def cleanup(self):
-        self.stop_ros()
-
-        try:
-            self.executor.remove_node(self.node)
-            self.executor.remove_node(self.node_planner_ompl)
-            self.executor.remove_node(self.node_trajectory_generator)
-            self.executor.remove_node(self.node_controller_mpc)
-
-            self.node.destroy_node()
-            self.node_planner_ompl.destroy_node()
-            self.node_trajectory_generator.destroy_node()
-            self.node_controller_mpc.destroy_node()
-        except Exception as e:
-            logger.error(f"Error cleaning up robot {self.namespace}: {e}")
+        """Cleanup robot resources"""
+        if self.has_ros():
+            self.ros_manager.stop()
 
     def initialize(self) -> None:
         for camera_name, camera_cfg in self.cfg_robot.cfg_dict_camera.items():
@@ -294,9 +209,12 @@ class Robot:
         self.publish_robot_state()
         # 更新相机的视野
         self._update_camera_view()
-        # calculate robot velocity
-        self.node_controller_mpc.control_loop()
-        # update robot velocity
+        
+        # Calculate robot velocity (if ROS is enabled)
+        if self.has_ros():
+            self.ros_manager.get_node_controller_mpc().control_loop()
+        
+        # Update robot velocity
         self.controller_simplified()
         return
 

@@ -51,7 +51,13 @@ def navigate_to(**kwargs):
 
 def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
     """Initialize navigation"""
-    robot.node_controller_mpc.has_reached_goal = False
+    # Check if ROS is available
+    if not robot.has_ros():
+        skill_manager.set_skill_state(skill_name, "FAILED")
+        skill_manager.skill_errors[skill_name] = "ROS not available - navigation requires ROS"
+        return
+    
+    robot.ros_manager.get_node_controller_mpc().has_reached_goal = False
     skill_manager.set_skill_state(skill_name, "EXECUTING")
     
     # Parse parameters
@@ -74,12 +80,13 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
         goal_quat_wxyz = list(goal_quat_wxyz)
     
     # Check ROS action server
-    if not robot.action_client_path_planner.wait_for_server(timeout_sec=2.0):
+    action_client = robot.ros_manager.get_action_client_path_planner()
+    if not action_client.wait_for_server(timeout_sec=2.0):
         skill_manager.set_skill_state(skill_name, "FAILED")
         skill_manager.skill_errors[skill_name] = "Path planner server not available"
         return
     
-    robot.node_controller_mpc.move_event.clear()
+    robot.ros_manager.get_node_controller_mpc().move_event.clear()
     
     # Create goal message
     goal_msg = ComputePathToPose.Goal()
@@ -101,7 +108,8 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
     skill_manager.set_skill_data(skill_name, "start_quat", start_quat)
     
     # Send planning request (ROS action)
-    send_future = robot.action_client_path_planner.send_goal_async(goal_msg)
+    action_client = robot.ros_manager.get_action_client_path_planner()
+    send_future = action_client.send_goal_async(goal_msg)
     start_time = robot.sim_time
     
     skill_manager.set_skill_data(skill_name, "send_future", send_future)
@@ -134,7 +142,7 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
     if result_future.done():
         result = result_future.result()
         if result.status == GoalStatus.STATUS_SUCCEEDED and result.result.path.poses:
-            robot.node_controller_mpc.move_event.clear()
+            robot.ros_manager.get_node_controller_mpc().move_event.clear()
             skill_manager.set_skill_data(skill_name, "move_start_time", robot.sim_time)
             skill_manager.set_skill_state(skill_name, "EXECUTING")
         else:
@@ -160,7 +168,7 @@ def _handle_executing(robot, skill_manager, skill_name):
     This decouples the skill from simulation layer.
     """
     # Check if reached goal
-    if robot.node_controller_mpc.move_event.is_set():
+    if robot.ros_manager.get_node_controller_mpc().move_event.is_set():
         # Stop robot using Control object
         from simulation.control import RobotControl
         control = RobotControl()

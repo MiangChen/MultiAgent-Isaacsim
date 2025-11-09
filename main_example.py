@@ -139,6 +139,25 @@ def main():
     # Load robots from config - CARLA style (blueprints auto-registered)
     robots = world.load_actors_from_config(f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml")
 
+    # Setup ROS for each robot
+    from ros.robot_ros_manager import RobotRosManager
+    for robot in robots:
+        try:
+            # Create ROS manager for this robot
+            robot_ros_manager = RobotRosManager(
+                robot=robot,
+                namespace=robot.namespace,
+                topics=robot.body.cfg_robot.topics
+            )
+            # Inject ROS manager
+            robot.set_ros_manager(robot_ros_manager)
+            # Start ROS
+            robot_ros_manager.start()
+            logger.info(f"✅ ROS enabled for {robot.namespace}")
+        except Exception as e:
+            logger.error(f"❌ Failed to setup ROS for {robot.namespace}: {e}")
+            logger.warning(f"⚠️  {robot.namespace} will run without ROS")
+
     ros_manager.start()
 
     # Load scene

@@ -29,6 +29,12 @@ def explore(**kwargs):
 
 
 def _init_explore(robot, skill_manager, skill_name, kwargs):
+    # Check if ROS is available
+    if not robot.has_ros():
+        skill_manager.set_skill_state(skill_name, "FAILED")
+        skill_manager.skill_errors[skill_name] = "ROS not available - exploration requires ROS"
+        return skill_manager.form_feedback("failed", "ROS not available")
+    
     # Parse parameters
     boundary = kwargs.get("boundary")
     holes = kwargs.get("holes", [])
@@ -163,8 +169,8 @@ def _handle_executing(robot, skill_manager, skill_name):
         
         # Publish waypoints path
         waypoints = skill_manager.get_skill_data(skill_name, "waypoints")
-        robot.node_controller_mpc.move_event.clear()
-        robot.node_planner_ompl.publisher_path.publish(waypoints)
+        robot.ros_manager.get_node_controller_mpc().move_event.clear()
+        robot.ros_manager.get_node_planner_ompl().publisher_path.publish(waypoints)
         
         skill_manager.set_skill_data(skill_name, "exploration_start_time", robot.sim_time)
         return skill_manager.form_feedback("processing", "Starting exploration", 65)
@@ -172,7 +178,7 @@ def _handle_executing(robot, skill_manager, skill_name):
     elapsed = robot.sim_time - start_time
     
     # Check completion
-    if robot.node_controller_mpc.move_event.is_set():
+    if robot.ros_manager.get_node_controller_mpc().move_event.is_set():
         _cleanup_explore(robot, skill_manager, skill_name)
         skill_manager.set_skill_state(skill_name, "COMPLETED")
         return skill_manager.form_feedback("completed", "Exploration completed", 100)
