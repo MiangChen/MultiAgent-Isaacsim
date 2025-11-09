@@ -135,11 +135,15 @@ def main():
 
     world = container.world_configured()
     simulation_app = server.get_simulation_app()
-
-    # Load robots from config - CARLA style (blueprints auto-registered)
-    robots = world.load_actors_from_config(f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml")
     
     ros_manager.start()
+
+    # ============================================================================
+    # Robots Setup
+    # ============================================================================
+    
+    # Load robots from config - CARLA style (blueprints auto-registered)
+    robots = world.load_actors_from_config(f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml")
 
     # ============================================================================
     # Scene Setup
@@ -170,11 +174,13 @@ def main():
     )
     package = world.spawn_actor(package_bp, package_transform)
     
-    # Initialize world and robots
+    # Initialize world
     world.reset()
-    world.initialize_robots()
     world.initialize_map()
-
+    
+    # Initialize robots
+    world.initialize_robots()
+    
     # Add physics callbacks for robots
     for i, robot in enumerate(robots):
         callback_name = f"physics_step_robot_{i}"
