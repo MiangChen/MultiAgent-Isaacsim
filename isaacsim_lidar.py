@@ -4,29 +4,13 @@ try:
 except:
     pass
 
-import math
-import time
 import rclpy
-from gazebo_msgs.msg import ContactsState, ContactState
 from std_msgs.msg import Header
 
 
-class Rate:
-    def __init__(self, frequency):
-        self.period = 1.0 / frequency
-        self.start_time = time.time()
-
-    # @carb.profiler.profile
-    def sleep(self):
-        elapsed = time.time() - self.start_time
-        sleep_duration = self.period - elapsed
-        if sleep_duration > 0:
-            time.sleep(sleep_duration)
-        self.start_time = time.time()
-
-
-def run_simulation_loop(simulation_app, world, drone_ctxs, semantic_camera, 
-                       semantic_camera_prim_path, semantic_map, scene_manager, viewport_manager):
+def run_simulation_loop(simulation_app, world, drones, semantic_camera, 
+                       semantic_camera_prim_path, viewport_manager):
+    """Main simulation loop - physics + lidar publishing"""
     world.reset()
     for _ in range(10):
         simulation_app.update()
@@ -37,55 +21,37 @@ def run_simulation_loop(simulation_app, world, drone_ctxs, semantic_camera,
     viewport_manager.register_viewport(name="Viewport", viewport_obj=get_viewport_from_window_name("Viewport"))
     viewport_manager.change_viewport(camera_prim_path=semantic_camera_prim_path, viewport_name="Viewport")
 
-    rate = Rate(1.0 / world.get_rendering_dt())
-
-    grid_size = int(math.ceil(math.sqrt(len(drone_ctxs))))
-
-    from physics_engine.pxr_utils import Gf
-
-    from robot.robot_drone_autel import DronePose
-    for i, ctx in enumerate(drone_ctxs):
-        row, col = i // grid_size, i % grid_size
-        x_pos = (col - grid_size // 2) * 4.0
-        y_pos = (row - grid_size // 2) * 4.0 + 5
-        ctx.des_pose = DronePose(pos=Gf.Vec3d(x_pos, y_pos, 2.0), quat=Gf.Quatd.GetIdentity())
-        ctx.is_pose_dirty = True
-
+    count = 0
     while simulation_app.is_running():
-        rate.sleep()
-
-        for ctx in drone_ctxs:
-            rclpy.spin_once(ctx.ros_node, timeout_sec=0.01)
-
-        t_now = drone_ctxs[0].ros_node.get_clock().now()
-
-        # for ctx in drone_ctxs:
-        #     if ctx.is_pose_dirty and ctx.des_pose and ctx.drone_prim:
-        #         ctx.drone_prim.GetAttribute("xformOp:translate").Set(ctx.des_pose.pos)
-        #         ctx.drone_prim.GetAttribute("xformOp:orient").Set(ctx.des_pose.quat)
-        #         ctx.is_pose_dirty = False
-
+        # Physics step
         world.tick()
-
-        for ctx in drone_ctxs:
-            header = Header()
-            header.stamp = t_now.to_msg()
-            header.frame_id = "map"
-
-            msg = ContactsState(header=header)
-            if scene_manager.check_prim_collision(prim_path=ctx.prim_path):
-                msg.states.append(ContactState(collision1_name=f"drone_{ctx.namespace}"))
-            ctx.pubs["collision"].publish(msg)
-
-            if ctx.lidar_list:
-                pc_lfr, pc_ubd = ctx.lidar_list[0].get_pointcloud(), ctx.lidar_list[1].get_pointcloud()
-                header = Header(stamp=t_now.to_msg(), frame_id="map")
-
-                from simulation_utils.message_convert import create_pc2_msg, create_image_msg
-                ctx.pubs["lfr_pc"].publish(create_pc2_msg(header, pc_lfr))
-                ctx.pubs["ubd_pc"].publish(create_pc2_msg(header, pc_ubd))
-                ctx.pubs["lfr_img"].publish(create_image_msg(header, ctx.lidar_list[0].get_depth()))
-                ctx.pubs["ubd_img"].publish(create_image_msg(header, ctx.lidar_list[1].get_depth()))
+        
+        # Publish lidar data periodically
+        if count % 10 == 0:  # Every 10 frames
+            for drone in drones:
+                if hasattr(drone, 'lidar_list') and drone.lidar_list:
+                    t_now = drone.ros_manager.get_node().get_clock().now() if drone.has_ros() else None
+                    if t_now:
+                        header = Header(stamp=t_now.to_msg(), frame_id="map")
+                        
+                        pc_lfr = drone.lidar_list[0].get_pointcloud()
+                        pc_ubd = drone.lidar_list[1].get_pointcloud()
+                        
+                        from simulation_utils.message_convert import create_pc2_msg, create_image_msg
+                        
+                        # Publish via ROS node
+                        node = drone.ros_manager.get_node()
+                        if hasattr(node, 'publisher_dict'):
+                            if "lfr_pc" in node.publisher_dict:
+                                node.publisher_dict["lfr_pc"].publish(create_pc2_msg(header, pc_lfr))
+                            if "ubd_pc" in node.publisher_dict:
+                                node.publisher_dict["ubd_pc"].publish(create_pc2_msg(header, pc_ubd))
+                            if "lfr_img" in node.publisher_dict:
+                                node.publisher_dict["lfr_img"].publish(create_image_msg(header, drone.lidar_list[0].get_depth()))
+                            if "ubd_img" in node.publisher_dict:
+                                node.publisher_dict["ubd_img"].publish(create_image_msg(header, drone.lidar_list[1].get_depth()))
+        
+        count += 1
 
 
 
@@ -137,7 +103,6 @@ def main():
     container = get_container()
     container.wire(modules=[__name__])
 
-
     config_manager = container.config_manager()
     log_manager = container.log_manager()
     server = container.server()
@@ -154,34 +119,120 @@ def main():
 
     scene_manager.load_scene(usd_path=config_manager.get("world_usd_path"), prim_path_root="/World/Scene")
     
-    # Create objects using blueprint - CARLA style
+    # Create objects using blueprint
     cars = create_car_objects(world)
 
     result = scene_manager.add_camera(translation=[1, 4, 2], orientation=[1, 0, 0, 0])
     camera_result = result.get("result")
 
-    from simulation_utils.ros_bridge import setup_ros
-    
-    # Create drones using blueprint - CARLA style (same as main_example.py)
+    # Create drones using blueprint (same as main_example.py)
     blueprint_library = world.get_blueprint_library()
     drone_bp = blueprint_library.find('robot.autel')
     
-    drone_ctxs = []
+    drones = []
     for idx, ns in enumerate(config_manager.get("namespace")):
-        drone_bp.set_attribute('type', 'autel')
+        # Don't override 'type' - let CfgDroneAutel use its default "drone_autel"
+        # drone_bp.set_attribute('type', 'autel')  # ❌ This overrides the default
         drone_bp.set_attribute('id', idx)
         drone_bp.set_attribute('namespace', ns)
         drone_bp.set_attribute('color_scheme_id', idx)
         drone_bp.set_attribute('disable_gravity', True)
         
         drone = world.spawn_actor(drone_bp)
-        drone.setup_lidar_and_ros(setup_ros)
-        drone.initialize()
-        drone_ctxs.append(drone)
+        drones.append(drone)
+    
+    # Setup ROS for each drone (same as main_example.py)
+    from ros.robot_ros_manager import RobotRosManager
+    for drone in drones:
+        ros_manager_drone = RobotRosManager(
+            robot=drone,
+            namespace=drone.namespace,
+            topics=drone.body.cfg_robot.topics
+        )
+        drone.set_ros_manager(ros_manager_drone)
+        ros_manager_drone.start()
+        logger.info(f"✅ ROS enabled for {drone.namespace}")
+    
+    # Initialize drones
+    world.reset()
+    world.initialize_robots()
+    
+    # Add physics callbacks
+    for i, drone in enumerate(drones):
+        callback_name = f"physics_step_drone_{i}"
+        world.get_isaac_world().add_physics_callback(
+            callback_name, callback_fn=drone.on_physics_step
+        )
+    
+    # Setup lidar if needed
+    from simulation_utils.ros_bridge import setup_ros
+    for drone in drones:
+        if hasattr(drone, 'setup_lidar_and_ros'):
+            drone.setup_lidar_and_ros(setup_ros)
+    
+    # ============================================================================
+    # Application Layer Setup (same as main_example.py)
+    # ============================================================================
+    
+    # 1. ROS Control Bridge: ROS cmd_vel -> Control objects
+    from ros.ros_control_bridge import RosControlBridgeManager
+    ros_bridge_manager = RosControlBridgeManager()
+    ros_bridge_manager.add_robots(drones)
+    ros_bridge_manager.start()
+    
+    # 2. Skill System: High-level behaviors via ROS actions
+    from application import SkillManager
+    skill_managers = {}
+    for drone in drones:
+        skill_manager = SkillManager(drone, auto_register=True)
+        drone.skill_manager = skill_manager
+        skill_managers[drone.namespace] = skill_manager
+    
+    # ============================================================================
+    # Control via ROS2 Actions
+    # ============================================================================
+    
+    print("\n" + "="*80)
+    print("LIDAR SIMULATION READY - Use ROS2 Actions to Control Drones")
+    print("="*80)
+    print("\nAvailable drones:")
+    for drone in drones:
+        print(f"  - {drone.namespace}")
+    
+    print("\nAvailable skills:")
+    print("  ROS Required: navigate_to, explore, track, move")
+    print("  No ROS: take_off, pick_up, put_down, take_photo, detect, object_detection")
+    
+    print("\nExample commands:")
+    print("\n  # Take off:")
+    print('  ros2 action send_goal /autel_0/skill_execution plan_msgs/action/SkillExecution \\')
+    print('    \'{skill_request: {skill_list: [{skill: "take_off", params: [{key: "altitude", value: "2.0"}]}]}}\' --feedback')
+    
+    print("\n  # Navigate:")
+    print('  ros2 action send_goal /autel_0/skill_execution plan_msgs/action/SkillExecution \\')
+    print('    \'{skill_request: {skill_list: [{skill: "navigate_to", params: [{key: "goal_pos", value: "[5, 5, 2]"}]}]}}\' --feedback')
+    
+    print("\n  # Control via cmd_vel:")
+    print('  ros2 topic pub /autel_0/cmd_vel geometry_msgs/msg/Twist "{linear: {x: 1.0, y: 0.0, z: 0.0}}"')
+    
+    print("\n  # View lidar topics:")
+    print('  ros2 topic list | grep autel')
+    print('  ros2 topic echo /autel_0/lfr_pc')
+    print("\n" + "="*80 + "\n")
 
-    # Run simulation loop
-    run_simulation_loop(simulation_app, world, drone_ctxs, camera_result.get("camera_instance"),
-                       camera_result.get("prim_path"), semantic_map, scene_manager, viewport_manager)
+    # ============================================================================
+    # Main Simulation Loop
+    # ============================================================================
+    
+    run_simulation_loop(simulation_app, world, drones, camera_result.get("camera_instance"),
+                       camera_result.get("prim_path"), viewport_manager)
+    
+    # Cleanup
+    ros_bridge_manager.stop()
+    ros_manager.stop()
+    
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

@@ -112,6 +112,10 @@ robot_topics:
     cmd_vel: "cmd_vel"
     odom: "odom"
     camera: "camera"
+  drone_autel:
+    cmd_vel: "cmd_vel"
+    odom: "odom"
+    camera: "camera"
   g1:
     cmd_vel: "cmd_vel"
     odom: "odom"
