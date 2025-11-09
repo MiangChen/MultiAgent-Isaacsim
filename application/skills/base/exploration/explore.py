@@ -67,7 +67,7 @@ def _init_explore(robot, skill_manager, skill_name, kwargs):
     
     try:
         # Plan exploration waypoints
-        from robot.skill.base.exploration.plan_exploration_waypoints import plan_exploration_waypoints
+        from application.skills.base.exploration.plan_exploration_waypoints import plan_exploration_waypoints
         
         waypoints = plan_exploration_waypoints(
             robot=robot,

@@ -13,7 +13,7 @@ from nav2_msgs.action import ComputePathToPose
 from nav_msgs.msg import Odometry
 
 from ros.node_robot import NodeRobot
-from robot.skill.base.navigation import NodePlannerOmpl, NodeTrajectoryGenerator, NodeMpcController
+from application.skills.base.navigation import NodePlannerOmpl, NodeTrajectoryGenerator, NodeMpcController
 from log.log_manager import LogManager
 
 logger = LogManager.get_logger(__name__)

@@ -1,5 +1,5 @@
-from .navigate_to import navigate_to
-from .explore import explore
+from application.skills.base.navigation.navigate_to import navigate_to
+from application.skills.base.exploration.explore import explore
 from .detect import detect
 from .track import track
 from .take_photo import take_photo
