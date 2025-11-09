@@ -18,7 +18,7 @@ from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from robot.robot import Robot
 from robot.cfg.cfg_target import CfgTarget
 from robot.body.body_target import BodyTarget
-from robot.skill.base.navigation.navigate_to import navigate_to
+# from robot.skill.base.navigation.navigate_to import navigate_to
 from scene.scene_manager import SceneManager
 
 # Custom ROS message imports

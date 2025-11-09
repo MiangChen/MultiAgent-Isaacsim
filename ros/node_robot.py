@@ -88,61 +88,75 @@ class NodeRobot(Node):
     def execute_callback_wrapper(self, goal_handle):
         """
         ROS2 action server的callback wrapper，处理skill执行请求
-        支持新的多技能架构
+        使用新的 SkillManager 架构
         """
+        import json
+        import time
 
         request = goal_handle.request.skill_request
         task_name = request.skill_list[0].skill
-        params = {p.key: p.value for p in request.skill_list[0].params}
+        
+        # Parse parameters - convert string values to appropriate types
+        params = {}
+        for p in request.skill_list[0].params:
+            try:
+                # Try to parse as JSON first
+                params[p.key] = json.loads(p.value)
+            except (json.JSONDecodeError, ValueError):
+                # If not JSON, use as string
+                params[p.key] = p.value
 
-        # 使用新的多技能架构启动技能
-        skill_function = self.get_skill_function(task_name)
-        if skill_function is None:
+        # Get skill manager from robot
+        if not hasattr(self.robot_instance, 'skill_manager'):
             goal_handle.abort()
             return SkillExecution.Result(
-                success=False, message=f"未知技能: {task_name}"
+                success=False, 
+                message=f"Robot does not have skill_manager"
+            )
+        
+        skill_manager = self.robot_instance.skill_manager
+        
+        # Check if skill is registered
+        if task_name not in skill_manager.skills:
+            goal_handle.abort()
+            available_skills = list(skill_manager.skills.keys())
+            return SkillExecution.Result(
+                success=False, 
+                message=f"Unknown skill: {task_name}. Available: {available_skills}"
             )
 
-        # 启动技能
-        skill_name = self.robot_instance.start_skill(skill_function, **params)
-
-        # 发送初始feedback表示技能已启动
+        # Send initial feedback
         feedback = SkillExecution.Feedback()
-        feedback.status = f"技能 {task_name} 启动成功"
+        feedback.status = f"Skill {task_name} started"
         goal_handle.publish_feedback(feedback)
 
-        # 循环监控skill执行状态并发送feedback
-        import time
+        # Execute skill in loop until completion
+        while goal_handle.is_active:
+            # Execute skill
+            result = skill_manager.execute_skill(task_name, **params)
+            
+            status = result.get("status", "processing")
+            message = result.get("message", "")
+            progress = result.get("progress", 0)
 
-        while (
-            skill_name in self.robot_instance.skill_functions and goal_handle.is_active
-        ):
-            # 获取技能状态
-            skill_state = self.robot_instance.skill_states.get(skill_name, "UNKNOWN")
-            skill_error = self.robot_instance.skill_errors.get(skill_name)
-            skill_feedback = self.robot_instance.skill_feedbacks.get(skill_name, {})
-
-            status = skill_feedback.get("status", "processing")
-            message = skill_feedback.get("message", "")
-            progress = skill_feedback.get("progress", 0)
-
+            # Send feedback
             feedback.status = f"{status}: {message} ({progress}%)"
             goal_handle.publish_feedback(feedback)
 
-            # 检查技能是否完成
-            if status in ["finished", "failed", "completed"]:
+            # Check if skill is complete
+            if status in ["completed", "failed"]:
                 break
 
-            # 10Hz频率，等待0.1秒 todo
+            # 10Hz frequency
             time.sleep(0.1)
 
-        # 获取最终结果
-        final_feedback = self.robot_instance.skill_feedbacks.get(skill_name, {})
-        final_status = final_feedback.get("status", "failed")
-        final_message = final_feedback.get("message", "Unknown result")
+        # Get final result
+        final_result = skill_manager.execute_skill(task_name, **params)
+        final_status = final_result.get("status", "failed")
+        final_message = final_result.get("message", "Unknown result")
 
-        # 创建ROS2 action result
-        success = final_status in ["finished", "completed"]
+        # Create ROS2 action result
+        success = final_status == "completed"
         result = SkillExecution.Result(success=success, message=final_message)
 
         if success:
@@ -151,23 +165,3 @@ class NodeRobot(Node):
         else:
             goal_handle.abort()
             return result
-
-    def get_skill_function(self, task_name):
-        """获取技能函数 - 使用SkillRegistry（支持按需导入）"""
-        from robot.skill.skill_registry import SkillRegistry
-
-        # 获取机器人类型
-        robot_type = self.robot_instance.cfg_robot.type
-
-        # 直接从SkillRegistry获取技能函数
-        skill_function = SkillRegistry.get_skill(robot_type, task_name)
-
-        if skill_function is None:
-            logger.warning(
-                f"Skill '{task_name}' not found for robot type '{robot_type}'"
-            )
-            logger.info(
-                f"Available skills for {robot_type}: {SkillRegistry.get_skill_names_for_robot(robot_type)}"
-            )
-
-        return skill_function

@@ -17,7 +17,6 @@ from .body import *
 from .cfg import *
 from .controller import *
 from .sensor import *
-from .skill import *
 
 __all__ = [
     # Main robot classes
