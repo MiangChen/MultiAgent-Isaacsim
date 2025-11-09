@@ -1,0 +1,45 @@
+# Application Layer Skill Configuration
+# Defines skill-to-robot-type mappings
+
+# Base skills - Supported by most robots
+base_skills:
+  robot_types: ['jetbot', 'g1', 'h1', 'cf2x', 'autel']
+  skills:
+    - navigate_to
+    - detect
+    - take_photo
+    - object_detection
+    - explore
+
+# Drone skills - UAV specific
+drone_skills:
+  robot_types: ['cf2x', 'autel']
+  skills:
+    - take_off
+    - land
+    - hover
+
+# Manipulation skills - Robots with arms
+manipulation_skills:
+  robot_types: ['g1', 'h1']
+  skills:
+    - pick_up
+    - put_down
+    - grasp
+    - place
+
+# Ground robot skills
+ground_robot_skills:
+  robot_types: ['jetbot', 'g1', 'h1']
+  skills:
+    - follow_line
+    - avoid_obstacle
+
+# Perception skills - Robots with cameras
+perception_skills:
+  robot_types: ['jetbot', 'g1', 'h1', 'cf2x', 'autel']
+  skills:
+    - take_photo
+    - object_detection
+    - detect
+    - track

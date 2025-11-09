@@ -30,8 +30,6 @@ from robot.body import BodyRobot
 from robot.skill.base.navigation import NodePlannerOmpl
 from robot.skill.base.navigation import NodeTrajectoryGenerator
 from robot.skill.base.navigation import NodeMpcController
-from robot.skill.base.detection import detect
-from robot.skill.base.navigation import navigate_to
 from ros.node_robot import NodeRobot
 from scene.scene_manager import SceneManager
 
@@ -99,28 +97,6 @@ class Robot:
         self.pos = torch.tensor([0.0, 0.0, 0.0])
         self.quat = torch.tensor([0.0, 0.0, 0.0, 1.0])
         self.sim_time = 0.0
-
-        # 字典化的技能管理 - 以函数名为key
-        self.skill_states = (
-            {}
-        )  # {"navigate_to": "EXECUTING", "take_off": "COMPLETED", ...}
-        self.skill_functions = (
-            {}
-        )  # {"navigate_to": navigate_to, "take_off": take_off, ...}
-        self.skill_params = (
-            {}
-        )  # {"navigate_to": {...params...}, "take_off": {...params...}, ...}
-        self.skill_errors = (
-            {}
-        )  # {"navigate_to": "error_message", "take_off": None, ...}
-        self.skill_feedbacks = (
-            {}
-        )  # {"navigate_to": {...feedback...}, "take_off": {...feedback...}, ...}
-
-        # 技能私有数据存储
-        self.skill_data = (
-            {}
-        )  # {"navigate_to": {...private_data...}, "take_off": {...private_data...}, ...}
 
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
@@ -318,73 +294,11 @@ class Robot:
         self.publish_robot_state()
         # 更新相机的视野
         self._update_camera_view()
-        # 执行技能步骤
-        self.execute_skill_step()
         # calculate robot velocity
         self.node_controller_mpc.control_loop()
         # update robot velocity
         self.controller_simplified()
         return
-
-    def execute_skill_step(self):
-        """执行所有活跃技能的步骤"""
-        if self.skill_functions:
-            completed_skills = []
-
-            for skill_name, skill_function in list(self.skill_functions.items()):
-
-                # 执行技能
-                params = self.skill_params.get(skill_name, {})
-                feedback = skill_function(**params)
-                self.skill_feedbacks[skill_name] = feedback
-
-                # 检查技能是否完成
-                if feedback and feedback.get("status") in ["completed", "failed"]:
-                    completed_skills.append(skill_name)
-
-                # except Exception as e:
-                #     self.skill_errors[skill_name] = str(e)
-                #     self.skill_states[skill_name] = "FAILED"
-                #     completed_skills.append(skill_name)
-
-            # 清理完成的技能
-            for skill_name in completed_skills:
-                self._cleanup_skill(skill_name)
-
-            return
-
-    def start_skill(self, skill_function: callable, **params):
-        """启动技能 - 使用函数名作为技能标识"""
-        skill_name = skill_function.__name__
-        params["robot"] = self
-
-        self.skill_params[skill_name] = params
-        self.skill_states[skill_name] = None
-        self.skill_errors[skill_name] = {}
-        self.skill_feedbacks[skill_name] = {}
-        self.skill_data[skill_name] = {}
-        self.skill_functions[skill_name] = skill_function
-
-        return skill_name
-
-    def _cleanup_skill(self, skill_name: str):
-        """内部清理方法"""
-        self.skill_functions.pop(skill_name, None)
-        self.skill_params.pop(skill_name, None)
-        self.skill_states.pop(skill_name, None)
-        self.skill_errors.pop(skill_name, None)
-        # self.skill_feedbacks.pop(skill_name, None)  # 因为需要在ros robot中反馈机器人的执行结果, 所以暂时不可以清除
-        self.skill_data.pop(skill_name, None)
-
-    def set_skill_data(self, skill_name: str, key: str, value):
-        """设置技能私有数据"""
-        if skill_name not in self.skill_data:
-            self.skill_data[skill_name] = {}
-        self.skill_data[skill_name][key] = value
-
-    def get_skill_data(self, skill_name: str, key: str, default=None):
-        """获取技能私有数据"""
-        return self.skill_data.get(skill_name, {}).get(key, default)
 
     def post_reset(self) -> None:
         for sensor in self.cameras.values():
@@ -395,21 +309,6 @@ class Robot:
             self.body.robot_articulation.set_linear_velocities(self.vel_linear)
             self.body.robot_articulation.set_angular_velocities(self.vel_angular)
             logger.debug(f"Robot Articulation vel, {self.vel_linear}")
-
-    def execute_frame_skill(self) -> None:
-        if self.is_detecting:
-            detect(self, self.target_prim)
-        if (
-                self.is_tracking
-                and self.node_controller_mpc.has_reached_goal
-                and self.track_waypoint_index < len(self.track_waypoint_list)
-        ):
-            self.skill_function = navigate_to
-            self.skill_params = {
-                "robot": self,
-                "goal_pos": self.track_waypoint_list[self.track_waypoint_index],
-            }
-            self.track_waypoint_index += 1
 
     def _initialize_third_person_camera(self):
         """初始化第三人称相机并注册到ViewportManager"""
@@ -503,9 +402,3 @@ class Robot:
     def update_sim_time(self, sim_time):
         """更新仿真时间"""
         self.sim_time = sim_time
-
-    def get_available_skills(self):
-        """获取当前机器人类型支持的所有技能"""
-        from robot.skill.skill_registry import SkillRegistry
-
-        return SkillRegistry.get_skill_names_for_robot(self.cfg_robot.type)

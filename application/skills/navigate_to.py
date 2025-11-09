@@ -16,8 +16,10 @@ from action_msgs.msg import GoalStatus
 from builtin_interfaces.msg import Time
 from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import ComputePathToPose
+from application.skill_registry import SkillRegistry
 
 
+@SkillRegistry.register()
 def navigate_to(**kwargs):
     """
     Navigate to target position

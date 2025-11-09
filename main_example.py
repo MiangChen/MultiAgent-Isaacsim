@@ -225,12 +225,16 @@ def main():
     # 2. Skill System: High-level behaviors
     from application import SkillManager
     from application.skills.navigate_to import navigate_to
+    from application.skills.explore import explore
+    from application.skills.take_off import take_off
     from simulation.control import RobotControl
     
     skill_managers = {}
     for robot in robots:
         skill_manager = SkillManager(robot)
         skill_manager.register_skill('navigate_to', navigate_to)
+        skill_manager.register_skill('explore', explore)
+        skill_manager.register_skill('take_off', take_off)
         skill_managers[robot.namespace] = skill_manager
 
     # ============================================================================
@@ -246,17 +250,108 @@ def main():
         for robot in robots:
             robot.apply_control(control)
     
-    # Mode 2: Navigate to goal (Application layer)
-    USE_NAVIGATION = True
-    if USE_NAVIGATION and len(robots) > 0:
-        # Navigate first robot to goal
-        skill_managers[robots[0].namespace].execute_skill(
-            'navigate_to',
-            goal_pos=[3, 4.3, 1.05],
-            goal_quat_wxyz=[1.0, 0.0, 0.0, 0.0]
-        )
+    # Mode 2: Multi-drone mission (Application layer)
+    USE_MULTI_DRONE = True
+    if USE_MULTI_DRONE and len(robots) > 0:
+        # Find drones
+        cf2x_0 = None
+        cf2x_1 = None
+        for robot in robots:
+            if robot.namespace == "cf2x_0":
+                cf2x_0 = robot
+            elif robot.namespace == "cf2x_1":
+                cf2x_1 = robot
+        
+        # cf2x_0: Take off to 5m
+        if cf2x_0:
+            print("\n" + "="*60)
+            print("CF2X_0 MISSION: TAKE OFF")
+            print("="*60)
+            print(f"Drone: {cf2x_0.namespace}")
+            print(f"Current Position: {cf2x_0.body.get_world_pose()[0]}")
+            print(f"Target Altitude: 5.0m")
+            print("="*60 + "\n")
+            
+            skill_managers[cf2x_0.namespace].execute_skill(
+                'take_off',
+                altitude=5.0
+            )
+        
+        # cf2x_1: Navigate to target position
+        if cf2x_1:
+            print("\n" + "="*60)
+            print("CF2X_1 MISSION: NAVIGATE TO TARGET")
+            print("="*60)
+            print(f"Drone: {cf2x_1.namespace}")
+            print(f"Current Position: {cf2x_1.body.get_world_pose()[0]}")
+            print(f"Target Position: [10.0, 15.0, 3.0]")
+            print("="*60 + "\n")
+            
+            skill_managers[cf2x_1.namespace].execute_skill(
+                'navigate_to',
+                goal_pos=[10.0, 15.0, 3.0],
+                goal_quat_wxyz=[1.0, 0.0, 0.0, 0.0]
+            )
     
-    # Mode 3: ROS control (run in another terminal)
+    # Mode 3: Explore area (Application layer) - Jetbot Example
+    USE_EXPLORATION = False
+    if USE_EXPLORATION and len(robots) > 0:
+        # Find jetbot (namespace: Allen)
+        jetbot = None
+        for robot in robots:
+            if robot.namespace in ["Allen", "jetbot_0"]:
+                jetbot = robot
+                break
+        
+        if jetbot:
+            print("\n" + "="*60)
+            print("JETBOT EXPLORATION MISSION")
+            print("="*60)
+            print(f"Robot: {jetbot.namespace}")
+            print(f"Start Position: {jetbot.body.get_world_pose()[0]}")
+            
+            # Jetbot exploration area (irregular polygon)
+            # This area covers a complex region for comprehensive coverage
+            # Coordinates match: ros2 action send_goal /jetbot_0/skill_execution
+            boundary = [
+                [-4.4, 12.0, 0.035],   # Point 1 (jetbot z-height: 0.035m)
+                [-4.3, 16.0, 0.035],   # Point 2
+                [-1.4, 26.0, 0.035],   # Point 3
+                [3.0, 27.4, 0.035],    # Point 4
+                [3.3, 19.4, 0.035],    # Point 5
+                [0.0, 11.0, 0.035],    # Point 6
+            ]
+            
+            print(f"Exploration Area: {len(boundary)} vertices")
+            print(f"Target Detection: car")
+            print(f"Path Interpolation: 0.1m (10cm)")
+            print("="*60 + "\n")
+            
+            skill_managers[jetbot.namespace].execute_skill(
+                'explore',
+                boundary=boundary,
+                holes=[],
+                target_prim="car",
+                interpolation_distance=0.1,  # 10cm spacing for smooth jetbot movement
+                interpolation_method="linear"
+            )
+        else:
+            # Fallback: use first robot with simple rectangular area
+            print("\n[Warning] Jetbot 'Allen' not found, using first robot")
+            boundary = [
+                [-5.0, -5.0, 1.0],
+                [15.0, -5.0, 1.0],
+                [15.0, 15.0, 1.0],
+                [-5.0, 15.0, 1.0],
+            ]
+            skill_managers[robots[0].namespace].execute_skill(
+                'explore',
+                boundary=boundary,
+                holes=[],
+                target_prim="car"
+            )
+    
+    # Mode 4: ROS control (run in another terminal)
     # ros2 topic pub /robot_0/cmd_vel geometry_msgs/msg/Twist ...
 
     # ============================================================================
@@ -268,19 +363,47 @@ def main():
         
         # Update all active skills (Application layer)
         for namespace, skill_manager in skill_managers.items():
-            state = skill_manager.get_skill_state('navigate_to')
+            # Update navigate_to skill
+            nav_state = skill_manager.get_skill_state('navigate_to')
+            if nav_state in ['EXECUTING', 'INITIALIZING', 'NAVIGATING_TO_START']:
+                skill_manager.execute_skill('navigate_to')
             
-            if state in ['EXECUTING', 'INITIALIZING']:
-                # Keep updating skill (computes velocity -> Control object)
-                result = skill_manager.execute_skill('navigate_to')
+            # Update explore skill with progress monitoring
+            explore_state = skill_manager.get_skill_state('explore')
+            if explore_state in ['EXECUTING', 'INITIALIZING', 'NAVIGATING_TO_START']:
+                result = skill_manager.execute_skill('explore')
+                
+                # Print progress every 2 seconds (120 frames at 60fps)
+                if count % 120 == 0 and result:
+                    status = result.get('status', 'unknown')
+                    message = result.get('message', '')
+                    progress = result.get('progress', 0)
+                    print(f"[{namespace}] Explore: {status} - {message} ({progress}%)")
             
-            elif state == 'COMPLETED' and count % 120 == 0:
-                # Navigation completed
-                pass
+            elif explore_state == 'COMPLETED' and count % 120 == 0:
+                print(f"[{namespace}] Exploration COMPLETED!")
             
-            elif state == 'FAILED' and count % 120 == 0:
-                # Navigation failed
-                error = skill_manager.skill_errors.get('navigate_to', 'Unknown')
+            elif explore_state == 'FAILED' and count % 120 == 0:
+                error = skill_manager.skill_errors.get('explore', 'Unknown')
+                print(f"[{namespace}] Exploration FAILED: {error}")
+            
+            # Update take_off skill
+            takeoff_state = skill_manager.get_skill_state('take_off')
+            if takeoff_state in ['EXECUTING', 'INITIALIZING', 'NAVIGATING_TO_ALTITUDE']:
+                result = skill_manager.execute_skill('take_off')
+                
+                if count % 120 == 0 and result:
+                    status = result.get('status', 'unknown')
+                    message = result.get('message', '')
+                    progress = result.get('progress', 0)
+                    print(f"[{namespace}] Take off: {status} - {message} ({progress}%)")
+            
+            elif takeoff_state == 'COMPLETED' and count % 120 == 0:
+                print(f"[{namespace}] Take off COMPLETED!")
+            
+            elif takeoff_state == 'FAILED' and count % 120 == 0:
+                error = skill_manager.skill_errors.get('take_off', 'Unknown')
+                print(f"[{namespace}] Take off FAILED: {error}")
         
         # Semantic detection
         if count % 120 == 0 and count > 0:
