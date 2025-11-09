@@ -2,9 +2,25 @@
 # Main Example - Isaac Sim Robotics Simulation Demo
 # =============================================================================
 #
-# This is the main example demonstrating the complete robotics simulation
-# pipeline using Isaac Sim, including robot swarm management, navigation,
-# semantic mapping, and ROS2 integration.
+# Architecture (3 Layers):
+#
+#   [Application Layer]
+#   ├─ Skills: navigate_to, explore, grasp, etc.
+#   │  └─ Flow: ROS planning -> MPC velocity -> RobotControl -> apply_control()
+#   └─ ROS Bridge: ROS cmd_vel -> RobotControl -> apply_control()
+#
+#   [Simulation Layer] 
+#   ├─ Control: RobotControl objects (CARLA-style)
+#   ├─ API: robot.apply_control(control), world.spawn_actor()
+#   └─ Blueprint: Robot and object creation
+#
+#   [Isaac Sim]
+#   └─ Physics engine, rendering, sensors
+#
+# Control Modes:
+#   1. Direct: robot.apply_control(control)
+#   2. Skills: skill_manager.execute_skill('navigate_to', goal_pos=[10,20,0])
+#   3. ROS: ros2 topic pub /robot_0/cmd_vel ...
 #
 # =============================================================================
 
@@ -196,33 +212,80 @@ def main():
     # Build grid map for planning
     grid_map.generate()
 
-    # Setup ROS control bridge (Application layer: ROS -> Control -> Simulation)
-    from ros.ros_control_bridge import RosControlBridgeManager
-    from simulation.control import RobotControl
+    # ============================================================================
+    # Application Layer Setup
+    # ============================================================================
     
+    # 1. ROS Control Bridge: ROS cmd_vel -> Control objects
+    from ros.ros_control_bridge import RosControlBridgeManager
     ros_bridge_manager = RosControlBridgeManager()
     ros_bridge_manager.add_robots(robots)
     ros_bridge_manager.start()
 
-    # Test: Set all robots to move forward at 1 m/s
-    control = RobotControl()
-    control.linear_velocity = [1.0, 0.0, 0.0]
-    control.angular_velocity = [0.0, 0.0, 0.0]
+    # 2. Skill System: High-level behaviors
+    from application import SkillManager
+    from application.skills.navigate_to import navigate_to
+    from simulation.control import RobotControl
     
+    skill_managers = {}
     for robot in robots:
-        robot.apply_control(control)
+        skill_manager = SkillManager(robot)
+        skill_manager.register_skill('navigate_to', navigate_to)
+        skill_managers[robot.namespace] = skill_manager
 
+    # ============================================================================
+    # Control Mode Selection (Choose one)
+    # ============================================================================
+    
+    # Mode 1: Direct velocity control (Simulation layer)
+    USE_DIRECT_CONTROL = False
+    if USE_DIRECT_CONTROL:
+        control = RobotControl()
+        control.linear_velocity = [1.0, 0.0, 0.0]
+        control.angular_velocity = [0.0, 0.0, 0.0]
+        for robot in robots:
+            robot.apply_control(control)
+    
+    # Mode 2: Navigate to goal (Application layer)
+    USE_NAVIGATION = True
+    if USE_NAVIGATION and len(robots) > 0:
+        # Navigate first robot to goal
+        skill_managers[robots[0].namespace].execute_skill(
+            'navigate_to',
+            goal_pos=[3, 4.3, 1.05],
+            goal_quat_wxyz=[1.0, 0.0, 0.0, 0.0]
+        )
+    
+    # Mode 3: ROS control (run in another terminal)
+    # ros2 topic pub /robot_0/cmd_vel geometry_msgs/msg/Twist ...
+
+    # ============================================================================
+    # Main Simulation Loop
+    # ============================================================================
     result = True
-    # Main simulation loop
     while simulation_app.is_running():
         world.tick()
         
-        ##### navigation usage ex
+        # Update all active skills (Application layer)
+        for namespace, skill_manager in skill_managers.items():
+            state = skill_manager.get_skill_state('navigate_to')
+            
+            if state in ['EXECUTING', 'INITIALIZING']:
+                # Keep updating skill (computes velocity -> Control object)
+                result = skill_manager.execute_skill('navigate_to')
+            
+            elif state == 'COMPLETED' and count % 120 == 0:
+                # Navigation completed
+                pass
+            
+            elif state == 'FAILED' and count % 120 == 0:
+                # Navigation failed
+                error = skill_manager.skill_errors.get('navigate_to', 'Unknown')
+        
+        # Semantic detection
         if count % 120 == 0 and count > 0:
-            result = process_semantic_detection(semantic_camera, semantic_map, "robot")
-            print(result)
-            result = process_semantic_detection(semantic_camera, semantic_map, "car")
-            print(result)
+            process_semantic_detection(semantic_camera, semantic_map, "robot")
+            process_semantic_detection(semantic_camera, semantic_map, "car")
 
         count += 1
 
