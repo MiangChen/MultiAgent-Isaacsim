@@ -15,9 +15,9 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                    Simulation Layer                          │
 │  ┌──────────────────┐  ┌──────────────────┐                │
-│  │  World           │  │  Control         │                │
-│  │  - spawn_actor() │  │  - RobotControl  │                │
-│  │  - Blueprint     │  │  - apply_control │                │
+│  │  World           │  │  Actor System    │                │
+│  │  - spawn_actor() │  │  - RobotActor    │                │
+│  │  - Blueprint     │  │  - StaticActor   │                │
 │  └──────────────────┘  └──────────────────┘                │
 └─────────────────────────────────────────────────────────────┘
                             ↓
@@ -27,377 +27,306 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## 🎯 核心设计原则
+
+1. **分层边界清晰** - Application 层不直接调用 Isaac Sim API
+2. **CARLA 风格 API** - 统一的 spawn_actor, apply_control 接口
+3. **状态与命令分离** - 区分实际状态和控制命令
+4. **同步控制** - MPC 直接设置速度，避免 ROS 延迟
+5. **类型安全** - 使用 Blueprint, Transform, Control 等数据类
+
 ---
 
-## ✅ 已完成的核心组件
+## ✅ 核心组件
 
-### 1. Simulation Layer（CARLA 风格）
+### 1. World 类（CARLA 风格）
 
-#### 核心类
-- ✅ `simulation/server.py` - Server 类，管理 simulation_app 启动
-- ✅ `simulation/world.py` - World 类，统一的 spawn_actor 接口
-- ✅ `simulation/actor.py` - Actor 基类
-- ✅ `simulation/robot_actor.py` - RobotActor 类，封装 Robot 实例
-- ✅ `simulation/transform.py` - Transform, Location, Rotation 数据类
-- ✅ `simulation/blueprint.py` - Blueprint 系统
-- ✅ `simulation/control.py` - RobotControl 类（CARLA 风格）
-
-#### Blueprint 系统
-```python
-# 预注册的机器人类型
-- robot.jetbot
-- robot.h1
-- robot.g1
-- robot.cf2x
-- robot.autel
-
-# 预注册的静态物体
-- static.prop.box
-- static.prop.car
-```
-
-#### 使用示例
+**统一的 Actor 创建接口：**
 ```python
 # 创建机器人
 blueprint_library = world.get_blueprint_library()
 robot_bp = blueprint_library.find('robot.jetbot')
-robot_bp.set_attribute('id', 0)
 robot_bp.set_attribute('namespace', 'robot_0')
-robot = world.spawn_actor(robot_bp, transform)
+robot_actor = world.spawn_actor(robot_bp, transform)  # 返回 RobotActor
 
 # 创建静态物体
 car_bp = blueprint_library.find('static.prop.car')
 car_bp.set_attribute('name', 'car0')
 car_bp.set_attribute('scale', [2, 5, 1.0])
-car = world.spawn_actor(car_bp, transform)
+car_actor = world.spawn_actor(car_bp, transform)  # 返回 StaticActor
 ```
 
-### 2. Control System（CARLA 风格）
+**关键方法：**
+- `spawn_actor(blueprint, transform)` - 统一创建接口
+- `get_blueprint_library()` - 获取 Blueprint 库
+- `load_actors_from_config(path)` - 从配置文件加载
+- `get_actors()` - 获取所有 Actor
+- `tick()` - 仿真步进
 
-#### RobotControl 类
+**内部实现：**
+- 使用 `blueprint.has_tag('static')` 判断类型
+- 静态物体 → `_spawn_static_prop()` → 返回 `StaticActor`
+- 机器人 → `_spawn_robot()` → 返回 `RobotActor`
+
+---
+
+### 2. Actor 系统
+
+**Actor 基类：**
 ```python
-from simulation import RobotControl
-
-control = RobotControl()
-control.linear_velocity = [1.0, 0.0, 0.0]   # X 轴前进
-control.angular_velocity = [0.0, 0.0, 0.5]  # Z 轴旋转
-robot.apply_control(control)
+class Actor:
+    def get_id(self) -> int
+    def get_type_id(self) -> str
+    def get_transform(self) -> Transform
+    def set_transform(self, transform: Transform)
+    def get_location(self) -> Location
+    def get_velocity(self) -> Vector3D
+    def destroy()
 ```
 
-#### 控制流程
-```
-应用层
-  ├── Python API: robot.apply_control(control)
-  └── ROS Topics: /<namespace>/cmd_vel
-          ↓
-桥接层
-  └── RosControlBridge: ROS Twist -> RobotControl
-          ↓
-仿真层
-  └── robot.apply_control() -> set_velocity_command()
-          ↓
-Isaac Sim
-```
-
-### 3. ROS Integration
-
-#### RobotRosManager
-每个机器人的 ROS 基础设施管理, 主要是创建Pub和Sub：
+**RobotActor（动态 Actor）：**
 ```python
-from ros.robot_ros_manager import RobotRosManager
+class RobotActor(Actor):
+    def __init__(self, robot, world):
+        self.robot = robot  # 引用 Robot 实例
+        robot.actor = self  # 双向引用
+    
+    def get_type_id(self) -> str:
+        return f"robot.{self.robot.cfg_robot.type}"
+```
 
-ros_manager = RobotRosManager(
-    robot=robot,
-    namespace=robot.namespace,
-    topics=robot.body.cfg_robot.topics
+**StaticActor（静态 Actor）：**
+```python
+class StaticActor(Actor):
+    def __init__(self, prim_path, world, semantic_label):
+        self._prim_path = prim_path
+        self._semantic_label = semantic_label
+    
+    def get_type_id(self) -> str:
+        return f"static.prop.{self._semantic_label}"
+```
+
+**设计优点：**
+- 统一的接口，无论机器人还是静态物体
+- 双向引用：`robot.actor` 和 `actor.robot`
+- 自动注册到 World 的 Actor 列表
+
+---
+
+### 3. Robot 类 - 状态与命令分离（CARLA 风格）
+
+**核心概念：**
+- **状态变量**（State）：从 Isaac Sim 读取的实际值
+- **命令变量**（Command）：控制器设置的目标值
+
+**状态变量（私有，只读）：**
+```python
+# 在 on_physics_step 中从 Isaac Sim 更新
+self.position = torch.tensor([0.0, 0.0, 0.0])
+self.quat = torch.tensor([0.0, 0.0, 0.0, 1.0])
+self._velocity = torch.tensor([0.0, 0.0, 0.0])  # 实际线速度
+self._angular_velocity = torch.tensor([0.0, 0.0, 0.0])  # 实际角速度
+
+# 公共接口（CARLA 风格）
+def get_velocity(self) -> torch.Tensor
+def get_angular_velocity(self) -> torch.Tensor
+def get_world_pose() -> Tuple[torch.Tensor, torch.Tensor]
+```
+
+**命令变量（公共，可写）：**
+```python
+# 由控制器设置，在 controller_simplified 中应用到 Isaac Sim
+self.target_velocity = torch.tensor([0.0, 0.0, 0.0])  # 目标线速度
+self.target_angular_velocity = torch.tensor([0.0, 0.0, 0.0])  # 目标角速度
+
+# 公共接口
+def set_target_velocity(linear_velocity, angular_velocity=None)
+def apply_control(control: RobotControl)
+```
+
+**关键：避免覆盖问题**
+```python
+def publish_robot_state(self):
+    """在 on_physics_step 中调用，更新状态"""
+    pos, quat = self._body.get_world_pose()
+    vel, ang_vel = self._body.get_world_vel()
+    
+    # 只更新状态变量
+    self.position = pos
+    self.quat = quat
+    self._velocity = vel
+    self._angular_velocity = ang_vel
+    
+    # 不更新 target_velocity/target_angular_velocity！
+    # 它们是命令，由 MPC/控制器设置
+```
+
+---
+
+### 4. 控制流程（on_physics_step）
+
+**执行顺序至关重要：**
+```python
+def on_physics_step(self, step_size):
+    # 1. 从 Isaac Sim 读取状态，更新 position, quat, _velocity, _angular_velocity
+    self.publish_robot_state()
+    
+    # 2. 更新相机视野
+    self._update_camera_view()
+    
+    # 3. MPC 计算并设置 target_velocity, target_angular_velocity
+    if self.has_ros():
+        self.ros_manager.get_node_controller_mpc().control_loop()
+    
+    # 4. 将 target_velocity, target_angular_velocity 应用到 Isaac Sim
+    self.controller_simplified()
+```
+
+**为什么这个顺序很重要：**
+1. 第 1 步更新状态（不覆盖命令）
+2. 第 3 步 MPC 设置新的命令速度
+3. 第 4 步将命令应用到 Isaac Sim
+
+**如果顺序错误会怎样：**
+- 如果 `publish_robot_state()` 覆盖了 `target_velocity`，机器人会使用旧速度（0）
+- 如果 MPC 在 `controller_simplified()` 之后运行，速度会延迟一帧
+
+---
+
+### 5. MPC 控制器 - 同步控制
+
+**问题：ROS 异步延迟**
+```python
+# 错误方式：通过 ROS topic（异步，有延迟）
+def control_loop(self):
+    optimal_command = self.mpc_controller.solve(...)
+    
+    # 发布到 ROS topic
+    cmd_msg = Twist()
+    cmd_msg.linear.x = optimal_command[0]
+    self.cmd_vel_pub.publish(cmd_msg)
+    
+    # ROS bridge 在另一个线程中接收，有延迟！
+    # 当前帧的 controller_simplified() 会使用旧速度
+```
+
+**解决方案：直接设置（同步，无延迟）**
+```python
+class NodeMpcController(Node):
+    def __init__(self, namespace: str, robot=None):
+        self.robot = robot  # 直接引用 robot
+    
+    def control_loop(self):
+        optimal_command = self.mpc_controller.solve(...)
+        
+        # 直接设置目标速度（同步，无延迟）
+        if self.robot:
+            self.robot.target_velocity = torch.tensor([
+                optimal_command[0], 
+                optimal_command[1], 
+                optimal_command[2]
+            ])
+            self.robot.target_angular_velocity = torch.tensor([
+                0.0, 0.0, optimal_command[3]
+            ])
+        
+        # 仍然发布到 ROS（用于监控/调试）
+        self.cmd_vel_pub.publish(cmd_msg)
+```
+
+**创建时传递 robot 引用：**
+```python
+# ros/robot_ros_manager.py
+self.node_controller_mpc = NodeMpcController(
+    namespace=self.namespace, 
+    robot=self.robot  # 传递 robot 引用
 )
-robot.set_ros_manager(ros_manager)
-ros_manager.start()
 ```
 
-**功能：**
-- ROS 节点管理（NodeRobot）
-- Action clients（路径规划）
-- Navigation nodes（Planner, Trajectory, MPC）
-- Executor 和线程管理
-- Publishers 和 subscribers
+---
 
-#### RosControlBridgeManager
-ROS cmd_vel 到仿真层的桥接, 主要是解决ROS2的消息和仿真层之间的数据问题：
+### 6. Blueprint 系统
+
+**预注册的类型：**
 ```python
-from ros.ros_control_bridge import RosControlBridgeManager
+# 机器人
+- robot.jetbot
+- robot.h1
+- robot.g1
+- robot.cf2x
+- robot.autel
+- robot.target
 
-ros_bridge_manager = RosControlBridgeManager()
-ros_bridge_manager.add_robots(robots)
-ros_bridge_manager.start()
+# 静态物体
+- static.prop.box
+- static.prop.car
 ```
 
-**功能：**
-- 订阅 `/<namespace>/cmd_vel`
-- 转换 Twist 消息为 RobotControl
-- 自动匹配机器人和 topic
-
-**使用示例：**
-```bash
-# 控制机器人前进
-ros2 topic pub /robot_0/cmd_vel geometry_msgs/msg/Twist \
-  "{linear: {x: 1.0, y: 0.0, z: 0.0}}"
-```
-
-### 4. Skill System
-
-#### SkillManager（装饰器注册 + 管理）
-
-**装饰器注册技能：**
+**使用 tags 判断类型：**
 ```python
-from application import SkillManager
+def spawn_actor(self, blueprint, transform=None):
+    # 使用 tags 判断，而不是 robot_class is None
+    if blueprint.has_tag('static'):
+        return self._spawn_static_prop(blueprint, transform)
+    
+    if blueprint.has_tag('robot'):
+        return self._spawn_robot(blueprint, transform)
+    
+    # Fallback
+    return self._spawn_static_prop(blueprint, transform)
+```
 
-@SkillManager.register()
+**优点：**
+- 更灵活，可以有多个 tags
+- 易于扩展（如 'vehicle', 'drone' 等）
+- 不依赖 `robot_class is None` 这种隐式判断
+
+---
+
+### 7. 分层边界 - Application 层不调用 Isaac Sim API
+
+**问题：**
+```python
+# 错误：Application 层直接调用 Isaac Sim API
+pos, quat = robot.body.get_world_pose()  # 渲染期间会报错！
+```
+
+**解决方案：**
+```python
+# robot/robot.py
+class Robot:
+    def __init__(self):
+        self._body: BodyRobot = None  # 私有，仅内部使用
+    
+    # 公共接口（Application 层使用）
+    def get_world_pose(self):
+        """返回缓存的状态，不调用 Isaac Sim API"""
+        return self.position, self.quat
+    
+    def get_velocity(self):
+        """返回缓存的实际速度"""
+        return self._velocity
+    
+    def get_config(self):
+        """返回配置"""
+        return self._body.cfg_robot
+    
+    # 向后兼容（带警告）
+    @property
+    def body(self):
+        warnings.warn("Direct access to robot.body is deprecated", DeprecationWarning)
+        return self._body
+```
+
+**Application 层使用：**
+```python
+# application/skills/base/navigation/navigate_to.py
 def navigate_to(robot, goal_pos, **kwargs):
-    """技能实现"""
-    pass
-
-# 或指定自定义名称, 并在skill_config.yaml中配置该技能可以给哪些机器人用
-@SkillManager.register()
-def my_skill(robot, **kwargs):
-    pass
-```
-
-**创建管理器并执行技能：**
-```python
-from application import SkillManager
-
-# 自动注册所有全局技能
-skill_manager = SkillManager(robot, auto_register=True)
-robot.skill_manager = skill_manager
-
-# 执行技能
-result = skill_manager.execute_skill('navigate_to', goal_pos=[10, 20, 0])
-
-# 列出可用技能
-print(skill_manager.list_skills())
-```
-
-**设计特点：**
-- 使用类变量存储全局技能注册表
-- 装饰器自动注册到全局注册表
-- 每个机器人实例可选择性使用全局技能
-- 简化架构，无需单独的 Registry 类
-
-#### 已实现的技能
-
-**运动技能：**
-- `navigate_to` - 导航到目标点（A*, RRT, MPC）
-- `explore` - 自主探索区域
-- `track` - 跟踪目标
-- `move` - 简单移动
-
-**无人机技能：**
-- `take_off` - 起飞到指定高度
-- `land` - 降落（未完全实现）
-
-**感知技能：**
-- `take_photo` - 拍照
-- `detect` - 目标检测
-- `object_detection` - 物体检测
-
-**操作技能：**
-- `pick_up` - 抓取物体
-- `put_down` - 放置物体
-
-#### ROS Action 接口
-```bash
-# 通过 ROS2 action 执行技能
-ros2 action send_goal /robot_0/skill_execution plan_msgs/action/SkillExecution \
-  '{skill_request: {skill_list: [{skill: "navigate_to", params: [{key: "goal_pos", value: "[10, 20, 0]"}]}]}}' --feedback
-```
-
----
-
-## ⚙️ 配置系统
-
-### ROS Topics 配置
-
-**配置文件：** `config/config_parameter.yaml`
-
-```yaml
-robot_topics:
-  jetbot:
-    odom: "odom"
-    cmd_vel: "cmd_vel"
-    camera: "camera"
-  
-  cf2x:
-    odom: "odom"
-    cmd_vel: "cmd_vel"
-    camera: "camera"
-  
-  drone_autel:
-    cmd_vel: "cmd_vel"
-    odom: "odom"
-    camera: "camera"
-  
-  g1:
-    odom: "odom"
-    cmd_vel: "cmd_vel"
-    camera: "camera"
-  
-  h1:
-    odom: "odom"
-    cmd_vel: "cmd_vel"
-    camera: "camera"
-```
-
-### 配置工作流程
-
-```
-1. CfgRobot.__post_init__()
-   ↓
-2. 从 ROBOT_TOPICS[self.type] 获取 topics 配置
-   ↓
-3. RobotRosManager 使用 topics 创建 ROS 节点
-   ↓
-4. NodeRobot._create_publishers() 创建 publishers
-   ↓
-5. robot.publish_robot_state() 发布数据
-```
-
-**关键点：**
-- `type` 字段必须与配置文件中的 key 匹配
-- 每个机器人类型必须配置 `odom` topic（如果需要发布状态）
-- `cmd_vel` 是可选的（如果需要 ROS 控制）
-
----
-
-## 📁 文件结构
-
-```
-simulation/                          # 仿真层（CARLA 风格）
-├── __init__.py                     # 导出所有公共类
-├── server.py                       # Server 类
-├── world.py                        # World 类
-│   ├── spawn_actor()              # 统一创建接口
-│   ├── load_actors_from_config()  # 从配置加载
-│   ├── get_blueprint_library()    # 获取 blueprint 库
-│   └── tick()                     # 仿真步进
-├── actor.py                        # Actor 基类
-├── robot_actor.py                  # RobotActor 类
-├── transform.py                    # Transform 数据类
-├── blueprint.py                    # Blueprint 系统
-└── control.py                      # RobotControl 类
-
-ros/                                 # ROS 层
-├── robot_ros_manager.py            # 每个机器人的 ROS 管理
-│   ├── RobotRosManager            # ROS 基础设施管理
-│   ├── NodeRobot                  # 主 ROS 节点
-│   ├── NodePlannerOmpl            # 路径规划节点
-│   ├── NodeTrajectoryGenerator    # 轨迹生成节点
-│   └── NodeMpcController          # MPC 控制节点
-├── ros_control_bridge.py           # ROS 控制桥接
-│   ├── RosControlBridge           # 单个机器人桥接
-│   └── RosControlBridgeManager    # 多机器人管理
-└── node_robot.py                   # ROS 节点实现
-    ├── Publishers (odom, camera)
-    ├── Subscribers (cmd_vel, clock)
-    └── Action Servers (skill_execution)
-
-application/                         # 应用层
-├── skill_manager.py                # 技能管理器
-│   ├── SkillManager               # 技能管理和执行
-│   ├── @register 装饰器           # 全局技能注册
-│   └── _global_skills             # 全局技能注册表（类变量）
-└── skills/                         # 技能实现
-    ├── base/                       # 基础技能
-    │   ├── navigation/            # 导航技能
-    │   ├── exploration/           # 探索技能
-    │   └── detection/             # 检测技能
-    ├── drone/                      # 无人机技能
-    │   └── takeoff.py
-    ├── manipulation/               # 操作技能
-    │   ├── grasp.py
-    │   └── place.py
-    └── perception/                 # 感知技能
-        └── take_photo.py
-
-robot/
-├── robot.py                        # Robot 基类
-│   ├── apply_control()            # 统一控制接口
-│   ├── set_velocity_command()     # 设置速度命令
-│   └── publish_robot_state()      # 发布状态
-└── cfg/                            # 机器人配置
-    ├── cfg_robot.py               # 基础配置
-    ├── cfg_drone_cf2x.py          # CF2X 配置
-    └── cfg_drone_autel.py         # Autel 配置
-```
-
----
-
-## 🎯 标准使用流程
-
-### 完整示例（main_example.py）
-
-```python
-# 1. 初始化
-import rclpy
-from containers import get_container, reset_container
-
-rclpy.init(args=None)
-reset_container()
-container = get_container()
-container.wire(modules=[__name__])
-
-# 获取服务
-world = container.world_configured()
-simulation_app = container.server().get_simulation_app()
-
-# 2. 加载机器人
-robots = world.load_actors_from_config("config/robot_swarm_cfg.yaml")
-
-# 3. 设置 ROS（每个机器人）
-from ros.robot_ros_manager import RobotRosManager
-
-for robot in robots:
-    ros_manager = RobotRosManager(
-        robot=robot,
-        namespace=robot.namespace,
-        topics=robot.body.cfg_robot.topics
-    )
-    robot.set_ros_manager(ros_manager)
-    ros_manager.start()
-
-# 4. 初始化机器人
-world.reset()
-world.initialize_robots()
-
-# 5. 添加物理回调
-for i, robot in enumerate(robots):
-    world.get_isaac_world().add_physics_callback(
-        f"physics_step_robot_{i}", 
-        robot.on_physics_step
-    )
-
-# 6. Application Layer Setup
-# 6.1 ROS Control Bridge
-from ros.ros_control_bridge import RosControlBridgeManager
-
-ros_bridge_manager = RosControlBridgeManager()
-ros_bridge_manager.add_robots(robots)
-ros_bridge_manager.start()
-
-# 6.2 Skill System
-from application import SkillManager
-
-for robot in robots:
-    skill_manager = SkillManager(robot, auto_register=True)
-    robot.skill_manager = skill_manager
-
-# 7. 主循环
-while simulation_app.is_running():
-    world.tick()
-
-# 8. 清理
-ros_bridge_manager.stop()
-rclpy.shutdown()
+    # 正确：使用公共接口
+    start_pos, start_quat = robot.get_world_pose()
+    
+    # 错误：不要直接访问 body
+    # start_pos, start_quat = robot.body.get_world_pose()
 ```
 
 ---
@@ -417,292 +346,295 @@ robot.apply_control(control)
 ### 2. ROS Topic（速度控制）
 ```bash
 ros2 topic pub /robot_0/cmd_vel geometry_msgs/msg/Twist \
-  "{linear: {x: 1.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.5}}"
+  "{linear: {x: 1.0, y: 0.0, z: 0.0}, angular: {z: 0.5}}"
 ```
 
 ### 3. ROS Action（技能系统）
 ```bash
-# 导航
 ros2 action send_goal /robot_0/skill_execution plan_msgs/action/SkillExecution \
   '{skill_request: {skill_list: [{skill: "navigate_to", params: [{key: "goal_pos", value: "[10, 20, 0]"}]}]}}' --feedback
-
-# 起飞（无人机）
-ros2 action send_goal /cf2x_0/skill_execution plan_msgs/action/SkillExecution \
-  '{skill_request: {skill_list: [{skill: "take_off", params: [{key: "altitude", value: "1.0"}]}]}}' --feedback
-
-# 探索
-ros2 action send_goal /jetbot_0/skill_execution plan_msgs/action/SkillExecution \
-  "{skill_request: {skill_list: [{skill: explore, params: [{key: boundary, value: '[[-4.4, 12, 0], [3.3, 19.4, 0]]'}]}]}}" --feedback
 ```
 
----
-
-## 🌟 核心特性
-
-### 1. 统一的创建方式
-所有物体（机器人和静态物体）都通过 `world.spawn_actor()` 创建
-
-### 2. Blueprint 系统
-- 预注册所有已知类型
-- 支持属性设置和查询
-- 自动分发到正确的创建方法
-
-### 3. 解耦设计
-- **仿真层**：不依赖 ROS，纯 Python API
-- **ROS 层**：可选的 ROS 集成
-- **应用层**：高级技能和任务
-
-### 4. 多种控制方式
-- 直接控制（Python API）
-- ROS 速度控制（cmd_vel）
-- ROS 技能控制（action）
-
-### 5. 技能系统
-- **装饰器注册**：`@SkillManager.register()` 自动注册技能
-- **全局注册表**：使用类变量 `_global_skills` 存储所有技能
-- **实例管理**：每个机器人有独立的 SkillManager 实例
-- **自动加载**：`application/__init__.py` 导入所有技能模块触发注册
-
-### 6. 自动化管理
-- 自动技能注册（装饰器）
-- 自动 ROS 节点管理
-- 自动 topic 映射
-
----
-
-## 🎓 设计原则
-
-1. **统一接口** - 所有物体通过 `world.spawn_actor()` 创建
-2. **CARLA 风格** - API 设计参考 CARLA，保持一致性
-3. **封装复杂性** - 隐藏 Isaac Sim 的底层细节
-4. **解耦设计** - 仿真层、ROS 层、应用层职责清晰
-5. **类型安全** - 使用 Transform 等数据类，避免裸数组
-6. **配置驱动** - 通过配置文件管理机器人类型和 topics
-7. **简化架构** - 避免过度设计，合并相关功能到单一类
-
-
-
----
-
-## 📝 技能系统详解
-
-### 技能分类
-
-**运动技能（Mobility）**
-- `navigate_to` - 导航到目标点
-- `explore` - 自主探索
-- `track` - 目标跟踪
-- `move` - 简单移动
-- `take_off` - 起飞（无人机）
-
-**感知技能（Perception）**
-- `take_photo` - 拍照
-- `detect` - 目标检测
-- `object_detection` - 物体检测
-
-**操作技能（Manipulation）**
-- `pick_up` - 抓取物体
-- `put_down` - 放置物体
-
-### 技能系统架构
-
-**核心概念：**
-- **全局注册表**：`SkillManager._global_skills`（类变量）存储所有已注册的技能
-- **装饰器注册**：`@SkillManager.register()` 在模块导入时自动注册技能
-- **实例管理**：每个机器人有独立的 SkillManager 实例，管理该机器人的技能执行
-
-**工作流程：**
-```
-1. 模块导入
-   application/__init__.py imports application.skills
-   ↓
-2. 装饰器执行
-   @SkillManager.register() 注册技能到 _global_skills
-   ↓
-3. 创建实例
-   skill_manager = SkillManager(robot, auto_register=True)
-   ↓
-4. 复制技能
-   从 _global_skills 复制到实例的 self.skills
-   ↓
-5. 执行技能
-   skill_manager.execute_skill('navigate_to', ...)
-```
-
-### 使用示例
-
-**1. 定义技能**
+### 4. MPC 控制（自动）
 ```python
+# MPC 在 on_physics_step 中自动运行
+# 直接设置 robot.target_velocity
+# 无需手动干预
+```
+
+---
+
+## 📁 文件结构
+
+```
+simulation/                          # 仿真层（CARLA 风格）
+├── __init__.py                     # 导出公共类
+├── server.py                       # Server 类
+├── world.py                        # World 类
+│   ├── spawn_actor()              # 统一创建接口
+│   ├── _spawn_robot()             # 创建机器人
+│   ├── _spawn_static_prop()       # 创建静态物体
+│   └── load_actors_from_config()  # 从配置加载
+├── actor.py                        # Actor 基类
+├── robot_actor.py                  # RobotActor 类
+├── static_actor.py                 # StaticActor 类（新增）
+├── transform.py                    # Transform 数据类
+├── blueprint.py                    # Blueprint 系统
+└── control.py                      # RobotControl 类
+
+robot/
+├── robot.py                        # Robot 基类
+│   ├── 状态变量（私有）
+│   │   ├── position, quat
+│   │   ├── _velocity
+│   │   └── _angular_velocity
+│   ├── 命令变量（公共）
+│   │   ├── target_velocity
+│   │   └── target_angular_velocity
+│   ├── 公共接口
+│   │   ├── get_world_pose()
+│   │   ├── get_velocity()
+│   │   ├── get_angular_velocity()
+│   │   ├── set_target_velocity()
+│   │   └── apply_control()
+│   └── 内部方法
+│       ├── publish_robot_state()
+│       ├── controller_simplified()
+│       └── on_physics_step()
+└── body/                           # Body 实现（Isaac Sim 层）
+    ├── body_robot.py
+    ├── body_jetbot.py
+    └── ...
+
+application/
+├── skill_manager.py                # 技能管理器
+└── skills/                         # 技能实现
+    ├── base/navigation/
+    │   ├── navigate_to.py
+    │   └── node_controller_mpc.py  # MPC 控制器
+    └── ...
+
+ros/
+├── robot_ros_manager.py            # ROS 管理器
+│   └── 创建 NodeMpcController(robot=robot)
+└── ros_control_bridge.py           # ROS 控制桥接
+```
+
+---
+
+## 🔄 完整数据流
+
+### 导航控制流程（navigate_to skill）
+
+```
+1. 用户发起导航请求
+   ROS Action: /robot_0/skill_execution
+   ↓
+2. Skill 执行
+   navigate_to() 发送路径规划请求
+   ↓
+3. 路径规划（ROS）
+   NodePlannerOmpl 计算路径
+   ↓
+4. 轨迹生成（ROS）
+   NodeTrajectoryGenerator 生成带时间戳的轨迹
+   ↓
+5. MPC 控制（每个 physics step）
+   on_physics_step() 调用:
+   ├─ publish_robot_state()        # 更新状态
+   ├─ control_loop()                # MPC 计算
+   │  └─ robot.target_velocity = ...  # 直接设置命令
+   └─ controller_simplified()       # 应用到 Isaac Sim
+      └─ _body.set_linear_velocities(target_velocity)
+   ↓
+6. Isaac Sim 执行
+   物理引擎更新机器人位置
+   ↓
+7. 状态反馈
+   publish_robot_state() 读取新位置
+   发布 odom 到 ROS
+   MPC 使用新位置计算下一步
+```
+
+### 关键点
+
+1. **MPC 直接设置速度**：`robot.target_velocity = ...`（同步，无延迟）
+2. **状态不覆盖命令**：`publish_robot_state()` 只更新 `_velocity`，不更新 `target_velocity`
+3. **命令应用到 Isaac Sim**：`controller_simplified()` 使用 `target_velocity`
+
+---
+
+## 🎯 标准使用流程
+
+```python
+# 1. 初始化
+import rclpy
+from containers import get_container, reset_container
+
+rclpy.init(args=None)
+reset_container()
+container = get_container()
+world = container.world_configured()
+
+# 2. 加载机器人（返回 Actor 列表）
+robot_actors = world.load_actors_from_config("config/robot_swarm_cfg.yaml")
+robots = [actor.robot for actor in robot_actors]  # 提取 Robot 对象
+
+# 3. 创建静态物体
+blueprint_library = world.get_blueprint_library()
+
+car_bp = blueprint_library.find('static.prop.car')
+car_bp.set_attribute('name', 'car0')
+car_bp.set_attribute('scale', [2, 5, 1.0])
+car_actor = world.spawn_actor(car_bp, Transform(location=Location(10, 5, 0)))
+
+# 4. 设置 ROS（每个机器人）
+from ros.robot_ros_manager import RobotRosManager
+
+for robot in robots:
+    ros_manager = RobotRosManager(
+        robot=robot,
+        namespace=robot.namespace,
+        topics=robot.get_topics()  # 使用公共接口
+    )
+    robot.set_ros_manager(ros_manager)
+    ros_manager.start()
+
+# 5. 初始化
+world.reset()
+world.initialize_robots()
+
+# 6. 添加物理回调
+for i, robot in enumerate(robots):
+    world.get_isaac_world().add_physics_callback(
+        f"physics_step_robot_{i}", 
+        robot.on_physics_step
+    )
+
+# 7. ROS Control Bridge（可选）
+from ros.ros_control_bridge import RosControlBridgeManager
+ros_bridge_manager = RosControlBridgeManager()
+ros_bridge_manager.add_robots(robots)
+ros_bridge_manager.start()
+
+# 8. Skill System
 from application import SkillManager
+for robot in robots:
+    skill_manager = SkillManager(robot, auto_register=True)
+    robot.skill_manager = skill_manager
 
-@SkillManager.register()
-def my_skill(robot, param1, param2, **kwargs):
-    """
-    自定义技能实现
-    
-    Args:
-        robot: 机器人实例（自动注入）
-        param1, param2: 技能参数
-        skill_manager: 技能管理器（自动注入）
-    """
-    skill_manager = kwargs.get('skill_manager')
-    
-    # 技能逻辑
-    result = do_something(robot, param1, param2)
-    
-    return {"status": "success", "result": result}
-```
+# 9. 主循环
+while simulation_app.is_running():
+    world.tick()
 
-**2. 创建管理器**
-```python
-from application import SkillManager
-
-# 自动注册所有全局技能
-skill_manager = SkillManager(robot, auto_register=True)
-robot.skill_manager = skill_manager
-```
-
-**3. 执行技能**
-```python
-# Python API
-result = skill_manager.execute_skill('my_skill', param1=value1, param2=value2)
-
-# ROS Action
-# ros2 action send_goal /robot_0/skill_execution plan_msgs/action/SkillExecution \
-#   '{skill_request: {skill_list: [{skill: "my_skill", params: [...]}]}}' --feedback
-```
-
-**4. 查看可用技能**
-```python
-# 全局注册的所有技能
-print(SkillManager.list_global_skills())
-
-# 当前机器人实例的技能
-print(skill_manager.list_skills())
-```
-
-### 技能执行流程
-
-```
-ROS Action Request
-    ↓
-NodeRobot.execute_callback_wrapper()
-    ↓
-SkillManager.execute_skill()
-    ↓
-技能函数执行
-    ↓
-返回结果
-    ↓
-ROS Action Response
-```
-
-### 依赖注入
-
-技能函数可以使用 `@inject` 装饰器自动注入依赖：
-
-```python
-from dependency_injector.wiring import inject, Provide
-from application import SkillManager
-
-
-@SkillManager.register()
-@inject
-def navigate_to(
-        robot,
-        goal_pos,
-        grid_map=Provide["grid_map"],
-        scene_manager=Provide["scene_manager"],
-        **kwargs
-):
-    """导航技能 - 自动注入 grid_map 和 scene_manager"""
-    path = grid_map.plan_path(robot.position, goal_pos)
-    # ...
-```
-
-**注意：** 装饰器顺序很重要，`@inject` 应该在 `@SkillManager.register()` 之后。
-
-### 技能状态管理
-
-SkillManager 提供状态管理功能，用于跟踪技能执行状态：
-
-```python
-# 设置/获取技能状态
-skill_manager.set_skill_state('navigate_to', 'EXECUTING')
-state = skill_manager.get_skill_state('navigate_to')
-
-# 设置/获取技能数据
-skill_manager.set_skill_data('navigate_to', 'target_pos', [10, 20, 0])
-target = skill_manager.get_skill_data('navigate_to', 'target_pos')
-
-# 构造反馈消息
-feedback = skill_manager.form_feedback(
-    status="processing",
-    message="Navigating to target",
-    progress=50
-)
+# 10. 清理
+ros_bridge_manager.stop()
+rclpy.shutdown()
 ```
 
 ---
 
-## 🔄 数据流
+## 🌟 关键改进总结
 
-### 状态发布流程
+### 1. Actor 系统统一
+- ✅ `spawn_actor()` 统一返回 Actor 对象
+- ✅ RobotActor 和 StaticActor 继承自 Actor 基类
+- ✅ 使用 Blueprint tags 判断类型，而不是 `robot_class is None`
 
-```
-robot.on_physics_step()
-    ↓
-robot.update_state()
-    ↓
-robot.publish_robot_state()
-    ↓
-ros_manager.publish_odometry()
-    ↓
-ROS odom topic
-```
+### 2. 状态与命令分离（CARLA 风格）
+- ✅ 状态变量：`_velocity`, `_angular_velocity`（实际值，只读）
+- ✅ 命令变量：`target_velocity`, `target_angular_velocity`（目标值，可写）
+- ✅ `publish_robot_state()` 只更新状态，不覆盖命令
 
-### 控制接收流程
+### 3. 同步控制（避免 ROS 延迟）
+- ✅ MPC 直接设置 `robot.target_velocity`
+- ✅ 不依赖 ROS topic 的异步回调
+- ✅ 在同一个 physics step 内完成：计算 → 设置 → 应用
 
-```
-ROS cmd_vel topic
-    ↓
-RosControlBridge._cmd_vel_callback()
-    ↓
-创建 RobotControl 对象
-    ↓
-robot.apply_control(control)
-    ↓
-robot.set_velocity_command()
-    ↓
-Isaac Sim 执行
-```
+### 4. 分层边界清晰
+- ✅ `robot._body` 私有，Application 层不可访问
+- ✅ 公共接口：`get_world_pose()`, `get_velocity()` 等
+- ✅ 返回缓存值，不在 Application 层调用 Isaac Sim API
+
+### 5. 命名约定（CARLA 风格）
+- ✅ `get_velocity()` - 获取实际速度（状态）
+- ✅ `target_velocity` - 目标速度（命令）
+- ✅ `apply_control(control)` - 应用控制
+- ✅ 符合 CARLA 和 ROS 的通用约定
 
 ---
+
+## 🐛 常见问题与解决方案
+
+### 问题 1：机器人不动（MPC 发布速度但机器人速度为 0）
+
+**原因：**
+`publish_robot_state()` 从 Isaac Sim 读取当前速度（0），覆盖了 MPC 设置的 `target_velocity`。
+
+**解决方案：**
+- 区分状态变量（`_velocity`）和命令变量（`target_velocity`）
+- `publish_robot_state()` 只更新状态，不更新命令
+- MPC 直接设置 `target_velocity`，不通过 ROS topic
+
+### 问题 2：Application 层调用 Isaac Sim API 导致渲染错误
+
+**原因：**
+Application 层直接访问 `robot.body.get_world_pose()`，在渲染期间调用会报错。
+
+**解决方案：**
+- 将 `body` 改为 `_body`（私有）
+- 提供公共接口：`get_world_pose()`, `get_velocity()` 等
+- 返回缓存的状态值，不直接调用 Isaac Sim API
+
+### 问题 3：spawn_actor 返回类型不一致
+
+**原因：**
+静态物体返回 `prim_path`（字符串），机器人返回 `robot` 对象。
+
+**解决方案：**
+- 创建 `StaticActor` 类包装静态物体
+- `spawn_actor()` 统一返回 Actor 对象
+- 使用 Blueprint tags 判断类型
+
+### 问题 4：MPC 速度命令延迟一帧
+
+**原因：**
+MPC 通过 ROS topic 发布速度，ROS bridge 在另一个线程异步接收，有延迟。
+
+**解决方案：**
+- MPC 直接设置 `robot.target_velocity`（同步）
+- 仍然发布到 ROS topic（用于监控）
+- 在 `on_physics_step` 中按正确顺序执行
+
+---
+
+## 📚 相关文档
+
+- `VELOCITY_NAMING_CONVENTION.md` - 速度命名约定（CARLA 风格）
+- `CARLA_VELOCITY_NAMING_RESEARCH.md` - CARLA 命名研究
+- `ARCHITECTURE_FIX_SUMMARY.md` - 架构修复总结
+- `docs/ROS_DECOUPLING_FINAL_SUMMARY.md` - ROS 解耦总结
+- `docs/WORLD_API_COMPARISON.md` - World API 对比
+- `application/skills/README.md` - 技能开发指南
 
 ## 🚀 后续工作
 
-### 短期 - 完善现有功能
+### 短期
 - [ ] 完善所有技能的实现
-- [ ] 添加更多机器人类型
+- [ ] 添加更多静态物体类型
 - [ ] 优化性能和稳定性
 
-### 中期 - 传感器系统
+### 中期
 - [ ] 统一的传感器接口（参考 CARLA）
-- [ ] 传感器数据回调机制
-- [ ] 多种传感器类型支持
-
-### 长期 - 高级功能
-- [ ] Actor 生命周期管理
+- [ ] Vehicle 类型支持（带物理控制）
 - [ ] 碰撞检测和物理事件
+
+### 长期
+- [ ] Actor 生命周期管理
 - [ ] 录制和回放
 - [ ] 多机器人协同框架
+- [ ] 完整的 CARLA API 兼容层
 
 ---
 
-## 📚 参考文档
-
-- `docs/ROS_DECOUPLING_FINAL_SUMMARY.md` - ROS 解耦总结
-- `docs/APPLICATION_LAYER_REFACTOR.md` - 应用层重构
-- `docs/ROS_ACTION_INTERFACE.md` - ROS Action 接口
-- `docs/QUICK_REFERENCE.md` - 快速参考
-- `application/skills/README.md` - 技能开发指南
+**最后更新：** 2024年（基于最新架构改进）
