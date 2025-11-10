@@ -1,44 +1,27 @@
-matplotlib>=3.7.0  # 绘图
+# 用于统一代码风格
 black
-pydantic>=2.0.0  # Data validation
-pyyaml>=6.0  # 用于读取yaml文件
-usd-core>=23.0  # pixar的官方库，处理usd文件
+
+pyyaml>=6.0
 dependency-injector>=4.41.0  # 依赖注入
+
+# 模型处理
+usd-core>=23.0  # pixar的官方库，处理usd文件
 
 # Path Planning
 shapely
-ompl # path planning
+ompl
 toppra # path generator
 casadi # for mpc
-#octomap-python # for grid map 不存在这个包
 
 # AI and Language Processing
 faster-whisper>=0.9.0  # openai的whisper语音转录模型, 输入音频, 可以输出文本
 sounddevice>=0.4.6  # 提供对计算机音频硬件的访问
 pyttsx3>=2.98  # 文本转语音
 langchain>=0.1.0
-langchain_openai>=0.1.0
 
 # Scientific Computing and Data Processing
+matplotlib>=3.7.0
 numpy>=1.24.0,<2.0.0  # 科学计算基础
-scipy>=1.10.0  # 建立在numpy上的科学计算库
 opencv-python>=4.8.0  # Computer vision and image processing
+scipy>=1.10.0  # 建立在numpy上的科学计算库
 Pillow>=10.0.0  # Image processing
-
-# File Processing
-openpyxl>=3.1.5  # 读写excel文件
-
-# Web Framework and Server (WebManager)
-fastapi>=0.104.0,<1.0.0
-uvicorn[standard]>=0.24.0,<1.0.0
-websockets>=12.0,<13.0
-python-multipart>=0.0.6
-
-# System Monitoring and Performance
-psutil>=5.9.0,<6.0.0
-
-# Async and Networking
-asyncio-mqtt>=0.13.0,<1.0.0  # For potential MQTT integration
-
-# Logging and Utilities
-python-json-logger>=2.0.0,<3.0.0
