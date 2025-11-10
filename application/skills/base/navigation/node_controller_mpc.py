@@ -277,8 +277,14 @@ class NodeMpcController(Node):
         self.get_logger().info("MPC Controller Node has started.")
 
     def clock_callback(self, msg: Clock):
+        """
+        每次 world.tick() 后，Isaac Sim 发布 clock，自动触发 MPC
+        """
         sim_time_float = msg.clock.sec + msg.clock.nanosec / 1e9
         self.latest_sim_time = sim_time_float
+        
+        # 自动调用 control_loop（Application 层控制）
+        self.control_loop()
 
     def trajectory_callback(self, msg: JointTrajectory):
         """Handles incoming trajectory messages."""

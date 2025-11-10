@@ -163,9 +163,9 @@ def publish_robot_state(self):
 
 ---
 
-### 4. 控制流程（on_physics_step）
+### 4. 控制流程（解耦设计）
 
-**执行顺序至关重要：**
+**Robot 层（on_physics_step）：**
 ```python
 def on_physics_step(self, step_size):
     # 1. 从 Isaac Sim 读取状态，更新 position, quat, _velocity, _angular_velocity
@@ -174,22 +174,35 @@ def on_physics_step(self, step_size):
     # 2. 更新相机视野
     self._update_camera_view()
     
-    # 3. MPC 计算并设置 target_velocity, target_angular_velocity
-    if self.has_ros():
-        self.ros_manager.get_node_controller_mpc().control_loop()
-    
-    # 4. 将 target_velocity, target_angular_velocity 应用到 Isaac Sim
+    # 3. 将 target_velocity, target_angular_velocity 应用到 Isaac Sim
+    # Note: target_velocity 由 MPC (Application 层) 通过 clock 回调设置
     self.controller_simplified()
 ```
 
-**为什么这个顺序很重要：**
-1. 第 1 步更新状态（不覆盖命令）
-2. 第 3 步 MPC 设置新的命令速度
-3. 第 4 步将命令应用到 Isaac Sim
+**Application 层（MPC 自动触发）：**
+```python
+# application/skills/base/navigation/node_controller_mpc.py
+def clock_callback(self, msg: Clock):
+    """订阅 /isaacsim_simulation_clock，每次 world.tick() 后自动调用"""
+    self.latest_sim_time = msg.clock.sec + msg.clock.nanosec / 1e9
+    
+    # 自动调用 control_loop（Application 层控制）
+    self.control_loop()
 
-**如果顺序错误会怎样：**
-- 如果 `publish_robot_state()` 覆盖了 `target_velocity`，机器人会使用旧速度（0）
-- 如果 MPC 在 `controller_simplified()` 之后运行，速度会延迟一帧
+def control_loop(self):
+    """MPC 计算并直接设置 robot.target_velocity"""
+    optimal_command = self.mpc_controller.solve(...)
+    
+    if self.robot:
+        self.robot.target_velocity = torch.tensor([...])
+        self.robot.target_angular_velocity = torch.tensor([...])
+```
+
+**完全解耦的设计：**
+- ✅ Robot 层不知道 MPC 的存在
+- ✅ MPC 通过 ROS clock 自动触发
+- ✅ MPC 直接设置 `target_velocity`（同步，无延迟）
+- ✅ Robot 只负责应用命令到 Isaac Sim
 
 ---
 
@@ -439,18 +452,21 @@ ros/
 4. 轨迹生成（ROS）
    NodeTrajectoryGenerator 生成带时间戳的轨迹
    ↓
-5. MPC 控制（每个 physics step）
-   on_physics_step() 调用:
-   ├─ publish_robot_state()        # 更新状态
-   ├─ control_loop()                # MPC 计算
-   │  └─ robot.target_velocity = ...  # 直接设置命令
-   └─ controller_simplified()       # 应用到 Isaac Sim
-      └─ _body.set_linear_velocities(target_velocity)
+5. 仿真循环（每帧）
+   world.tick()
+   ├─ Isaac Sim 步进
+   ├─ 发布 /isaacsim_simulation_clock
+   │
+   ├─ [Application 层] MPC.clock_callback() 自动触发
+   │  └─ control_loop()
+   │     └─ robot.target_velocity = ...  # 直接设置命令
+   │
+   └─ [Robot 层] robot.on_physics_step()
+      ├─ publish_robot_state()           # 更新状态
+      └─ controller_simplified()         # 应用命令到 Isaac Sim
+         └─ _body.set_linear_velocities(target_velocity)
    ↓
-6. Isaac Sim 执行
-   物理引擎更新机器人位置
-   ↓
-7. 状态反馈
+6. 状态反馈
    publish_robot_state() 读取新位置
    发布 odom 到 ROS
    MPC 使用新位置计算下一步
@@ -458,9 +474,11 @@ ros/
 
 ### 关键点
 
-1. **MPC 直接设置速度**：`robot.target_velocity = ...`（同步，无延迟）
-2. **状态不覆盖命令**：`publish_robot_state()` 只更新 `_velocity`，不更新 `target_velocity`
-3. **命令应用到 Isaac Sim**：`controller_simplified()` 使用 `target_velocity`
+1. **完全解耦**：Robot 层不调用 MPC，MPC 通过 clock 自动触发
+2. **MPC 直接设置速度**：`robot.target_velocity = ...`（同步，无延迟）
+3. **状态不覆盖命令**：`publish_robot_state()` 只更新 `_velocity`，不更新 `target_velocity`
+4. **命令应用到 Isaac Sim**：`controller_simplified()` 使用 `target_velocity`
+5. **分层清晰**：Application 层计算命令，Robot 层执行命令
 
 ---
 
@@ -556,7 +574,12 @@ rclpy.shutdown()
 - ✅ 公共接口：`get_world_pose()`, `get_velocity()` 等
 - ✅ 返回缓存值，不在 Application 层调用 Isaac Sim API
 
-### 5. 命名约定（CARLA 风格）
+### 5. MPC 完全解耦（新增）
+- ✅ MPC 通过订阅 `/isaacsim_simulation_clock` 自动触发
+- ✅ Robot 层不调用 MPC，保持分层独立
+- ✅ Application 层控制器自主运行
+
+### 6. 命名约定（CARLA 风格）
 - ✅ `get_velocity()` - 获取实际速度（状态）
 - ✅ `target_velocity` - 目标速度（命令）
 - ✅ `apply_control(control)` - 应用控制

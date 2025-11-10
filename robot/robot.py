@@ -321,20 +321,21 @@ class Robot:
 
     def on_physics_step(self, step_size) -> None:
         """
+        Physics step callback - Robot layer only
+        
         Args:
-            step_size:  dt 时间间隔
+            step_size: dt 时间间隔
         """
-        # publish robot position
+        # 1. Update robot state from Isaac Sim
         self.publish_robot_state()
-        # 更新相机的视野
+
+        # 2. Update camera view
         self._update_camera_view()
 
-        # Calculate robot velocity (if ROS is enabled)
-        if self.has_ros():
-            self.ros_manager.get_node_controller_mpc().control_loop()
-
-        # Update robot velocity
+        # 3. Apply target velocity to Isaac Sim
+        # Note: target_velocity is set by MPC (Application layer) via clock callback
         self.controller_simplified()
+
         return
 
     def post_reset(self) -> None:
