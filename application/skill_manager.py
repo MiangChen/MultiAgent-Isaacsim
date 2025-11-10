@@ -106,6 +106,10 @@ class SkillManager:
         
         Returns:
             技能执行结果
+        
+        Note: 
+            - 技能使用状态机模式，每次调用会根据当前状态执行相应逻辑
+            - 如果需要重新执行已完成的技能，请先调用 reset_skill()
         """
         if skill_name not in self.skills:
             return {"status": "failed", "message": f"Skill {skill_name} not found"}
@@ -145,3 +149,23 @@ class SkillManager:
     def form_feedback(self, status: str = "processing", message: str = "", progress: int = 100):
         """构造反馈消息"""
         return {"status": status, "message": message, "progress": progress}
+    
+    def reset_skill(self, skill_name: str):
+        """
+        重置技能状态和数据
+        
+        Args:
+            skill_name: 技能名称
+        """
+        if skill_name in self.skill_states:
+            del self.skill_states[skill_name]
+        if skill_name in self.skill_data:
+            del self.skill_data[skill_name]
+        if skill_name in self.skill_errors:
+            del self.skill_errors[skill_name]
+    
+    def reset_all_skills(self):
+        """重置所有技能状态"""
+        self.skill_states.clear()
+        self.skill_data.clear()
+        self.skill_errors.clear()

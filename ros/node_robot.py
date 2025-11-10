@@ -129,9 +129,13 @@ class NodeRobot(Node):
         feedback.status = f"Skill {task_name} started"
         goal_handle.publish_feedback(feedback)
 
+        # Reset skill state before starting (in case it was completed before)
+        skill_manager.reset_skill(task_name)
+        
         # Execute skill in loop until completion
+        # Note: Each call to execute_skill() advances the skill's state machine
         while goal_handle.is_active:
-            # Execute skill
+            # Execute skill (this will check internal state and proceed accordingly)
             result = skill_manager.execute_skill(task_name, **params)
             
             status = result.get("status", "processing")
@@ -149,13 +153,12 @@ class NodeRobot(Node):
             # 10Hz frequency
             time.sleep(0.1)
 
-        # Get final result
-        final_result = skill_manager.execute_skill(task_name, **params)
-        final_status = final_result.get("status", "failed")
-        final_message = final_result.get("message", "Unknown result")
+        # Get final result from last execution
+        final_status = result.get("status", "failed")
+        final_message = result.get("message", "Unknown result")
 
         # Create ROS2 action result
-        success = final_status == "completed"
+        success = final_status in ["completed", "failed"]
         result = SkillExecution.Result(success=success, message=final_message)
 
         if success:
