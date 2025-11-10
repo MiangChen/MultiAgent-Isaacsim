@@ -605,17 +605,18 @@ ROS Action Response
 from dependency_injector.wiring import inject, Provide
 from application import SkillManager
 
+
 @SkillManager.register()
 @inject
 def navigate_to(
-    robot,
-    goal_pos,
-    grid_map=Provide["grid_map"],
-    scene_manager=Provide["scene_manager"],
-    **kwargs
+        robot,
+        goal_pos,
+        grid_map=Provide["grid_map"],
+        scene_manager=Provide["scene_manager"],
+        **kwargs
 ):
     """导航技能 - 自动注入 grid_map 和 scene_manager"""
-    path = grid_map.plan_path(robot.pos, goal_pos)
+    path = grid_map.plan_path(robot.position, goal_pos)
     # ...
 ```
 

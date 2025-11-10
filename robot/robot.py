@@ -82,7 +82,7 @@ class Robot:
         # robot physics state
         self.vel_linear = torch.tensor([0.0, 0.0, 0.0])
         self.vel_angular = torch.tensor([0.0, 0.0, 0.0])
-        self.pos = torch.tensor([0.0, 0.0, 0.0])
+        self.position = torch.tensor([0.0, 0.0, 0.0])
         self.quat = torch.tensor([0.0, 0.0, 0.0, 1.0])
         self.sim_time = 0.0
 
@@ -94,10 +94,10 @@ class Robot:
         self.viewport_name = None  # 存储viewport名称
         self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
         self.transform_camera_pos = np.array([0, 0, 0])
-        
+
         # ROS manager (optional, injected from outside)
         self.ros_manager = None
-        
+
         self.is_detecting = False
         self.target_prim = None
 
@@ -115,7 +115,7 @@ class Robot:
         pos, quat = self.body.get_world_pose()
         vel_linear, vel_angular = self.body.get_world_vel()
 
-        self.pos = pos
+        self.position = pos
         self.quat = quat
 
         # Publish to ROS if available
@@ -124,30 +124,23 @@ class Robot:
             quat = quat.detach().cpu().numpy()
             vel_linear = vel_linear.detach().cpu().numpy()
             vel_angular = vel_angular.detach().cpu().numpy()
-            
+
             self.ros_manager.publish_odometry(pos, quat, vel_linear, vel_angular)
 
-    ########################## Subscriber Velocity  ############################
-    def set_velocity_command(self, linear_vel, angular_vel):
-        """设置机器人速度命令 - 业务逻辑接口"""
-        self.vel_linear = torch.tensor(linear_vel)
-        self.vel_angular = torch.tensor(angular_vel)
-        logger.debug(f"set linear vel: {linear_vel}, angular vel: {angular_vel}")
-
     ########################## ROS Manager Interface ############################
-    
+
     def set_ros_manager(self, ros_manager):
         """Set ROS manager (dependency injection)"""
         self.ros_manager = ros_manager
-    
+
     def get_ros_manager(self):
         """Get ROS manager"""
         return self.ros_manager
-    
+
     def has_ros(self):
         """Check if ROS is enabled"""
         return self.ros_manager is not None
-    
+
     def cleanup(self):
         """Cleanup robot resources"""
         if self.has_ros():
@@ -185,8 +178,10 @@ class Robot:
         from simulation.control import RobotControl
         if isinstance(control, RobotControl):
             self._current_control = control  # Cache for get_control()
-            self.set_velocity_command(control.linear_velocity, control.angular_velocity)
-    
+            """设置机器人速度命令 - 业务逻辑接口"""
+            self.vel_linear = torch.tensor(control.linear_velocity)
+            self.vel_angular = torch.tensor(control.angular_velocity)
+
     def get_control(self):
         """Get current control (CARLA-style)"""
         from simulation.control import RobotControl
@@ -207,11 +202,11 @@ class Robot:
         self.publish_robot_state()
         # 更新相机的视野
         self._update_camera_view()
-        
+
         # Calculate robot velocity (if ROS is enabled)
         if self.has_ros():
             self.ros_manager.get_node_controller_mpc().control_loop()
-        
+
         # Update robot velocity
         self.controller_simplified()
         return
