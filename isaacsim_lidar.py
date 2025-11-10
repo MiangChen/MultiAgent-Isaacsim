@@ -174,13 +174,8 @@ def main():
     # Application Layer Setup (same as main_example.py)
     # ============================================================================
     
-    # 1. ROS Control Bridge: ROS cmd_vel -> Control objects
-    from ros.ros_control_bridge import RosControlBridgeManager
-    ros_bridge_manager = RosControlBridgeManager()
-    ros_bridge_manager.add_robots(drones)
-    ros_bridge_manager.start()
-    
-    # 2. Skill System: High-level behaviors via ROS actions
+    # 1. Skill System: High-level behaviors via ROS actions
+    # Note: cmd_vel is now handled directly in NodeRobot (no separate bridge needed)
     from application import SkillManager
     skill_managers = {}
     for drone in drones:
@@ -228,8 +223,9 @@ def main():
                        camera_result.get("prim_path"), viewport_manager)
     
     # Cleanup
-    ros_bridge_manager.stop()
-    ros_manager.stop()
+    for drone in drones:
+        if drone.has_ros():
+            drone.cleanup()
     
     if rclpy.ok():
         rclpy.shutdown()

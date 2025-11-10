@@ -242,14 +242,8 @@ def main():
             logger.error(f"❌ Failed to setup ROS for {robot.namespace}: {e}")
             raise f"Failed to setup ROS for {robot.namespace}"
 
-    # 2. ROS Control Bridge: ROS cmd_vel -> Control objects
-    from ros.ros_control_bridge import RosControlBridgeManager
-    
-    ros_bridge_manager = RosControlBridgeManager()
-    ros_bridge_manager.add_robots(robots)
-    ros_bridge_manager.start()
-
-    # 3. Skill System: High-level behaviors via ROS actions
+    # 2. Skill System: High-level behaviors via ROS actions
+    # Note: cmd_vel is now handled directly in NodeRobot (no separate bridge needed)
     from application import SkillManager
 
     skill_managers = {}
@@ -278,8 +272,9 @@ def main():
         count += 1
 
     # Cleanup
-    ros_bridge_manager.stop()
-    ros_manager.stop()
+    for robot in robots:
+        if robot.has_ros():
+            robot.cleanup()
 
     if rclpy.ok():
         rclpy.shutdown()

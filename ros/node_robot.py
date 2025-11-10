@@ -49,12 +49,14 @@ class NodeRobot(Node):
         """根据配置创建subscribers"""
         self.subscriber_dict = {}
 
-        # if "cmd_vel" in self.topics:
-        #     self.subscriber_cmd_vel = self.create_subscription(
-        #         Twist, self.topics["cmd_vel"], self.callback_cmd_vel, 10
-        #     )
-        #     self.subscriber_dict["cmd_vel"] = self.subscriber_cmd_vel
+        # cmd_vel subscriber (for external control)
+        if "cmd_vel" in self.topics:
+            self.subscriber_cmd_vel = self.create_subscription(
+                Twist, self.topics["cmd_vel"], self.callback_cmd_vel, 10
+            )
+            self.subscriber_dict["cmd_vel"] = self.subscriber_cmd_vel
 
+        # Simulation clock subscriber
         self.subscriber_sim_clock = self.create_subscription(
             Clock, "/isaacsim_simulation_clock", self.callback_sim_clock, 10
         )
@@ -72,10 +74,20 @@ class NodeRobot(Node):
         )
         self.action_server_dict["skill_execution"] = self.action_server_skill
 
-    # def callback_cmd_vel(self, msg):
-    #     linear_vel = [msg.linear.x, msg.linear.y, msg.linear.z]
-    #     angular_vel = [msg.angular.x, msg.angular.y, msg.angular.z]
-    #     self.robot_instance.set_velocity_command(linear_vel, angular_vel)
+    def callback_cmd_vel(self, msg: Twist):
+        """
+        cmd_vel callback: Convert ROS Twist to Control object
+        
+        This allows external control via ROS topics (e.g., teleop, joystick)
+        """
+        from simulation.control import RobotControl
+        
+        control = RobotControl()
+        control.linear_velocity = [msg.linear.x, msg.linear.y, msg.linear.z]
+        control.angular_velocity = [msg.angular.x, msg.angular.y, msg.angular.z]
+        
+        if self.robot_instance:
+            self.robot_instance.apply_control(control)
 
     def callback_sim_clock(self, msg: Clock):
         sim_time = msg.clock.sec + msg.clock.nanosec / 1e9

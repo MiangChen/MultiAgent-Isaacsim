@@ -429,8 +429,14 @@ application/
 
 ros/
 ├── robot_ros_manager.py            # ROS 管理器
+│   ├── 管理 NodeRobot 和导航节点
+│   ├── 管理 executor 和线程
 │   └── 创建 NodeMpcController(robot=robot)
-└── ros_control_bridge.py           # ROS 控制桥接
+└── node_robot.py                   # ROS Node（包含 cmd_vel 支持）
+    ├── Publishers: odom
+    ├── Subscribers: sim_clock, cmd_vel
+    ├── Action Servers: skill_execution
+    └── Action Clients: path_planner
 ```
 
 ---
@@ -529,11 +535,14 @@ for i, robot in enumerate(robots):
         robot.on_physics_step
     )
 
-# 7. ROS Control Bridge（可选）
-from ros.ros_control_bridge import RosControlBridgeManager
-ros_bridge_manager = RosControlBridgeManager()
-ros_bridge_manager.add_robots(robots)
-ros_bridge_manager.start()
+# 7. cmd_vel 支持（已集成到 NodeRobot）
+# Note: cmd_vel subscriber 已经集成到 NodeRobot 中
+# 不需要额外的 RosControlBridge
+# 只需确保 topics 配置中包含 cmd_vel：
+# topics = {
+#     "odom": f"/{namespace}/odom",
+#     "cmd_vel": f"/{namespace}/cmd_vel",
+# }
 
 # 8. Skill System
 from application import SkillManager
