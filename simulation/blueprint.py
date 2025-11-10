@@ -40,7 +40,7 @@ class BlueprintLibrary:
         self.register_robot_class("h1", RobotH1)
         self.register_robot_class("g1", RobotG1)
         self.register_robot_class("cf2x", RobotCf2x)
-        self.register_robot_class("autel", RobotDroneAutel)
+        self.register_robot_class("drone_autel", RobotDroneAutel)
         self.register_robot_class("target", Target)
         
         # Register static props (CARLA style: static.prop.*)

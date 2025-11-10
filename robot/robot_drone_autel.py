@@ -67,60 +67,60 @@ class RobotDroneAutel(Robot):
     def __init__(self, cfg_robot: Dict = {}):
         # Extract color_scheme_id before passing to CfgDroneAutel
         self.color_scheme_id = cfg_robot.pop('color_scheme_id', 0)
-        
+
         self.cfg_robot = CfgDroneAutel(**cfg_robot)
         super().__init__()
-        
+
         self._body = BodyDroneAutel(cfg_robot=self.cfg_robot)
-        
+
         # ROS2
         self.ros_node = None
         self.pubs = {}
         self.subs = {}
         self.srvs = {}
-        
+
         # LiDAR sensors
         self.lidar_list = None
-        
+
         # Desired pose tracking
         self.des_pose = None
         self.is_pose_dirty = False
-        
+
         # Locks & queues
         self.pending_spawn_requests = []
         self.spawn_lock = threading.Lock()
         self.pending_move_requests = []
         self.move_lock = threading.Lock()
-    
+
     def initialize(self):
         pass
-    
+
     def setup_lidar_and_ros(self, setup_ros_fn):
         """Setup LiDAR sensors and ROS after creation"""
         from robot.sensor.lidar.lidar_omni import LidarOmni
         from robot.sensor.lidar.cfg_lidar import CfgLidar
-        
+
         prim_path = self.cfg_robot.path_prim_robot
-        
+
         cfg_lfr = CfgLidar(name="lfr", prim_path=prim_path + "/lfr", output_size=(352, 120),
-                          quat=(1, 0, 0, 0), config_file_name="autel_perception_120x352")
+                           quat=(1, 0, 0, 0), config_file_name="autel_perception_120x352")
         cfg_ubd = CfgLidar(name="ubd", prim_path=prim_path + "/ubd", output_size=(352, 120),
-                          quat=(0, 0, 0.7071067811865476, 0.7071067811865476),
-                          config_file_name="autel_perception_120x352")
-        
+                           quat=(0, 0, 0.7071067811865476, 0.7071067811865476),
+                           config_file_name="autel_perception_120x352")
+
         self.lidar_list = [LidarOmni(cfg_lidar=cfg_lfr), LidarOmni(cfg_lidar=cfg_ubd)]
-        
+
         node, pubs, subs, srvs = setup_ros_fn(self.namespace, ctx=self)
         self.ros_node = node
         self.pubs = pubs
         self.subs = subs
         self.srvs = srvs
-    
+
     @property
     def drone_prim(self):
         from physics_engine.isaacsim_utils import get_prim_at_path
         return get_prim_at_path(self.cfg_robot.path_prim_robot)
-    
+
     @property
     def prim_path(self):
         return self.cfg_robot.path_prim_robot

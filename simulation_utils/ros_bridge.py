@@ -8,11 +8,8 @@
 # =============================================================================
 
 # Standard library imports
-import math
 import os
 import threading
-import time
-from collections import namedtuple
 
 # Third-party library imports
 import numpy as np
@@ -20,7 +17,6 @@ import carb
 
 # Local project imports
 from containers import get_container
-from map.map_semantic_map import MapSemantic
 from physics_engine.pxr_utils import Gf
 from robot.robot_drone_autel import DronePose, RobotDroneAutel
 
