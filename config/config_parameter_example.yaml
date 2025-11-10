@@ -105,27 +105,32 @@ namespace: ["uav1", "uav2", "uav3"]
 # 机器人ROS Topic配置 (只需要写topic名称，namespace会自动添加)
 robot_topics:
   jetbot:
-    cmd_vel: "cmd_vel"
     odom: "odom"
+    cmd_vel: "cmd_vel"
     camera: "camera"
+
   cf2x:
-    cmd_vel: "cmd_vel"
     odom: "odom"
+    cmd_vel: "cmd_vel"
     camera: "camera"
+
   drone_autel:
     cmd_vel: "cmd_vel"
     odom: "odom"
     camera: "camera"
+
   g1:
-    cmd_vel: "cmd_vel"
     odom: "odom"
-#    joint_states: "joint_states"
+    cmd_vel: "cmd_vel"
     camera: "camera"
+
   h1:
-    cmd_vel: "cmd_vel"
     odom: "odom"
-#    joint_states: "joint_states"
+    cmd_vel: "cmd_vel"
     camera: "camera"
+
   target:
-    cmd_vel: "cmd_vel"
     odom: "odom"
+    cmd_vel: "cmd_vel"
+    camera: "camera"
+
