@@ -27,5 +27,5 @@ class RobotActor(Actor):
         )
     
     def get_velocity(self) -> Vector3D:
-        vel = self.robot.vel_linear
+        vel = self.robot.get_velocity()
         return Vector3D(vel[0].item(), vel[1].item(), vel[2].item())
