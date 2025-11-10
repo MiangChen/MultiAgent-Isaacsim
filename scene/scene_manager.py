@@ -58,12 +58,12 @@ ASSET_PATH = config_manager.get("path_asset")
 class SceneManager:
     """
     Scene Manager - Isaac Sim Backend
-    
+
     这个模块是Isaac Sim专用的场景管理器，直接使用Isaac Sim API。
     它作为simulation层的后端实现，不应该被用户代码直接调用。
-    
+
     用户代码应该使用 simulation.World 提供的CARLA风格API。
-    
+
     职责：
     - 场景加载和管理
     - 物体创建（使用Isaac Sim原生API）

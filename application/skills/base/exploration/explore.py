@@ -35,7 +35,9 @@ def _init_explore(robot, skill_manager, skill_name, kwargs):
     # Check if ROS is available
     if not robot.has_ros():
         skill_manager.set_skill_state(skill_name, "FAILED")
-        skill_manager.skill_errors[skill_name] = "ROS not available - exploration requires ROS"
+        skill_manager.skill_errors[skill_name] = (
+            "ROS not available - exploration requires ROS"
+        )
         return skill_manager.form_feedback("failed", "ROS not available")
 
     # Parse parameters
@@ -65,7 +67,9 @@ def _init_explore(robot, skill_manager, skill_name, kwargs):
 
     try:
         # Plan exploration waypoints
-        from application.skills.base.exploration.plan_exploration_waypoints import plan_exploration_waypoints
+        from application.skills.base.exploration.plan_exploration_waypoints import (
+            plan_exploration_waypoints,
+        )
 
         waypoints = plan_exploration_waypoints(
             robot=robot,
@@ -115,7 +119,11 @@ def _init_explore(robot, skill_manager, skill_name, kwargs):
 
 def _handle_navigating_to_start(robot, skill_manager, skill_name):
     # Check if navigate_to is available
-    if skill_manager.get_skill_state("navigate_to") not in [None, "COMPLETED", "FAILED"]:
+    if skill_manager.get_skill_state("navigate_to") not in [
+        None,
+        "COMPLETED",
+        "FAILED",
+    ]:
         return skill_manager.form_feedback("processing", "Waiting for navigate_to", 25)
 
     # Start navigate_to if not started
@@ -125,8 +133,11 @@ def _handle_navigating_to_start(robot, skill_manager, skill_name):
 
         # Execute navigate_to skill
         from application.skills.base.navigation import navigate_to
+
         skill_manager.register_skill("navigate_to", navigate_to)
-        skill_manager.execute_skill("navigate_to", goal_pos=start_pos, goal_quat_wxyz=start_quat)
+        skill_manager.execute_skill(
+            "navigate_to", goal_pos=start_pos, goal_quat_wxyz=start_quat
+        )
 
         skill_manager.set_skill_data(skill_name, "navigate_started", True)
         skill_manager.set_skill_data(skill_name, "navigate_start_time", robot.sim_time)
@@ -145,7 +156,9 @@ def _handle_navigating_to_start(robot, skill_manager, skill_name):
         return skill_manager.form_feedback("failed", f"Navigate failed: {error}")
     else:
         # Check timeout
-        elapsed = robot.sim_time - skill_manager.get_skill_data(skill_name, "navigate_start_time", robot.sim_time)
+        elapsed = robot.sim_time - skill_manager.get_skill_data(
+            skill_name, "navigate_start_time", robot.sim_time
+        )
         if elapsed > 60.0:
             skill_manager.set_skill_state(skill_name, "FAILED")
             skill_manager.skill_errors[skill_name] = "Navigate to start timeout"
@@ -170,7 +183,9 @@ def _handle_executing(robot, skill_manager, skill_name):
         robot.ros_manager.get_node_controller_mpc().move_event.clear()
         robot.ros_manager.get_node_planner_ompl().publisher_path.publish(waypoints)
 
-        skill_manager.set_skill_data(skill_name, "exploration_start_time", robot.sim_time)
+        skill_manager.set_skill_data(
+            skill_name, "exploration_start_time", robot.sim_time
+        )
         return skill_manager.form_feedback("processing", "Starting exploration", 65)
 
     elapsed = robot.sim_time - start_time
@@ -189,7 +204,9 @@ def _handle_executing(robot, skill_manager, skill_name):
         return skill_manager.form_feedback("failed", "Timeout")
 
     progress = min(65 + (elapsed / 120.0) * 30, 95)
-    return skill_manager.form_feedback("processing", f"Exploring... ({elapsed:.1f}s)", int(progress))
+    return skill_manager.form_feedback(
+        "processing", f"Exploring... ({elapsed:.1f}s)", int(progress)
+    )
 
 
 def _handle_completed(robot, skill_manager, skill_name):

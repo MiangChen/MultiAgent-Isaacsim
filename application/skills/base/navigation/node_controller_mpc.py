@@ -282,7 +282,7 @@ class NodeMpcController(Node):
         """
         sim_time_float = msg.clock.sec + msg.clock.nanosec / 1e9
         self.latest_sim_time = sim_time_float
-        
+
         # 自动调用 control_loop（Application 层控制）
         self.control_loop()
 

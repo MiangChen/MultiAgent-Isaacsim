@@ -77,15 +77,15 @@ class NodeRobot(Node):
     def callback_cmd_vel(self, msg: Twist):
         """
         cmd_vel callback: Convert ROS Twist to Control object
-        
+
         This allows external control via ROS topics (e.g., teleop, joystick)
         """
         from simulation.control import RobotControl
-        
+
         control = RobotControl()
         control.linear_velocity = [msg.linear.x, msg.linear.y, msg.linear.z]
         control.angular_velocity = [msg.angular.x, msg.angular.y, msg.angular.z]
-        
+
         if self.robot_instance:
             self.robot_instance.apply_control(control)
 
@@ -106,7 +106,7 @@ class NodeRobot(Node):
 
         request = goal_handle.request.skill_request
         task_name = request.skill_list[0].skill
-        
+
         # Parse parameters - convert string values to appropriate types
         params = {}
         for p in request.skill_list[0].params:
@@ -118,22 +118,21 @@ class NodeRobot(Node):
                 params[p.key] = p.value
 
         # Get skill manager from robot
-        if not hasattr(self.robot_instance, 'skill_manager'):
+        if not hasattr(self.robot_instance, "skill_manager"):
             goal_handle.abort()
             return SkillExecution.Result(
-                success=False, 
-                message=f"Robot does not have skill_manager"
+                success=False, message=f"Robot does not have skill_manager"
             )
-        
+
         skill_manager = self.robot_instance.skill_manager
-        
+
         # Check if skill is registered
         if task_name not in skill_manager.skills:
             goal_handle.abort()
             available_skills = list(skill_manager.skills.keys())
             return SkillExecution.Result(
-                success=False, 
-                message=f"Unknown skill: {task_name}. Available: {available_skills}"
+                success=False,
+                message=f"Unknown skill: {task_name}. Available: {available_skills}",
             )
 
         # Send initial feedback
@@ -143,13 +142,13 @@ class NodeRobot(Node):
 
         # Reset skill state before starting (in case it was completed before)
         skill_manager.reset_skill(task_name)
-        
+
         # Execute skill in loop until completion
         # Note: Each call to execute_skill() advances the skill's state machine
         while goal_handle.is_active:
             # Execute skill (this will check internal state and proceed accordingly)
             result = skill_manager.execute_skill(task_name, **params)
-            
+
             status = result.get("status", "processing")
             message = result.get("message", "")
             progress = result.get("progress", 0)

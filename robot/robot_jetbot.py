@@ -33,8 +33,8 @@ from gsi_msgs.gsi_msgs_helper import (
 
 class RobotJetbot(Robot):
     def __init__(
-            self,
-            cfg_robot: Dict = {},
+        self,
+        cfg_robot: Dict = {},
     ) -> None:
         self.cfg_robot = CfgJetbot(**cfg_robot)
         super().__init__()

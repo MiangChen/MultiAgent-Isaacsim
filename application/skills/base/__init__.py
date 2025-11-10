@@ -6,10 +6,10 @@ from .take_photo import take_photo
 from .object_detection import object_detection
 
 __all__ = [
-    'navigate_to',
-    'explore',
-    'detect',
-    'track',
-    'take_photo',
-    'object_detection',
+    "navigate_to",
+    "explore",
+    "detect",
+    "track",
+    "take_photo",
+    "object_detection",
 ]

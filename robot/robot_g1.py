@@ -33,8 +33,8 @@ from gsi_msgs.gsi_msgs_helper import (
 
 class RobotG1(Robot):
     def __init__(
-            self,
-            cfg_robot: Dict = {},
+        self,
+        cfg_robot: Dict = {},
     ) -> None:
         self.cfg_robot = CfgG1(**cfg_robot)
         super().__init__()
@@ -54,7 +54,9 @@ class RobotG1(Robot):
             raise NotImplementedError
 
         self._body.robot_articulation.set_linear_velocities(self.target_velocity)
-        self._body.robot_articulation.set_angular_velocities(self.target_angular_velocity)
+        self._body.robot_articulation.set_angular_velocities(
+            self.target_angular_velocity
+        )
         # FIXME:为了让G1能运动，先用平移来代替
         # obs暂时未实现
         obs = None

@@ -37,8 +37,8 @@ class RobotH1(Robot):
     """
 
     def __init__(
-            self,
-            cfg_robot,
+        self,
+        cfg_robot,
     ) -> None:
         self.cfg_robot = CfgH1(**cfg_robot)
         super().__init__()

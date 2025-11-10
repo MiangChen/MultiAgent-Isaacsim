@@ -9,7 +9,7 @@
 #   │  └─ Flow: ROS planning -> MPC velocity -> RobotControl -> apply_control()
 #   └─ ROS Bridge: ROS cmd_vel -> RobotControl -> apply_control()
 #
-#   [Simulation Layer] 
+#   [Simulation Layer]
 #   ├─ Control: RobotControl objects (CARLA-style)
 #   ├─ API: robot.apply_control(control), world.spawn_actor()
 #   └─ Blueprint: Robot and object creation
@@ -45,21 +45,26 @@ def create_car_objects(world):
         {"name": "car1", "position": [0.3, 3.5, 0], "prim_path": "/World/car2"},
         {"name": "car2", "position": [-13.2, 3.5, 0], "prim_path": "/World/car3"},
         {"name": "car3", "position": [-7.1, 10, 0], "prim_path": "/World/car4"},
-        {"name": "car4", "position": [-0.9, 30, 0], "orientation": [0.707, 0, 0, 0.707], "prim_path": "/World/car5"},
+        {
+            "name": "car4",
+            "position": [-0.9, 30, 0],
+            "orientation": [0.707, 0, 0, 0.707],
+            "prim_path": "/World/car5",
+        },
     ]
 
     cars = []
     for cfg in cars_config:
-        car_bp = blueprint_library.find('static.prop.car')
-        car_bp.set_attribute('name', cfg['name'])
-        car_bp.set_attribute('scale', [2, 5, 1.0])
-        car_bp.set_attribute('color', [255, 255, 255])
-        car_bp.set_attribute('semantic_label', 'car')
-        car_bp.set_attribute('prim_path', cfg['prim_path'])
+        car_bp = blueprint_library.find("static.prop.car")
+        car_bp.set_attribute("name", cfg["name"])
+        car_bp.set_attribute("scale", [2, 5, 1.0])
+        car_bp.set_attribute("color", [255, 255, 255])
+        car_bp.set_attribute("semantic_label", "car")
+        car_bp.set_attribute("prim_path", cfg["prim_path"])
 
-        transform = Transform(location=Location(*cfg['position']))
-        if 'orientation' in cfg:
-            transform.rotation = Rotation(quaternion=cfg['orientation'])
+        transform = Transform(location=Location(*cfg["position"]))
+        if "orientation" in cfg:
+            transform.rotation = Rotation(quaternion=cfg["orientation"])
 
         car = world.spawn_actor(car_bp, transform)
         cars.append(car)
@@ -68,7 +73,7 @@ def create_car_objects(world):
 
 
 def process_semantic_detection(
-        semantic_camera, map_semantic, target_semantic_class: str
+    semantic_camera, map_semantic, target_semantic_class: str
 ) -> None:
     """
     Process semantic detection and car pose extraction using injected dependencies.
@@ -136,61 +141,65 @@ def main():
 
     world = container.world_configured()
     simulation_app = server.get_simulation_app()
-    
+
     ros_manager.start()
 
     # ============================================================================
     # Robots Setup
     # ============================================================================
-    
+
     # Load robots from config - CARLA style (blueprints auto-registered)
-    robot_actors = world.load_actors_from_config(f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml")
-    robots = [actor.robot for actor in robot_actors]  # Extract robot objects from actors
+    robot_actors = world.load_actors_from_config(
+        f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml"
+    )
+    robots = [
+        actor.robot for actor in robot_actors
+    ]  # Extract robot objects from actors
 
     # ============================================================================
     # Scene Setup
     # ============================================================================
-    
+
     # Load scene
     scene_manager.load_scene(usd_path=WORLD_USD_PATH, prim_path_root="/World/Scene")
-    
+
     # Create static objects using blueprint - CARLA style
     from simulation import Transform, Location, Rotation
-    
+
     # Create cars
     cars = create_car_objects(world)
-    
+
     # Create critical package
     blueprint_library = world.get_blueprint_library()
-    package_bp = blueprint_library.find('static.prop.box')
-    package_bp.set_attribute('name', 'Critical-Package')
-    package_bp.set_attribute('scale', [0.5, 0.5, 0.5])
-    package_bp.set_attribute('color', [255, 255, 255])
-    package_bp.set_attribute('mass', 0.01)
-    package_bp.set_attribute('entity_type', 'rigid')
-    package_bp.set_attribute('semantic_label', 'package')
+    package_bp = blueprint_library.find("static.prop.box")
+    package_bp.set_attribute("name", "Critical-Package")
+    package_bp.set_attribute("scale", [0.5, 0.5, 0.5])
+    package_bp.set_attribute("color", [255, 255, 255])
+    package_bp.set_attribute("mass", 0.01)
+    package_bp.set_attribute("entity_type", "rigid")
+    package_bp.set_attribute("semantic_label", "package")
     package_bp.set_attribute("prim_path", "/World/package")
 
     package_transform = Transform(
         location=Location(3, 4.5, 0.25),
-        rotation=Rotation(quaternion=[0.707, 0, 0, 0.707])
+        rotation=Rotation(quaternion=[0.707, 0, 0, 0.707]),
     )
     package = world.spawn_actor(package_bp, package_transform)
-    
+
     # Initialize world
     world.reset()
     world.initialize_map()
-    
+
     # Initialize robots
     world.initialize_robots()
-    
+
     # Add physics callbacks for robots
     for i, robot in enumerate(robots):
         callback_name = f"physics_step_robot_{i}"
         world.get_isaac_world().add_physics_callback(
             callback_name, callback_fn=robot.on_physics_step
         )
-    
+
     # Setup semantic camera
     result = scene_manager.add_camera(
         translation=[1, 4, 2], orientation=euler_to_quat(roll=90)
@@ -208,6 +217,7 @@ def main():
 
     # Switch viewport to semantic camera
     from physics_engine.omni_utils import get_viewport_from_window_name
+
     viewport_manager.register_viewport(
         name="Viewport", viewport_obj=get_viewport_from_window_name("Viewport")
     )
@@ -221,17 +231,15 @@ def main():
     # ============================================================================
     # Application Layer Setup
     # ============================================================================
-    
+
     # 1. Setup ROS for each robot
     from ros.ros_manager_robot import RobotRosManager
-    
+
     for robot in robots:
         try:
             # Create ROS manager for this robot
             robot_ros_manager = RobotRosManager(
-                robot=robot,
-                namespace=robot.namespace,
-                topics=robot.get_topics()
+                robot=robot, namespace=robot.namespace, topics=robot.get_topics()
             )
             # Inject ROS manager
             robot.set_ros_manager(robot_ros_manager)

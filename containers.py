@@ -48,15 +48,14 @@ class AppContainer(containers.DeclarativeContainer):
             rendering_dt=cfg["world"]["rendering_dt"],
             stage_units_in_meters=cfg["world"]["stage_units_in_meters"],
             sim_params=cfg["world"]["sim_params"],
-            backend=cfg["world"]["backend"]
+            backend=cfg["world"]["backend"],
         ),
         server=server,
-        cfg=config
+        cfg=config,
     )
 
     grid_map = providers.Singleton(
-        lambda cfg: _import_and_create_grid_map(cfg),
-        cfg=config
+        lambda cfg: _import_and_create_grid_map(cfg), cfg=config
     )
 
     ros_manager = providers.Singleton(
@@ -66,13 +65,10 @@ class AppContainer(containers.DeclarativeContainer):
     )
 
     scene_manager = providers.Singleton(
-        lambda world: _import_and_create_scene_manager(world),
-        world=world
+        lambda world: _import_and_create_scene_manager(world), world=world
     )
 
-    semantic_map = providers.Singleton(
-        lambda: _import_and_create_semantic_map()
-    )
+    semantic_map = providers.Singleton(lambda: _import_and_create_semantic_map())
 
     viewport_manager = providers.Singleton(
         lambda: _import_and_create_viewport_manager()
@@ -84,17 +80,19 @@ class AppContainer(containers.DeclarativeContainer):
         w=world,
         sm=scene_manager,
         semantic_map=semantic_map,
-        gm=grid_map
+        gm=grid_map,
     )
 
 
 def _import_and_create_server():
     from simulation.server import Server
+
     return Server()
 
 
 def _import_and_create_grid_map(cfg):
     from map.map_grid_map import GridMap
+
     return GridMap(
         cell_size=cfg["map"]["cell_size"],
         start_point=cfg["map"]["start_point"],
@@ -108,21 +106,25 @@ def _import_and_create_grid_map(cfg):
 
 def _import_and_create_ros_manager(loop, ros_config):
     from ros.ros_manager_isaacsim import RosManager
+
     return RosManager(loop=loop, config=ros_config)
 
 
 def _import_and_create_scene_manager(world):
     from scene.scene_manager import SceneManager
+
     return SceneManager(world=world)
 
 
 def _import_and_create_semantic_map():
     from map.map_semantic_map import MapSemantic
+
     return MapSemantic()
 
 
 def _import_and_create_viewport_manager():
     from ui.viewport_manager import ViewportManager
+
     return ViewportManager()
 
 

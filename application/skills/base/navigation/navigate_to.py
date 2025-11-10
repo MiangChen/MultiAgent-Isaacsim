@@ -7,7 +7,7 @@ Architecture:
     3. Execution: Control objects (simulation layer)
 
 Flow:
-    navigate_to -> ROS path planning -> MPC computes velocity -> 
+    navigate_to -> ROS path planning -> MPC computes velocity ->
     RobotControl object -> robot.apply_control() -> Isaac Sim
 """
 
@@ -26,7 +26,7 @@ from nav2_msgs.action import ComputePathToPose
 def navigate_to(**kwargs):
     """
     Navigate to target position
-    
+
     Application layer skill:
     - ROS: Path planning (gridmap subscription)
     - MPC: Velocity computation
@@ -57,7 +57,9 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
     # Check if ROS is available
     if not robot.has_ros():
         skill_manager.set_skill_state(skill_name, "FAILED")
-        skill_manager.skill_errors[skill_name] = "ROS not available - navigation requires ROS"
+        skill_manager.skill_errors[skill_name] = (
+            "ROS not available - navigation requires ROS"
+        )
         return
 
     robot.ros_manager.get_node_controller_mpc().has_reached_goal = False
@@ -166,7 +168,7 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
 def _handle_executing(robot, skill_manager, skill_name):
     """
     Handle executing state
-    
+
     MPC controller (via ROS) automatically computes and publishes velocity commands.
     ROS bridge receives cmd_vel and updates robot.vel_linear/vel_angular.
     We just monitor progress here.
@@ -189,7 +191,9 @@ def _handle_executing(robot, skill_manager, skill_name):
         return skill_manager.form_feedback("failed", "Timeout")
 
     progress = min(50 + (elapsed / 120.0) * 45, 95)
-    return skill_manager.form_feedback("processing", f"Moving... ({elapsed:.1f}s)", int(progress))
+    return skill_manager.form_feedback(
+        "processing", f"Moving... ({elapsed:.1f}s)", int(progress)
+    )
 
 
 def _handle_completed(skill_manager, skill_name):

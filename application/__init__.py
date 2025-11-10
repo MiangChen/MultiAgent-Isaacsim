@@ -6,4 +6,4 @@ from application.skill_manager import SkillManager
 # 导入技能模块以触发装饰器注册
 import application.skills
 
-__all__ = ['SkillManager']
+__all__ = ["SkillManager"]

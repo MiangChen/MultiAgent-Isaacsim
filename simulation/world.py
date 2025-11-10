@@ -8,13 +8,13 @@ if TYPE_CHECKING:
 class World:
 
     def __init__(
-            self,
-            simulation_app,
-            physics_dt: float = 1.0 / 60.0,
-            rendering_dt: float = 1.0 / 60.0,
-            stage_units_in_meters: float = 1.0,
-            sim_params: dict = None,
-            backend: str = "torch"
+        self,
+        simulation_app,
+        physics_dt: float = 1.0 / 60.0,
+        rendering_dt: float = 1.0 / 60.0,
+        stage_units_in_meters: float = 1.0,
+        sim_params: dict = None,
+        backend: str = "torch",
     ):
         self._simulation_app = simulation_app
         self._isaac_world = IsaacWorld(
@@ -22,9 +22,9 @@ class World:
             rendering_dt=rendering_dt,
             stage_units_in_meters=stage_units_in_meters,
             sim_params=sim_params,
-            backend=backend
+            backend=backend,
         )
-        self._actors: Dict[int, 'Actor'] = {}
+        self._actors: Dict[int, "Actor"] = {}
         self._next_actor_id = 1
         self._blueprint_library = None
         self._scene_manager = None
@@ -37,34 +37,34 @@ class World:
     def reset(self):
         self._isaac_world.reset()
 
-    def get_actors(self) -> List['Actor']:
+    def get_actors(self) -> List["Actor"]:
         return list(self._actors.values())
 
-    def get_actor(self, actor_id: int) -> Optional['Actor']:
+    def get_actor(self, actor_id: int) -> Optional["Actor"]:
         return self._actors.get(actor_id)
 
-    def find_actor_by_robot(self, robot) -> Optional['Actor']:
+    def find_actor_by_robot(self, robot) -> Optional["Actor"]:
         """通过 Robot 实例查找对应的 Actor"""
-        return getattr(robot, 'actor', None)
+        return getattr(robot, "actor", None)
 
     def spawn_actor(self, blueprint, transform=None, attach_to=None):
         """
         Spawn an actor from blueprint (CARLA style)
-        
+
         Args:
             blueprint: Blueprint object (robot, static prop, vehicle, etc.)
             transform: Transform object for initial position/rotation
             attach_to: Parent actor to attach to (not implemented yet)
-        
+
         Returns:
             Actor: RobotActor for dynamic actors, StaticActor for static props
         """
         # Use tags to determine actor type (more flexible than checking robot_class)
-        if blueprint.has_tag('static'):
+        if blueprint.has_tag("static"):
             return self._spawn_static_prop(blueprint, transform)
 
         # Dynamic actors (robots, vehicles, drones, etc.)
-        if blueprint.has_tag('robot'):
+        if blueprint.has_tag("robot"):
             return self._spawn_robot(blueprint, transform)
 
         # Fallback: if no tags match, treat as static
@@ -75,26 +75,30 @@ class World:
         actor_config = blueprint.get_all_attributes()
 
         if transform is not None:
-            actor_config['position'] = transform.location.to_list()
-            actor_config['orientation'] = transform.rotation.to_quaternion()
+            actor_config["position"] = transform.location.to_list()
+            actor_config["orientation"] = transform.rotation.to_quaternion()
 
         # Instantiate the robot class
         if blueprint.robot_class is None:
-            raise ValueError(f"Blueprint {blueprint.id} has 'robot' tag but no robot_class defined")
+            raise ValueError(
+                f"Blueprint {blueprint.id} has 'robot' tag but no robot_class defined"
+            )
 
         robot_instance = blueprint.robot_class(cfg_robot=actor_config)
 
         self.scene.add(robot_instance._body.robot_articulation)
 
         if self._semantic_map:
-            self._semantic_map.dict_map_semantic[
-                robot_instance.cfg_robot.namespace] = robot_instance.cfg_robot.path_prim_robot
+            self._semantic_map.dict_map_semantic[robot_instance.cfg_robot.namespace] = (
+                robot_instance.cfg_robot.path_prim_robot
+            )
             self._semantic_map.add_semantic(
                 prim_path=robot_instance.cfg_robot.path_prim_robot,
-                semantic_label="robot"
+                semantic_label="robot",
             )
 
         from simulation.robot_actor import RobotActor
+
         actor = RobotActor(robot_instance, world=self)
 
         return actor
@@ -104,28 +108,35 @@ class World:
         attrs = blueprint.get_all_attributes()
 
         # Generate prim_path if not provided
-        if 'prim_path' not in attrs:
-            name = attrs.get('name', f'prop_{id(blueprint)}')
+        if "prim_path" not in attrs:
+            name = attrs.get("name", f"prop_{id(blueprint)}")
             # Sanitize name for USD prim path (replace invalid characters)
-            name = name.replace('-', '_').replace(' ', '_')
-            attrs['prim_path'] = f"/World/{name}"
+            name = name.replace("-", "_").replace(" ", "_")
+            attrs["prim_path"] = f"/World/{name}"
 
         if transform:
-            attrs['position'] = [transform.location.x, transform.location.y, transform.location.z]
-            if hasattr(transform, 'rotation'):
-                attrs['orientation'] = transform.rotation.to_quaternion()
+            attrs["position"] = [
+                transform.location.x,
+                transform.location.y,
+                transform.location.z,
+            ]
+            if hasattr(transform, "rotation"):
+                attrs["orientation"] = transform.rotation.to_quaternion()
 
         # Extract semantic_label before passing to create_shape_unified
-        semantic_label = attrs.pop('semantic_label', None)
+        semantic_label = attrs.pop("semantic_label", None)
 
         result = self._scene_manager.create_shape_unified(**attrs)
 
         if result.get("status") == "success":
             prim_path = result.get("prim_path")
             if self._semantic_map and semantic_label:
-                self._semantic_map.add_semantic(prim_path=prim_path, semantic_label=semantic_label)
+                self._semantic_map.add_semantic(
+                    prim_path=prim_path, semantic_label=semantic_label
+                )
             # Create StaticActor wrapper
             from simulation.static_actor import StaticActor
+
             actor = StaticActor(prim_path, world=self, semantic_label=semantic_label)
             return actor
 
@@ -134,20 +145,21 @@ class World:
     def get_blueprint_library(self):
         if self._blueprint_library is None:
             from simulation.blueprint import BlueprintLibrary
+
             self._blueprint_library = BlueprintLibrary()
         return self._blueprint_library
 
     def load_actors_from_config(self, config_path: str) -> List:
         import yaml
 
-        with open(config_path, 'r') as file:
+        with open(config_path, "r") as file:
             config = yaml.safe_load(file)
 
         actors = []
         blueprint_library = self.get_blueprint_library()
 
         for robot_type, robot_configs in config.items():
-            bp = blueprint_library.find(f'robot.{robot_type}')
+            bp = blueprint_library.find(f"robot.{robot_type}")
             if not bp:
                 raise ValueError(f"Unknown robot type: {robot_type}")
 
@@ -159,7 +171,7 @@ class World:
 
         return actors
 
-    def register_actor(self, actor: 'Actor') -> int:
+    def register_actor(self, actor: "Actor") -> int:
         actor_id = self._next_actor_id
         self._next_actor_id += 1
         self._actors[actor_id] = actor
@@ -214,7 +226,7 @@ class World:
 
     def initialize_robots(self):
         for actor in self.get_actors():
-            if hasattr(actor, 'robot') and hasattr(actor.robot, 'initialize'):
+            if hasattr(actor, "robot") and hasattr(actor.robot, "initialize"):
                 actor.robot.initialize()
 
     def initialize_map(self):
@@ -228,7 +240,7 @@ class World:
     def get_stage(self):
         """
         Get USD stage (CARLA style)
-        
+
         Returns:
             Usd.Stage: USD stage object
         """
@@ -237,19 +249,22 @@ class World:
 
         # Fallback: get stage directly
         import omni.usd
+
         return omni.usd.get_context().get_stage()
 
-    def create_joint(self, joint_path, joint_type, body0, body1, local_pos_0, local_pos_1, axis):
+    def create_joint(
+        self, joint_path, joint_type, body0, body1, local_pos_0, local_pos_1, axis
+    ):
         """
         Create physics joint (CARLA style)
-        
+
         Args:
             joint_path: Path for the joint prim
             joint_type: Type of joint ('fixed', 'revolute', etc.)
             body0: First body prim path
             body1: Second body prim path
             **kwargs: Additional joint parameters
-        
+
         Returns:
             Result dictionary
         """
@@ -269,7 +284,7 @@ class World:
     def remove_joint(self, joint_path):
         """
         Remove physics joint (CARLA style)
-        
+
         Args:
             joint_path: Path of the joint prim to remove
         """
@@ -282,11 +297,11 @@ class World:
     def set_collision_enabled(self, prim_path, enabled=True):
         """
         Enable/disable collision for a prim (CARLA style)
-        
+
         Args:
             prim_path: Path of the prim
             enabled: True to enable collision, False to disable
-        
+
         Returns:
             Result dictionary
         """
@@ -294,17 +309,16 @@ class World:
             raise RuntimeError("Scene manager not available")
 
         return self._scene_manager.set_collision_enabled(
-            prim_path=prim_path,
-            collision_enabled=enabled
+            prim_path=prim_path, collision_enabled=enabled
         )
 
     def overlap_test(self, prim_path):
         """
         Test for overlapping objects (CARLA style)
-        
+
         Args:
             prim_path: Path of the prim to test
-        
+
         Returns:
             Overlap test result
         """

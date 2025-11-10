@@ -30,8 +30,8 @@ from gsi_msgs.gsi_msgs_helper import (
 
 class Target(Robot):
     def __init__(
-            self,
-            cfg_robot,
+        self,
+        cfg_robot,
     ) -> None:
         self.cfg_robot = CfgTarget(**cfg_robot)
         super().__init__()

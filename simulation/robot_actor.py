@@ -19,9 +19,7 @@ class RobotActor(Actor):
 
     def get_transform(self) -> Transform:
         pos, quat = self.robot.get_world_pose()
-        return Transform(
-            location=Location(pos[0].item(), pos[1].item(), pos[2].item())
-        )
+        return Transform(location=Location(pos[0].item(), pos[1].item(), pos[2].item()))
 
     def set_transform(self, transform: Transform):
         self.robot.set_world_pose(
@@ -37,7 +35,7 @@ class RobotActor(Actor):
         设置物理属性（如禁用重力）
         在 robot._body 创建完成后调用
         """
-        if hasattr(self.robot, 'cfg_robot') and self.robot.cfg_robot.disable_gravity:
+        if hasattr(self.robot, "cfg_robot") and self.robot.cfg_robot.disable_gravity:
             self._disable_gravity_for_hierarchy(self._prim_path)
 
     def _disable_gravity_for_hierarchy(self, root_prim_path: str):
@@ -55,6 +53,7 @@ class RobotActor(Actor):
         try:
             from physics_engine.omni_utils import omni
             from physics_engine.pxr_utils import Usd, PhysxSchema
+
             stage = omni.usd.get_context().get_stage()
             if not stage:
                 return {"status": "error", "message": "No active USD stage."}

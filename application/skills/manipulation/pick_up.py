@@ -13,9 +13,7 @@ from application import SkillManager
 
 
 @SkillManager.register()
-def pick_up(
-        **kwargs
-):
+def pick_up(**kwargs):
     robot = kwargs.get("robot")
     skill_manager = kwargs.get("skill_manager")
     skill_name = "pick_up"
@@ -37,7 +35,7 @@ def pick_up(
 def _init_pick_up(robot, skill_manager, skill_name, kwargs):
     """
     Initialize pick_up skill - Create Control object (pure data, no Isaac Sim API)
-    
+
     Architecture:
     - Application layer: Create GraspControl object
     - Robot layer: Execute in on_physics_step
@@ -95,7 +93,7 @@ def _init_pick_up(robot, skill_manager, skill_name, kwargs):
 def _handle_checking(robot, skill_manager, skill_name):
     """
     Handle CHECKING state - Query result from Robot layer
-    
+
     No Isaac Sim API calls here, only query results from Robot.
     """
     # Query result from Robot layer (async)
@@ -105,9 +103,10 @@ def _handle_checking(robot, skill_manager, skill_name):
         # Still processing, wait for next cycle
         return skill_manager.form_feedback("processing", "Checking distance", 30)
 
-    if result['success']:
+    if result["success"]:
         # Distance check passed, proceed to attach
         from simulation.control import ControlAction
+
         grasp_control = skill_manager.get_skill_data(skill_name, "grasp_control")
         grasp_control.action = ControlAction.ATTACH  # Use Enum instead of string
 
@@ -119,14 +118,14 @@ def _handle_checking(robot, skill_manager, skill_name):
     else:
         # Distance check failed
         skill_manager.set_skill_state(skill_name, "FAILED")
-        skill_manager.skill_errors[skill_name] = result['message']
-        return skill_manager.form_feedback("failed", result['message'])
+        skill_manager.skill_errors[skill_name] = result["message"]
+        return skill_manager.form_feedback("failed", result["message"])
 
 
 def _handle_attaching(robot, skill_manager, skill_name):
     """
     Handle ATTACHING state - Query attach result from Robot layer
-    
+
     No Isaac Sim API calls here, only query results from Robot.
     """
     # Query result from Robot layer (async)
@@ -136,9 +135,9 @@ def _handle_attaching(robot, skill_manager, skill_name):
         # Still processing, wait for next cycle
         return skill_manager.form_feedback("processing", "Attaching object", 70)
 
-    if result['success']:
+    if result["success"]:
         # Attach succeeded
-        joint_path = result['data'].get('joint_path')
+        joint_path = result["data"].get("joint_path")
         skill_manager.set_skill_data(skill_name, "joint_path", joint_path)
 
         skill_manager.set_skill_state(skill_name, "COMPLETED")
@@ -146,8 +145,8 @@ def _handle_attaching(robot, skill_manager, skill_name):
     else:
         # Attach failed
         skill_manager.set_skill_state(skill_name, "FAILED")
-        skill_manager.skill_errors[skill_name] = result['message']
-        return skill_manager.form_feedback("failed", result['message'])
+        skill_manager.skill_errors[skill_name] = result["message"]
+        return skill_manager.form_feedback("failed", result["message"])
 
 
 def _handle_completed(robot, skill_manager, skill_name):

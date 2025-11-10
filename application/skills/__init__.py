@@ -22,17 +22,17 @@ from .target import move
 
 __all__ = [
     # Base
-    'navigate_to',
-    'explore',
-    'detect',
-    'track',
-    'take_photo',
-    'object_detection',
+    "navigate_to",
+    "explore",
+    "detect",
+    "track",
+    "take_photo",
+    "object_detection",
     # Drone
-    'take_off',
+    "take_off",
     # Manipulation
-    'pick_up',
-    'put_down',
+    "pick_up",
+    "put_down",
     # Target
-    'move',
+    "move",
 ]
