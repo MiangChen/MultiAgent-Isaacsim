@@ -161,7 +161,7 @@ def main():
     # ============================================================================
 
     # Load scene
-    scene_manager.load_scene(usd_path=WORLD_USD_PATH, prim_path_root="/World/Scene")
+    scene_manager.load_scene(usd_path=WORLD_USD_PATH, prim_path_root="/World/scene")
 
     # Create static objects using blueprint - CARLA style
     from simulation import Transform, Location, Rotation
