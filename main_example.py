@@ -166,7 +166,7 @@ def main():
     package_bp.set_attribute('name', 'Critical-Package')
     package_bp.set_attribute('scale', [0.5, 0.5, 0.5])
     package_bp.set_attribute('color', [255, 255, 255])
-    package_bp.set_attribute('mass', 0.1)
+    package_bp.set_attribute('mass', 0.01)
     package_bp.set_attribute('entity_type', 'rigid')
     package_bp.set_attribute('semantic_label', 'package')
     package_bp.set_attribute("prim_path", "/World/package")

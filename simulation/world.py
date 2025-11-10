@@ -224,7 +224,7 @@ class World:
     # ============================================================================
     # Physics Operations (for Application Layer)
     # ============================================================================
-    
+
     def get_stage(self):
         """
         Get USD stage (CARLA style)
@@ -234,12 +234,12 @@ class World:
         """
         if self._scene_manager:
             return self._scene_manager.stage
-        
+
         # Fallback: get stage directly
         import omni.usd
         return omni.usd.get_context().get_stage()
-    
-    def create_joint(self, joint_path, joint_type, body0, body1, **kwargs):
+
+    def create_joint(self, joint_path, joint_type, body0, body1, local_pos_0, local_pos_1, axis):
         """
         Create physics joint (CARLA style)
         
@@ -255,15 +255,17 @@ class World:
         """
         if not self._scene_manager:
             raise RuntimeError("Scene manager not available")
-        
+
         return self._scene_manager.create_joint(
             joint_path=joint_path,
             joint_type=joint_type,
             body0=body0,
             body1=body1,
-            **kwargs
+            local_pos0=local_pos_0,
+            local_pos1=local_pos_1,
+            axis=axis,
         )
-    
+
     def remove_joint(self, joint_path):
         """
         Remove physics joint (CARLA style)
@@ -276,7 +278,7 @@ class World:
             joint_prim = stage.GetPrimAtPath(joint_path)
             if joint_prim.IsValid():
                 stage.RemovePrim(joint_path)
-    
+
     def set_collision_enabled(self, prim_path, enabled=True):
         """
         Enable/disable collision for a prim (CARLA style)
@@ -290,12 +292,12 @@ class World:
         """
         if not self._scene_manager:
             raise RuntimeError("Scene manager not available")
-        
+
         return self._scene_manager.set_collision_enabled(
             prim_path=prim_path,
             collision_enabled=enabled
         )
-    
+
     def overlap_test(self, prim_path):
         """
         Test for overlapping objects (CARLA style)
@@ -308,5 +310,5 @@ class World:
         """
         if not self._scene_manager:
             return None
-        
+
         return self._scene_manager.overlap_hits_target_ancestor(prim_path)

@@ -384,28 +384,20 @@ class Robot:
         """
         from simulation.control import GraspControl, ReleaseControl
         from physics_engine.isaacsim_utils import RigidPrim
-        from physics_engine.pxr_utils import UsdPhysics, Gf
-        
+
         control = self._manipulation_control
-        
-        try:
-            if isinstance(control, GraspControl):
-                self._execute_grasp_control(control)
-            elif isinstance(control, ReleaseControl):
-                self._execute_release_control(control)
-            else:
-                self._manipulation_result = {
-                    'success': False,
-                    'message': f'Unknown control type: {type(control)}',
-                    'data': {}
-                }
-        except Exception as e:
-            logger.error(f"Manipulation control execution failed: {e}")
+
+        if isinstance(control, GraspControl):
+            self._execute_grasp_control(control)
+        elif isinstance(control, ReleaseControl):
+            self._execute_release_control(control)
+        else:
             self._manipulation_result = {
                 'success': False,
-                'message': f'Execution error: {str(e)}',
+                'message': f'Unknown control type: {type(control)}',
                 'data': {}
             }
+
 
     def _execute_grasp_control(self, control):
         """Execute grasp control (check distance or attach)"""
@@ -478,11 +470,10 @@ class Robot:
                     joint_type="fixed",
                     body0=control.hand_prim_path,
                     body1=control.object_prim_path,
-                    local_pos0=control.local_pos_hand,
-                    local_pos1=control.local_pos_object,
+                    local_pos_0=control.local_pos_hand,
+                    local_pos_1=control.local_pos_object,
                     axis=control.axis,
                 )
-                stage = world.get_stage()
                 joint_prim = stage.GetPrimAtPath(joint_path)
             
             # Enable joint
@@ -533,28 +524,6 @@ class Robot:
                 'data': {}
             }
 
-    def _execute_place_control(self, control):
-        """Execute place control (set object position)"""
-        from physics_engine.isaacsim_utils import RigidPrim
-        
-        # Get object prim
-        object_prim = RigidPrim(prim_paths_expr=control.object_prim_path)
-        
-        # Set position
-        position = torch.tensor(control.position, dtype=torch.float32)
-        object_prim.set_world_poses(positions=position)
-        
-        # Set velocity to zero
-        object_prim.set_linear_velocities(torch.zeros(3, dtype=torch.float32))
-        object_prim.set_angular_velocities(torch.zeros(3, dtype=torch.float32))
-        
-        self._manipulation_result = {
-            'success': True,
-            'message': 'Object placed',
-            'data': {
-                'position': control.position,
-            }
-        }
 
     def _initialize_third_person_camera(self):
         """初始化第三人称相机并注册到ViewportManager"""
