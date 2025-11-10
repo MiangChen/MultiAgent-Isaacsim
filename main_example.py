@@ -223,7 +223,7 @@ def main():
     # ============================================================================
     
     # 1. Setup ROS for each robot
-    from ros.robot_ros_manager import RobotRosManager
+    from ros.ros_manager_robot import RobotRosManager
     
     for robot in robots:
         try:

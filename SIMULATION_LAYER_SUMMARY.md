@@ -249,7 +249,7 @@ class NodeMpcController(Node):
 
 **创建时传递 robot 引用：**
 ```python
-# ros/robot_ros_manager.py
+# ros/ros_manager_robot.py
 self.node_controller_mpc = NodeMpcController(
     namespace=self.namespace, 
     robot=self.robot  # 传递 robot 引用
@@ -513,7 +513,7 @@ car_bp.set_attribute('scale', [2, 5, 1.0])
 car_actor = world.spawn_actor(car_bp, Transform(location=Location(10, 5, 0)))
 
 # 4. 设置 ROS（每个机器人）
-from ros.robot_ros_manager import RobotRosManager
+from ros.ros_manager_robot import RobotRosManager
 
 for robot in robots:
     ros_manager = RobotRosManager(
@@ -531,7 +531,7 @@ world.initialize_robots()
 # 6. 添加物理回调
 for i, robot in enumerate(robots):
     world.get_isaac_world().add_physics_callback(
-        f"physics_step_robot_{i}", 
+        f"physics_step_robot_{i}",
         robot.on_physics_step
     )
 
@@ -546,6 +546,7 @@ for i, robot in enumerate(robots):
 
 # 8. Skill System
 from application import SkillManager
+
 for robot in robots:
     skill_manager = SkillManager(robot, auto_register=True)
     robot.skill_manager = skill_manager

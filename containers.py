@@ -107,7 +107,7 @@ def _import_and_create_grid_map(cfg):
 
 
 def _import_and_create_ros_manager(loop, ros_config):
-    from ros.ros_manager import RosManager
+    from ros.ros_manager_isaacsim import RosManager
     return RosManager(loop=loop, config=ros_config)
 
 

@@ -141,7 +141,7 @@ def main():
         drones.append(drone)
 
     # Setup ROS for each drone (same as main_example.py)
-    from ros.robot_ros_manager import RobotRosManager
+    from ros.ros_manager_robot import RobotRosManager
     for drone in drones:
         ros_manager_drone = RobotRosManager(
             robot=drone.robot,
