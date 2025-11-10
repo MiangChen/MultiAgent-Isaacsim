@@ -43,7 +43,7 @@ def _init_put_down(robot, skill_manager, skill_name, world, kwargs):
     - Robot layer: Execute in on_physics_step
     - Application layer: Query result asynchronously
     """
-    from simulation.control import ReleaseControl
+    from simulation.control import ReleaseControl, ControlAction
     
     # Get parameters
     object_prim_path = kwargs.get("object_prim_path")
@@ -67,6 +67,7 @@ def _init_put_down(robot, skill_manager, skill_name, world, kwargs):
     release_control = ReleaseControl(
         object_prim_path=object_prim_path,
         joint_path=joint_path,
+        action=ControlAction.RELEASE,  # Use Enum (already default, but explicit)
     )
     
     # Apply control (Robot will execute in on_physics_step)

@@ -1,13 +1,93 @@
-"""Control Module - CARLA-style control classes for robots and skills"""
+"""Control Module - CARLA-style control classes for robots and skills
 
+Architecture:
+- Control: Base class for all controls (pure data, CARLA-style)
+- ContinuousControl: Applied every physics step (e.g., velocity)
+- DiscreteControl: One-shot action with state management (e.g., grasp, release)
+"""
+
+from enum import Enum
 from typing import List, Optional, Any
 from dataclasses import dataclass, field
 
 
-# Low-level motion control
+# ============= Action States =============
+class ControlAction(Enum):
+    """Unified control action states for discrete controls"""
+    # Common states (all discrete controls)
+    PENDING = "pending"
+    EXECUTING = "executing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    
+    # Grasp-specific states
+    CHECK_DISTANCE = "check_distance"
+    ATTACH = "attach"
+    
+    # Release-specific states
+    RELEASE = "release"
+    
+    # Place-specific states
+    PLACE = "place"
+
+
+# ============= Base Classes =============
 @dataclass
-class RobotControl:
-    """Low-level velocity control (all robot types)"""
+class Control:
+    """Base class for all controls (CARLA-style pure data object)"""
+    pass
+
+
+@dataclass
+class ContinuousControl(Control):
+    """
+    Continuous control (applied every physics step, CARLA-style)
+    
+    Examples: velocity control, force control
+    These controls are applied continuously and don't have "completed" state.
+    """
+    pass
+
+
+@dataclass
+class DiscreteControl(Control):
+    """
+    Discrete control (one-shot action with state management)
+    
+    Examples: grasp, release, place
+    These controls execute once and have completion state.
+    """
+    action: ControlAction = ControlAction.PENDING
+    
+    def is_completed(self) -> bool:
+        """Check if action is completed"""
+        return self.action == ControlAction.COMPLETED
+    
+    def is_failed(self) -> bool:
+        """Check if action failed"""
+        return self.action == ControlAction.FAILED
+    
+    def is_pending(self) -> bool:
+        """Check if action is pending"""
+        return self.action == ControlAction.PENDING
+    
+    def mark_completed(self):
+        """Mark action as completed"""
+        self.action = ControlAction.COMPLETED
+    
+    def mark_failed(self):
+        """Mark action as failed"""
+        self.action = ControlAction.FAILED
+
+
+# ============= Continuous Controls =============
+@dataclass
+class RobotControl(ContinuousControl):
+    """
+    Low-level velocity control (CARLA-style continuous control)
+    
+    Applied every physics step, no completion state.
+    """
     linear_velocity: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
     angular_velocity: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
 
@@ -75,33 +155,55 @@ class ScanControl:
     save_path: Optional[str] = None
 
 
-# Manipulation skills
+# ============= Discrete Controls (Manipulation) =============
 @dataclass
-class GraspControl:
-    """抓取控制（纯数据，不调用 Isaac Sim API）"""
+class GraspControl(DiscreteControl):
+    """
+    Grasp control with multi-stage actions (discrete control)
+    
+    Actions:
+    - CHECK_DISTANCE: Check if object is within grasp distance
+    - ATTACH: Attach object to hand (create joint)
+    - COMPLETED: Action completed
+    """
     hand_prim_path: str = ""
     object_prim_path: str = ""
+    action: ControlAction = ControlAction.CHECK_DISTANCE
+    distance_threshold: float = 2.0
     local_pos_hand: List[float] = field(default_factory=lambda: [0.0, 0.0, 1.0])
     local_pos_object: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
     axis: List[float] = field(default_factory=lambda: [0.0, 0.0, 1.0])
-    action: str = "check_distance"  # "check_distance", "attach"
-    distance_threshold: float = 2.0
+
 
 @dataclass
-class ReleaseControl:
-    """释放控制（纯数据）"""
+class ReleaseControl(DiscreteControl):
+    """
+    Release control (discrete one-shot action)
+    
+    Actions:
+    - RELEASE: Release object from hand (disable joint)
+    - COMPLETED: Action completed
+    """
     object_prim_path: str = ""
     joint_path: str = ""
+    action: ControlAction = ControlAction.RELEASE
     gentle: bool = True
 
-# @dataclass
-# class PlaceControl:
-#     """放置控制（纯数据）"""
-#     object_prim_path: str = ""
-#     joint_path: str = ""
-#     target_location: Optional[List[float]] = None
-#     orientation: Optional[List[float]] = None
-#     gentle: bool = True
+
+@dataclass
+class PlaceControl(DiscreteControl):
+    """
+    Place control (discrete one-shot action)
+    
+    Actions:
+    - PLACE: Place object at target location
+    - COMPLETED: Action completed
+    """
+    object_prim_path: str = ""
+    joint_path: str = ""
+    target_location: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
+    action: ControlAction = ControlAction.PLACE
+    gentle: bool = True
 
 # @dataclass
 # class PushControl:

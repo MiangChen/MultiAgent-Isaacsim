@@ -43,7 +43,7 @@ def _init_pick_up(robot, skill_manager, skill_name, kwargs):
     - Robot layer: Execute in on_physics_step
     - Application layer: Query result asynchronously
     """
-    from simulation.control import GraspControl
+    from simulation.control import GraspControl, ControlAction
 
     # Get parameters
     robot_hand_prim_path = kwargs.get("robot_hand_prim_path")
@@ -76,7 +76,7 @@ def _init_pick_up(robot, skill_manager, skill_name, kwargs):
     grasp_control = GraspControl(
         hand_prim_path=robot_hand_prim_path,
         object_prim_path=object_prim_path,
-        action="check_distance",
+        action=ControlAction.CHECK_DISTANCE,  # Use Enum instead of string
         distance_threshold=distance_threshold,
         local_pos_hand=local_pos_hand,
         local_pos_object=local_pos_object,
@@ -107,8 +107,9 @@ def _handle_checking(robot, skill_manager, skill_name):
 
     if result['success']:
         # Distance check passed, proceed to attach
+        from simulation.control import ControlAction
         grasp_control = skill_manager.get_skill_data(skill_name, "grasp_control")
-        grasp_control.action = "attach"
+        grasp_control.action = ControlAction.ATTACH  # Use Enum instead of string
 
         # Apply attach control
         robot.apply_manipulation_control(grasp_control)

@@ -381,31 +381,58 @@ class Robot:
         """
         Execute manipulation control in physics step (Robot layer only).
         This is called in on_physics_step, so it's safe to call Isaac Sim API here.
+        
+        Architecture:
+        - DiscreteControl: One-shot action with state management
+        - Skip if already completed or failed
+        - Mark as completed after execution to prevent repeated execution
         """
-        from simulation.control import GraspControl, ReleaseControl
+        from simulation.control import GraspControl, ReleaseControl, PlaceControl, DiscreteControl
         from physics_engine.isaacsim_utils import RigidPrim
 
         control = self._manipulation_control
 
-        if isinstance(control, GraspControl):
-            self._execute_grasp_control(control)
-        elif isinstance(control, ReleaseControl):
-            self._execute_release_control(control)
-        else:
+        # Skip if discrete control is already completed or failed
+        if isinstance(control, DiscreteControl):
+            if control.is_completed() or control.is_failed():
+                return
+
+        try:
+            if isinstance(control, GraspControl):
+                self._execute_grasp_control(control)
+            elif isinstance(control, ReleaseControl):
+                self._execute_release_control(control)
+            elif isinstance(control, PlaceControl):
+                self._execute_place_control(control)
+            else:
+                self._manipulation_result = {
+                    'success': False,
+                    'message': f'Unknown control type: {type(control)}',
+                    'data': {}
+                }
+        except Exception as e:
+            logger.error(f"Manipulation control execution failed: {e}")
             self._manipulation_result = {
                 'success': False,
-                'message': f'Unknown control type: {type(control)}',
+                'message': f'Execution error: {str(e)}',
                 'data': {}
             }
 
 
     def _execute_grasp_control(self, control):
-        """Execute grasp control (check distance or attach)"""
+        """
+        Execute grasp control (check distance or attach)
+        
+        Multi-stage action:
+        1. CHECK_DISTANCE: Check if object is within grasp distance
+        2. ATTACH: Attach object to hand (create joint)
+        """
         from physics_engine.isaacsim_utils import RigidPrim
         from physics_engine.pxr_utils import UsdPhysics, Gf
         from containers import get_container
+        from simulation.control import ControlAction
         
-        if control.action == "check_distance":
+        if control.action == ControlAction.CHECK_DISTANCE:
             # Initialize rigid prims
             hand_prim = RigidPrim(prim_paths_expr=control.hand_prim_path)
             object_prim = RigidPrim(prim_paths_expr=control.object_prim_path)
@@ -437,7 +464,7 @@ class Robot:
                     }
                 }
                 
-        elif control.action == "attach":
+        elif control.action == ControlAction.ATTACH:
             # Get world from container
             container = get_container()
             world = container.world_configured()
@@ -481,7 +508,9 @@ class Robot:
             joint.GetLocalPos0Attr().Set(Gf.Vec3f(control.local_pos_hand))
             joint.GetLocalPos1Attr().Set(Gf.Vec3f(control.local_pos_object))
             joint.GetJointEnabledAttr().Set(True)
-            
+
+            # Mark as completed to prevent repeated execution
+            control.mark_completed()
             self._manipulation_result = {
                 'success': True,
                 'message': 'Object attached',
@@ -491,9 +520,18 @@ class Robot:
             }
 
     def _execute_release_control(self, control):
-        """Execute release control (detach object)"""
+        """
+        Execute release control (detach object)
+        
+        One-shot action:
+        - RELEASE: Disable joint and re-enable collision
+        """
         from physics_engine.pxr_utils import UsdPhysics
         from containers import get_container
+        from simulation.control import ControlAction
+        
+        if control.action != ControlAction.RELEASE:
+            return
         
         # Get world from container
         container = get_container()
@@ -512,18 +550,84 @@ class Robot:
                 prim_path=control.object_prim_path, enabled=True
             )
             
+            # Mark as completed to prevent repeated execution
+            control.mark_completed()
+            
             self._manipulation_result = {
                 'success': True,
                 'message': 'Object released',
                 'data': {}
             }
         else:
+            control.mark_failed()
             self._manipulation_result = {
                 'success': False,
                 'message': f'Joint not found: {control.joint_path}',
                 'data': {}
             }
 
+    def _execute_place_control(self, control):
+        """
+        Execute place control (place object at target location)
+        
+        One-shot action:
+        - PLACE: Set object position and disable joint
+        """
+        from physics_engine.isaacsim_utils import RigidPrim
+        from physics_engine.pxr_utils import UsdPhysics
+        from containers import get_container
+        from simulation.control import ControlAction
+        
+        if control.action != ControlAction.PLACE:
+            return
+        
+        try:
+            # Get world from container
+            container = get_container()
+            world = container.world_configured()
+            
+            # Get object prim
+            object_prim = RigidPrim(prim_paths_expr=control.object_prim_path)
+            
+            # Disable joint first
+            stage = world.get_stage()
+            joint_prim = stage.GetPrimAtPath(control.joint_path)
+            
+            if joint_prim.IsValid():
+                joint = UsdPhysics.Joint(joint_prim)
+                joint.GetJointEnabledAttr().Set(False)
+            
+            # Set object position
+            position = torch.tensor(control.target_location, dtype=torch.float32)
+            object_prim.set_world_poses(positions=position)
+            
+            # Set velocity to zero (gentle placement)
+            if control.gentle:
+                object_prim.set_linear_velocities(torch.zeros(3, dtype=torch.float32))
+                object_prim.set_angular_velocities(torch.zeros(3, dtype=torch.float32))
+            
+            # Re-enable collision
+            world.set_collision_enabled(
+                prim_path=control.object_prim_path, enabled=True
+            )
+            
+            # Mark as completed
+            control.mark_completed()
+            
+            self._manipulation_result = {
+                'success': True,
+                'message': 'Object placed',
+                'data': {
+                    'position': control.target_location,
+                }
+            }
+        except Exception as e:
+            control.mark_failed()
+            self._manipulation_result = {
+                'success': False,
+                'message': f'Place failed: {str(e)}',
+                'data': {}
+            }
 
     def _initialize_third_person_camera(self):
         """初始化第三人称相机并注册到ViewportManager"""
