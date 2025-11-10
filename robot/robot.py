@@ -79,11 +79,17 @@ class Robot:
         )
         self.action: np.ndarray = None
 
-        # robot physics state
-        self.vel_linear = torch.tensor([0.0, 0.0, 0.0])
-        self.vel_angular = torch.tensor([0.0, 0.0, 0.0])
+        # Robot state (cached from Isaac Sim, updated in on_physics_step)
         self.position = torch.tensor([0.0, 0.0, 0.0])
         self.quat = torch.tensor([0.0, 0.0, 0.0, 1.0])
+        self._velocity = torch.tensor([0.0, 0.0, 0.0])  # Actual linear velocity (state)
+        self._angular_velocity = torch.tensor([0.0, 0.0, 0.0])  # Actual angular velocity (state)
+        
+        # Robot control commands (set by controllers, applied in controller_simplified)
+        # Following CARLA naming: these are target/command values, not actual state
+        self.target_velocity = torch.tensor([0.0, 0.0, 0.0])  # Target linear velocity (command)
+        self.target_angular_velocity = torch.tensor([0.0, 0.0, 0.0])  # Target angular velocity (command)
+        
         self.sim_time = 0.0
 
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
@@ -124,23 +130,45 @@ class Robot:
         if orientation is not None:
             self.quat = orientation if isinstance(orientation, torch.Tensor) else torch.tensor(orientation)
 
+    def get_velocity(self):
+        """
+        Get robot linear velocity (CARLA style) - Public interface
+        
+        Returns the actual velocity (state), not the target/command velocity.
+        This is safe to call from Application layer as it returns cached values.
+        """
+        return self._velocity
+    
+    def get_angular_velocity(self):
+        """
+        Get robot angular velocity (CARLA style) - Public interface
+        
+        Returns the actual angular velocity (state), not the target/command velocity.
+        This is safe to call from Application layer as it returns cached values.
+        """
+        return self._angular_velocity
+    
     def get_world_velocity(self):
-        """Get robot world velocity (linear, angular) - Public interface"""
-        return self.vel_linear, self.vel_angular
+        """
+        Get robot world velocity (linear, angular) - Public interface
+        Alias for compatibility, returns both velocities.
+        """
+        return self._velocity, self._angular_velocity
 
-    def set_linear_velocity(self, velocity):
+    def set_target_velocity(self, linear_velocity, angular_velocity=None):
         """
-        Set robot linear velocity - Public interface
-        This only updates the cached state. The actual Isaac Sim update happens in controller_simplified.
+        Set robot target velocity (CARLA style) - Public interface
+        
+        This sets the TARGET velocity (command), not the actual state.
+        The actual Isaac Sim update happens in controller_simplified during on_physics_step.
+        
+        Args:
+            linear_velocity: Target linear velocity [x, y, z]
+            angular_velocity: Target angular velocity [x, y, z] (optional)
         """
-        self.vel_linear = velocity if isinstance(velocity, torch.Tensor) else torch.tensor(velocity)
-
-    def set_angular_velocity(self, velocity):
-        """
-        Set robot angular velocity - Public interface
-        This only updates the cached state. The actual Isaac Sim update happens in controller_simplified.
-        """
-        self.vel_angular = velocity if isinstance(velocity, torch.Tensor) else torch.tensor(velocity)
+        self.target_velocity = linear_velocity if isinstance(linear_velocity, torch.Tensor) else torch.tensor(linear_velocity)
+        if angular_velocity is not None:
+            self.target_angular_velocity = angular_velocity if isinstance(angular_velocity, torch.Tensor) else torch.tensor(angular_velocity)
 
     def get_config(self):
         """Get robot configuration - Public interface"""
@@ -190,20 +218,30 @@ class Robot:
     ########################## Publisher Odom  ############################
     def publish_robot_state(self):
         """
-        Update robot state from Isaac Sim and publish to ROS.
+        Update robot state from Isaac Sim and publish to ROS (CARLA style).
         This method is called in on_physics_step, so it's safe to call Isaac Sim API here.
+        
+        Updates:
+        - position, quat: Current pose (state)
+        - _velocity, _angular_velocity: Current actual velocity (state)
+        
+        Does NOT update:
+        - target_velocity, target_angular_velocity: These are commands set by controllers
         """
-        # Read from Isaac Sim API (safe in physics step)
+        # Read state from Isaac Sim API (safe in physics step)
         pos, quat = self._body.get_world_pose()
         vel_linear, vel_angular = self._body.get_world_vel()
 
         # Update cached state for Application layer
         self.position = pos
         self.quat = quat
-        self.vel_linear = vel_linear
-        self.vel_angular = vel_angular
+        self._velocity = vel_linear  # Actual velocity (state)
+        self._angular_velocity = vel_angular  # Actual angular velocity (state)
+        
+        # DO NOT update target_velocity/target_angular_velocity here!
+        # They are command variables set by MPC/controllers.
 
-        # Publish to ROS if available
+        # Publish to ROS if available (use actual velocity for odometry)
         if self.has_ros():
             pos_np = pos.detach().cpu().numpy()
             quat_np = quat.detach().cpu().numpy()
@@ -263,9 +301,9 @@ class Robot:
         from simulation.control import RobotControl
         if isinstance(control, RobotControl):
             self._current_control = control  # Cache for get_control()
-            """设置机器人速度命令 - 业务逻辑接口"""
-            self.vel_linear = torch.tensor(control.linear_velocity)
-            self.vel_angular = torch.tensor(control.angular_velocity)
+            # Set target velocity (command), not actual velocity (state)
+            self.target_velocity = torch.tensor(control.linear_velocity)
+            self.target_angular_velocity = torch.tensor(control.angular_velocity)
 
     def get_control(self):
         """Get current control (CARLA-style)"""
@@ -273,8 +311,8 @@ class Robot:
         if not hasattr(self, '_current_control'):
             # Return default control if none applied yet
             control = RobotControl()
-            control.linear_velocity = self.vel_linear.tolist()
-            control.angular_velocity = self.vel_angular.tolist()
+            control.linear_velocity = self.target_velocity.tolist()
+            control.angular_velocity = self.target_angular_velocity.tolist()
             return control
         return self._current_control
 
@@ -302,13 +340,13 @@ class Robot:
 
     def controller_simplified(self) -> None:
         """
-        Apply cached velocity commands to Isaac Sim.
+        Apply target velocity commands to Isaac Sim (CARLA style).
         This is called in on_physics_step, so it's safe to call Isaac Sim API here.
         """
         if self._body and self._body.robot_articulation.is_physics_handle_valid():
-            self._body.robot_articulation.set_linear_velocities(self.vel_linear)
-            self._body.robot_articulation.set_angular_velocities(self.vel_angular)
-            logger.debug(f"Robot Articulation vel, {self.vel_linear}")
+            self._body.robot_articulation.set_linear_velocities(self.target_velocity)
+            self._body.robot_articulation.set_angular_velocities(self.target_angular_velocity)
+            logger.debug(f"Robot Articulation target vel: {self.target_velocity}")
 
     def _initialize_third_person_camera(self):
         """初始化第三人称相机并注册到ViewportManager"""
