@@ -16,7 +16,7 @@ from physics_engine.pxr_utils import Tf, Gf, Usd, UsdGeom, Sdf
 from rclpy.node import Node
 from geometry_msgs.msg import Transform as RosTransform
 
-# Custom ROS message imports
+# ROS message imports
 from gsi_msgs.gsi_msgs_helper import (
     PrimTransform,
     SceneModifications,

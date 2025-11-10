@@ -21,7 +21,7 @@ from robot.body.body_g1 import BodyG1
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from utils import to_torch, quat_to_yaw
 
-# Custom ROS message imports
+# ROS message imports
 
 from gsi_msgs.gsi_msgs_helper import (
     Plan,

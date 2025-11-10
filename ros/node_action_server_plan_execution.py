@@ -21,7 +21,7 @@ from ros.node_action_client_skill import NodeActionClientSkill
 from rclpy.action import ActionServer
 from rclpy.node import Node
 
-# Custom ROS message imports
+# ROS message imports
 from gsi_msgs.gsi_msgs_helper import (
     PrimTransform,
     SceneModifications,

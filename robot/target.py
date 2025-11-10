@@ -21,7 +21,7 @@ from robot.body.body_target import BodyTarget
 # from robot.skill.base.navigation.navigate_to import navigate_to
 from scene.scene_manager import SceneManager
 
-# Custom ROS message imports
+# ROS message imports
 from gsi_msgs.gsi_msgs_helper import (
     Plan,
     RobotFeedback,

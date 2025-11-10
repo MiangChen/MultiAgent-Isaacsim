@@ -23,7 +23,7 @@ from robot.robot import Robot
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from utils import to_torch, quat_to_yaw
 
-# Custom ROS message imports
+# ROS message imports
 
 logger = LogManager.get_logger(__name__)
 
