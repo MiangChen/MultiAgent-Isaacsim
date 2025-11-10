@@ -6,15 +6,15 @@ if TYPE_CHECKING:
 
 
 class World:
-    
+
     def __init__(
-        self, 
-        simulation_app,
-        physics_dt: float = 1.0/60.0,
-        rendering_dt: float = 1.0/60.0,
-        stage_units_in_meters: float = 1.0,
-        sim_params: dict = None,
-        backend: str = "torch"
+            self,
+            simulation_app,
+            physics_dt: float = 1.0 / 60.0,
+            rendering_dt: float = 1.0 / 60.0,
+            stage_units_in_meters: float = 1.0,
+            sim_params: dict = None,
+            backend: str = "torch"
     ):
         self._simulation_app = simulation_app
         self._isaac_world = IsaacWorld(
@@ -30,161 +30,196 @@ class World:
         self._scene_manager = None
         self._semantic_map = None
         self._grid_map = None
-    
+
     def tick(self):
         self._isaac_world.step(render=True)
-    
+
     def reset(self):
         self._isaac_world.reset()
-    
+
     def get_actors(self) -> List['Actor']:
         return list(self._actors.values())
-    
+
     def get_actor(self, actor_id: int) -> Optional['Actor']:
         return self._actors.get(actor_id)
-    
+
     def find_actor_by_robot(self, robot) -> Optional['Actor']:
         """通过 Robot 实例查找对应的 Actor"""
         return getattr(robot, 'actor', None)
-    
+
     def spawn_actor(self, blueprint, transform=None, attach_to=None):
-        # Static props (CARLA style: static.prop.*)
-        if blueprint.robot_class is None:
+        """
+        Spawn an actor from blueprint (CARLA style)
+        
+        Args:
+            blueprint: Blueprint object (robot, static prop, vehicle, etc.)
+            transform: Transform object for initial position/rotation
+            attach_to: Parent actor to attach to (not implemented yet)
+        
+        Returns:
+            Actor: RobotActor for dynamic actors, StaticActor for static props
+        """
+        # Use tags to determine actor type (more flexible than checking robot_class)
+        if blueprint.has_tag('static'):
             return self._spawn_static_prop(blueprint, transform)
-        
-        # Robots
-        cfg_robot = blueprint.get_all_attributes()
-        
+
+        # Dynamic actors (robots, vehicles, drones, etc.)
+        if blueprint.has_tag('robot'):
+            return self._spawn_robot(blueprint, transform)
+
+        # Fallback: if no tags match, treat as static
+        return self._spawn_static_prop(blueprint, transform)
+
+    def _spawn_robot(self, blueprint, transform):
+        """创建机器人 Spawn robot actor"""
+        actor_config = blueprint.get_all_attributes()
+
         if transform is not None:
-            cfg_robot['position'] = transform.location.to_list()
-            cfg_robot['orientation'] = transform.rotation.to_quaternion()
-        
-        robot = blueprint.robot_class(cfg_robot=cfg_robot, scene_manager=self._scene_manager)
-        
-        self.scene.add(robot.body.robot_articulation)
-        
+            actor_config['position'] = transform.location.to_list()
+            actor_config['orientation'] = transform.rotation.to_quaternion()
+
+        # Instantiate the robot class
+        if blueprint.robot_class is None:
+            raise ValueError(f"Blueprint {blueprint.id} has 'robot' tag but no robot_class defined")
+
+        robot_instance = blueprint.robot_class(
+            cfg_robot=actor_config,
+            scene_manager=self._scene_manager
+        )
+
+        self.scene.add(robot_instance.body.robot_articulation)
+
         if self._semantic_map:
-            self._semantic_map.dict_map_semantic[robot.cfg_robot.namespace] = robot.cfg_robot.path_prim_robot
-            self._semantic_map.add_semantic(prim_path=robot.cfg_robot.path_prim_robot, semantic_label="robot")
-        
+            self._semantic_map.dict_map_semantic[
+                robot_instance.cfg_robot.namespace] = robot_instance.cfg_robot.path_prim_robot
+            self._semantic_map.add_semantic(
+                prim_path=robot_instance.cfg_robot.path_prim_robot,
+                semantic_label="robot"
+            )
+
         from simulation.robot_actor import RobotActor
-        RobotActor(robot, world=self)
-        
-        return robot
-    
+        actor = RobotActor(robot_instance, world=self)
+
+        return actor
+
     def _spawn_static_prop(self, blueprint, transform):
         """创建静态物体 Spawn static prop (CARLA style)"""
         attrs = blueprint.get_all_attributes()
-        
+
         # Generate prim_path if not provided
         if 'prim_path' not in attrs:
             name = attrs.get('name', f'prop_{id(blueprint)}')
             # Sanitize name for USD prim path (replace invalid characters)
             name = name.replace('-', '_').replace(' ', '_')
             attrs['prim_path'] = f"/World/{name}"
-        
+
         if transform:
             attrs['position'] = [transform.location.x, transform.location.y, transform.location.z]
             if hasattr(transform, 'rotation'):
                 attrs['orientation'] = transform.rotation.to_quaternion()
-        
+
         # Extract semantic_label before passing to create_shape_unified
         semantic_label = attrs.pop('semantic_label', None)
-        
+
         result = self._scene_manager.create_shape_unified(**attrs)
-        
+
         if result.get("status") == "success":
-            prim_path = result.get("result")
+            prim_path = result.get("prim_path")
             if self._semantic_map and semantic_label:
                 self._semantic_map.add_semantic(prim_path=prim_path, semantic_label=semantic_label)
-            return prim_path
+            # Create StaticActor wrapper
+            from simulation.static_actor import StaticActor
+            actor = StaticActor(prim_path, world=self, semantic_label=semantic_label)
+            return actor
+
         return None
-    
+
     def get_blueprint_library(self):
         if self._blueprint_library is None:
             from simulation.blueprint import BlueprintLibrary
             self._blueprint_library = BlueprintLibrary()
         return self._blueprint_library
-    
+
     def load_actors_from_config(self, config_path: str) -> List:
         import yaml
-        
+
         with open(config_path, 'r') as file:
             config = yaml.safe_load(file)
-        
-        robots = []
+
+        actors = []
         blueprint_library = self.get_blueprint_library()
-        
+
         for robot_type, robot_configs in config.items():
             bp = blueprint_library.find(f'robot.{robot_type}')
             if not bp:
                 raise ValueError(f"Unknown robot type: {robot_type}")
-            
+
             for cfg in robot_configs:
                 for key, value in cfg.items():
                     bp.set_attribute(key, value)
-                robots.append(self.spawn_actor(bp))
-        
-        return robots
-    
+                actor = self.spawn_actor(bp)
+                actors.append(actor)
+
+        return actors
+
     def register_actor(self, actor: 'Actor') -> int:
         actor_id = self._next_actor_id
         self._next_actor_id += 1
         self._actors[actor_id] = actor
         return actor_id
-    
+
     def unregister_actor(self, actor_id: int):
         if actor_id in self._actors:
             del self._actors[actor_id]
-    
+
     def get_isaac_world(self):
         return self._isaac_world
-    
+
     @property
     def scene(self):
         return self._isaac_world.scene
-    
+
     def get_rendering_dt(self) -> float:
         return self._isaac_world.get_rendering_dt()
-    
+
     def get_physics_dt(self) -> float:
         return self._isaac_world.get_physics_dt()
-    
+
     def is_playing(self) -> bool:
         return self._isaac_world.is_playing()
-    
+
     def play(self):
         self._isaac_world.play()
-    
+
     def pause(self):
         self._isaac_world.pause()
-    
+
     def stop(self):
         self._isaac_world.stop()
-    
+
     def set_scene_manager(self, scene_manager):
         self._scene_manager = scene_manager
-    
+
     def set_semantic_map(self, semantic_map):
         self._semantic_map = semantic_map
-    
+
     def set_grid_map(self, grid_map):
         self._grid_map = grid_map
-    
+
     def get_scene_manager(self):
         return self._scene_manager
-    
+
     def get_semantic_map(self):
         return self._semantic_map
-    
+
     def get_grid_map(self):
         return self._grid_map
-    
+
     def initialize_robots(self):
         for actor in self.get_actors():
             if hasattr(actor, 'robot') and hasattr(actor.robot, 'initialize'):
                 actor.robot.initialize()
-    
+
     def initialize_map(self):
         if self._grid_map:
             self._grid_map.initialize()

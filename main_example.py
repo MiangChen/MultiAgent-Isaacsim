@@ -41,11 +41,11 @@ def create_car_objects(world):
     blueprint_library = world.get_blueprint_library()
 
     cars_config = [
-        {"name": "car0", "position": [11.6, 3.5, 0]},
-        {"name": "car1", "position": [0.3, 3.5, 0]},
-        {"name": "car2", "position": [-13.2, 3.5, 0]},
-        {"name": "car3", "position": [-7.1, 10, 0]},
-        {"name": "car4", "position": [-0.9, 30, 0], "orientation": [0.707, 0, 0, 0.707]},
+        {"name": "car0", "position": [11.6, 3.5, 0], "prim_path": "/World/car1"},
+        {"name": "car1", "position": [0.3, 3.5, 0], "prim_path": "/World/car2"},
+        {"name": "car2", "position": [-13.2, 3.5, 0], "prim_path": "/World/car3"},
+        {"name": "car3", "position": [-7.1, 10, 0], "prim_path": "/World/car4"},
+        {"name": "car4", "position": [-0.9, 30, 0], "orientation": [0.707, 0, 0, 0.707], "prim_path": "/World/car5"},
     ]
 
     cars = []
@@ -55,6 +55,7 @@ def create_car_objects(world):
         car_bp.set_attribute('scale', [2, 5, 1.0])
         car_bp.set_attribute('color', [255, 255, 255])
         car_bp.set_attribute('semantic_label', 'car')
+        car_bp.set_attribute('prim_path', cfg['prim_path'])
 
         transform = Transform(location=Location(*cfg['position']))
         if 'orientation' in cfg:
@@ -143,7 +144,8 @@ def main():
     # ============================================================================
     
     # Load robots from config - CARLA style (blueprints auto-registered)
-    robots = world.load_actors_from_config(f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml")
+    robot_actors = world.load_actors_from_config(f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml")
+    robots = [actor.robot for actor in robot_actors]  # Extract robot objects from actors
 
     # ============================================================================
     # Scene Setup
@@ -167,7 +169,8 @@ def main():
     package_bp.set_attribute('mass', 0.1)
     package_bp.set_attribute('entity_type', 'rigid')
     package_bp.set_attribute('semantic_label', 'package')
-    
+    package_bp.set_attribute("prim_path", "/World/package")
+
     package_transform = Transform(
         location=Location(3, 4.5, 0.25),
         rotation=Rotation(quaternion=[0.707, 0, 0, 0.707])
