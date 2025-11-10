@@ -236,19 +236,15 @@ def main():
     from ros.ros_manager_robot import RobotRosManager
 
     for robot in robots:
-        try:
-            # Create ROS manager for this robot
-            robot_ros_manager = RobotRosManager(
-                robot=robot, namespace=robot.namespace, topics=robot.get_topics()
-            )
-            # Inject ROS manager
-            robot.set_ros_manager(robot_ros_manager)
-            # Start ROS
-            robot_ros_manager.start()
-            logger.info(f"✅ ROS enabled for {robot.namespace}")
-        except Exception as e:
-            logger.error(f"❌ Failed to setup ROS for {robot.namespace}: {e}")
-            raise f"Failed to setup ROS for {robot.namespace}"
+        # Create ROS manager for this robot
+        robot_ros_manager = RobotRosManager(
+            robot=robot, namespace=robot.namespace, topics=robot.get_topics()
+        )
+        # Inject ROS manager
+        robot.set_ros_manager(robot_ros_manager)
+        # Start ROS
+        robot_ros_manager.start()
+        logger.info(f"✅ ROS enabled for {robot.namespace}")
 
     # 2. Skill System: High-level behaviors via ROS actions
     from application import SkillManager
@@ -272,7 +268,7 @@ def main():
         world.tick()
 
         # Optional: Semantic detection every 2 seconds
-        if count % 120 == 0 and count > 0:
+        if count % 240 == 0 and count > 0:
             process_semantic_detection(semantic_camera, semantic_map, "robot")
             process_semantic_detection(semantic_camera, semantic_map, "car")
 
