@@ -102,7 +102,7 @@ Isaac Sim
 ### 3. ROS Integration
 
 #### RobotRosManager
-每个机器人的 ROS 基础设施管理：
+每个机器人的 ROS 基础设施管理, 主要是创建Pub和Sub：
 ```python
 from ros.robot_ros_manager import RobotRosManager
 
@@ -123,7 +123,7 @@ ros_manager.start()
 - Publishers 和 subscribers
 
 #### RosControlBridgeManager
-ROS cmd_vel 到仿真层的桥接：
+ROS cmd_vel 到仿真层的桥接, 主要是解决ROS2的消息和仿真层之间的数据问题：
 ```python
 from ros.ros_control_bridge import RosControlBridgeManager
 
@@ -157,8 +157,8 @@ def navigate_to(robot, goal_pos, **kwargs):
     """技能实现"""
     pass
 
-# 或指定自定义名称
-@SkillManager.register("custom_name")
+# 或指定自定义名称, 并在skill_config.yaml中配置该技能可以给哪些机器人用
+@SkillManager.register()
 def my_skill(robot, **kwargs):
     pass
 ```
@@ -224,10 +224,12 @@ ros2 action send_goal /robot_0/skill_execution plan_msgs/action/SkillExecution \
 robot_topics:
   jetbot:
     odom: "odom"
+    cmd_vel: "cmd_vel"
     camera: "camera"
   
   cf2x:
     odom: "odom"
+    cmd_vel: "cmd_vel"
     camera: "camera"
   
   drone_autel:
@@ -237,10 +239,12 @@ robot_topics:
   
   g1:
     odom: "odom"
+    cmd_vel: "cmd_vel"
     camera: "camera"
   
   h1:
     odom: "odom"
+    cmd_vel: "cmd_vel"
     camera: "camera"
 ```
 
