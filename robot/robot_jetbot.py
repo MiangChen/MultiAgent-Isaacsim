@@ -33,9 +33,9 @@ from gsi_msgs.gsi_msgs_helper import (
 
 class RobotJetbot(Robot):
     def __init__(
-        self,
-        cfg_robot: Dict = {},
-        scene_manager=None,
+            self,
+            cfg_robot: Dict = {},
+            scene_manager=None,
     ) -> None:
         self.cfg_robot = CfgJetbot(**cfg_robot)
         super().__init__(
@@ -44,12 +44,6 @@ class RobotJetbot(Robot):
         self._body = BodyJetbot(cfg_robot=self.cfg_robot)
         self.control_mode = "joint_velocities"
 
-        self.counter = 0
-        self.pub_period = 50
-        self.previous_pos = None
-        self.movement_threshold = (
-            0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
-        )
         if self.cfg_robot.disable_gravity:
             self.scene_manager.disable_gravity_for_hierarchy(
                 self.cfg_robot.path_prim_robot
@@ -60,14 +54,10 @@ class RobotJetbot(Robot):
         return
 
     def on_physics_step(self, step_size):
-        self.vel_linear[2] = 0
-        self.vel_angular[0] = 0
-        self.vel_angular[1] = 0
+        self.target_velocity[2] = 0
+        self.target_angular_velocity[0] = 0
+        self.target_angular_velocity[1] = 0
         super().on_physics_step(step_size)
-
-        # if self.flag_world_reset:
-        # if self.flag_action_navigation:
-        #     self.step(self.action)
 
         return
 

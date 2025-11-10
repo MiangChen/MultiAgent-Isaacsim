@@ -43,19 +43,12 @@ class RobotCf2x(Robot):
         )
 
         self._body = BodyDroneCf2X(cfg_robot=self.cfg_robot)
-        self.is_drone = True
 
         # 无人机基本属性
         self.position = np.array(
             getattr(cfg_robot, "position", [0.0, 0.0, 0.0]), dtype=np.float32
         )
-        self.linear_velocity = np.zeros(3, dtype=np.float32)  # 当前速度 [vx, vy, vz]
 
-        # —— 平滑导航配置（无人机专用）——
-        self.nav_target_xy = None  # 目标点的 XY
-        self.nav_max_speed = 0.5  # 导航最大水平速度
-        self.nav_slow_radius = 3.0  # 减速起始半径（m）
-        self.nav_stop_radius = 0.30  # 到点判定半径（m）
         if self.cfg_robot.disable_gravity:
             self.scene_manager.disable_gravity_for_hierarchy(
                 self.cfg_robot.path_prim_robot
@@ -136,19 +129,3 @@ class RobotCf2x(Robot):
 
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
-
-        # self.counter += 1
-
-        # if (
-        #     getattr(self, "flag_action_navigation", False)
-        #     and self.nav_target_xy is not None
-        # ):
-        #     pass
-        # elif self.flight_state == "fluctuating":
-        #     self.move_vertically()
-        # else:
-        #
-        #     if hasattr(self, "waypoints") and self.waypoints:
-        #         self.execute_waypoint_sequence()
-        #     if self.flight_state == "hovering":
-        #         self.update_position_with_velocity(step_size)

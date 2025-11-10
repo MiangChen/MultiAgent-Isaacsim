@@ -84,12 +84,12 @@ class Robot:
         self.quat = torch.tensor([0.0, 0.0, 0.0, 1.0])
         self._velocity = torch.tensor([0.0, 0.0, 0.0])  # Actual linear velocity (state)
         self._angular_velocity = torch.tensor([0.0, 0.0, 0.0])  # Actual angular velocity (state)
-        
+
         # Robot control commands (set by controllers, applied in controller_simplified)
         # Following CARLA naming: these are target/command values, not actual state
         self.target_velocity = torch.tensor([0.0, 0.0, 0.0])  # Target linear velocity (command)
         self.target_angular_velocity = torch.tensor([0.0, 0.0, 0.0])  # Target angular velocity (command)
-        
+
         self.sim_time = 0.0
 
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
@@ -138,7 +138,7 @@ class Robot:
         This is safe to call from Application layer as it returns cached values.
         """
         return self._velocity
-    
+
     def get_angular_velocity(self):
         """
         Get robot angular velocity (CARLA style) - Public interface
@@ -147,7 +147,7 @@ class Robot:
         This is safe to call from Application layer as it returns cached values.
         """
         return self._angular_velocity
-    
+
     def get_world_velocity(self):
         """
         Get robot world velocity (linear, angular) - Public interface
@@ -166,9 +166,12 @@ class Robot:
             linear_velocity: Target linear velocity [x, y, z]
             angular_velocity: Target angular velocity [x, y, z] (optional)
         """
-        self.target_velocity = linear_velocity if isinstance(linear_velocity, torch.Tensor) else torch.tensor(linear_velocity)
+        self.target_velocity = linear_velocity if isinstance(linear_velocity, torch.Tensor) else torch.tensor(
+            linear_velocity)
         if angular_velocity is not None:
-            self.target_angular_velocity = angular_velocity if isinstance(angular_velocity, torch.Tensor) else torch.tensor(angular_velocity)
+            self.target_angular_velocity = angular_velocity if isinstance(angular_velocity,
+                                                                          torch.Tensor) else torch.tensor(
+                angular_velocity)
 
     def get_config(self):
         """Get robot configuration - Public interface"""
@@ -237,7 +240,7 @@ class Robot:
         self.quat = quat
         self._velocity = vel_linear  # Actual velocity (state)
         self._angular_velocity = vel_angular  # Actual angular velocity (state)
-        
+
         # DO NOT update target_velocity/target_angular_velocity here!
         # They are command variables set by MPC/controllers.
 

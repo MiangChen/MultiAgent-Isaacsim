@@ -33,9 +33,9 @@ from gsi_msgs.gsi_msgs_helper import (
 
 class RobotG1(Robot):
     def __init__(
-        self,
-        cfg_robot: Dict = {},
-        scene_manager=None,
+            self,
+            cfg_robot: Dict = {},
+            scene_manager=None,
     ) -> None:
         self.cfg_robot = CfgG1(**cfg_robot)
         super().__init__(
@@ -44,12 +44,6 @@ class RobotG1(Robot):
         self._body = BodyG1(cfg_robot=self.cfg_robot)
         self.control_mode = "joint_velocities"
 
-        self.counter = 0
-        self.pub_period = 50
-        self.previous_pos = None
-        self.movement_threshold = (
-            0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
-        )
         if self.cfg_robot.disable_gravity:
             self.scene_manager.disable_gravity_for_hierarchy(
                 self.cfg_robot.path_prim_robot
@@ -67,20 +61,21 @@ class RobotG1(Robot):
         else:
             raise NotImplementedError
 
-        self.body.robot_articulation.set_linear_velocities(self.vel_linear)
-        self.body.robot_articulation.set_angular_velocities(self.vel_angular)
+        self._body.robot_articulation.set_linear_velocities(self.target_velocity)
+        self._body.robot_articulation.set_angular_velocities(self.target_angular_velocity)
         # FIXME:为了让G1能运动，先用平移来代替
         # obs暂时未实现
         obs = None
         return obs
 
     def on_physics_step(self, step_size):
+        self.target_velocity[2] = 0
+        self.target_angular_velocity[0] = 0
+        self.target_angular_velocity[1] = 0
         super().on_physics_step(step_size)
 
-        self.counter += 1
-
         # if self.flag_world_reset:
-        if self.flag_action_navigation:
-            self.step(self.action)
-        if self.is_detecting:
-            self.detect(self, target_prim=self.target_prim)
+        # if self.flag_action_navigation:
+        #     self.step(self.action)
+        # if self.is_detecting:
+        #     self.detect(self, target_prim=self.target_prim)

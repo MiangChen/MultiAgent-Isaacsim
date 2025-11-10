@@ -163,7 +163,3 @@ class RobotDroneAutel(Robot):
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
         # self._publish_status_pose()  # 例如，每一步都发布状态
-
-    def step(self, action: np.ndarray):
-        # 无人机的动作控制逻辑 (例如，应用推力)
-        pass  # raise NotImplementedError

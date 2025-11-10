@@ -53,19 +53,11 @@ class RobotH1(Robot):
         self.controller_policy: H1FlatTerrainPolicy | None = None
         self.base_command = np.zeros(3)
 
-        self.counter = 0
-        self.pub_period = 50
-        self.previous_pos = None
-        self.movement_threshold = (
-            0.1  # 移动时，如果两次检测之间的移动距离小于这个阈值，那么就会判定其为异常
-        )
         self._body = BodyH1(cfg_robot=self.cfg_robot)
         if self.cfg_robot.disable_gravity:
             self.scene_manager.disable_gravity_for_hierarchy(
                 self.cfg_robot.path_prim_robot
             )
-
-
 
     def initialize(self):
         """
@@ -97,9 +89,9 @@ class RobotH1(Robot):
         return obs
 
     def on_physics_step(self, step_size):
-        self.vel_linear[2] = 0
-        self.vel_angular[0] = 0
-        self.vel_angular[1] = 0
+        self.target_velocity[2] = 0
+        self.target_angular_velocity[0] = 0
+        self.target_angular_velocity[1] = 0
         super().on_physics_step(step_size)
 
         self.counter += 1
