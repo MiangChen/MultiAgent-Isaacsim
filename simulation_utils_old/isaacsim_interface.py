@@ -37,7 +37,7 @@ from physics_engine.isaacsim_utils import (
     get_assets_root_path,
 )
 
-from simulation_utils.minimal_camera import (
+from simulation_utils_old.minimal_camera import (
     MinimalCamera,
 )  # a stripped down version of isaacsim.sensors.camera
 

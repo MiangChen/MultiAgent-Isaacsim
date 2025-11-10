@@ -38,7 +38,7 @@ def run_simulation_loop(simulation_app, world, drones, semantic_camera,
                         pc_lfr = drone.robot.lidar_list[0].get_pointcloud()
                         pc_ubd = drone.robot.lidar_list[1].get_pointcloud()
 
-                        from simulation_utils.message_convert import create_pc2_msg, create_image_msg
+                        from simulation_utils_old.message_convert import create_pc2_msg, create_image_msg
 
                         # Publish via ROS node
                         node = drone.robot.ros_manager.get_node()
@@ -164,7 +164,7 @@ def main():
         )
 
     # Setup lidar if needed
-    from simulation_utils.ros_bridge import setup_ros
+    from simulation_utils_old.ros_bridge import setup_ros
     for drone in drones:
         if hasattr(drone.robot, 'setup_lidar_and_ros'):
             drone.robot.setup_lidar_and_ros(setup_ros)
