@@ -82,10 +82,7 @@ class World:
         if blueprint.robot_class is None:
             raise ValueError(f"Blueprint {blueprint.id} has 'robot' tag but no robot_class defined")
 
-        robot_instance = blueprint.robot_class(
-            cfg_robot=actor_config,
-            scene_manager=self._scene_manager
-        )
+        robot_instance = blueprint.robot_class(cfg_robot=actor_config)
 
         self.scene.add(robot_instance._body.robot_articulation)
 

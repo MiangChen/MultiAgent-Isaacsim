@@ -35,12 +35,9 @@ class RobotCf2x(Robot):
     def __init__(
             self,
             cfg_robot: Dict = {},
-            scene_manager=None,
     ) -> None:
         self.cfg_robot = CfgDroneCf2X(**cfg_robot)
-        super().__init__(
-            scene_manager=scene_manager,
-        )
+        super().__init__()
 
         self._body = BodyDroneCf2X(cfg_robot=self.cfg_robot)
 
@@ -48,11 +45,6 @@ class RobotCf2x(Robot):
         self.position = np.array(
             getattr(cfg_robot, "position", [0.0, 0.0, 0.0]), dtype=np.float32
         )
-
-        if self.cfg_robot.disable_gravity:
-            self.scene_manager.disable_gravity_for_hierarchy(
-                self.cfg_robot.path_prim_robot
-            )
 
     def initialize(self):
         """初始化无人机"""

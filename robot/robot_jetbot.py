@@ -35,19 +35,11 @@ class RobotJetbot(Robot):
     def __init__(
             self,
             cfg_robot: Dict = {},
-            scene_manager=None,
     ) -> None:
         self.cfg_robot = CfgJetbot(**cfg_robot)
-        super().__init__(
-            scene_manager=scene_manager,
-        )
+        super().__init__()
         self._body = BodyJetbot(cfg_robot=self.cfg_robot)
         self.control_mode = "joint_velocities"
-
-        if self.cfg_robot.disable_gravity:
-            self.scene_manager.disable_gravity_for_hierarchy(
-                self.cfg_robot.path_prim_robot
-            )
 
     def initialize(self) -> None:
         super().initialize()

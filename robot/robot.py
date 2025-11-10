@@ -50,17 +50,12 @@ def _get_viewport_manager_from_container():
 
 
 class Robot:
-    def __init__(
-            self,
-            scene_manager: SceneManager = None,
-    ):
-
+    def __init__(self):
         self.cfg_dict_camera = self.cfg_robot.cfg_dict_camera
         self.cfg_dict_camera_third = self.cfg_robot.cfg_dict_camera_third
         self.camera_dict = {}
         self.camera_third_dict = {}
 
-        self.scene_manager = scene_manager
         self.viewport_manager = _get_viewport_manager_from_container()
         self.cfg_robot.path_prim_robot = (
                 self.cfg_robot.path_prim_swarm

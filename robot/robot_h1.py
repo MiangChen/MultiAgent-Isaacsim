@@ -39,25 +39,17 @@ class RobotH1(Robot):
     def __init__(
             self,
             cfg_robot,
-            scene_manager=None,
     ) -> None:
         self.cfg_robot = CfgH1(**cfg_robot)
-        super().__init__(
-            scene_manager=scene_manager,
-        )
+        super().__init__()
         # self.create_robot_entity()
         self.control_mode = "joint_positions"
-        self.scene_manager = scene_manager
 
         # 将控制器先初始化为 None，它将在异步工厂中被正确创建
         self.controller_policy: H1FlatTerrainPolicy | None = None
         self.base_command = np.zeros(3)
 
         self._body = BodyH1(cfg_robot=self.cfg_robot)
-        if self.cfg_robot.disable_gravity:
-            self.scene_manager.disable_gravity_for_hierarchy(
-                self.cfg_robot.path_prim_robot
-            )
 
     def initialize(self):
         """

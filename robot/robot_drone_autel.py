@@ -65,12 +65,12 @@ class DronePose:
 
 
 class RobotDroneAutel(Robot):
-    def __init__(self, cfg_robot: Dict = {}, scene_manager: SceneManager = None):
+    def __init__(self, cfg_robot: Dict = {}):
         # Extract color_scheme_id before passing to CfgDroneAutel
         self.color_scheme_id = cfg_robot.pop('color_scheme_id', 0)
         
         self.cfg_robot = CfgDroneAutel(**cfg_robot)
-        super().__init__(scene_manager=scene_manager)
+        super().__init__()
         
         self._body = BodyDroneAutel(cfg_robot=self.cfg_robot)
         
@@ -94,8 +94,7 @@ class RobotDroneAutel(Robot):
         self.move_lock = threading.Lock()
     
     def initialize(self):
-        # if self.cfg_robot.disable_gravity:
-        self.scene_manager.disable_gravity_for_hierarchy(self.cfg_robot.path_prim_robot)
+        pass
     
     def setup_lidar_and_ros(self, setup_ros_fn):
         """Setup LiDAR sensors and ROS after creation"""
@@ -162,4 +161,3 @@ class RobotDroneAutel(Robot):
 
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)
-        # self._publish_status_pose()  # 例如，每一步都发布状态

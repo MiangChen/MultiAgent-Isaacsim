@@ -35,13 +35,10 @@ class Target(Robot):
     def __init__(
         self,
         cfg_robot,
-        scene_manager: SceneManager = None,
     ) -> None:
 
         self.cfg_robot = CfgTarget(**cfg_robot)
-        super().__init__(
-            scene_manager=scene_manager,
-        )
+        super().__init__()
         self._body = BodyTarget(cfg_robot=self.cfg_robot)
         self.control_mode = "joint_velocities"
         self.path = self.cfg_robot.move_path
