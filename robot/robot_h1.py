@@ -82,7 +82,7 @@ class RobotH1(Robot):
             action = ArticulationActions(joint_efforts=action)
         else:
             raise NotImplementedError
-        self.body.robot_articulation.apply_action(action)
+        self._body.robot_articulation.apply_action(action)
 
         # obs暂时未实现
         obs = None
@@ -93,8 +93,6 @@ class RobotH1(Robot):
         self.target_angular_velocity[0] = 0
         self.target_angular_velocity[1] = 0
         super().on_physics_step(step_size)
-
-        self.counter += 1
 
         # if self.flag_world_reset == True:
         # if self.flag_action_navigation == True:
