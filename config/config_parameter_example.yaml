@@ -88,7 +88,7 @@ logging:
   level: "INFO" # 层级关系: DEBUG (all message) > INFO > WARNING > ERROR > CRITICAL (breaking errors)
   file: "logs/app.log" # 相对于项目根目录，或使用绝对路径
 
-# ROS相关
+# ROS2相关
 ros:
   node_enable:
     node_scene_monitor: False
@@ -99,10 +99,7 @@ frames:
   frame_id_global: "map"
   frame_id_base: "base_link"
 
-# 命名空间配置 (用于多无人机仿真)
-namespace: ["uav1", "uav2", "uav3"]
-
-# 机器人ROS Topic配置 (只需要写topic名称，namespace会自动添加)
+# 机器人ROS2 Topic配置 (只需要写topic名称，namespace会自动添加)
 robot_topics:
   jetbot:
     odom: "odom"

@@ -129,7 +129,7 @@ def main():
     drone_bp = blueprint_library.find('robot.drone_autel')
 
     drones = []
-    for idx, ns in enumerate(config_manager.get("namespace")):
+    for idx, ns in enumerate({1: "uav1", 2: "uav2", 3:"uav3"}):
         # Don't override 'type' - let CfgDroneAutel use its default "drone_autel"
         # drone_bp.set_attribute('type', 'autel')  # ❌ This overrides the default
         drone_bp.set_attribute('id', idx)
