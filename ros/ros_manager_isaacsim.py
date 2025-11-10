@@ -47,17 +47,17 @@ class RosManagerIsaac:
             self.node["node_action_server_plan_execution"] = node
             self.node["node_action_client_skill"] = node.action_client_skill
 
-        logger.info("ROS nodes built successfully.")
+        logger.info("ROS Node for Isaac built successfully.")
 
     def start(self):
         """在后台线程中启动ROS节点"""
         if not self.node:
-            logger.warning("No ROS nodes was built. Cannot start.")
+            logger.warning("No ROS Node for Isaac was built. Cannot start.")
             return
 
         self.thread = threading.Thread(target=self._spin_in_background, daemon=True)
         self.thread.start()
-        logger.info("ROS manager thread started.")
+        logger.info("ROS manager Isaac thread started.")
 
     def _spin_in_background(self):
         """后台运行ROS节点的实际工作函数"""
@@ -66,7 +66,7 @@ class RosManagerIsaac:
             for n in self.node.values():
                 if n:
                     self.executor.add_node(n)
-                    logger.debug(f"Added node {n.get_name()} to ROS manager executor")
+                    logger.debug(f"Added node {n.get_name()} to ROS manager Isaac executor")
 
             while not self.stop_event.is_set():
                 self.executor.spin_once(timeout_sec=0.05)
@@ -76,7 +76,7 @@ class RosManagerIsaac:
                     self.executor.remove_node(n)
                     n.destroy_node()
             logger.info(
-                "ROS manager executor stopped (rclpy context preserved for robots)."
+                "ROS manager Isaac executor stopped (rclpy context preserved for robots)."
             )
 
     def stop(self):
@@ -86,4 +86,4 @@ class RosManagerIsaac:
             self.thread.join(timeout=3.0)
             if self.thread.is_alive():
                 logger.warning("ROS thread did not stop gracefully.")
-        logger.info("ROS manager stopped.")
+        logger.info("ROS manager Isaac stopped.")
