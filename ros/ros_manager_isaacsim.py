@@ -22,7 +22,7 @@ from rclpy.executors import MultiThreadedExecutor
 logger = LogManager.get_logger(__name__)
 
 
-class RosManager:
+class RosManagerIsaac:
     def __init__(
         self,
         loop=None,

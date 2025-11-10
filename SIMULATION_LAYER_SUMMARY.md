@@ -556,7 +556,6 @@ while simulation_app.is_running():
     world.tick()
 
 # 10. 清理
-ros_bridge_manager.stop()
 rclpy.shutdown()
 ```
 

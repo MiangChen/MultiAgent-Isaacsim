@@ -133,7 +133,7 @@ def main():
     log_manager = container.log_manager()
     loop = container.loop()
     server = container.server()
-    ros_manager = container.ros_manager()
+    ros_manager_isaac = container.ros_manager_isaac()
     scene_manager = container.scene_manager()
     grid_map = container.grid_map()
     semantic_map = container.semantic_map()
@@ -142,7 +142,7 @@ def main():
     world = container.world_configured()
     simulation_app = server.get_simulation_app()
 
-    ros_manager.start()
+    ros_manager_isaac.start()
 
     # ============================================================================
     # Robots Setup
@@ -251,7 +251,6 @@ def main():
             raise f"Failed to setup ROS for {robot.namespace}"
 
     # 2. Skill System: High-level behaviors via ROS actions
-    # Note: cmd_vel is now handled directly in NodeRobot (no separate bridge needed)
     from application import SkillManager
 
     skill_managers = {}

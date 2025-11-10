@@ -139,7 +139,7 @@ def main():
     config_manager = container.config_manager()
     log_manager = container.log_manager()
     server = container.server()
-    ros_manager = container.ros_manager()
+    ros_manager_isaac = container.ros_manager_isaac()
     scene_manager = container.scene_manager()
     grid_map = container.grid_map()
     semantic_map = container.semantic_map()
@@ -148,7 +148,7 @@ def main():
     world = container.world_configured()
     simulation_app = server.get_simulation_app()
 
-    ros_manager.start()
+    ros_manager_isaac.start()
 
     scene_manager.load_scene(
         usd_path=config_manager.get("world_usd_path"), prim_path_root="/World/Scene"

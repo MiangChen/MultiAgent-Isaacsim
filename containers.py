@@ -58,8 +58,8 @@ class AppContainer(containers.DeclarativeContainer):
         lambda cfg: _import_and_create_grid_map(cfg), cfg=config
     )
 
-    ros_manager = providers.Singleton(
-        lambda loop, ros_config: _import_and_create_ros_manager(loop, ros_config),
+    ros_manager_isaac = providers.Singleton(
+        lambda loop, ros_config: _import_and_create_ros_manager_isaac(loop, ros_config),
         loop=loop,
         ros_config=config.provided["ros"],
     )
@@ -104,10 +104,10 @@ def _import_and_create_grid_map(cfg):
     )
 
 
-def _import_and_create_ros_manager(loop, ros_config):
-    from ros.ros_manager_isaacsim import RosManager
+def _import_and_create_ros_manager_isaac(loop, ros_config):
+    from ros.ros_manager_isaacsim import RosManagerIsaac
 
-    return RosManager(loop=loop, config=ros_config)
+    return RosManagerIsaac(loop=loop, config=ros_config)
 
 
 def _import_and_create_scene_manager(world):
