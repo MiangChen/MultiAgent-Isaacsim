@@ -78,31 +78,42 @@ class ScanControl:
 # Manipulation skills
 @dataclass
 class GraspControl:
-    target_object: Optional[Any] = None
-    force: float = 10.0
-    approach_angle: Optional[List[float]] = None
+    """抓取控制（纯数据，不调用 Isaac Sim API）"""
+    hand_prim_path: str = ""
+    object_prim_path: str = ""
+    local_pos_hand: List[float] = field(default_factory=lambda: [0.0, 0.0, 1.0])
+    local_pos_object: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
+    axis: List[float] = field(default_factory=lambda: [0.0, 0.0, 1.0])
+    action: str = "check_distance"  # "check_distance", "attach"
+    distance_threshold: float = 2.0
 
 @dataclass
 class ReleaseControl:
+    """释放控制（纯数据）"""
+    object_prim_path: str = ""
+    joint_path: str = ""
     gentle: bool = True
 
-@dataclass
-class PlaceControl:
-    target_location: Optional[List[float]] = None
-    orientation: Optional[List[float]] = None
-    gentle: bool = True
+# @dataclass
+# class PlaceControl:
+#     """放置控制（纯数据）"""
+#     object_prim_path: str = ""
+#     joint_path: str = ""
+#     target_location: Optional[List[float]] = None
+#     orientation: Optional[List[float]] = None
+#     gentle: bool = True
 
-@dataclass
-class PushControl:
-    target_object: Optional[Any] = None
-    direction: Optional[List[float]] = None
-    force: float = 5.0
-
-@dataclass
-class PullControl:
-    target_object: Optional[Any] = None
-    direction: Optional[List[float]] = None
-    force: float = 5.0
+# @dataclass
+# class PushControl:
+#     target_object: Optional[Any] = None
+#     direction: Optional[List[float]] = None
+#     force: float = 5.0
+#
+# @dataclass
+# class PullControl:
+#     target_object: Optional[Any] = None
+#     direction: Optional[List[float]] = None
+#     force: float = 5.0
 
 
 # Interaction skills
@@ -137,28 +148,28 @@ def create_control(control_type: str, **kwargs):
     """Factory: create Control object by type name"""
     control_classes = {
         'robot': RobotControl,
-        'navigation': NavigationControl,
-        'exploration': ExplorationControl,
-        'takeoff': TakeOffControl,
-        'land': LandControl,
-        'hover': HoverControl,
-        'detection': DetectionControl,
-        'photo': PhotoControl,
-        'video': VideoControl,
-        'scan': ScanControl,
+        # 'navigation': NavigationControl,
+        # 'exploration': ExplorationControl,
+        # 'takeoff': TakeOffControl,
+        # 'land': LandControl,
+        # 'hover': HoverControl,
+        # 'detection': DetectionControl,
+        # 'photo': PhotoControl,
+        # 'video': VideoControl,
+        # 'scan': ScanControl,
         'grasp': GraspControl,
         'release': ReleaseControl,
-        'place': PlaceControl,
-        'push': PushControl,
-        'pull': PullControl,
-        'follow': FollowControl,
-        'escort': EscortControl,
-        'handover': HandoverControl,
-        'communication': CommunicationControl,
+        # 'place': PlaceControl,
+        # 'push': PushControl,
+        # 'pull': PullControl,
+        # 'follow': FollowControl,
+        # 'escort': EscortControl,
+        # 'handover': HandoverControl,
+        # 'communication': CommunicationControl,
     }
-    
+
     control_class = control_classes.get(control_type.lower())
     if not control_class:
         raise ValueError(f"Unknown control type: {control_type}")
-    
+
     return control_class(**kwargs)

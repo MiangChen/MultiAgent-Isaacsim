@@ -84,6 +84,10 @@ class Robot:
         self.target_velocity = torch.tensor([0.0, 0.0, 0.0])  # Target linear velocity (command)
         self.target_angular_velocity = torch.tensor([0.0, 0.0, 0.0])  # Target angular velocity (command)
 
+        # Manipulation control (set by skills, applied in on_physics_step)
+        self._manipulation_control = None
+        self._manipulation_result = None
+
         self.sim_time = 0.0
 
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
@@ -313,6 +317,29 @@ class Robot:
             return control
         return self._current_control
 
+    def apply_manipulation_control(self, control):
+        """
+        Apply manipulation control (CARLA-style) - Public interface
+        
+        Application layer creates Control object and applies it.
+        Robot layer executes it in on_physics_step.
+        
+        Args:
+            control: GraspControl, ReleaseControl, or PlaceControl object
+        """
+        self._manipulation_control = control
+        self._manipulation_result = None  # Clear previous result
+
+    def get_manipulation_result(self):
+        """
+        Get manipulation result (CARLA-style) - Public interface
+        
+        Returns:
+            dict: Result with 'success', 'message', 'data' keys
+            None: If no result available yet
+        """
+        return self._manipulation_result
+
     def on_physics_step(self, step_size) -> None:
         """
         Physics step callback - Robot layer only
@@ -330,6 +357,10 @@ class Robot:
         # Note: target_velocity is set by MPC (Application layer) via clock callback
         self.controller_simplified()
 
+        # 4. Execute manipulation control if any
+        if self._manipulation_control is not None:
+            self._execute_manipulation_control()
+
         return
 
     def post_reset(self) -> None:
@@ -345,6 +376,185 @@ class Robot:
             self._body.robot_articulation.set_linear_velocities(self.target_velocity)
             self._body.robot_articulation.set_angular_velocities(self.target_angular_velocity)
             logger.debug(f"Robot Articulation target vel: {self.target_velocity}")
+
+    def _execute_manipulation_control(self):
+        """
+        Execute manipulation control in physics step (Robot layer only).
+        This is called in on_physics_step, so it's safe to call Isaac Sim API here.
+        """
+        from simulation.control import GraspControl, ReleaseControl
+        from physics_engine.isaacsim_utils import RigidPrim
+        from physics_engine.pxr_utils import UsdPhysics, Gf
+        
+        control = self._manipulation_control
+        
+        try:
+            if isinstance(control, GraspControl):
+                self._execute_grasp_control(control)
+            elif isinstance(control, ReleaseControl):
+                self._execute_release_control(control)
+            else:
+                self._manipulation_result = {
+                    'success': False,
+                    'message': f'Unknown control type: {type(control)}',
+                    'data': {}
+                }
+        except Exception as e:
+            logger.error(f"Manipulation control execution failed: {e}")
+            self._manipulation_result = {
+                'success': False,
+                'message': f'Execution error: {str(e)}',
+                'data': {}
+            }
+
+    def _execute_grasp_control(self, control):
+        """Execute grasp control (check distance or attach)"""
+        from physics_engine.isaacsim_utils import RigidPrim
+        from physics_engine.pxr_utils import UsdPhysics, Gf
+        from containers import get_container
+        
+        if control.action == "check_distance":
+            # Initialize rigid prims
+            hand_prim = RigidPrim(prim_paths_expr=control.hand_prim_path)
+            object_prim = RigidPrim(prim_paths_expr=control.object_prim_path)
+            
+            # Calculate distance
+            hand_pos, _ = hand_prim.get_world_poses()
+            object_pos, _ = object_prim.get_world_poses()
+            distance = torch.norm(hand_pos - object_pos).item()
+            
+            # Check if within threshold
+            if distance <= control.distance_threshold:
+                self._manipulation_result = {
+                    'success': True,
+                    'message': 'Within grasp distance',
+                    'data': {
+                        'distance': distance,
+                        'ready_to_grasp': True,
+                        'hand_prim': hand_prim,
+                        'object_prim': object_prim,
+                    }
+                }
+            else:
+                self._manipulation_result = {
+                    'success': False,
+                    'message': f'Too far: {distance:.2f}m > {control.distance_threshold}m',
+                    'data': {
+                        'distance': distance,
+                        'ready_to_grasp': False,
+                    }
+                }
+                
+        elif control.action == "attach":
+            # Get world from container
+            container = get_container()
+            world = container.world_configured()
+            
+            # Initialize rigid prims
+            hand_prim = RigidPrim(prim_paths_expr=control.hand_prim_path)
+            object_prim = RigidPrim(prim_paths_expr=control.object_prim_path)
+            
+            # Stop object motion
+            object_prim.set_linear_velocities(torch.zeros(3, dtype=torch.float32))
+            object_prim.set_angular_velocities(torch.zeros(3, dtype=torch.float32))
+            
+            # Move object to hand position
+            hand_pos, _ = hand_prim.get_world_poses()
+            object_prim.set_world_poses(positions=hand_pos)
+            
+            # Disable collision
+            world.set_collision_enabled(
+                prim_path=control.object_prim_path, enabled=False
+            )
+            
+            # Create or update joint
+            joint_path = f"/World/grasp_joint_{object_prim.name}"
+            stage = world.get_stage()
+            joint_prim = stage.GetPrimAtPath(joint_path)
+            
+            if not joint_prim.IsValid():
+                world.create_joint(
+                    joint_path=joint_path,
+                    joint_type="fixed",
+                    body0=control.hand_prim_path,
+                    body1=control.object_prim_path,
+                    local_pos0=control.local_pos_hand,
+                    local_pos1=control.local_pos_object,
+                    axis=control.axis,
+                )
+                stage = world.get_stage()
+                joint_prim = stage.GetPrimAtPath(joint_path)
+            
+            # Enable joint
+            joint = UsdPhysics.Joint(joint_prim)
+            joint.GetLocalPos0Attr().Set(Gf.Vec3f(control.local_pos_hand))
+            joint.GetLocalPos1Attr().Set(Gf.Vec3f(control.local_pos_object))
+            joint.GetJointEnabledAttr().Set(True)
+            
+            self._manipulation_result = {
+                'success': True,
+                'message': 'Object attached',
+                'data': {
+                    'joint_path': joint_path,
+                }
+            }
+
+    def _execute_release_control(self, control):
+        """Execute release control (detach object)"""
+        from physics_engine.pxr_utils import UsdPhysics
+        from containers import get_container
+        
+        # Get world from container
+        container = get_container()
+        world = container.world_configured()
+        
+        # Disable joint
+        stage = world.get_stage()
+        joint_prim = stage.GetPrimAtPath(control.joint_path)
+        
+        if joint_prim.IsValid():
+            joint = UsdPhysics.Joint(joint_prim)
+            joint.GetJointEnabledAttr().Set(False)
+            
+            # Re-enable collision
+            world.set_collision_enabled(
+                prim_path=control.object_prim_path, enabled=True
+            )
+            
+            self._manipulation_result = {
+                'success': True,
+                'message': 'Object released',
+                'data': {}
+            }
+        else:
+            self._manipulation_result = {
+                'success': False,
+                'message': f'Joint not found: {control.joint_path}',
+                'data': {}
+            }
+
+    def _execute_place_control(self, control):
+        """Execute place control (set object position)"""
+        from physics_engine.isaacsim_utils import RigidPrim
+        
+        # Get object prim
+        object_prim = RigidPrim(prim_paths_expr=control.object_prim_path)
+        
+        # Set position
+        position = torch.tensor(control.position, dtype=torch.float32)
+        object_prim.set_world_poses(positions=position)
+        
+        # Set velocity to zero
+        object_prim.set_linear_velocities(torch.zeros(3, dtype=torch.float32))
+        object_prim.set_angular_velocities(torch.zeros(3, dtype=torch.float32))
+        
+        self._manipulation_result = {
+            'success': True,
+            'message': 'Object placed',
+            'data': {
+                'position': control.position,
+            }
+        }
 
     def _initialize_third_person_camera(self):
         """初始化第三人称相机并注册到ViewportManager"""

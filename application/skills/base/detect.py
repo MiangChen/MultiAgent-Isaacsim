@@ -1,8 +1,13 @@
 from application import SkillManager
+from dependency_injector.wiring import inject, Provide
 
 
 @SkillManager.register()
-def detect(**kwargs):
+@inject
+def detect(
+    world=Provide["world_configured"],
+    **kwargs
+):
     robot = kwargs.get("robot")
     skill_manager = kwargs.get("skill_manager")
     skill_name = "detect"
@@ -23,7 +28,7 @@ def detect(**kwargs):
         target_prim = skill_manager.get_skill_data(skill_name, "target_prim")
         
         # Perform detection
-        detection_result = robot.scene_manager.overlap_hits_target_ancestor(target_prim)
+        detection_result = world.overlap_test(target_prim) if world else None
         skill_manager.set_skill_data(skill_name, "detection_result", detection_result)
         
         skill_manager.set_skill_state(skill_name, "COMPLETED")
