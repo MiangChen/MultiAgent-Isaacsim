@@ -231,7 +231,7 @@ def main():
             robot_ros_manager = RobotRosManager(
                 robot=robot,
                 namespace=robot.namespace,
-                topics=robot.body.cfg_robot.topics
+                topics=robot.get_topics()
             )
             # Inject ROS manager
             robot.set_ros_manager(robot_ros_manager)

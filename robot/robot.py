@@ -70,7 +70,7 @@ class Robot:
         self.cfg_robot.namespace = self.cfg_robot.type + f"_{self.cfg_robot.id}"
         self.namespace = self.cfg_robot.namespace
 
-        self.body: BodyRobot = None
+        self._body: BodyRobot = None  # Private: Isaac Sim layer only
 
         # 机器人的控制器
         self.controllers: dict = {}  # 用于存储多个控制器, 'controller name': function
@@ -109,23 +109,108 @@ class Robot:
         self.track_counter = 0
         self.track_period = 300
 
+    ########################## Public Interface (Application Layer) ############################
+
+    def get_world_pose(self):
+        """Get robot world pose (position, quaternion) - Public interface"""
+        return self.position, self.quat
+
+    def set_world_pose(self, position, orientation=None):
+        """
+        Set robot world pose - Public interface
+        This only updates the cached state. The actual Isaac Sim update happens in on_physics_step.
+        """
+        self.position = position if isinstance(position, torch.Tensor) else torch.tensor(position)
+        if orientation is not None:
+            self.quat = orientation if isinstance(orientation, torch.Tensor) else torch.tensor(orientation)
+
+    def get_world_velocity(self):
+        """Get robot world velocity (linear, angular) - Public interface"""
+        return self.vel_linear, self.vel_angular
+
+    def set_linear_velocity(self, velocity):
+        """
+        Set robot linear velocity - Public interface
+        This only updates the cached state. The actual Isaac Sim update happens in controller_simplified.
+        """
+        self.vel_linear = velocity if isinstance(velocity, torch.Tensor) else torch.tensor(velocity)
+
+    def set_angular_velocity(self, velocity):
+        """
+        Set robot angular velocity - Public interface
+        This only updates the cached state. The actual Isaac Sim update happens in controller_simplified.
+        """
+        self.vel_angular = velocity if isinstance(velocity, torch.Tensor) else torch.tensor(velocity)
+
+    def get_config(self):
+        """Get robot configuration - Public interface"""
+        if self._body is None:
+            raise RuntimeError("Robot body not initialized")
+        return self._body.cfg_robot
+
+    def get_topics(self):
+        """Get ROS topics configuration - Public interface"""
+        cfg = self.get_config()
+        return cfg.topics if hasattr(cfg, 'topics') else {}
+
+    def get_detection_radius(self):
+        """Get robot detection radius - Public interface"""
+        cfg = self.get_config()
+        return cfg.detection_radius if hasattr(cfg, 'detection_radius') else 1.0
+
+    def get_robot_radius(self):
+        """Get robot physical radius - Public interface"""
+        cfg = self.get_config()
+        return cfg.robot_radius if hasattr(cfg, 'robot_radius') else 0.5
+
+    def is_physics_valid(self):
+        """
+        Check if physics handle is valid - Public interface
+        Note: This is a simple check and doesn't call Isaac Sim API directly.
+        """
+        return self._body is not None
+
+    @property
+    def body(self):
+        """
+        Deprecated: Direct access to body is discouraged.
+        Use public methods like get_world_pose(), get_config(), etc.
+        This property exists for backward compatibility only.
+        """
+        import warnings
+        warnings.warn(
+            "Direct access to robot.body is deprecated and may cause issues "
+            "when called during Isaac Sim rendering. "
+            "Use robot.get_world_pose(), robot.get_config(), etc. instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return self._body
+
     ########################## Publisher Odom  ############################
     def publish_robot_state(self):
-        """Publish robot state (if ROS is enabled)"""
-        pos, quat = self.body.get_world_pose()
-        vel_linear, vel_angular = self.body.get_world_vel()
+        """
+        Update robot state from Isaac Sim and publish to ROS.
+        This method is called in on_physics_step, so it's safe to call Isaac Sim API here.
+        """
+        # Read from Isaac Sim API (safe in physics step)
+        pos, quat = self._body.get_world_pose()
+        vel_linear, vel_angular = self._body.get_world_vel()
 
+        # Update cached state for Application layer
         self.position = pos
         self.quat = quat
+        self.vel_linear = vel_linear
+        self.vel_angular = vel_angular
 
         # Publish to ROS if available
         if self.has_ros():
-            pos = pos.detach().cpu().numpy()
-            quat = quat.detach().cpu().numpy()
-            vel_linear = vel_linear.detach().cpu().numpy()
-            vel_angular = vel_angular.detach().cpu().numpy()
+            pos_np = pos.detach().cpu().numpy()
+            quat_np = quat.detach().cpu().numpy()
+            vel_linear_np = vel_linear.detach().cpu().numpy()
+            vel_angular_np = vel_angular.detach().cpu().numpy()
 
-            self.ros_manager.publish_odometry(pos, quat, vel_linear, vel_angular)
+            self.ros_manager.publish_odometry(pos_np, quat_np, vel_linear_np, vel_angular_np)
 
     ########################## ROS Manager Interface ############################
 
@@ -216,9 +301,13 @@ class Robot:
             sensor.post_reset()
 
     def controller_simplified(self) -> None:
-        if self.body.robot_articulation.is_physics_handle_valid():
-            self.body.robot_articulation.set_linear_velocities(self.vel_linear)
-            self.body.robot_articulation.set_angular_velocities(self.vel_angular)
+        """
+        Apply cached velocity commands to Isaac Sim.
+        This is called in on_physics_step, so it's safe to call Isaac Sim API here.
+        """
+        if self._body and self._body.robot_articulation.is_physics_handle_valid():
+            self._body.robot_articulation.set_linear_velocities(self.vel_linear)
+            self._body.robot_articulation.set_angular_velocities(self.vel_angular)
             logger.debug(f"Robot Articulation vel, {self.vel_linear}")
 
     def _initialize_third_person_camera(self):

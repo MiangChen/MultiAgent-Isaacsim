@@ -120,7 +120,7 @@ def _start_navigation_to_waypoint(robot, skill_manager, skill_name, goal_pos):
     goal_msg = ComputePathToPose.Goal()
     
     # Get current position as start
-    start_pos_tensor, start_quat_tensor = robot.body.get_world_pose()
+    start_pos_tensor, start_quat_tensor = robot.get_world_pose()
     start_pos = start_pos_tensor.cpu().numpy().tolist()
     start_quat = start_quat_tensor.cpu().numpy().tolist()
     

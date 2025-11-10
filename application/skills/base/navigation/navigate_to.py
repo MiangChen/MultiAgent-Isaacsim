@@ -92,10 +92,10 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
     goal_msg = ComputePathToPose.Goal()
     
     if start_pos is None:
-        start_pos_tensor, _ = robot.body.get_world_pose()
+        start_pos_tensor, _ = robot.get_world_pose()
         start_pos = start_pos_tensor.cpu().numpy().tolist()
     if start_quat is None:
-        _, start_quat_tensor = robot.body.get_world_pose()
+        _, start_quat_tensor = robot.get_world_pose()
         start_quat = start_quat_tensor.cpu().numpy().tolist()
     
     goal_msg.start = _create_pose_stamped(robot, start_pos, start_quat)

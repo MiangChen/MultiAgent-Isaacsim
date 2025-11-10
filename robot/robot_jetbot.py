@@ -41,7 +41,7 @@ class RobotJetbot(Robot):
         super().__init__(
             scene_manager=scene_manager,
         )
-        self.body = BodyJetbot(cfg_robot=self.cfg_robot)
+        self._body = BodyJetbot(cfg_robot=self.cfg_robot)
         self.control_mode = "joint_velocities"
 
         self.counter = 0

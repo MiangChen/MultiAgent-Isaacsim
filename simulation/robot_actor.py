@@ -16,13 +16,13 @@ class RobotActor(Actor):
         return f"robot.{self.robot.cfg_robot.type}"
     
     def get_transform(self) -> Transform:
-        pos, quat = self.robot.body.get_world_pose()
+        pos, quat = self.robot.get_world_pose()
         return Transform(
             location=Location(pos[0].item(), pos[1].item(), pos[2].item())
         )
     
     def set_transform(self, transform: Transform):
-        self.robot.body.robot_articulation.set_world_pose(
+        self.robot.set_world_pose(
             position=[transform.location.x, transform.location.y, transform.location.z]
         )
     

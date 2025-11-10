@@ -87,7 +87,7 @@ class World:
             scene_manager=self._scene_manager
         )
 
-        self.scene.add(robot_instance.body.robot_articulation)
+        self.scene.add(robot_instance._body.robot_articulation)
 
         if self._semantic_map:
             self._semantic_map.dict_map_semantic[

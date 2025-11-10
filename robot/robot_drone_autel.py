@@ -72,7 +72,7 @@ class RobotDroneAutel(Robot):
         self.cfg_robot = CfgDroneAutel(**cfg_robot)
         super().__init__(scene_manager=scene_manager)
         
-        self.body = BodyDroneAutel(cfg_robot=self.cfg_robot)
+        self._body = BodyDroneAutel(cfg_robot=self.cfg_robot)
         
         # ROS2
         self.ros_node = None

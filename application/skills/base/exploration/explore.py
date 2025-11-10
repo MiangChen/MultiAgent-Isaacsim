@@ -60,7 +60,9 @@ def _init_explore(robot, skill_manager, skill_name, kwargs):
         skill_manager.skill_errors[skill_name] = "Invalid boundary"
         return skill_manager.form_feedback("failed", "Invalid boundary")
     
-    if not hasattr(robot, "body") or not hasattr(robot.body, "cfg_robot"):
+    try:
+        robot.get_config()
+    except RuntimeError:
         skill_manager.set_skill_state(skill_name, "FAILED")
         skill_manager.skill_errors[skill_name] = "Robot config not available"
         return skill_manager.form_feedback("failed", "Robot config not available")
@@ -73,8 +75,8 @@ def _init_explore(robot, skill_manager, skill_name, kwargs):
             robot=robot,
             polygon_coords=boundary,
             holes=holes,
-            lane_width=robot.body.cfg_robot.detection_radius,
-            robot_radius=robot.body.cfg_robot.robot_radius,
+            lane_width=robot.get_detection_radius(),
+            robot_radius=robot.get_robot_radius(),
             interpolation_distance=interpolation_distance,
             interpolation_method=interpolation_method,
         )

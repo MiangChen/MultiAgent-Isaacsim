@@ -321,10 +321,10 @@ def plan_ompl_coverage_waypoints(**kwargs) -> Optional[Path]:
         planner.set_validity_checker(polygon_coords, holes)
 
         # 获取起始位置
-        if hasattr(robot, "body") and robot.body:
-            start_pos_tensor, _ = robot.body.get_world_pose()
+        try:
+            start_pos_tensor, _ = robot.get_world_pose()
             start_pos = (float(start_pos_tensor[0]), float(start_pos_tensor[1]))
-        else:
+        except RuntimeError:
             # 使用多边形中心作为起始点
             start_pos = (np.mean(coords_array[:, 0]), np.mean(coords_array[:, 1]))
 

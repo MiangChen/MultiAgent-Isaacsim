@@ -42,7 +42,7 @@ class RobotCf2x(Robot):
             scene_manager=scene_manager,
         )
 
-        self.body = BodyDroneCf2X(cfg_robot=self.cfg_robot)
+        self._body = BodyDroneCf2X(cfg_robot=self.cfg_robot)
         self.is_drone = True
 
         # 无人机基本属性

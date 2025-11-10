@@ -42,7 +42,7 @@ class RobotG1(Robot):
         super().__init__(
             scene_manager=scene_manager,
         )
-        self.body = BodyG1(cfg_robot=self.cfg_robot)
+        self._body = BodyG1(cfg_robot=self.cfg_robot)
         self.control_mode = "joint_velocities"
 
         self.counter = 0
@@ -68,8 +68,8 @@ class RobotG1(Robot):
         else:
             raise NotImplementedError
 
-        self.body.robot_articulation.set_linear_velocities(self.linear_velocity)
-        self.body.robot_articulation.set_angular_velocities(self.angular_velocity)
+        self.body.robot_articulation.set_linear_velocities(self.vel_linear)
+        self.body.robot_articulation.set_angular_velocities(self.vel_angular)
         # FIXME:为了让G1能运动，先用平移来代替
         # obs暂时未实现
         obs = None
