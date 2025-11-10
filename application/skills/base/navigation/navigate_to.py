@@ -11,10 +11,11 @@ Flow:
     RobotControl object -> robot.apply_control() -> Isaac Sim
 """
 
+# Standard library imports
 import json
 from application import SkillManager
 
-# ROS2 message
+# ROS2 message imports
 from action_msgs.msg import GoalStatus
 from builtin_interfaces.msg import Time
 from geometry_msgs.msg import PoseStamped

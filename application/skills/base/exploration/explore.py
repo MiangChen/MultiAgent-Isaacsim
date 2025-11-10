@@ -3,10 +3,11 @@
 Flow: Plan waypoints -> Navigate to start -> Follow path -> Complete
 """
 
+# Standard library imports
 import json
 from application import SkillManager
 
-# ROS2 message
+# ROS2 message imports
 from action_msgs.msg import GoalStatus
 
 
