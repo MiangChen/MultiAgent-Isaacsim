@@ -19,7 +19,6 @@ import numpy as np
 from physics_engine.pxr_utils import Gf, UsdGeom
 from physics_engine.isaacsim_utils import Scene
 from robot.cfg import CfgDroneAutel
-from scene.scene_manager import SceneManager
 
 from robot.robot import Robot
 from robot.body.body_drone_autel import BodyDroneAutel

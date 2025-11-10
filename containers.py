@@ -41,7 +41,7 @@ class AppContainer(containers.DeclarativeContainer):
     server = providers.Singleton(
         lambda: _import_and_create_server(),
     )
-    
+
     world = providers.Singleton(
         lambda server, cfg: server.get_world(
             physics_dt=cfg["world"]["physics_dt"],
@@ -69,11 +69,11 @@ class AppContainer(containers.DeclarativeContainer):
         lambda world: _import_and_create_scene_manager(world),
         world=world
     )
-    
+
     semantic_map = providers.Singleton(
         lambda: _import_and_create_semantic_map()
     )
-    
+
     viewport_manager = providers.Singleton(
         lambda: _import_and_create_viewport_manager()
     )
@@ -92,6 +92,7 @@ def _import_and_create_server():
     from simulation.server import Server
     return Server()
 
+
 def _import_and_create_grid_map(cfg):
     from map.map_grid_map import GridMap
     return GridMap(
@@ -104,21 +105,26 @@ def _import_and_create_grid_map(cfg):
         unknown_value=cfg["map"]["unknown_cell"],
     )
 
+
 def _import_and_create_ros_manager(loop, ros_config):
     from ros.ros_manager import RosManager
     return RosManager(loop=loop, config=ros_config)
+
 
 def _import_and_create_scene_manager(world):
     from scene.scene_manager import SceneManager
     return SceneManager(world=world)
 
+
 def _import_and_create_semantic_map():
     from map.map_semantic_map import MapSemantic
     return MapSemantic()
 
+
 def _import_and_create_viewport_manager():
     from ui.viewport_manager import ViewportManager
     return ViewportManager()
+
 
 def _configure_world(world, scene_manager, semantic_map, grid_map):
     """配置World的组件"""

@@ -25,7 +25,6 @@ from physics_engine.isaacsim_utils import (
 )
 from robot.sensor.camera import Camera
 from robot.body import BodyRobot
-from scene.scene_manager import SceneManager
 
 # ROS2 message imports
 from gsi_msgs.gsi_msgs_helper import (

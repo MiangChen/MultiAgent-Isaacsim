@@ -8,18 +8,15 @@
 # =============================================================================
 
 # Standard library imports
-from typing import Dict, List, Tuple
 
 # Third-party library imports
-import torch
+
 
 # Local project imports
 from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from robot.robot import Robot
 from robot.cfg.cfg_target import CfgTarget
 from robot.body.body_target import BodyTarget
-# from robot.skill.base.navigation.navigate_to import navigate_to
-from scene.scene_manager import SceneManager
 
 # ROS2 message imports
 from gsi_msgs.gsi_msgs_helper import (
@@ -33,10 +30,9 @@ from gsi_msgs.gsi_msgs_helper import (
 
 class Target(Robot):
     def __init__(
-        self,
-        cfg_robot,
+            self,
+            cfg_robot,
     ) -> None:
-
         self.cfg_robot = CfgTarget(**cfg_robot)
         super().__init__()
         self._body = BodyTarget(cfg_robot=self.cfg_robot)
