@@ -8,9 +8,8 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 
-# ROS message imports
+# ROS2 message imports
 from gsi_msgs.gsi_msgs_helper import SkillExecution
-
 from rosgraph_msgs.msg import Clock
 
 logger = LogManager.get_logger(__name__)

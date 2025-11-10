@@ -21,7 +21,7 @@ from robot.body.body_jetbot import BodyJetbot
 from robot.sensor.camera import CfgCamera, CfgCameraThird
 from utils import to_torch, quat_to_yaw
 
-# ROS message imports
+# ROS2 message imports
 from gsi_msgs.gsi_msgs_helper import (
     Plan,
     RobotFeedback,

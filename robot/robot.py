@@ -27,7 +27,7 @@ from robot.sensor.camera import Camera
 from robot.body import BodyRobot
 from scene.scene_manager import SceneManager
 
-# Custom ROS message imports (for type hints only)
+# ROS2 message imports
 from gsi_msgs.gsi_msgs_helper import (
     RobotFeedback,
     SkillExecution,
