@@ -3,7 +3,7 @@
 
 # Base skills - Supported by most robots
 base_skills:
-  robot_types: ['jetbot', 'g1', 'h1', 'cf2x', 'autel']
+  robot_types: ['jetbot', 'g1', 'h1', 'cf2x', 'drone_autel']
   skills:
     - navigate_to
     - detect
@@ -13,7 +13,7 @@ base_skills:
 
 # Drone skills - UAV specific
 drone_skills:
-  robot_types: ['cf2x', 'autel']
+  robot_types: ['cf2x', 'drone_autel']
   skills:
     - take_off
     - land
@@ -37,7 +37,7 @@ ground_robot_skills:
 
 # Perception skills - Robots with cameras
 perception_skills:
-  robot_types: ['jetbot', 'g1', 'h1', 'cf2x', 'autel']
+  robot_types: ['jetbot', 'g1', 'h1', 'cf2x', 'drone_autel']
   skills:
     - take_photo
     - object_detection

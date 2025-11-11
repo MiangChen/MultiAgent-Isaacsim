@@ -68,7 +68,7 @@ class BlueprintLibrary:
             tags.append("humanoid")
         elif robot_type in ["jetbot"]:
             tags.append("wheeled")
-        elif robot_type in ["cf2x", "autel"]:
+        elif robot_type in ["cf2x", "drone_autel"]:
             tags.append("drone")
 
         bp = Blueprint(f"robot.{robot_type}", robot_class=robot_class, tags=tags)
