@@ -75,7 +75,7 @@ class Robot:
 
         # Robot state (cached from Isaac Sim, updated in on_physics_step)
         self._position = torch.tensor([0.0, 0.0, 0.0])
-        self.quat = torch.tensor([0.0, 0.0, 0.0, 1.0])
+        self._quat = torch.tensor([0.0, 0.0, 0.0, 1.0])
         self._velocity = torch.tensor([0.0, 0.0, 0.0])  # Actual linear velocity (state)
         self._angular_velocity = torch.tensor(
             [0.0, 0.0, 0.0]
@@ -123,7 +123,7 @@ class Robot:
 
     def get_world_pose(self):
         """Get robot world pose (position, quaternion) - Public interface"""
-        return self._position, self.quat
+        return self._position, self._quat
 
     def set_world_pose(self, position, orientation=None):
         """
@@ -134,7 +134,7 @@ class Robot:
             position if isinstance(position, torch.Tensor) else torch.tensor(position)
         )
         if orientation is not None:
-            self.quat = (
+            self._quat = (
                 orientation
                 if isinstance(orientation, torch.Tensor)
                 else torch.tensor(orientation)
@@ -253,7 +253,7 @@ class Robot:
 
         # Update cached state for Application layer
         self._position = pos
-        self.quat = quat
+        self._quat = quat
         self._velocity = vel_linear  # Actual velocity (state)
         self._angular_velocity = vel_angular  # Actual angular velocity (state)
 
