@@ -43,7 +43,7 @@ class RobotCf2x(Robot):
 
         # 无人机基本属性
         self.position = np.array(
-            getattr(cfg_robot, "position", [0.0, 0.0, 0.0]), dtype=np.float32
+            getattr(cfg_robot, "_position", [0.0, 0.0, 0.0]), dtype=np.float32
         )
 
     def initialize(self):

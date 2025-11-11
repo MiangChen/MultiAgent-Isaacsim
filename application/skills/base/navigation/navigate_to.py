@@ -25,7 +25,7 @@ from nav2_msgs.action import ComputePathToPose
 @SkillManager.register()
 def navigate_to(**kwargs):
     """
-    Navigate to target position
+    Navigate to target osition
 
     Application layer skill:
     - ROS: Path planning (gridmap subscription)

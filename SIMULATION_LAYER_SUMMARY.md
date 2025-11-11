@@ -120,17 +120,23 @@ class StaticActor(Actor):
 - **命令变量**（Command）：控制器设置的目标值
 
 **状态变量（私有，只读）：**
+
 ```python
 # 在 on_physics_step 中从 Isaac Sim 更新
-self.position = torch.tensor([0.0, 0.0, 0.0])
+self._position = torch.tensor([0.0, 0.0, 0.0])
 self.quat = torch.tensor([0.0, 0.0, 0.0, 1.0])
 self._velocity = torch.tensor([0.0, 0.0, 0.0])  # 实际线速度
 self._angular_velocity = torch.tensor([0.0, 0.0, 0.0])  # 实际角速度
 
+
 # 公共接口（CARLA 风格）
 def get_velocity(self) -> torch.Tensor
-def get_angular_velocity(self) -> torch.Tensor
-def get_world_pose() -> Tuple[torch.Tensor, torch.Tensor]
+
+
+    def get_angular_velocity(self) -> torch.Tensor
+
+
+    def get_world_pose() -> Tuple[torch.Tensor, torch.Tensor]
 ```
 
 **命令变量（公共，可写）：**
@@ -145,18 +151,19 @@ def apply_control(control: RobotControl)
 ```
 
 **关键：避免覆盖问题**
+
 ```python
 def publish_robot_state(self):
     """在 on_physics_step 中调用，更新状态"""
     pos, quat = self._body.get_world_pose()
     vel, ang_vel = self._body.get_world_vel()
-    
+
     # 只更新状态变量
-    self.position = pos
+    self._position = pos
     self.quat = quat
     self._velocity = vel
     self._angular_velocity = ang_vel
-    
+
     # 不更新 target_velocity/target_angular_velocity！
     # 它们是命令，由 MPC/控制器设置
 ```
@@ -168,7 +175,7 @@ def publish_robot_state(self):
 **Robot 层（on_physics_step）：**
 ```python
 def on_physics_step(self, step_size):
-    # 1. 从 Isaac Sim 读取状态，更新 position, quat, _velocity, _angular_velocity
+    # 1. 从 Isaac Sim 读取状态，更新 _position, quat, _velocity, _angular_velocity
     self.publish_robot_state()
     
     # 2. 更新相机视野

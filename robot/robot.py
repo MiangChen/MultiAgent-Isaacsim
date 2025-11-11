@@ -74,7 +74,7 @@ class Robot:
         self.action: np.ndarray = None
 
         # Robot state (cached from Isaac Sim, updated in on_physics_step)
-        self.position = torch.tensor([0.0, 0.0, 0.0])
+        self._position = torch.tensor([0.0, 0.0, 0.0])
         self.quat = torch.tensor([0.0, 0.0, 0.0, 1.0])
         self._velocity = torch.tensor([0.0, 0.0, 0.0])  # Actual linear velocity (state)
         self._angular_velocity = torch.tensor(
@@ -123,14 +123,14 @@ class Robot:
 
     def get_world_pose(self):
         """Get robot world pose (position, quaternion) - Public interface"""
-        return self.position, self.quat
+        return self._position, self.quat
 
     def set_world_pose(self, position, orientation=None):
         """
         Set robot world pose - Public interface
         This only updates the cached state. The actual Isaac Sim update happens in on_physics_step.
         """
-        self.position = (
+        self._position = (
             position if isinstance(position, torch.Tensor) else torch.tensor(position)
         )
         if orientation is not None:
@@ -252,7 +252,7 @@ class Robot:
         vel_linear, vel_angular = self._body.get_world_vel()
 
         # Update cached state for Application layer
-        self.position = pos
+        self._position = pos
         self.quat = quat
         self._velocity = vel_linear  # Actual velocity (state)
         self._angular_velocity = vel_angular  # Actual angular velocity (state)

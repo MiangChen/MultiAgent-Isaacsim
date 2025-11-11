@@ -42,14 +42,14 @@ DRONE_COLOR_NAMES = list(DRONE_COLOR_SCHEMES.keys())
 DRONE_GEOMETRY_TEMPLATE = {
     "MainBody": {
         "shape_type": "cuboid",
-        "position": [0.0, 0.0, 0.0],
+        "_position": [0.0, 0.0, 0.0],
         "scale": [0.12, 0.06, 0.06],
         "orientation": [1.0, 0.0, 0.0, 0.0],
         "color_type": "main",  # 指定使用哪种颜色
     },
     "Nose": {
         "shape_type": "cuboid",
-        "position": [0.08, 0.0, 0.0],
+        "_position": [0.08, 0.0, 0.0],
         "scale": [0.03, 0.02, 0.02],
         "orientation": [1.0, 0.0, 0.0, 0.0],
         "color_type": "nose",  # 指定使用哪种颜色

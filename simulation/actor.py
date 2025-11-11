@@ -39,9 +39,6 @@ class Actor:
     def destroy(self):
         self._world.unregister_actor(self._actor_id)
 
-    def get_world(self) -> "World":
-        return self._world
-
     def get_prim_path(self) -> str:
         return self._prim_path
 
