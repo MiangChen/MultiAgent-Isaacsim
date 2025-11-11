@@ -76,7 +76,7 @@ class Robot:
         # Robot state (cached from Isaac Sim, updated in on_physics_step)
         self._position = torch.tensor([0.0, 0.0, 0.0])
         self._quat = torch.tensor([0.0, 0.0, 0.0, 1.0])
-        self._velocity = torch.tensor([0.0, 0.0, 0.0])  # Actual linear velocity (state)
+        self._linear_velocity = torch.tensor([0.0, 0.0, 0.0])  # Actual linear velocity (state)
         self._angular_velocity = torch.tensor(
             [0.0, 0.0, 0.0]
         )  # Actual angular velocity (state)
@@ -140,14 +140,14 @@ class Robot:
                 else torch.tensor(orientation)
             )
 
-    def get_velocity(self):
+    def get_linear_velocity(self):
         """
         Get robot linear velocity (CARLA style) - Public interface
 
         Returns the actual velocity (state), not the target/command velocity.
         This is safe to call from Application layer as it returns cached values.
         """
-        return self._velocity
+        return self._linear_velocity
 
     def get_angular_velocity(self):
         """
@@ -163,9 +163,9 @@ class Robot:
         Get robot world velocity (linear, angular) - Public interface
         Alias for compatibility, returns both velocities.
         """
-        return self._velocity, self._angular_velocity
+        return self._linear_velocity, self._angular_velocity
 
-    def set_target_velocity(self, linear_velocity, angular_velocity=None):
+    def set_target_velocity(self, linear_velocity=None, angular_velocity=None):
         """
         Set robot target velocity (CARLA style) - Public interface
 
@@ -176,11 +176,12 @@ class Robot:
             linear_velocity: Target linear velocity [x, y, z]
             angular_velocity: Target angular velocity [x, y, z] (optional)
         """
-        self.target_velocity = (
-            linear_velocity
-            if isinstance(linear_velocity, torch.Tensor)
-            else torch.tensor(linear_velocity)
-        )
+        if linear_velocity is not None:
+            self.target_velocity = (
+                linear_velocity
+                if isinstance(linear_velocity, torch.Tensor)
+                else torch.tensor(linear_velocity)
+            )
         if angular_velocity is not None:
             self.target_angular_velocity = (
                 angular_velocity
@@ -241,21 +242,21 @@ class Robot:
         This method is called in on_physics_step, so it's safe to call Isaac Sim API here.
 
         Updates:
-        - position, quat: Current pose (state)
-        - _velocity, _angular_velocity: Current actual velocity (state)
+        - _position, _quat: Current pose (state)
+        - _linear_velocity, _angular_velocity: Current actual velocity (state)
 
         Does NOT update:
         - target_velocity, target_angular_velocity: These are commands set by controllers
         """
         # Read state from Isaac Sim API (safe in physics step)
         pos, quat = self._body.get_world_pose()
-        vel_linear, vel_angular = self._body.get_world_vel()
+        linear_vel, angular_vel = self._body.get_world_vel()
 
         # Update cached state for Application layer
         self._position = pos
         self._quat = quat
-        self._velocity = vel_linear  # Actual velocity (state)
-        self._angular_velocity = vel_angular  # Actual angular velocity (state)
+        self._linear_velocity = linear_vel  # Actual velocity (state)
+        self._angular_velocity = angular_vel  # Actual angular velocity (state)
 
         # DO NOT update target_velocity/target_angular_velocity here!
         # They are command variables set by MPC/controllers.
@@ -264,8 +265,8 @@ class Robot:
         if self.has_ros():
             pos_np = pos.detach().cpu().numpy()
             quat_np = quat.detach().cpu().numpy()
-            vel_linear_np = vel_linear.detach().cpu().numpy()
-            vel_angular_np = vel_angular.detach().cpu().numpy()
+            vel_linear_np = linear_vel.detach().cpu().numpy()
+            vel_angular_np = angular_vel.detach().cpu().numpy()
 
             self.ros_manager.publish_odometry(
                 pos_np, quat_np, vel_linear_np, vel_angular_np

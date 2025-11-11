@@ -125,7 +125,7 @@ class StaticActor(Actor):
 # 在 on_physics_step 中从 Isaac Sim 更新
 self._position = torch.tensor([0.0, 0.0, 0.0])
 self._quat = torch.tensor([0.0, 0.0, 0.0, 1.0])
-self._velocity = torch.tensor([0.0, 0.0, 0.0])  # 实际线速度
+self._linear_velocity = torch.tensor([0.0, 0.0, 0.0])  # 实际线速度
 self._angular_velocity = torch.tensor([0.0, 0.0, 0.0])  # 实际角速度
 
 
@@ -160,7 +160,7 @@ def publish_robot_state(self):
     # 只更新状态变量
     self._position = pos
     self._quat = quat
-    self._velocity = vel
+    self._linear_velocity = vel
     self._angular_velocity = ang_vel
 
     # 不更新 target_velocity/target_angular_velocity！
@@ -174,7 +174,7 @@ def publish_robot_state(self):
 **Robot 层（on_physics_step）：**
 ```python
 def on_physics_step(self, step_size):
-    # 1. 从 Isaac Sim 读取状态，更新 _position, _quat, _velocity, _angular_velocity
+    # 1. 从 Isaac Sim 读取状态，更新 _position, _quat, _linear_velocity, _angular_velocity
     self.publish_robot_state()
     
     # 2. 更新相机视野
