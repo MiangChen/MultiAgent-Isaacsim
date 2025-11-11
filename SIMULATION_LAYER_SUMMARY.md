@@ -139,14 +139,18 @@ def get_velocity(self) -> torch.Tensor
 ```
 
 **命令变量（公共，可写）：**
+
 ```python
 # 由控制器设置，在 controller_simplified 中应用到 Isaac Sim
-self.target_velocity = torch.tensor([0.0, 0.0, 0.0])  # 目标线速度
+self.target_linear_velocity = torch.tensor([0.0, 0.0, 0.0])  # 目标线速度
 self.target_angular_velocity = torch.tensor([0.0, 0.0, 0.0])  # 目标角速度
+
 
 # 公共接口
 def set_target_velocity(linear_velocity, angular_velocity=None)
-def apply_control(control: RobotControl)
+
+
+    def apply_control(control: RobotControl)
 ```
 
 **关键：避免覆盖问题**
@@ -163,7 +167,7 @@ def publish_robot_state(self):
     self._linear_velocity = vel
     self._angular_velocity = ang_vel
 
-    # 不更新 target_velocity/target_angular_velocity！
+    # 不更新 target_linear_velocity/target_angular_velocity！
     # 它们是命令，由 MPC/控制器设置
 ```
 
@@ -180,27 +184,29 @@ def on_physics_step(self, step_size):
     # 2. 更新相机视野
     self._update_camera_view()
     
-    # 3. 将 target_velocity, target_angular_velocity 应用到 Isaac Sim
-    # Note: target_velocity 由 MPC (Application 层) 通过 clock 回调设置
+    # 3. 将 target_linear_velocity, target_angular_velocity 应用到 Isaac Sim
+    # Note: target_linear_velocity 由 MPC (Application 层) 通过 clock 回调设置
     self.controller_simplified()
 ```
 
 **Application 层（MPC 自动触发）：**
+
 ```python
 # application/skills/base/navigation/node_controller_mpc.py
 def clock_callback(self, msg: Clock):
     """订阅 /isaacsim_simulation_clock，每次 world.tick() 后自动调用"""
     self.latest_sim_time = msg.clock.sec + msg.clock.nanosec / 1e9
-    
+
     # 自动调用 control_loop（Application 层控制）
     self.control_loop()
 
+
 def control_loop(self):
-    """MPC 计算并直接设置 robot.target_velocity"""
+    """MPC 计算并直接设置 robot.target_linear_velocity"""
     optimal_command = self.mpc_controller.solve(...)
-    
+
     if self.robot:
-        self.robot.target_velocity = torch.tensor([...])
+        self.robot.target_linear_velocity = torch.tensor([...])
         self.robot.target_angular_velocity = torch.tensor([...])
 ```
 
@@ -230,25 +236,26 @@ def control_loop(self):
 ```
 
 **解决方案：直接设置（同步，无延迟）**
+
 ```python
 class NodeMpcController(Node):
     def __init__(self, namespace: str, robot=None):
         self.robot = robot  # 直接引用 robot
-    
+
     def control_loop(self):
         optimal_command = self.mpc_controller.solve(...)
-        
+
         # 直接设置目标速度（同步，无延迟）
         if self.robot:
-            self.robot.target_velocity = torch.tensor([
-                optimal_command[0], 
-                optimal_command[1], 
+            self.robot.target_linear_velocity = torch.tensor([
+                optimal_command[0],
+                optimal_command[1],
                 optimal_command[2]
             ])
             self.robot.target_angular_velocity = torch.tensor([
                 0.0, 0.0, optimal_command[3]
             ])
-        
+
         # 仍然发布到 ROS（用于监控/调试）
         self.cmd_vel_pub.publish(cmd_msg)
 ```
@@ -377,7 +384,7 @@ ros2 action send_goal /robot_0/skill_execution plan_msgs/action/SkillExecution \
 ### 4. MPC 控制（自动）
 ```python
 # MPC 在 on_physics_step 中自动运行
-# 直接设置 robot.target_velocity
+# 直接设置 robot.target_linear_velocity
 # 无需手动干预
 ```
 

@@ -53,7 +53,7 @@ class RobotG1(Robot):
         else:
             raise NotImplementedError
 
-        self._body.robot_articulation.set_linear_velocities(self.target_velocity)
+        self._body.robot_articulation.set_linear_velocities(self.target_linear_velocity)
         self._body.robot_articulation.set_angular_velocities(
             self.target_angular_velocity
         )
@@ -63,7 +63,7 @@ class RobotG1(Robot):
         return obs
 
     def on_physics_step(self, step_size):
-        self.target_velocity[2] = 0
+        self.target_linear_velocity[2] = 0
         self.target_angular_velocity[0] = 0
         self.target_angular_velocity[1] = 0
         super().on_physics_step(step_size)

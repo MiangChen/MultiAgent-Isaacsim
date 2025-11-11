@@ -57,9 +57,9 @@ class Robot:
 
         self.viewport_manager = _get_viewport_manager_from_container()
         self.cfg_robot.path_prim_robot = (
-            self.cfg_robot.path_prim_swarm
-            + f"/{self.cfg_robot.type}"
-            + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
+                self.cfg_robot.path_prim_swarm
+                + f"/{self.cfg_robot.type}"
+                + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
         )
         self.cfg_robot.namespace = self.cfg_robot.type + f"_{self.cfg_robot.id}"
         self.namespace = self.cfg_robot.namespace
@@ -83,7 +83,7 @@ class Robot:
 
         # Robot control commands (set by controllers, applied in controller_simplified)
         # Following CARLA naming: these are target/command values, not actual state
-        self.target_velocity = torch.tensor(
+        self.target_linear_velocity = torch.tensor(
             [0.0, 0.0, 0.0]
         )  # Target linear velocity (command)
         self.target_angular_velocity = torch.tensor(
@@ -177,7 +177,7 @@ class Robot:
             angular_velocity: Target angular velocity [x, y, z] (optional)
         """
         if linear_velocity is not None:
-            self.target_velocity = (
+            self.target_linear_velocity = (
                 linear_velocity
                 if isinstance(linear_velocity, torch.Tensor)
                 else torch.tensor(linear_velocity)
@@ -246,7 +246,7 @@ class Robot:
         - _linear_velocity, _angular_velocity: Current actual velocity (state)
 
         Does NOT update:
-        - target_velocity, target_angular_velocity: These are commands set by controllers
+        - target_linear_velocity, target_angular_velocity: These are commands set by controllers
         """
         # Read state from Isaac Sim API (safe in physics step)
         pos, quat = self._body.get_world_pose()
@@ -258,7 +258,7 @@ class Robot:
         self._linear_velocity = linear_vel  # Actual velocity (state)
         self._angular_velocity = angular_vel  # Actual angular velocity (state)
 
-        # DO NOT update target_velocity/target_angular_velocity here!
+        # DO NOT update target_linear_velocity/target_angular_velocity here!
         # They are command variables set by MPC/controllers.
 
         # Publish to ROS if available (use actual velocity for odometry)
@@ -310,7 +310,7 @@ class Robot:
         #     self._initialize_third_person_camera()
 
     def form_feedback(
-        self, status: str = "processing", message: str = "none", progress: int = 100
+            self, status: str = "processing", message: str = "none", progress: int = 100
     ) -> Dict[str, Any]:
         return dict(
             status=str(status),
@@ -325,7 +325,7 @@ class Robot:
         if isinstance(control, RobotControl):
             self._current_control = control  # Cache for get_control()
             # Set target velocity (command), not actual velocity (state)
-            self.target_velocity = torch.tensor(control.linear_velocity)
+            self.target_linear_velocity = torch.tensor(control.linear_velocity)
             self.target_angular_velocity = torch.tensor(control.angular_velocity)
 
     def get_control(self):
@@ -335,7 +335,7 @@ class Robot:
         if not hasattr(self, "_current_control"):
             # Return default control if none applied yet
             control = RobotControl()
-            control.linear_velocity = self.target_velocity.tolist()
+            control.linear_velocity = self.target_linear_velocity.tolist()
             control.angular_velocity = self.target_angular_velocity.tolist()
             return control
         return self._current_control
@@ -377,7 +377,7 @@ class Robot:
         self._update_camera_view()
 
         # 3. Apply target velocity to Isaac Sim
-        # Note: target_velocity is set by MPC (Application layer) via clock callback
+        # Note: target_linear_velocity is set by MPC (Application layer) via clock callback
         self.controller_simplified()
 
         # 4. Execute manipulation control if any
@@ -396,11 +396,11 @@ class Robot:
         This is called in on_physics_step, so it's safe to call Isaac Sim API here.
         """
         if self._body and self._body.robot_articulation.is_physics_handle_valid():
-            self._body.robot_articulation.set_linear_velocities(self.target_velocity)
+            self._body.robot_articulation.set_linear_velocities(self.target_linear_velocity)
             self._body.robot_articulation.set_angular_velocities(
                 self.target_angular_velocity
             )
-            logger.debug(f"Robot Articulation target vel: {self.target_velocity}")
+            logger.debug(f"Robot Articulation target vel: {self.target_linear_velocity}")
 
     def _execute_manipulation_control(self):
         """
@@ -718,7 +718,7 @@ class Robot:
 
             # 2. 计算相机的位置 (eye) 和目标位置 (target)
             camera_eye_position = (
-                robot_position + self.relative_camera_pos + self.transform_camera_pos
+                    robot_position + self.relative_camera_pos + self.transform_camera_pos
             )
             camera_target_position = robot_position
 
