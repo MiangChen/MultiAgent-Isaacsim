@@ -1,4 +1,4 @@
-# 仿真层架构总结
+# 架构总结
 
 ## 📐 三层架构设计
 
@@ -173,105 +173,9 @@ def publish_robot_state(self):
 
 ---
 
-### 4. 控制流程（解耦设计）
+***
 
-**Robot 层（on_physics_step）：**
-```python
-def on_physics_step(self, step_size):
-    # 1. 从 Isaac Sim 读取状态，更新 _position, _quat, _linear_velocity, _angular_velocity
-    self.publish_robot_state()
-    
-    # 2. 更新相机视野
-    self._update_camera_view()
-    
-    # 3. 将 target_linear_velocity, target_angular_velocity 应用到 Isaac Sim
-    # Note: target_linear_velocity 由 MPC (Application 层) 通过 clock 回调设置
-    self.controller_simplified()
-```
-
-**Application 层（MPC 自动触发）：**
-
-```python
-# application/skills/base/navigation/node_controller_mpc.py
-def clock_callback(self, msg: Clock):
-    """订阅 /isaacsim_simulation_clock，每次 world.tick() 后自动调用"""
-    self.latest_sim_time = msg.clock.sec + msg.clock.nanosec / 1e9
-
-    # 自动调用 control_loop（Application 层控制）
-    self.control_loop()
-
-
-def control_loop(self):
-    """MPC 计算并直接设置 robot.target_linear_velocity"""
-    optimal_command = self.mpc_controller.solve(...)
-
-    if self.robot:
-        self.robot.target_linear_velocity = torch.tensor([...])
-        self.robot.target_angular_velocity = torch.tensor([...])
-```
-
-**完全解耦的设计：**
-- ✅ Robot 层不知道 MPC 的存在
-- ✅ MPC 通过 ROS clock 自动触发
-- ✅ MPC 直接设置 `target_velocity`（同步，无延迟）
-- ✅ Robot 只负责应用命令到 Isaac Sim
-
----
-
-### 5. MPC 控制器 - 同步控制
-
-**问题：ROS 异步延迟**
-```python
-# 错误方式：通过 ROS topic（异步，有延迟）
-def control_loop(self):
-    optimal_command = self.mpc_controller.solve(...)
-    
-    # 发布到 ROS topic
-    cmd_msg = Twist()
-    cmd_msg.linear.x = optimal_command[0]
-    self.cmd_vel_pub.publish(cmd_msg)
-    
-    # ROS bridge 在另一个线程中接收，有延迟！
-    # 当前帧的 controller_simplified() 会使用旧速度
-```
-
-**解决方案：直接设置（同步，无延迟）**
-
-```python
-class NodeMpcController(Node):
-    def __init__(self, namespace: str, robot=None):
-        self.robot = robot  # 直接引用 robot
-
-    def control_loop(self):
-        optimal_command = self.mpc_controller.solve(...)
-
-        # 直接设置目标速度（同步，无延迟）
-        if self.robot:
-            self.robot.target_linear_velocity = torch.tensor([
-                optimal_command[0],
-                optimal_command[1],
-                optimal_command[2]
-            ])
-            self.robot.target_angular_velocity = torch.tensor([
-                0.0, 0.0, optimal_command[3]
-            ])
-
-        # 仍然发布到 ROS（用于监控/调试）
-        self.cmd_vel_pub.publish(cmd_msg)
-```
-
-**创建时传递 robot 引用：**
-```python
-# ros/ros_manager_robot.py
-self.node_controller_mpc = NodeMpcController(
-    namespace=self.namespace, 
-    robot=self.robot  # 传递 robot 引用
-)
-```
-
----
-
-### 6. Blueprint 系统
+### 6. Blueprint 类
 
 Blueprint 系统提供了类似 CARLA 的 Actor 创建机制，通过类型标识符和属性配置来创建不同类型的对象。
 
@@ -483,7 +387,7 @@ def spawn_actor(self, blueprint, transform=None):
 
 ---
 
-### 7. ROS Robot Manager 系统
+### 7. ROS Robot Manager 类
 
 ROS Robot Manager 负责管理单个机器人的所有 ROS 基础设施，实现了仿真层与 ROS 层的完全解耦。每个机器人都有独立的 ROS Manager 实例，管理其 ROS 节点、话题、服务和 Action。
 
@@ -1070,6 +974,108 @@ for i, robot in enumerate(robots):
         }
     )
 ```
+
+***
+
+
+
+### 4. 控制流程（解耦设计）
+
+**Robot 层（on_physics_step）：**
+```python
+def on_physics_step(self, step_size):
+    # 1. 从 Isaac Sim 读取状态，更新 _position, _quat, _linear_velocity, _angular_velocity
+    self.publish_robot_state()
+    
+    # 2. 更新相机视野
+    self._update_camera_view()
+    
+    # 3. 将 target_linear_velocity, target_angular_velocity 应用到 Isaac Sim
+    # Note: target_linear_velocity 由 MPC (Application 层) 通过 clock 回调设置
+    self.controller_simplified()
+```
+
+**Application 层（MPC 自动触发）：**
+
+```python
+# application/skills/base/navigation/node_controller_mpc.py
+def clock_callback(self, msg: Clock):
+    """订阅 /isaacsim_simulation_clock，每次 world.tick() 后自动调用"""
+    self.latest_sim_time = msg.clock.sec + msg.clock.nanosec / 1e9
+
+    # 自动调用 control_loop（Application 层控制）
+    self.control_loop()
+
+
+def control_loop(self):
+    """MPC 计算并直接设置 robot.target_linear_velocity"""
+    optimal_command = self.mpc_controller.solve(...)
+
+    if self.robot:
+        self.robot.target_linear_velocity = torch.tensor([...])
+        self.robot.target_angular_velocity = torch.tensor([...])
+```
+
+**完全解耦的设计：**
+- ✅ Robot 层不知道 MPC 的存在
+- ✅ MPC 通过 ROS clock 自动触发
+- ✅ MPC 直接设置 `target_velocity`（同步，无延迟）
+- ✅ Robot 只负责应用命令到 Isaac Sim
+
+---
+
+### 5. MPC 控制器 - 同步控制
+
+**问题：ROS 异步延迟**
+```python
+# 错误方式：通过 ROS topic（异步，有延迟）
+def control_loop(self):
+    optimal_command = self.mpc_controller.solve(...)
+    
+    # 发布到 ROS topic
+    cmd_msg = Twist()
+    cmd_msg.linear.x = optimal_command[0]
+    self.cmd_vel_pub.publish(cmd_msg)
+    
+    # ROS bridge 在另一个线程中接收，有延迟！
+    # 当前帧的 controller_simplified() 会使用旧速度
+```
+
+**解决方案：直接设置（同步，无延迟）**
+
+```python
+class NodeMpcController(Node):
+    def __init__(self, namespace: str, robot=None):
+        self.robot = robot  # 直接引用 robot
+
+    def control_loop(self):
+        optimal_command = self.mpc_controller.solve(...)
+
+        # 直接设置目标速度（同步，无延迟）
+        if self.robot:
+            self.robot.target_linear_velocity = torch.tensor([
+                optimal_command[0],
+                optimal_command[1],
+                optimal_command[2]
+            ])
+            self.robot.target_angular_velocity = torch.tensor([
+                0.0, 0.0, optimal_command[3]
+            ])
+
+        # 仍然发布到 ROS（用于监控/调试）
+        self.cmd_vel_pub.publish(cmd_msg)
+```
+
+**创建时传递 robot 引用：**
+```python
+# ros/ros_manager_robot.py
+self.node_controller_mpc = NodeMpcController(
+    namespace=self.namespace, 
+    robot=self.robot  # 传递 robot 引用
+)
+```
+
+---
 
 ---
 
