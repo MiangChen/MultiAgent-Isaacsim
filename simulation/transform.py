@@ -1,9 +1,32 @@
+def _to_python_scalar(value):
+    """
+    将 torch tensor, numpy array 或其他类型转换为 Python 标量
+    """
+    if hasattr(value, 'item'):
+        # torch tensor 或 numpy scalar
+        return value.item()
+    return float(value)
+
+
+def _to_python_list(array):
+    """
+    将 torch tensor, numpy array 或其他类型转换为 Python list
+    """
+    if hasattr(array, 'tolist'):
+        # torch tensor 或 numpy array
+        return array.tolist()
+    elif hasattr(array, '__iter__'):
+        # 可迭代对象，逐个转换
+        return [_to_python_scalar(x) for x in array]
+    return list(array)
+
+
 class Location:
 
     def __init__(self, x: float = 0.0, y: float = 0.0, z: float = 0.0):
-        self.x = float(x)
-        self.y = float(y)
-        self.z = float(z)
+        self.x = _to_python_scalar(x)
+        self.y = _to_python_scalar(y)
+        self.z = _to_python_scalar(z)
 
     def __repr__(self):
         return f"Location(x={self.x:.2f}, y={self.y:.2f}, z={self.z:.2f})"
@@ -14,81 +37,81 @@ class Location:
 
 class Rotation:
 
-    def __init__(
-        self,
-        pitch: float = 0.0,
-        yaw: float = 0.0,
-        roll: float = 0.0,
-        quaternion: list = None,
-    ):
+    def __init__(self, quaternion=None, order: str = "xyzw"):
         """
-        Initialize rotation with either Euler angles or quaternion.
+        Initialize rotation with quaternion only.
 
         Args:
-            pitch: Pitch angle in degrees
-            yaw: Yaw angle in degrees
-            roll: Roll angle in degrees
-            quaternion: Quaternion [x, y, z, w] (overrides Euler angles if provided)
+            quaternion: Quaternion as list/array/tensor [x, y, z, w] or [w, x, y, z]
+                       If None, defaults to identity quaternion [0, 0, 0, 1]
+            order: "xyzw" (default) or "wxyz" to specify quaternion order
         """
-        if quaternion is not None:
-            self._quaternion = list(quaternion)
-            self.pitch = 0.0
-            self.yaw = 0.0
-            self.roll = 0.0
+        if quaternion is None:
+            # 默认单位四元数
+            self._quaternion = [0.0, 0.0, 0.0, 1.0]
         else:
-            self.pitch = float(pitch)
-            self.yaw = float(yaw)
-            self.roll = float(roll)
-            self._quaternion = None
+            # 统一转换为 Python list
+            quaternion = _to_python_list(quaternion)
+            
+            # 处理顺序转换
+            if order == "wxyz":
+                w, x, y, z = quaternion
+                self._quaternion = [x, y, z, w]
+            else:
+                self._quaternion = quaternion
 
     def to_quaternion(self):
         """Return quaternion representation [x, y, z, w]"""
-        if self._quaternion is not None:
-            return self._quaternion
-
-        # Convert Euler angles to quaternion
-        from math import cos, sin, radians
-
-        pitch_rad = radians(self.pitch)
-        yaw_rad = radians(self.yaw)
-        roll_rad = radians(self.roll)
-
-        cy = cos(yaw_rad * 0.5)
-        sy = sin(yaw_rad * 0.5)
-        cp = cos(pitch_rad * 0.5)
-        sp = sin(pitch_rad * 0.5)
-        cr = cos(roll_rad * 0.5)
-        sr = sin(roll_rad * 0.5)
-
-        w = cr * cp * cy + sr * sp * sy
-        x = sr * cp * cy - cr * sp * sy
-        y = cr * sp * cy + sr * cp * sy
-        z = cr * cp * sy - sr * sp * cy
-
-        return [x, y, z, w]
+        return self._quaternion
 
     def __repr__(self):
-        if self._quaternion is not None:
-            return f"Rotation(quaternion={self._quaternion})"
-        return f"Rotation(pitch={self.pitch:.2f}, yaw={self.yaw:.2f}, roll={self.roll:.2f})"
+        return f"Rotation(quaternion={self._quaternion})"
 
 
 class Transform:
 
-    def __init__(self, location: Location = None, rotation: Rotation = None):
-        self.location = location if location is not None else Location()
-        self.rotation = rotation if rotation is not None else Rotation()
+    def __init__(self, location=None, rotation=None, order: str = "xyzw"):
+        """
+        Initialize Transform with location and rotation.
+        
+        Args:
+            location: Location object, or list/array [x, y, z]
+                     Must be provided explicitly (no default)
+            rotation: Rotation object, or list/array (quaternion)
+                     Must be provided explicitly (no default)
+        """
+        # 处理 location - 不提供默认值，强制用户显式设置
+        if location is None:
+            self.location = None
+        elif isinstance(location, Location):
+            self.location = location
+        elif hasattr(location, '__iter__'):
+            # list, torch tensor, numpy array
+            loc_list = _to_python_list(location)
+            self.location = Location(loc_list[0], loc_list[1], loc_list[2])
+        else:
+            raise ValueError(f"Invalid location type: {type(location)}")
+        
+        # 处理 rotation - 不提供默认值，强制用户显式设置
+        if rotation is None:
+            self.rotation = None
+        elif isinstance(rotation, Rotation):
+            self.rotation = rotation
+        elif hasattr(rotation, '__iter__'):
+            self.rotation = Rotation(quaternion=rotation, order=order)
+        else:
+            raise ValueError(f"Invalid rotation type: {type(rotation)}")
 
     def __repr__(self):
-        return f"Transform({self.location}, {self.rotation})"
+        return f"Transform(location={self.location}, rotation={self.rotation})"
 
 
 class Vector3D:
 
     def __init__(self, x: float = 0.0, y: float = 0.0, z: float = 0.0):
-        self.x = float(x)
-        self.y = float(y)
-        self.z = float(z)
+        self.x = _to_python_scalar(x)
+        self.y = _to_python_scalar(y)
+        self.z = _to_python_scalar(z)
 
     def length(self) -> float:
         return (self.x**2 + self.y**2 + self.z**2) ** 0.5

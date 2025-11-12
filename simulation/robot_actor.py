@@ -1,5 +1,5 @@
 from simulation.actor import Actor
-from simulation.transform import Transform, Location, Vector3D
+from simulation.transform import Transform, Location, Vector3D, Rotation
 
 
 class RobotActor(Actor):
@@ -18,8 +18,8 @@ class RobotActor(Actor):
         return f"robot.{self.robot.cfg_robot.type}"
 
     def get_transform(self) -> Transform:
-        pos, quat = self.robot.get_world_pose()
-        return Transform(location=Location(pos[0].item(), pos[1].item(), pos[2].item()))
+        pos, quat = self.robot.get_world_pose()  # tensor
+        return Transform(location=pos, rotation=quat, order="wxyz")
 
     def set_transform(self, transform: Transform):
         self.robot.set_world_pose(

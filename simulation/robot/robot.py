@@ -94,7 +94,7 @@ class Robot:
 
     ########################## Public Interface (Application Layer) ############################
 
-    def get_world_pose(self):
+    def get_world_pose(self) -> torch.Tensor:
         """Get robot world pose (position, quaternion) - Public interface"""
         return self._position, self._quat
 
