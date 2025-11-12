@@ -298,13 +298,6 @@ def main():
             omni_lidar_bp, omni_lidar_transform, attach_to=cf2x_actor
         )
 
-        ## Listen to Omni LiDAR data (optional - for testing)
-        def process_omni_lidar_data(lidar_data):
-            if lidar_data.frame % 60 == 0:  # Log every 60 frames
-                logger.info(f"Omni LiDAR: {lidar_data}")
-
-        omni_lidar.listen(process_omni_lidar_data)
-
         logger.info(f"✅ Omni LiDAR added to cf2x_0 at {omni_lidar.get_prim_path()}")
         logger.info(f"   Config: autel_perception_120x352, Output: 352x120, Max depth: 100m")
 

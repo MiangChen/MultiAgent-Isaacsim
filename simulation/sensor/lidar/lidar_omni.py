@@ -101,7 +101,9 @@ class LidarOmni:
 
     @carb.profiler.profile
     def get_pointcloud(self):
-        """从深度图生成点云，使用缓存的LUT"""
+        """从深度图生成点云，使用缓存的LUT
+        shape: width * height * 3
+        """
         if self._depth2pc_lut is None:
             self._depth2pc_lut = self.create_depth2pc_lut()
         self.get_depth()

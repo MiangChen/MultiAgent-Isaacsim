@@ -34,7 +34,7 @@ class LidarIsaacSensor(SensorActor):
             parent: Parent actor (robot)
         """
         super().__init__(lidar_impl, world, parent)
-        
+
         # Frequency control
         self._frequency = getattr(lidar_impl.cfg_lidar, 'frequency', 10)  # Default 10Hz
         self._tick_interval = 1.0 / self._frequency if self._frequency > 0 else 0.0
@@ -53,12 +53,12 @@ class LidarIsaacSensor(SensorActor):
         """
         if not self._is_listening or self._callback is None:
             return
-        
+
         # Frequency control: only process at specified frequency
         self._time_since_last_tick += step_size
         if self._tick_interval > 0 and self._time_since_last_tick < self._tick_interval:
             return
-        
+
         self._time_since_last_tick = 0.0
 
         try:
@@ -142,7 +142,7 @@ class LidarOmniSensor(SensorActor):
             parent: Parent actor (robot)
         """
         super().__init__(lidar_impl, world, parent)
-        
+
         # Frequency control
         self._frequency = getattr(lidar_impl.cfg_lidar, 'frequency', 10)  # Default 10Hz
         self._tick_interval = 1.0 / self._frequency if self._frequency > 0 else 0.0
@@ -161,25 +161,20 @@ class LidarOmniSensor(SensorActor):
         """
         if not self._is_listening or self._callback is None:
             return
-        
+
         # Frequency control: only process at specified frequency
         self._time_since_last_tick += step_size
         if self._tick_interval > 0 and self._time_since_last_tick < self._tick_interval:
             return
-        
+
         self._time_since_last_tick = 0.0
 
         try:
             # Get point cloud from Omni LiDAR
             point_cloud = self.sensor.get_pointcloud()
-            
+
             if point_cloud is None or point_cloud.size == 0:
                 return
-
-            # Reshape to [N, 3] if needed
-            if len(point_cloud.shape) == 3:
-                # Shape is [H, W, 3], flatten to [N, 3]
-                point_cloud = point_cloud.reshape(-1, 3)
 
             lidar_data = LidarData(
                 frame=self._world.get_simulation_time(),

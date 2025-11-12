@@ -221,8 +221,7 @@ class RobotRosManager:
         # Create appropriate bridge
         if sensor_type == 'lidar':
             topic = topic_name or 'lidar/points'
-            bridge = LidarRosBridge(self.node, self.namespace, topic, 
-                                   sensor_actor=sensor_actor, frame_id=frame_id)
+            bridge = LidarRosBridge(self.node, self.namespace, topic, frame_id=frame_id)
         elif sensor_type == 'camera':
             topic = topic_name or 'camera/image_raw'
             bridge = CameraRosBridge(self.node, self.namespace, topic)

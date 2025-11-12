@@ -24,10 +24,10 @@ class CfgLidar:
     output_size: Optional[Tuple[int, int]] = (32, 1800)
     # 雷达的最大深度, 如果超过该深度, 则会被设置成这个数值 (用于 Omni LiDAR)
     max_depth: float = 1000.0
-    # 等距投影图像宽度（像素）(用于 Omni LiDAR)
-    erp_width: int = 120
     # 等距投影图像高度（像素) (用于 Omni LiDAR)
     erp_height: int = 352
+    # 等距投影图像宽度（像素）(用于 Omni LiDAR)
+    erp_width: int = 120
     # 水平视场角（度）(用于 Omni LiDAR)
     erp_width_fov: float = 90.0
     # 垂直视场角（度）(用于 Omni LiDAR)
