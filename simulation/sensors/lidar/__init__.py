@@ -18,8 +18,8 @@ from .cfg_lidar import CfgLidar
 # from .lidar_omni import LidarOmni
 
 __all__ = [
-    'RayCastLidarBlueprint',
-    'CfgLidar',
+    "RayCastLidarBlueprint",
+    "CfgLidar",
     # 'LidarIsaac',  # Import on demand
     # 'LidarOmni',   # Import on demand
 ]

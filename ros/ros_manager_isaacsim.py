@@ -66,7 +66,9 @@ class RosManagerIsaac:
             for n in self.node.values():
                 if n:
                     self.executor.add_node(n)
-                    logger.debug(f"Added node {n.get_name()} to ROS manager Isaac executor")
+                    logger.debug(
+                        f"Added node {n.get_name()} to ROS manager Isaac executor"
+                    )
 
             while not self.stop_event.is_set():
                 self.executor.spin_once(timeout_sec=0.05)

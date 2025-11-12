@@ -29,8 +29,8 @@ logger = LogManager.get_logger(__name__)
 class RobotCf2x(Robot):
 
     def __init__(
-        self,
-        cfg_robot: Dict = {},
+            self,
+            cfg_robot: Dict = {},
     ) -> None:
         self.cfg_robot = CfgDroneCf2X(**cfg_robot)
         super().__init__()
@@ -84,36 +84,6 @@ class RobotCf2x(Robot):
         else:
             print("WARNING: Raycast did not hit any surface below the robot.")
             return None  # 或者返回一个默认的安全高度，比如 0.0
-
-    #
-    # def move_vertically(self, target_height, state):
-    #
-    #     pos, quat = self.body.get_world_pose()
-    #     self.position = to_torch(pos)
-    #     cur_pos = np.array(pos[0], dtype=np.float32)
-    #     delta_z = target_height - cur_pos[2]
-    #
-    #     if delta_z <= 0.05:
-    #         zero_velocity = torch.zeros((1, 3), dtype=torch.float32)
-    #         self.body.robot_articulation.set_linear_velocities(zero_velocity)
-    #         if state == "landing":
-    #             self.flight_state = "landed"
-    #             print(f"无人机降落到高度: {target_height}m")
-    #         elif state == "hovering":
-    #             # 取消重力
-    #             M = 1
-    #             K = self.body.robot_articulation.num_bodies
-    #             values_array = torch.full((M, K), fill_value=1, dtype=torch.uint8)
-    #             self.body.robot_articulation.set_body_disable_gravity(
-    #                 values=values_array
-    #             )
-    #             self.flight_state = "hovering"
-    #             print(f"无人机起飞到高度: {target_height}m")
-    #         return
-    #
-    #     linear_velocity = torch.tensor([0, 0, delta_z], dtype=torch.float32)
-    #     self.body.robot_articulation.set_linear_velocities(linear_velocity)
-    #     self.velocity = linear_velocity
 
     def on_physics_step(self, step_size):
         super().on_physics_step(step_size)

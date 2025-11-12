@@ -4,10 +4,10 @@ from typing import List, Dict, Optional
 class ActorBlueprint:
     """
     Actor Blueprint (CARLA style)
-    
+
     Base class for all actor blueprints (robots, sensors, static props, etc.)
     """
-    
+
     def __init__(self, blueprint_id: str, robot_class=None, tags: List[str] = None):
         self.id = blueprint_id
         self.robot_class = robot_class
@@ -55,14 +55,16 @@ class BlueprintLibrary:
 
         # Register static props (CARLA style: static.prop.*)
         self._register_static_props()
-        
+
         # Register sensors (CARLA style: sensor.*)
         self._register_sensors()
 
     def _register_static_props(self):
         """注册静态物体 Register static props (CARLA style)"""
         # Box
-        bp = ActorBlueprint("static.prop.box", robot_class=None, tags=["static", "prop"])
+        bp = ActorBlueprint(
+            "static.prop.box", robot_class=None, tags=["static", "prop"]
+        )
         bp.set_attribute("shape_type", "cuboid")
         bp.set_attribute("entity_type", "visual")
         self._blueprints[bp.id] = bp
@@ -74,7 +76,7 @@ class BlueprintLibrary:
         bp.set_attribute("shape_type", "cuboid")
         bp.set_attribute("entity_type", "visual")
         self._blueprints[bp.id] = bp
-        
+
     def _register_sensors(self):
         """注册传感器 Register sensors (CARLA style)"""
         from simulation.sensors.camera.camera_blueprint import (
@@ -84,15 +86,15 @@ class BlueprintLibrary:
         from simulation.sensors.lidar.lidar_blueprint import (
             RayCastLidarBlueprint,
         )
-        
+
         # RGB Camera
-        self._blueprints['sensor.camera.rgb'] = RGBCameraBlueprint()
-        
+        self._blueprints["sensor.camera.rgb"] = RGBCameraBlueprint()
+
         # Depth Camera
-        self._blueprints['sensor.camera.depth'] = DepthCameraBlueprint()
-        
+        self._blueprints["sensor.camera.depth"] = DepthCameraBlueprint()
+
         # LiDAR
-        self._blueprints['sensor.lidar.ray_cast'] = RayCastLidarBlueprint()
+        self._blueprints["sensor.lidar.ray_cast"] = RayCastLidarBlueprint()
 
     def register_robot_class(self, robot_type: str, robot_class: type):
         tags = ["robot"]

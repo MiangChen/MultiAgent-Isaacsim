@@ -10,8 +10,8 @@ from .camera_actor import RGBCamera
 from .lidar_actor import LidarSensor
 
 __all__ = [
-    'CameraData',
-    'LidarData',
-    'RGBCamera',
-    'LidarSensor',
+    "CameraData",
+    "LidarData",
+    "RGBCamera",
+    "LidarSensor",
 ]

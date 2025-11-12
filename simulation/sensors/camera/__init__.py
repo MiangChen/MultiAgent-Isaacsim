@@ -18,9 +18,9 @@ from .cfg_camera_third import CfgCameraThird
 # from .camera import Camera
 
 __all__ = [
-    'RGBCameraBlueprint',
-    'DepthCameraBlueprint',
-    'CfgCamera',
-    'CfgCameraThird',
+    "RGBCameraBlueprint",
+    "DepthCameraBlueprint",
+    "CfgCamera",
+    "CfgCameraThird",
     # 'Camera',  # Import on demand
 ]

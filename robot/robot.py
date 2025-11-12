@@ -16,13 +16,7 @@ import torch
 
 # Local project imports
 from log.log_manager import LogManager
-from physics_engine.isaacsim_utils import (
-    Scene,
-    prims_utils,
-    create_viewport_for_camera,
-    set_camera_view,
-    Camera,
-)
+from physics_engine.isaacsim_utils import Scene, prims_utils
 from robot.body import BodyRobot
 
 # ROS2 message imports
@@ -37,27 +31,12 @@ from gsi_msgs.gsi_msgs_helper import (
 logger = LogManager.get_logger(__name__)
 
 
-def _get_viewport_manager_from_container():
-    try:
-        from containers import get_container
-
-        container = get_container()
-        return container.viewport_manager()
-    except Exception as e:
-        raise Exception("ViewportManager not found in container") from e
-
-
 class Robot:
     def __init__(self):
-        # Note: Cameras are now created using CARLA-style Blueprint system
-        # See main_example.py for how to add sensors to robots
-        pass
-
-        self.viewport_manager = _get_viewport_manager_from_container()
         self.cfg_robot.path_prim_robot = (
-                self.cfg_robot.path_prim_swarm
-                + f"/{self.cfg_robot.type}"
-                + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
+            self.cfg_robot.path_prim_swarm
+            + f"/{self.cfg_robot.type}"
+            + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
         )
         self.cfg_robot.namespace = self.cfg_robot.type + f"_{self.cfg_robot.id}"
         self.namespace = self.cfg_robot.namespace
@@ -74,7 +53,9 @@ class Robot:
         # Robot state (cached from Isaac Sim, updated in on_physics_step)
         self._position = torch.tensor([0.0, 0.0, 0.0])
         self._quat = torch.tensor([0.0, 0.0, 0.0, 1.0])
-        self._linear_velocity = torch.tensor([0.0, 0.0, 0.0])  # Actual linear velocity (state)
+        self._linear_velocity = torch.tensor(
+            [0.0, 0.0, 0.0]
+        )  # Actual linear velocity (state)
         self._angular_velocity = torch.tensor(
             [0.0, 0.0, 0.0]
         )  # Actual angular velocity (state)
@@ -96,12 +77,6 @@ class Robot:
 
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
-
-        # 第三视角相机 一个机器人只有一个
-        # self.cfg_camera_third_person = cfg_camera_third_person
-        self.viewport_name = None  # 存储viewport名称
-        self.relative_camera_pos = np.array([0, 0, 0])  # 默认为0向量
-        self.transform_camera_pos = np.array([0, 0, 0])
 
         # ROS manager (optional, injected from outside)
         self.ros_manager = None
@@ -290,14 +265,12 @@ class Robot:
             self.ros_manager.stop()
 
     def initialize(self) -> None:
-        # Note: Camera initialization removed
-        # Cameras are now created using CARLA-style Blueprint system
-        # See main_example.py for examples
+        """Initialize robot (sensors are created separately via Blueprint system)"""
         pass
         return
 
     def form_feedback(
-            self, status: str = "processing", message: str = "none", progress: int = 100
+        self, status: str = "processing", message: str = "none", progress: int = 100
     ) -> Dict[str, Any]:
         return dict(
             status=str(status),
@@ -360,22 +333,15 @@ class Robot:
         # 1. Update robot state from Isaac Sim
         self.publish_robot_state()
 
-        # 2. Update camera view
-        # self._update_camera_view()
-
-        # 3. Apply target velocity to Isaac Sim
+        # 2. Apply target velocity to Isaac Sim
         # Note: target_linear_velocity is set by MPC (Application layer) via clock callback
         self.controller_simplified()
 
-        # 4. Execute manipulation control if any
+        # 3. Execute manipulation control if any
         if self._manipulation_control is not None:
             self._execute_manipulation_control()
 
         return
-
-    def post_reset(self) -> None:
-        for sensor in self.cameras.values():
-            sensor.post_reset()
 
     def controller_simplified(self) -> None:
         """
@@ -383,11 +349,15 @@ class Robot:
         This is called in on_physics_step, so it's safe to call Isaac Sim API here.
         """
         if self._body and self._body.robot_articulation.is_physics_handle_valid():
-            self._body.robot_articulation.set_linear_velocities(self.target_linear_velocity)
+            self._body.robot_articulation.set_linear_velocities(
+                self.target_linear_velocity
+            )
             self._body.robot_articulation.set_angular_velocities(
                 self.target_angular_velocity
             )
-            logger.debug(f"Robot Articulation target vel: {self.target_linear_velocity}")
+            logger.debug(
+                f"Robot Articulation target vel: {self.target_linear_velocity}"
+            )
 
     def _execute_manipulation_control(self):
         """
@@ -644,95 +614,6 @@ class Robot:
                 "message": f"Place failed: {str(e)}",
                 "data": {},
             }
-    #
-    # def _initialize_third_person_camera(self):
-    #     """初始化第三人称相机并注册到ViewportManager"""
-    #     logger.info(f"Creating third-person camera for robot {self.cfg_robot.id}...")
-    #
-    #     # 1. 为相机创建唯一的prim路径和视口名称
-    #     self.camera_prim_path = f"/World/Robot_{self.cfg_robot.id}_Camera"
-    #     self.viewport_name = f"Viewport_Robot_{self.cfg_robot.id}"
-    #
-    #     # # 如果prim已存在，先删除（可选，用于热重载）
-    #     # if prims_utils.is_prim_path_valid(self.camera_prim_path):
-    #     #     prims_utils.delete_prim(self.camera_prim_path)
-    #
-    #     # 2. 创建相机Prim
-    #
-    #     camera = Camera(prim_path=self.camera_prim_path)
-    #     camera.set_focal_length(2)
-    #
-    #     # 3. 创建视口
-    #     viewport_obj = create_viewport_for_camera(
-    #         viewport_name=self.viewport_name,
-    #         camera_prim_path=self.camera_prim_path,
-    #         width=self.cfg_camera_third_person.viewport_size[0],
-    #         height=self.cfg_camera_third_person.viewport_size[1],
-    #         position_x=self.cfg_camera_third_person.viewport_position[0],
-    #         position_y=self.cfg_camera_third_person.viewport_position[1],
-    #     )
-    #
-    #     # 4. 注册viewport到ViewportManager
-    #     if viewport_obj and self.viewport_manager:
-    #         success = self.viewport_manager.register_viewport(
-    #             self.viewport_name, viewport_obj
-    #         )
-    #         if success:
-    #             self.viewport_manager.map_camera(
-    #                 self.viewport_name, self.camera_prim_path
-    #             )
-    #             logger.info(
-    #                 f"Robot {self.cfg_robot.id} viewport registered to ViewportManager"
-    #             )
-    #         else:
-    #             raise RuntimeError(
-    #                 f"Failed to register viewport for robot {self.cfg_robot.id}"
-    #             )
-    #
-    #     # 5. 将相对位置转换为numpy数组以便后续计算
-    #     self.relative_camera_pos = np.array(
-    #         self.cfg_camera_third_person.relative_position
-    #     )
-    #     self.transform_camera_pos = np.array(
-    #         self.cfg_camera_third_person.transform_position
-    #     )
-
-    def _update_camera_view(self):
-        """更新第三人称相机的位置和朝向"""
-        if self.camera_third_dict:
-            # 1. 获取机器人的当前位置
-            robot_position, _ = self.get_world_poses()  # torch.tensor
-
-            # 2. 计算相机的位置 (eye) 和目标位置 (target)
-            camera_eye_position = (
-                    robot_position + self.relative_camera_pos + self.transform_camera_pos
-            )
-            camera_target_position = robot_position
-
-            # 3. 设置相机视图
-            set_camera_view(
-                eye=camera_eye_position,
-                target=camera_target_position,
-                camera_prim_path=self.camera_prim_path,
-            )
-
-    def get_viewport_info(self):
-        """
-        获取robot的viewport信息，供ViewportManager批量操作使用
-
-        Returns:
-            dict: 包含viewport_name, camera_path等信息的字典
-        """
-        return {
-            "viewport_name": self.viewport_name,
-            "camera_path": self.camera_prim_path,
-            "robot_id": self.cfg_robot.id if self.cfg_robot else None,
-            "enabled": (
-                self.cfg_camera_third_person.enabled
-                if self.cfg_camera_third_person
-                else False
-            ),
-        }
 
     def update_sim_time(self, sim_time):
         """更新仿真时间"""

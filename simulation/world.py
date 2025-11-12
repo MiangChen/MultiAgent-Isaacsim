@@ -67,7 +67,7 @@ class World:
                     "Please provide 'attach_to' parameter."
                 )
             return self._spawn_sensor(blueprint, transform, attach_to)
-        
+
         # Use tags to determine actor type (more flexible than checking robot_class)
         if blueprint.has_tag("static"):
             return self._spawn_static_prop(blueprint, transform)
@@ -335,51 +335,50 @@ class World:
             return None
 
         return self._scene_manager.overlap_hits_target_ancestor(prim_path)
-    
+
     # ============================================================================
     # Sensor Operations (CARLA Style)
     # ============================================================================
-    
+
     def _spawn_sensor(self, blueprint, transform, parent_actor):
         """
         Spawn sensor and attach to parent (CARLA style)
-        
+
         Args:
             blueprint: Sensor blueprint
             transform: Relative transform
             parent_actor: Parent actor (robot)
-            
+
         Returns:
             Sensor actor
         """
         # 1. Auto-construct sensor path
         sensor_path = self._construct_sensor_path(parent_actor, blueprint)
-        
+
         # 2. Extract relative transform
         translation, quaternion = self._extract_transform(transform)
-        
+
         # 3. Create sensor implementation (Isaac Sim layer)
         sensor_impl = self._create_sensor_impl(
             sensor_path, translation, quaternion, blueprint
         )
-        
+
         # 4. Create sensor actor (abstraction layer)
         sensor_actor = blueprint.sensor_class(sensor_impl, self, parent_actor)
-        
+
         # 5. Register physics callback
         self._isaac_world.add_physics_callback(
-            f'sensor_{sensor_actor.get_id()}',
-            sensor_actor.tick
+            f"sensor_{sensor_actor.get_id()}", sensor_actor.tick
         )
-        
+
         return sensor_actor
-        
+
     def _construct_sensor_path(self, parent_actor, blueprint):
         """
         Auto-construct sensor prim path
-        
+
         Rule: parent_path/sensors/sensor_type_id
-        
+
         Example:
         - Parent: /World/robot_swarm/jetbot/jetbot_0
         - Sensor: sensor.camera.rgb
@@ -387,117 +386,119 @@ class World:
         - Result: /World/robot_swarm/jetbot/jetbot_0/sensors/sensor_camera_rgb_0
         """
         parent_path = parent_actor.get_prim_path()
-        sensor_type = blueprint.id.replace('.', '_')
+        sensor_type = blueprint.id.replace(".", "_")
         sensor_name = f"{sensor_type}_{self._next_actor_id}"
         return f"{parent_path}/sensors/{sensor_name}"
-        
+
     def _extract_transform(self, transform):
         """
         Extract translation and quaternion from Transform
-        
+
         Args:
             transform: Transform object
-            
+
         Returns:
             (translation, quaternion) tuple
         """
         if transform is None:
             return [0, 0, 0], [1, 0, 0, 0]
-            
-        translation = [
-            transform.location.x,
-            transform.location.y,
-            transform.location.z
-        ]
-        
+
+        translation = [transform.location.x, transform.location.y, transform.location.z]
+
         # Convert rotation to quaternion
         quaternion = transform.rotation.to_quaternion()
-        
+
         # Isaac Sim uses [w, x, y, z], but to_quaternion returns [x, y, z, w]
         # Reorder to [w, x, y, z]
         quaternion = [quaternion[3], quaternion[0], quaternion[1], quaternion[2]]
-        
+
         return translation, quaternion
-        
+
     def _create_sensor_impl(self, sensor_path, translation, quaternion, blueprint):
         """
         Create sensor implementation (Isaac Sim layer)
-        
+
         Args:
             sensor_path: Auto-generated sensor path
             translation: Relative position
             quaternion: Relative orientation [w, x, y, z]
             blueprint: Sensor blueprint
-            
+
         Returns:
             Sensor implementation (Camera or LidarIsaac)
         """
-        if blueprint.id == 'sensor.camera.rgb':
-            return self._create_camera_impl(sensor_path, translation, quaternion, blueprint)
-        elif blueprint.id == 'sensor.lidar.ray_cast':
-            return self._create_lidar_impl(sensor_path, translation, quaternion, blueprint)
+        if blueprint.id == "sensor.camera.rgb":
+            return self._create_camera_impl(
+                sensor_path, translation, quaternion, blueprint
+            )
+        elif blueprint.id == "sensor.lidar.ray_cast":
+            return self._create_lidar_impl(
+                sensor_path, translation, quaternion, blueprint
+            )
         else:
             raise ValueError(f"Unknown sensor type: {blueprint.id}")
-            
+
     def _create_camera_impl(self, sensor_path, translation, quaternion, blueprint):
         """Create camera implementation"""
         from simulation.sensors.camera.camera import Camera
         from simulation.sensors.camera.cfg_camera import CfgCamera
-        
+
         # Construct config
         cfg = CfgCamera(
             path_prim_absolute=sensor_path,
             resolution=(
-                blueprint.get_attribute('image_size_x'),
-                blueprint.get_attribute('image_size_y')
+                blueprint.get_attribute("image_size_x"),
+                blueprint.get_attribute("image_size_y"),
             ),
             translation=translation,
             orientation=quaternion,
-            focal_length=blueprint.get_attribute('focal_length'),
-            enable_semantic_detection=blueprint.get_attribute('enable_semantic_detection'),
+            focal_length=blueprint.get_attribute("focal_length"),
+            enable_semantic_detection=blueprint.get_attribute(
+                "enable_semantic_detection"
+            ),
         )
 
         # Extract parent path
-        parent_path = '/'.join(sensor_path.split('/')[:-1])
-        
+        parent_path = "/".join(sensor_path.split("/")[:-1])
+
         # Create camera
         camera = Camera(path_prim_parent=parent_path, cfg_camera=cfg)
         camera.initialize()
 
         return camera
-        
+
     def _create_lidar_impl(self, sensor_path, translation, quaternion, blueprint):
         """Create LiDAR implementation"""
         from simulation.sensors.lidar.lidar_isaac import LidarIsaac
         from simulation.sensors.lidar.cfg_lidar import CfgLidar
         from robot.cfg import CfgRobot
-        
+
         # Construct LiDAR config
         cfg_lidar = CfgLidar(
-            name=sensor_path.split('/')[-1],
+            name=sensor_path.split("/")[-1],
             prim_path=sensor_path,
             translation=translation,
             quat=quaternion,
-            config_file_name=blueprint.get_attribute('config_file_name'),
-            channels=blueprint.get_attribute('channels'),
-            range=blueprint.get_attribute('range'),
+            config_file_name=blueprint.get_attribute("config_file_name"),
+            channels=blueprint.get_attribute("channels"),
+            range=blueprint.get_attribute("range"),
         )
-        
+
         # Create dummy robot config (LidarIsaac requires it)
         cfg_robot = CfgRobot()
-        cfg_robot.path_prim_swarm = '/'.join(sensor_path.split('/')[:-2])
-        
+        cfg_robot.path_prim_swarm = "/".join(sensor_path.split("/")[:-2])
+
         # Create LiDAR
         lidar = LidarIsaac(cfg_lidar, cfg_robot)
         lidar.create_lidar(prim_path=sensor_path)
         lidar.initialize()
-        
+
         return lidar
-    
+
     def get_frame(self) -> int:
         """Get current frame number"""
         return self._isaac_world.current_time_step_index
-        
+
     def get_simulation_time(self) -> float:
         """Get simulation time in seconds"""
         return self._isaac_world.current_time
