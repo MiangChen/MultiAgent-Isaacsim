@@ -34,6 +34,11 @@ class LidarIsaacSensor(SensorActor):
             parent: Parent actor (robot)
         """
         super().__init__(lidar_impl, world, parent)
+        
+        # Frequency control
+        self._frequency = getattr(lidar_impl.cfg_lidar, 'frequency', 10)  # Default 10Hz
+        self._tick_interval = 1.0 / self._frequency if self._frequency > 0 else 0.0
+        self._time_since_last_tick = 0.0
 
     def get_type_id(self) -> str:
         """Get sensor type ID (CARLA style)"""
@@ -48,6 +53,13 @@ class LidarIsaacSensor(SensorActor):
         """
         if not self._is_listening or self._callback is None:
             return
+        
+        # Frequency control: only process at specified frequency
+        self._time_since_last_tick += step_size
+        if self._tick_interval > 0 and self._time_since_last_tick < self._tick_interval:
+            return
+        
+        self._time_since_last_tick = 0.0
 
         try:
             frame_data = self.sensor.get_current_frame()
@@ -130,6 +142,11 @@ class LidarOmniSensor(SensorActor):
             parent: Parent actor (robot)
         """
         super().__init__(lidar_impl, world, parent)
+        
+        # Frequency control
+        self._frequency = getattr(lidar_impl.cfg_lidar, 'frequency', 10)  # Default 10Hz
+        self._tick_interval = 1.0 / self._frequency if self._frequency > 0 else 0.0
+        self._time_since_last_tick = 0.0
 
     def get_type_id(self) -> str:
         """Get sensor type ID (CARLA style)"""
@@ -144,6 +161,13 @@ class LidarOmniSensor(SensorActor):
         """
         if not self._is_listening or self._callback is None:
             return
+        
+        # Frequency control: only process at specified frequency
+        self._time_since_last_tick += step_size
+        if self._tick_interval > 0 and self._time_since_last_tick < self._tick_interval:
+            return
+        
+        self._time_since_last_tick = 0.0
 
         try:
             # Get point cloud from Omni LiDAR
@@ -158,7 +182,7 @@ class LidarOmniSensor(SensorActor):
                 point_cloud = point_cloud.reshape(-1, 3)
 
             lidar_data = LidarData(
-                frame=self._world.get_frame(),
+                frame=self._world.get_simulation_time(),
                 timestamp=self._world.get_simulation_time(),
                 point_cloud=point_cloud,
             )

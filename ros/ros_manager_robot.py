@@ -57,6 +57,9 @@ class RobotRosManager:
         # Action clients
         self.action_client_path_planner = None
 
+        # Sensor ROS bridges (CARLA style)
+        self.sensor_bridges = {}
+
         # Executor and threading
         self.executor = None
         self.ros_thread = None
@@ -191,6 +194,65 @@ class RobotRosManager:
     def get_node_controller_mpc(self):
         """Get MPC controller node"""
         return self.node_controller_mpc
+
+    def attach_sensor_to_ros(self, sensor_actor, sensor_type: str, topic_name: str = None, 
+                             frame_id: str = 'map'):
+        """
+        Attach sensor to ROS (CARLA style)
+        
+        Creates a ROS bridge and connects it to sensor via listen()
+        
+        Args:
+            sensor_actor: Sensor actor (LidarIsaacSensor, LidarOmniSensor, RGBCamera, etc.)
+            sensor_type: Sensor type ('lidar', 'camera')
+            topic_name: Custom topic name (optional)
+            frame_id: Target frame_id ('map' or '{namespace}/lidar', default: 'map')
+            
+        Example:
+            # Publish in map frame (default)
+            ros_manager.attach_sensor_to_ros(lidar_sensor, 'lidar', 'front_lidar/points')
+            
+            # Publish in sensor frame
+            ros_manager.attach_sensor_to_ros(lidar_sensor, 'lidar', 'front_lidar/points', 
+                                            frame_id=f'{namespace}/lidar')
+        """
+        from ros.sensor_ros_bridge import LidarRosBridge, CameraRosBridge
+        
+        # Create appropriate bridge
+        if sensor_type == 'lidar':
+            topic = topic_name or 'lidar/points'
+            bridge = LidarRosBridge(self.node, self.namespace, topic, 
+                                   sensor_actor=sensor_actor, frame_id=frame_id)
+        elif sensor_type == 'camera':
+            topic = topic_name or 'camera/image_raw'
+            bridge = CameraRosBridge(self.node, self.namespace, topic)
+        else:
+            logger.error(f"Unknown sensor type: {sensor_type}")
+            return
+        
+        # Connect sensor to ROS via listen() (CARLA style)
+        sensor_actor.listen(bridge.publish)
+        
+        # Store bridge reference
+        sensor_id = sensor_actor.get_id()
+        self.sensor_bridges[sensor_id] = bridge
+        
+        logger.info(
+            f"Sensor {sensor_id} attached to ROS: /{self.namespace}/{topic} (frame: {frame_id})"
+        )
+    
+    def detach_sensor_from_ros(self, sensor_actor):
+        """
+        Detach sensor from ROS
+        
+        Args:
+            sensor_actor: Sensor actor to detach
+        """
+        sensor_id = sensor_actor.get_id()
+        if sensor_id in self.sensor_bridges:
+            sensor_actor.stop()  # Stop listening
+            del self.sensor_bridges[sensor_id]
+            logger.info(f"Sensor {sensor_id} detached from ROS")
 
     def __del__(self):
         """Cleanup on deletion"""

@@ -201,8 +201,35 @@ def main():
         )
 
     # ============================================================================
-    # Sensors Setup (CARLA Style)
+    # Application Layer Setup
     # ============================================================================
+
+    # 1. Setup ROS for each robot
+    from ros.ros_manager_robot import RobotRosManager
+
+    for robot in robots:
+        # Create ROS manager for this robot
+        robot_ros_manager = RobotRosManager(
+            robot=robot, namespace=robot.namespace, topics=robot.get_topics()
+        )
+        # Inject ROS manager
+        robot.set_ros_manager(robot_ros_manager)
+        # Start ROS
+        robot_ros_manager.start()
+        logger.info(f"✅ ROS enabled for {robot.namespace}")
+
+    # 2. Skill System: High-level behaviors via ROS actions
+    from application import SkillManager
+
+    skill_managers = {}
+    for robot in robots:
+        # SkillManager auto-registers all skills from global registry
+        skill_manager = SkillManager(robot, auto_register=True)
+        # Attach to robot for ROS action server
+        robot.skill_manager = skill_manager
+        skill_managers[robot.namespace] = skill_manager
+
+    # 3. Sensors Setup (CARLA Style)
 
     # Add camera sensor to h1_0 robot (CARLA style)
     # Find h1_0 robot actor
@@ -279,7 +306,16 @@ def main():
         omni_lidar.listen(process_omni_lidar_data)
 
         logger.info(f"✅ Omni LiDAR added to cf2x_0 at {omni_lidar.get_prim_path()}")
-        logger.info(f"   Config: autel_perception_120x352, Output: 32x1800, Max depth: 100m")
+        logger.info(f"   Config: autel_perception_120x352, Output: 352x120, Max depth: 100m")
+
+        # Attach LiDAR to ROS (CARLA style)
+        cf2x_robot = cf2x_actor.robot
+        if cf2x_robot.has_ros():
+            ros_manager = cf2x_robot.get_ros_manager()
+
+            # Attach Omni LiDAR to ROS
+            ros_manager.attach_sensor_to_ros(omni_lidar, 'lidar', 'omni_lidar/points')
+            logger.info(f"   📡 Omni LiDAR publishing to /cf2x_0/omni_lidar/points")
     else:
         logger.warning("cf2x_0 robot not found, skipping LiDAR setup")
 
@@ -310,35 +346,6 @@ def main():
 
     # Build grid map for planning
     grid_map.generate()
-
-    # ============================================================================
-    # Application Layer Setup
-    # ============================================================================
-
-    # 1. Setup ROS for each robot
-    from ros.ros_manager_robot import RobotRosManager
-
-    for robot in robots:
-        # Create ROS manager for this robot
-        robot_ros_manager = RobotRosManager(
-            robot=robot, namespace=robot.namespace, topics=robot.get_topics()
-        )
-        # Inject ROS manager
-        robot.set_ros_manager(robot_ros_manager)
-        # Start ROS
-        robot_ros_manager.start()
-        logger.info(f"✅ ROS enabled for {robot.namespace}")
-
-    # 2. Skill System: High-level behaviors via ROS actions
-    from application import SkillManager
-
-    skill_managers = {}
-    for robot in robots:
-        # SkillManager auto-registers all skills from global registry
-        skill_manager = SkillManager(robot, auto_register=True)
-        # Attach to robot for ROS action server
-        robot.skill_manager = skill_manager
-        skill_managers[robot.namespace] = skill_manager
 
     # ============================================================================
     # Main Simulation Loop

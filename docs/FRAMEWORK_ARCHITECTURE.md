@@ -106,7 +106,7 @@ camera = world.spawn_actor(camera_bp, transform, attach_to=robot)
 - `robot.*` - 机器人 (jetbot, h1, g1, cf2x, drone_autel)
 - `static.prop.*` - 静态物体 (box, car)
 - `sensor.camera.*` - 相机 (rgb, depth)
-- `sensor.lidar.*` - LiDAR (ray_cast)
+- `sensor.lidar.*` - LiDAR (isaac, omni)
 
 ---
 
@@ -119,7 +119,8 @@ Actor (基类)
 ├── StaticActor         # 静态物体 Actor
 └── SensorActor         # 传感器 Actor 基类
     ├── RGBCamera       # RGB 相机
-    └── LidarSensor     # LiDAR 传感器
+    ├── LidarIsaacSensor    # Isaac LiDAR 传感器
+    └── LidarOmniSensor     # Omni LiDAR 传感器
 ```
 
 **Actor 基类**:
@@ -166,10 +167,11 @@ simulation/sensors/
 │   ├── camera.py              # Camera 实现 (Isaac Sim)
 │   └── cfg_camera.py          # CfgCamera
 │
-├── lidar_actor.py              # LidarSensor Actor
+├── lidar_actor.py              # LidarIsaacSensor, LidarOmniSensor
 └── lidar/
-    ├── lidar_blueprint.py     # RayCastLidarBlueprint
-    ├── lidar_isaac.py         # LidarIsaac 实现 (Isaac Sim)
+    ├── lidar_blueprint.py     # IsaacLidarBlueprint, OmniLidarBlueprint
+    ├── lidar_isaac.py         # LidarIsaac 实现 (Isaac Sim API)
+    ├── lidar_omni.py          # LidarOmni 实现 (Omni API)
     └── cfg_lidar.py           # CfgLidar
 ```
 
@@ -239,13 +241,16 @@ class RobotRosManager:
     node_trajectory_generator: NodeTrajectoryGenerator
     node_controller_mpc: NodeMpcController
     
+    # Sensor ROS bridges (CARLA style)
+    sensor_bridges: Dict[int, SensorRosBridge]
+    
     # 执行器和线程
     executor: MultiThreadedExecutor
     ros_thread: Thread
 ```
 
 **ROS 通信**:
-- **Publishers**: `/robot_0/odom`
+- **Publishers**: `/robot_0/odom`, `/robot_0/lidar/points`, `/robot_0/camera/image`
 - **Subscribers**: `/robot_0/cmd_vel`, `/sim_clock`
 - **Action Servers**: `/robot_0/skill_execution`
 - **Action Clients**: `/robot_0/compute_path_to_pose`
@@ -254,6 +259,47 @@ class RobotRosManager:
 - 完全解耦：Robot 类不包含 ROS 代码
 - 独立线程：不阻塞仿真循环
 - 统一接口：所有机器人使用相同结构
+- CARLA 风格：通过 `.listen()` 连接传感器到 ROS
+
+---
+
+### 7. Sensor ROS Bridge (传感器 ROS 桥接)
+
+**架构设计** (CARLA 风格):
+```
+[Simulation Layer]
+    Sensor Actor (LidarIsaacSensor, RGBCamera)
+    ↓ .listen(callback)
+[Bridge Layer]
+    SensorRosBridge (LidarRosBridge, CameraRosBridge)
+    ↓ ROS publish
+[ROS Layer]
+    ROS Topics (/robot_0/lidar/points, /robot_0/camera/image)
+```
+
+**使用示例**:
+```python
+# 创建传感器 (CARLA style)
+lidar_bp = bp_library.find('sensor.lidar.isaac')
+lidar = world.spawn_actor(lidar_bp, transform, attach_to=robot_actor)
+
+# 附加到 ROS (通过 RobotRosManager)
+robot = robot_actor.robot
+if robot.has_ros():
+    ros_manager = robot.get_ros_manager()
+    ros_manager.attach_sensor_to_ros(lidar, 'lidar', 'front_lidar/points')
+    # 发布到: /robot_0/front_lidar/points
+```
+
+**支持的传感器类型**:
+- **LiDAR**: `sensor_msgs/PointCloud2` → `/robot_0/lidar/points`
+- **Camera**: `sensor_msgs/Image` → `/robot_0/camera/image_raw`
+
+**设计优势**:
+- ✅ 完全符合 CARLA 架构 (`.listen()` 模式)
+- ✅ Sensor 不依赖 ROS (解耦)
+- ✅ 可以同时有多个回调
+- ✅ 动态添加/移除 ROS 发布
 
 ---
 
@@ -276,6 +322,7 @@ robot.on_physics_step()
 
 ### 2. 传感器数据流
 
+**Camera 数据流**:
 ```
 用户代码
   ↓ camera.listen(callback)
@@ -288,6 +335,33 @@ Isaac Sim 渲染引擎
 RGBCamera 构造 CameraData
   ↓ callback(camera_data)
 用户回调函数
+```
+
+**LiDAR 数据流**:
+```
+用户代码
+  ↓ lidar.listen(callback)
+LidarIsaacSensor.tick()
+  ↓ self.sensor.get_current_frame()
+LidarIsaac (Isaac Sim)
+  ↓ LidarRtx API
+Isaac Sim RTX LiDAR
+  ↓ 返回点云数据
+LidarIsaacSensor 构造 LidarData
+  ↓ callback(lidar_data)
+用户回调函数
+```
+
+**Sensor ROS 发布流程**:
+```
+Sensor.tick()
+  ↓ 获取数据
+  ↓ 构造 SensorData
+  ↓ callback(sensor_data)
+SensorRosBridge.publish()
+  ↓ 转换为 ROS 消息
+  ↓ publisher.publish(msg)
+ROS Topic
 ```
 
 ### 3. 技能执行流程
@@ -355,7 +429,8 @@ application/                    # 应用层
 
 ros/                           # ROS 集成
 ├── ros_manager_robot.py       # RobotRosManager
-└── node_robot.py              # NodeRobot
+├── node_robot.py              # NodeRobot
+└── sensor_ros_bridge.py       # SensorRosBridge, LidarRosBridge, CameraRosBridge
 ```
 
 ---
@@ -387,6 +462,7 @@ robot = robot_actor.robot
 
 ### 2. 添加传感器
 
+**添加 Camera**:
 ```python
 # 获取相机蓝图
 camera_bp = bp_library.find('sensor.camera.rgb')
@@ -402,6 +478,50 @@ camera = world.spawn_actor(
 
 # 监听数据
 camera.listen(lambda img: img.save_to_disk(f'frame_{img.frame}.png'))
+```
+
+**添加 LiDAR**:
+```python
+# Isaac LiDAR
+isaac_lidar_bp = bp_library.find('sensor.lidar.isaac')
+isaac_lidar_bp.set_attribute('config_file_name', 'Hesai_XT32_SD10')
+isaac_lidar = world.spawn_actor(
+    isaac_lidar_bp,
+    Transform(Location(x=0.0, z=0.05)),
+    attach_to=robot_actor
+)
+
+# Omni LiDAR
+omni_lidar_bp = bp_library.find('sensor.lidar.omni')
+omni_lidar_bp.set_attribute('config_file_name', 'Hesai_XT32_SD10')
+omni_lidar_bp.set_attribute('output_size', (352, 120))
+omni_lidar_bp.set_attribute('erp_height', 352)
+omni_lidar_bp.set_attribute('erp_width', 120)
+omni_lidar = world.spawn_actor(
+    omni_lidar_bp,
+    Transform(Location(x=0.0, z=0.1)),
+    attach_to=robot_actor
+)
+
+# 监听数据
+isaac_lidar.listen(lambda data: print(f"Points: {len(data.points)}"))
+```
+
+**发布到 ROS**:
+```python
+# 获取 ROS manager
+robot = robot_actor.robot
+ros_manager = robot.get_ros_manager()
+
+# 附加传感器到 ROS (CARLA style)
+ros_manager.attach_sensor_to_ros(camera, 'camera', 'front_camera/image')
+ros_manager.attach_sensor_to_ros(isaac_lidar, 'lidar', 'isaac_lidar/points')
+ros_manager.attach_sensor_to_ros(omni_lidar, 'lidar', 'omni_lidar/points')
+
+# 数据自动发布到:
+# - /robot_0/front_camera/image
+# - /robot_0/isaac_lidar/points
+# - /robot_0/omni_lidar/points
 ```
 
 ### 3. ROS 控制
@@ -511,6 +631,12 @@ robot.cleanup()
 ---
 
 ## 📚 第六部分：参考文档
+
+### 核心文档
+- **`docs/FRAMEWORK_ARCHITECTURE.md`** (本文档) - 框架架构总览
+- **`docs/SENSOR_ACCESS_PATTERN.md`** - 传感器访问模式详解
+- **`docs/LIDAR_IMPLEMENTATION.md`** - LiDAR 实现细节
+- **`docs/SENSOR_ROS_BRIDGE.md`** - Sensor ROS 桥接详解
 
 ### 快速参考
 - **`docs/QUICK_REFERENCE.md`** - 传感器系统快速参考
