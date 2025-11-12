@@ -26,13 +26,16 @@
 
 try:
     import pydevd_pycharm
-
     pydevd_pycharm.settrace(
         "localhost", port=12345, stdout_to_server=True, stderr_to_server=True
     )
 except Exception as e:
     print(f"no pydevd found: {repr(e)}")
 
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
 
 def create_car_objects(world):
     """Create car objects using blueprint - CARLA style"""
@@ -104,9 +107,17 @@ def process_semantic_detection(
         print(f"Error getting semantic camera data: {repr(e)}")
 
 
+# =============================================================================
+# Main Function
+# =============================================================================
+
 def main():
     print("\n\n\n\ninto the main\n\n\n\n")
 
+    # =========================================================================
+    # 1. INITIALIZATION
+    # =========================================================================
+    
     # Import after simulation_app is created by Server
     from containers import get_container, reset_container
     from config.config_manager import config_manager
@@ -124,8 +135,6 @@ def main():
     # Setup dependency injection container
     reset_container()
     container = get_container()
-
-    # Wire the container to this module for @inject decorators in skill functions
     container.wire(modules=[__name__])
 
     # Get services from container
@@ -142,35 +151,41 @@ def main():
     world = container.world_configured()
     simulation_app = server.get_simulation_app()
 
+    # Start ROS manager
     ros_manager_isaac.start()
 
-    # ============================================================================
-    # Robots Setup
-    # ============================================================================
+    # =========================================================================
+    # 2. CREATION - Robots, Scene, Objects
+    # =========================================================================
+    
+    logger.info("=" * 80)
+    logger.info("CREATION PHASE")
+    logger.info("=" * 80)
 
-    # Load robots from config - CARLA style (blueprints auto-registered)
+    # 2.1 Load Robots from Config (CARLA style)
+    logger.info("Loading robots from config...")
     robot_actors = world.load_actors_from_config(
         f"{PROJECT_ROOT}/config/robot_swarm_cfg.yaml"
     )
-    robots = [
-        actor.robot for actor in robot_actors
-    ]  # Extract robot objects from actors
+    robots = [actor.robot for actor in robot_actors]
+    logger.info(f"✅ Loaded {len(robots)} robots")
 
-    # ============================================================================
-    # Scene Setup
-    # ============================================================================
-
-    # Load scene
+    # 2.2 Load Scene
+    logger.info("Loading scene...")
     scene_manager.load_scene(usd_path=WORLD_USD_PATH, prim_path_root="/World/scene")
+    logger.info("✅ Scene loaded")
 
-    # Create static objects using blueprint - CARLA style
+    # 2.3 Create Static Objects (CARLA style)
+    logger.info("Creating static objects...")
     from simulation import Transform, Location, Rotation
+    
+    blueprint_library = world.get_blueprint_library()
 
     # Create cars
     cars = create_car_objects(world)
+    logger.info(f"✅ Created {len(cars)} cars")
 
     # Create critical package
-    blueprint_library = world.get_blueprint_library()
     package_bp = blueprint_library.find("static.prop.box")
     package_bp.set_attribute("name", "Critical-Package")
     package_bp.set_attribute("scale", [0.5, 0.5, 0.5])
@@ -185,54 +200,28 @@ def main():
         rotation=Rotation(quaternion=[0.707, 0, 0, 0.707]),
     )
     package = world.spawn_actor(package_bp, package_transform)
+    logger.info("✅ Created package")
 
-    # Initialize world
+    # 2.4 Initialize World
+    logger.info("Initializing world...")
     world.reset()
     world.initialize_map()
-
-    # Initialize robots
     world.initialize_robots()
+    logger.info("✅ World initialized")
 
-    # Add physics callbacks for robots
+    # 2.5 Add Physics Callbacks
+    logger.info("Adding physics callbacks...")
     for i, robot in enumerate(robots):
         callback_name = f"physics_step_robot_{i}"
         world.get_isaac_world().add_physics_callback(
             callback_name, callback_fn=robot.on_physics_step
         )
+    logger.info(f"✅ Added {len(robots)} physics callbacks")
 
-    # ============================================================================
-    # Application Layer Setup
-    # ============================================================================
-
-    # 1. Setup ROS for each robot
-    from ros.ros_manager_robot import RobotRosManager
-
-    for robot in robots:
-        # Create ROS manager for this robot
-        robot_ros_manager = RobotRosManager(
-            robot=robot, namespace=robot.namespace, topics=robot.get_topics()
-        )
-        # Inject ROS manager
-        robot.set_ros_manager(robot_ros_manager)
-        # Start ROS
-        robot_ros_manager.start()
-        logger.info(f"✅ ROS enabled for {robot.namespace}")
-
-    # 2. Skill System: High-level behaviors via ROS actions
-    from application import SkillManager
-
-    skill_managers = {}
-    for robot in robots:
-        # SkillManager auto-registers all skills from global registry
-        skill_manager = SkillManager(robot, auto_register=True)
-        # Attach to robot for ROS action server
-        robot.skill_manager = skill_manager
-        skill_managers[robot.namespace] = skill_manager
-
-    # 3. Sensors Setup (CARLA Style)
-
-    # Add camera sensor to h1_0 robot (CARLA style)
-    # Find h1_0 robot actor
+    # 2.6 Create Sensors (CARLA style)
+    logger.info("Creating sensors...")
+    
+    # Add camera to h1_0
     h1_actor = None
     for actor in robot_actors:
         if hasattr(actor, "robot") and actor.robot.namespace == "h1_0":
@@ -240,36 +229,23 @@ def main():
             break
 
     if h1_actor:
-        logger.info("Adding camera sensor to h1_0 robot (CARLA style)...")
-
-        # Get camera blueprint
         camera_bp = blueprint_library.find("sensor.camera.rgb")
-
-        # Configure camera attributes (based on your previous config)
         camera_bp.set_attribute("image_size_x", 1280)
         camera_bp.set_attribute("image_size_y", 720)
         camera_bp.set_attribute("focal_length", 2)
         camera_bp.set_attribute("enable_semantic_detection", True)
-
-        # Create camera with relative transform
-        from simulation import Transform, Location, Rotation
 
         camera_transform = Transform(
             location=Location(x=0.1, y=0.01, z=0.69),
             rotation=Rotation(quaternion=[0.5, -0.5, -0.5, 0.5]),
         )
 
-        # Spawn camera (attach to h1_0)
         h1_camera = world.spawn_actor(camera_bp, camera_transform, attach_to=h1_actor)
-
-        logger.info(f"✅ Camera sensor added to h1_0 at {h1_camera.get_prim_path()}")
-        logger.info(f"   Resolution: 1280x720, Focal length: 2mm")
-        logger.info(f"   Semantic detection: Enabled")
+        logger.info(f"✅ Camera added to h1_0 (1280x720, focal: 2mm)")
     else:
-        logger.warning("h1_0 robot not found, skipping camera setup")
+        logger.warning("h1_0 robot not found, skipping camera")
 
-    # Add LiDAR sensors to cf2x_0 robot (CARLA style)
-    # Find cf2x_0 robot actor
+    # Add LiDAR to cf2x_0
     cf2x_actor = None
     for actor in robot_actors:
         if hasattr(actor, "robot") and actor.robot.namespace == "cf2x_0":
@@ -277,12 +253,8 @@ def main():
             break
 
     if cf2x_actor:
-        logger.info("Adding LiDAR sensors to cf2x_0 robot (CARLA style)...")
-
-        # 2. Add Omni LiDAR
         omni_lidar_bp = blueprint_library.find("sensor.lidar.omni")
         omni_lidar_bp.set_attribute("config_file_name", "autel_perception_120x352")
-        # 注意: output_size 必须与 (erp_height, erp_width) 一致
         omni_lidar_bp.set_attribute("erp_height", 352)
         omni_lidar_bp.set_attribute("erp_width", 120)
         omni_lidar_bp.set_attribute("output_size", (352, 120))
@@ -291,30 +263,18 @@ def main():
 
         omni_lidar_transform = Transform(
             location=Location(x=0.0, y=0.0, z=0.1),
-            rotation=Rotation(quaternion=[0, 0.0, 0.0, 1]),  # xyzw
+            rotation=Rotation(quaternion=[0, 0.0, 0.0, 1]),
         )
 
         omni_lidar = world.spawn_actor(
             omni_lidar_bp, omni_lidar_transform, attach_to=cf2x_actor
         )
-
-        logger.info(f"✅ Omni LiDAR added to cf2x_0 at {omni_lidar.get_prim_path()}")
-        logger.info(
-            f"   Config: autel_perception_120x352, Output: 352x120, Max depth: 100m"
-        )
-
-        # Attach LiDAR to ROS (CARLA style)
-        cf2x_robot = cf2x_actor.robot
-        if cf2x_robot.has_ros():
-            ros_manager = cf2x_robot.get_ros_manager()
-
-            # Attach Omni LiDAR to ROS
-            ros_manager.attach_sensor_to_ros(omni_lidar, "lidar", "omni_lidar/points")
-            logger.info(f"   📡 Omni LiDAR publishing to /cf2x_0/omni_lidar/points")
+        logger.info(f"✅ Omni LiDAR added to cf2x_0 (352x120, 10Hz)")
     else:
-        logger.warning("cf2x_0 robot not found, skipping LiDAR setup")
+        logger.warning("cf2x_0 robot not found, skipping LiDAR")
 
-    # Setup semantic camera
+    # 2.7 Setup Semantic Camera
+    logger.info("Setting up semantic camera...")
     result = scene_manager.add_camera(
         translation=[1, 4, 2], orientation=euler_to_quat(roll=90)
     )
@@ -322,14 +282,15 @@ def main():
     semantic_camera_prim_path = result.get("result").get("prim_path")
     semantic_camera.initialize()
 
-    # Wait for camera and rendering pipeline to fully initialize
+    # Wait for camera initialization
     for _ in range(10):
         world.tick()
 
-    # Enable bounding box detection
     semantic_camera.add_bounding_box_2d_loose_to_frame()
+    logger.info("✅ Semantic camera initialized")
 
-    # Switch viewport to semantic camera
+    # 2.8 Setup Viewport
+    logger.info("Setting up viewport...")
     from physics_engine.omni_utils import get_viewport_from_window_name
 
     viewport_manager.register_viewport(
@@ -338,13 +299,61 @@ def main():
     viewport_manager.change_viewport(
         camera_prim_path=semantic_camera_prim_path, viewport_name="Viewport"
     )
+    logger.info("✅ Viewport configured")
 
-    # Build grid map for planning
+    # =========================================================================
+    # 3. APPLICATION LAYER SETUP
+    # =========================================================================
+    
+    logger.info("=" * 80)
+    logger.info("APPLICATION LAYER SETUP")
+    logger.info("=" * 80)
+
+    # 3.1 Setup ROS for Each Robot
+    logger.info("Setting up ROS for robots...")
+    from ros.ros_manager_robot import RobotRosManager
+
+    for robot in robots:
+        robot_ros_manager = RobotRosManager(
+            robot=robot, namespace=robot.namespace, topics=robot.get_topics()
+        )
+        robot.set_ros_manager(robot_ros_manager)
+        robot_ros_manager.start()
+        logger.info(f"✅ ROS enabled for {robot.namespace}")
+
+    # 3.2 Setup Skill System
+    logger.info("Setting up skill system...")
+    from application import SkillManager
+
+    skill_managers = {}
+    for robot in robots:
+        skill_manager = SkillManager(robot, auto_register=True)
+        robot.skill_manager = skill_manager
+        skill_managers[robot.namespace] = skill_manager
+        logger.info(f"✅ Skill manager created for {robot.namespace}")
+
+    # 3.3 Attach Sensors to ROS (CARLA style)
+    logger.info("Attaching sensors to ROS...")
+    
+    if cf2x_actor:
+        cf2x_robot = cf2x_actor.robot
+        if cf2x_robot.has_ros():
+            ros_manager = cf2x_robot.get_ros_manager()
+            ros_manager.attach_sensor_to_ros(omni_lidar, "lidar", "omni_lidar/points")
+            logger.info(f"✅ Omni LiDAR publishing to /cf2x_0/omni_lidar/points")
+
+    # 3.4 Build Grid Map for Planning
+    logger.info("Building grid map...")
     grid_map.generate()
+    logger.info("✅ Grid map generated")
 
-    # ============================================================================
-    # Main Simulation Loop
-    # ============================================================================
+    # =========================================================================
+    # 4. MAIN LOOP
+    # =========================================================================
+    
+    logger.info("=" * 80)
+    logger.info("STARTING MAIN LOOP")
+    logger.info("=" * 80)
 
     count = 0
 
@@ -359,21 +368,34 @@ def main():
 
         count += 1
 
-    # Cleanup
+    # =========================================================================
+    # 5. CLEANUP
+    # =========================================================================
+    
+    logger.info("=" * 80)
+    logger.info("CLEANUP")
+    logger.info("=" * 80)
+
     for robot in robots:
         if robot.has_ros():
             robot.cleanup()
+            logger.info(f"✅ Cleaned up {robot.namespace}")
 
     if rclpy.ok():
         rclpy.shutdown()
+        logger.info("✅ ROS shutdown")
 
     container.unwire()
     loop.close()
 
     if simulation_app:
         simulation_app.__exit__(None, None, None)
+        logger.info("✅ Simulation app closed")
+
+    logger.info("=" * 80)
+    logger.info("DONE")
+    logger.info("=" * 80)
 
 
 if __name__ == "__main__":
-    # 直接调用同步 main 函数
     main()
