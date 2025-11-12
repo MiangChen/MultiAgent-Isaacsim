@@ -29,8 +29,8 @@ logger = LogManager.get_logger(__name__)
 class RobotCf2x(Robot):
 
     def __init__(
-            self,
-            cfg_robot: Dict = {},
+        self,
+        cfg_robot: Dict = {},
     ) -> None:
         self.cfg_robot = CfgDroneCf2X(**cfg_robot)
         super().__init__()

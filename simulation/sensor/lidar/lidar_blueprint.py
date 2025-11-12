@@ -66,7 +66,7 @@ class OmniLidarBlueprint(SensorBlueprint):
         self.set_attribute("erp_width", 120)
         self.set_attribute("erp_height", 352)
         self.set_attribute("output_size", (352, 120))
-        
+
         # FOV parameters
         self.set_attribute("erp_width_fov", 90.0)
         self.set_attribute("erp_height_fov", 270.0)

@@ -2,7 +2,7 @@ def _to_python_scalar(value):
     """
     将 torch tensor, numpy array 或其他类型转换为 Python 标量
     """
-    if hasattr(value, 'item'):
+    if hasattr(value, "item"):
         # torch tensor 或 numpy scalar
         return value.item()
     return float(value)
@@ -12,10 +12,10 @@ def _to_python_list(array):
     """
     将 torch tensor, numpy array 或其他类型转换为 Python list
     """
-    if hasattr(array, 'tolist'):
+    if hasattr(array, "tolist"):
         # torch tensor 或 numpy array
         return array.tolist()
-    elif hasattr(array, '__iter__'):
+    elif hasattr(array, "__iter__"):
         # 可迭代对象，逐个转换
         return [_to_python_scalar(x) for x in array]
     return list(array)
@@ -52,7 +52,7 @@ class Rotation:
         else:
             # 统一转换为 Python list
             quaternion = _to_python_list(quaternion)
-            
+
             # 处理顺序转换
             if order == "wxyz":
                 w, x, y, z = quaternion
@@ -73,7 +73,7 @@ class Transform:
     def __init__(self, location=None, rotation=None, order: str = "xyzw"):
         """
         Initialize Transform with location and rotation.
-        
+
         Args:
             location: Location object, or list/array [x, y, z]
                      Must be provided explicitly (no default)
@@ -85,19 +85,19 @@ class Transform:
             self.location = None
         elif isinstance(location, Location):
             self.location = location
-        elif hasattr(location, '__iter__'):
+        elif hasattr(location, "__iter__"):
             # list, torch tensor, numpy array
             loc_list = _to_python_list(location)
             self.location = Location(loc_list[0], loc_list[1], loc_list[2])
         else:
             raise ValueError(f"Invalid location type: {type(location)}")
-        
+
         # 处理 rotation - 不提供默认值，强制用户显式设置
         if rotation is None:
             self.rotation = None
         elif isinstance(rotation, Rotation):
             self.rotation = rotation
-        elif hasattr(rotation, '__iter__'):
+        elif hasattr(rotation, "__iter__"):
             self.rotation = Rotation(quaternion=rotation, order=order)
         else:
             raise ValueError(f"Invalid rotation type: {type(rotation)}")

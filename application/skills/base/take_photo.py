@@ -48,39 +48,41 @@ def take_photo(**kwargs):
 
 def _init_take_photo(robot, skill_manager, skill_name, kwargs):
     """Initialize take photo skill"""
-    
+
     # Get parameters (CARLA style)
     camera_type = kwargs.get("camera_type", "sensor.camera.rgb")
-    save_path = kwargs.get("save_path", kwargs.get("save_to_file", ""))  # Backward compatibility
-    
+    save_path = kwargs.get(
+        "save_path", kwargs.get("save_to_file", "")
+    )  # Backward compatibility
+
     # Validate save_path
     if not save_path:
         skill_manager.set_skill_state(skill_name, "FAILED")
         skill_manager.skill_errors[skill_name] = "save_path parameter is required"
         return skill_manager.form_feedback("failed", "save_path is required")
-    
+
     try:
         # Find camera sensor (CARLA style)
         camera = robot.get_sensor_by_type(camera_type)
-        
+
         if camera is None:
             # List available sensors for debugging
             sensors = robot.get_sensors()
             sensor_types = [s.get_type_id() for s in sensors]
-            
+
             error_msg = f"Camera '{camera_type}' not found. Available: {sensor_types}"
             skill_manager.set_skill_state(skill_name, "FAILED")
             skill_manager.skill_errors[skill_name] = error_msg
             return skill_manager.form_feedback("failed", error_msg)
-        
+
         # Store data
         skill_manager.set_skill_data(skill_name, "camera_type", camera_type)
         skill_manager.set_skill_data(skill_name, "save_path", save_path)
         skill_manager.set_skill_data(skill_name, "camera", camera)
-        
+
         skill_manager.set_skill_state(skill_name, "EXECUTING")
         return skill_manager.form_feedback("processing", "Preparing camera", 20)
-        
+
     except Exception as e:
         logger.error(f"Init take_photo failed: {e}")
         skill_manager.set_skill_state(skill_name, "FAILED")
@@ -94,37 +96,33 @@ def _handle_executing(robot, skill_manager, skill_name):
         camera = skill_manager.get_skill_data(skill_name, "camera")
         save_path = skill_manager.get_skill_data(skill_name, "save_path")
         camera_type = skill_manager.get_skill_data(skill_name, "camera_type")
-        
+
         # Capture image from sensor
         rgb = camera.sensor.get_rgb()
-        
+
         if rgb is None:
             skill_manager.set_skill_state(skill_name, "FAILED")
             skill_manager.skill_errors[skill_name] = "Failed to capture image"
             return skill_manager.form_feedback("failed", "Capture failed")
-        
+
         # Save to file
         try:
             result = camera.sensor.save_rgb_to_file(rgb, save_path)
             logger.info(f"Photo saved to {save_path}")
-            
+
             # Store result
             skill_manager.set_skill_data(skill_name, "image_shape", rgb.shape)
             skill_manager.set_skill_data(skill_name, "saved_path", save_path)
-            
+
             skill_manager.set_skill_state(skill_name, "COMPLETED")
-            return skill_manager.form_feedback(
-                "completed", 
-                f"{result}",
-                100
-            )
-            
+            return skill_manager.form_feedback("completed", f"{result}", 100)
+
         except Exception as e:
             logger.error(f"Failed to save photo: {e}")
             skill_manager.set_skill_state(skill_name, "FAILED")
             skill_manager.skill_errors[skill_name] = f"Save failed: {str(e)}"
             return skill_manager.form_feedback("failed", f"Save failed: {str(e)}")
-        
+
     except Exception as e:
         logger.error(f"Execute take_photo failed: {e}")
         skill_manager.set_skill_state(skill_name, "FAILED")

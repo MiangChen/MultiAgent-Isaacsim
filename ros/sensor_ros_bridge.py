@@ -18,12 +18,12 @@ logger = LogManager.get_logger(__name__)
 class SensorRosBridge:
     """
     Base class for sensor ROS bridges
-    
+
     Responsibilities:
     - Create ROS publishers for sensor data
     - Convert sensor data to ROS messages
     - Publish to ROS topics
-    
+
     Usage (CARLA style):
         bridge = LidarRosBridge(node, namespace, topic_name)
         sensor.listen(bridge.publish)  # Connect sensor to ROS
@@ -32,7 +32,7 @@ class SensorRosBridge:
     def __init__(self, node: Node, namespace: str, topic_name: str):
         """
         Initialize sensor ROS bridge
-        
+
         Args:
             node: ROS node
             namespace: Robot namespace
@@ -46,9 +46,9 @@ class SensorRosBridge:
     def publish(self, sensor_data):
         """
         Publish sensor data to ROS (to be overridden)
-        
+
         This method is called by sensor.listen(callback)
-        
+
         Args:
             sensor_data: Sensor data object (CameraData, LidarData, etc.)
         """
@@ -58,17 +58,22 @@ class SensorRosBridge:
 class LidarRosBridge(SensorRosBridge):
     """
     LiDAR ROS Bridge - Publishes PointCloud2
-    
+
     Usage:
         bridge = LidarRosBridge(node, 'robot_0', 'lidar/points', sensor_actor)
         lidar_sensor.listen(bridge.publish)
     """
 
-    def __init__(self, node: Node, namespace: str, topic_name: str = 'lidar/points',
-                 frame_id: str = 'map'):
+    def __init__(
+        self,
+        node: Node,
+        namespace: str,
+        topic_name: str = "lidar/points",
+        frame_id: str = "map",
+    ):
         """
         Initialize LiDAR ROS bridge
-        
+
         Args:
             node: ROS node
             namespace: Robot namespace
@@ -80,7 +85,7 @@ class LidarRosBridge(SensorRosBridge):
         self.frame_id = frame_id
 
         # Create PointCloud2 publisher
-        full_topic = f'/{namespace}/{topic_name}'
+        full_topic = f"/{namespace}/{topic_name}"
         self.publisher = node.create_publisher(PointCloud2, full_topic, 10)
 
         logger.info(f"LiDAR ROS bridge created: {full_topic} (frame: {frame_id})")
@@ -89,7 +94,7 @@ class LidarRosBridge(SensorRosBridge):
     def publish(self, lidar_data):
         """
         Publish LiDAR data as PointCloud2
-        
+
         Args:
             lidar_data: LidarData object with point_cloud [N, 3] array
         """
@@ -105,10 +110,10 @@ class LidarRosBridge(SensorRosBridge):
     def _create_pointcloud2_msg(self, lidar_data) -> PointCloud2:
         """
         Create PointCloud2 message from LiDAR data
-        
+
         Args:
             lidar_data: LidarData object
-            
+
         Returns:
             PointCloud2 message
         """
@@ -150,17 +155,19 @@ class LidarRosBridge(SensorRosBridge):
 class CameraRosBridge(SensorRosBridge):
     """
     Camera ROS Bridge - Publishes Image
-    
+
     Usage:
         bridge = CameraRosBridge(node, 'robot_0', 'camera/image_raw')
         camera_sensor.listen(bridge.publish)
     """
 
-    def __init__(self, node: Node, namespace: str, topic_name: str = 'camera/image_raw'):
+    def __init__(
+        self, node: Node, namespace: str, topic_name: str = "camera/image_raw"
+    ):
         super().__init__(node, namespace, topic_name)
 
         # Create Image publisher
-        full_topic = f'/{namespace}/{topic_name}'
+        full_topic = f"/{namespace}/{topic_name}"
         self.publisher = node.create_publisher(Image, full_topic, 10)
 
         logger.info(f"Camera ROS bridge created: {full_topic}")
@@ -168,7 +175,7 @@ class CameraRosBridge(SensorRosBridge):
     def publish(self, camera_data):
         """
         Publish camera data as Image
-        
+
         Args:
             camera_data: CameraData object with raw_data [H, W, 3] array
         """
@@ -183,10 +190,10 @@ class CameraRosBridge(SensorRosBridge):
     def _create_image_msg(self, camera_data) -> Image:
         """
         Create Image message from camera data
-        
+
         Args:
             camera_data: CameraData object
-            
+
         Returns:
             Image message
         """
@@ -195,12 +202,12 @@ class CameraRosBridge(SensorRosBridge):
         # Header
         msg.header = Header()
         msg.header.stamp = self.node.get_clock().now().to_msg()
-        msg.header.frame_id = f'{self.namespace}/camera'
+        msg.header.frame_id = f"{self.namespace}/camera"
 
         # Image properties
         msg.height = camera_data.height
         msg.width = camera_data.width
-        msg.encoding = 'rgb8'
+        msg.encoding = "rgb8"
         msg.step = msg.width * 3
         msg.is_bigendian = False
 

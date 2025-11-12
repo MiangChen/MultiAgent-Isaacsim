@@ -24,7 +24,11 @@ class RobotActor(Actor):
     def set_transform(self, transform: Transform):
         if transform.location is not None:
             self.robot.set_world_pose(
-                position=[transform.location.x, transform.location.y, transform.location.z]
+                position=[
+                    transform.location.x,
+                    transform.location.y,
+                    transform.location.z,
+                ]
             )
 
     def get_velocity(self) -> Vector3D:

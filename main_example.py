@@ -73,7 +73,7 @@ def create_car_objects(world):
 
 
 def process_semantic_detection(
-        semantic_camera, map_semantic, target_semantic_class: str
+    semantic_camera, map_semantic, target_semantic_class: str
 ) -> None:
     """
     Process semantic detection and car pose extraction using injected dependencies.
@@ -299,7 +299,9 @@ def main():
         )
 
         logger.info(f"✅ Omni LiDAR added to cf2x_0 at {omni_lidar.get_prim_path()}")
-        logger.info(f"   Config: autel_perception_120x352, Output: 352x120, Max depth: 100m")
+        logger.info(
+            f"   Config: autel_perception_120x352, Output: 352x120, Max depth: 100m"
+        )
 
         # Attach LiDAR to ROS (CARLA style)
         cf2x_robot = cf2x_actor.robot
@@ -307,7 +309,7 @@ def main():
             ros_manager = cf2x_robot.get_ros_manager()
 
             # Attach Omni LiDAR to ROS
-            ros_manager.attach_sensor_to_ros(omni_lidar, 'lidar', 'omni_lidar/points')
+            ros_manager.attach_sensor_to_ros(omni_lidar, "lidar", "omni_lidar/points")
             logger.info(f"   📡 Omni LiDAR publishing to /cf2x_0/omni_lidar/points")
     else:
         logger.warning("cf2x_0 robot not found, skipping LiDAR setup")

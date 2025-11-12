@@ -36,7 +36,7 @@ class LidarIsaacSensor(SensorActor):
         super().__init__(lidar_impl, world, parent)
 
         # Frequency control
-        self._frequency = getattr(lidar_impl.cfg_lidar, 'frequency', 10)  # Default 10Hz
+        self._frequency = getattr(lidar_impl.cfg_lidar, "frequency", 10)  # Default 10Hz
         self._tick_interval = 1.0 / self._frequency if self._frequency > 0 else 0.0
         self._time_since_last_tick = 0.0
 
@@ -88,7 +88,7 @@ class LidarIsaacSensor(SensorActor):
     def _extract_point_cloud(self, frame_data: dict) -> np.ndarray:
         """
         Extract point cloud from Isaac Sim LiDAR data
-        
+
         返回的点云已经应用了 LiDAR 的局部旋转（相对于父对象）
 
         Args:
@@ -129,10 +129,10 @@ class LidarIsaacSensor(SensorActor):
     def _apply_local_rotation(self, point_cloud: np.ndarray) -> np.ndarray:
         """
         应用 LiDAR 的局部旋转到点云
-        
+
         Args:
             point_cloud: 点云 [N, 3]
-            
+
         Returns:
             旋转后的点云 [N, 3]
         """
@@ -145,6 +145,7 @@ class LidarIsaacSensor(SensorActor):
 
         # 转换为旋转矩阵
         from scipy.spatial.transform import Rotation as R
+
         # scipy 使用 (x, y, z, w) 格式
         rotation = R.from_quat([quat[1], quat[2], quat[3], quat[0]])
         rotation_matrix = rotation.as_matrix()
@@ -157,10 +158,10 @@ class LidarIsaacSensor(SensorActor):
     def _apply_parent_transform(self, point_cloud: np.ndarray) -> np.ndarray:
         """
         应用父对象（机器人）的世界位姿到点云
-        
+
         Args:
             point_cloud: 点云 [N, 3]
-            
+
         Returns:
             变换后的点云 [N, 3]
         """
@@ -178,11 +179,14 @@ class LidarIsaacSensor(SensorActor):
 
             # 转换为旋转矩阵
             from scipy.spatial.transform import Rotation as R
+
             rotation = R.from_quat(quat)
             rotation_matrix = rotation.as_matrix()
 
             # 应用变换: p_world = R_parent * p_local + t_parent
-            points_transformed = (rotation_matrix @ point_cloud.T).T + np.array([pos.x, pos.y, pos.z])
+            points_transformed = (rotation_matrix @ point_cloud.T).T + np.array(
+                [pos.x, pos.y, pos.z]
+            )
 
             return points_transformed
 
@@ -221,7 +225,7 @@ class LidarOmniSensor(SensorActor):
         super().__init__(lidar_impl, world, parent)
 
         # Frequency control
-        self._frequency = getattr(lidar_impl.cfg_lidar, 'frequency', 10)  # Default 10Hz
+        self._frequency = getattr(lidar_impl.cfg_lidar, "frequency", 10)  # Default 10Hz
         self._tick_interval = 1.0 / self._frequency if self._frequency > 0 else 0.0
         self._time_since_last_tick = 0.0
 
@@ -267,10 +271,10 @@ class LidarOmniSensor(SensorActor):
     def _apply_parent_transform(self, point_cloud: np.ndarray) -> np.ndarray:
         """
         应用父对象（机器人）的世界位姿到点云
-        
+
         Args:
             point_cloud: 点云 [H, W, 3]
-            
+
         Returns:
             变换后的点云（保持原始形状）
         """
@@ -291,6 +295,7 @@ class LidarOmniSensor(SensorActor):
 
         # 转换为旋转矩阵
         from scipy.spatial.transform import Rotation as R
+
         rotation = R.from_quat(quat)
         rotation_matrix = rotation.as_matrix().astype(original_dtype)
 

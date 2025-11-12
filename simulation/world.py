@@ -48,33 +48,34 @@ class World:
     def find_actor_by_robot(self, robot) -> Optional["Actor"]:
         """Find actor by Robot instance"""
         return getattr(robot, "actor", None)
-    
+
     def find_sensors_by_parent(self, parent_actor) -> List["Actor"]:
         """
         Find all sensors attached to a parent actor (CARLA style)
-        
+
         Args:
             parent_actor: Parent actor (RobotActor or other)
-            
+
         Returns:
             List of sensor actors attached to the parent
         """
         from simulation.sensor_actor import SensorActor
+
         sensors = []
         for actor in self._actors.values():
             if isinstance(actor, SensorActor):
                 if actor.get_parent() == parent_actor:
                     sensors.append(actor)
         return sensors
-    
+
     def find_sensor_by_type(self, parent_actor, sensor_type: str) -> Optional["Actor"]:
         """
         Find sensor by type attached to a parent actor
-        
+
         Args:
             parent_actor: Parent actor
             sensor_type: Sensor type ID (e.g., 'sensor.camera.rgb', 'sensor.lidar.ray_cast')
-            
+
         Returns:
             First matching sensor actor or None
         """
@@ -445,7 +446,11 @@ class World:
 
         # 处理 location
         if transform.location is not None:
-            translation = [transform.location.x, transform.location.y, transform.location.z]
+            translation = [
+                transform.location.x,
+                transform.location.y,
+                transform.location.z,
+            ]
         else:
             translation = [0, 0, 0]
 

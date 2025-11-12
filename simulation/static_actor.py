@@ -47,7 +47,9 @@ class StaticActor(Actor):
         if transform.location is not None:
             translate_op = xformable.AddTranslateOp()
             translate_op.Set(
-                Gf.Vec3d(transform.location.x, transform.location.y, transform.location.z)
+                Gf.Vec3d(
+                    transform.location.x, transform.location.y, transform.location.z
+                )
             )
 
     def get_velocity(self) -> Vector3D:
