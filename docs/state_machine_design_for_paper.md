@@ -653,7 +653,7 @@ None/INITIALIZING → CHECKING → ATTACHING → COMPLETED/FAILED
 **状态 1: INITIALIZING（初始化）**
 ```python
 def _init_pick_up(robot, skill_manager, skill_name, kwargs):
-    from simulation.control import GraspControl, ControlAction
+    from simulation.control.command import GraspControl, ControlAction
     
     # 解析参数
     robot_hand_prim_path = kwargs.get("robot_hand_prim_path")
@@ -699,7 +699,7 @@ def _handle_checking(robot, skill_manager, skill_name):
     
     if result["success"]:
         # 距离检查通过，准备抓取
-        from simulation.control import ControlAction
+        from simulation.control.command import ControlAction
         
         grasp_control = skill_manager.get_skill_data(skill_name, "grasp_control")
         grasp_control.action = ControlAction.ATTACH

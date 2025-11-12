@@ -40,7 +40,7 @@ def _init_put_down(robot, skill_manager, skill_name, world, kwargs):
     - Robot layer: Execute in on_physics_step
     - Application layer: Query result asynchronously
     """
-    from simulation.control import ReleaseControl, ControlAction
+    from simulation.control.command import ReleaseControl, ControlAction
 
     # Get parameters
     object_prim_path = kwargs.get("object_prim_path")

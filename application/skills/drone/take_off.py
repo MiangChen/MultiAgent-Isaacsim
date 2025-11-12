@@ -1,5 +1,5 @@
 from application import SkillManager
-from simulation.control import RobotControl
+from simulation.control.command import RobotControl
 
 
 @SkillManager.register()

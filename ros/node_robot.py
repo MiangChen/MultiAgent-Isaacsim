@@ -80,7 +80,7 @@ class NodeRobot(Node):
 
         This allows external control via ROS topics (e.g., teleop, joystick)
         """
-        from simulation.control import RobotControl
+        from simulation.control.command import RobotControl
 
         control = RobotControl()
         control.linear_velocity = [msg.linear.x, msg.linear.y, msg.linear.z]
