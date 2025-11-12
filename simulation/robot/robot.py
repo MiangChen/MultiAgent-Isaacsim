@@ -172,6 +172,45 @@ class Robot:
         """Get ROS topics configuration - Public interface"""
         cfg = self.get_config()
         return cfg.topics if hasattr(cfg, "topics") else {}
+    
+    def get_sensors(self):
+        """
+        Get all sensors attached to this robot (CARLA style)
+        
+        Returns:
+            List of sensor actors attached to this robot
+            
+        Note: Sensors are managed by World, not stored in Robot.
+        This is a convenience method that queries World.
+        """
+        if not hasattr(self, 'actor') or self.actor is None:
+            return []
+        
+        # Get world from actor
+        world = self.actor._world if hasattr(self.actor, '_world') else None
+        if world is None:
+            return []
+        
+        return world.find_sensors_by_parent(self.actor)
+    
+    def get_sensor_by_type(self, sensor_type: str):
+        """
+        Get sensor by type attached to this robot
+        
+        Args:
+            sensor_type: Sensor type ID (e.g., 'sensor.camera.rgb')
+            
+        Returns:
+            Sensor actor or None
+        """
+        if not hasattr(self, 'actor') or self.actor is None:
+            return None
+        
+        world = self.actor._world if hasattr(self.actor, '_world') else None
+        if world is None:
+            return None
+        
+        return world.find_sensor_by_type(self.actor, sensor_type)
 
     def get_detection_radius(self):
         """Get robot detection radius - Public interface"""
@@ -280,7 +319,7 @@ class Robot:
 
     def apply_control(self, control):
         """Apply CARLA-style control: Control object -> velocity command"""
-        from simulation.control import RobotControl
+        from simulation.control.command import RobotControl
 
         if isinstance(control, RobotControl):
             self._current_control = control  # Cache for get_control()
@@ -290,7 +329,7 @@ class Robot:
 
     def get_control(self):
         """Get current control (CARLA-style)"""
-        from simulation.control import RobotControl
+        from simulation.control.command import RobotControl
 
         if not hasattr(self, "_current_control"):
             # Return default control if none applied yet
@@ -369,7 +408,7 @@ class Robot:
         - Skip if already completed or failed
         - Mark as completed after execution to prevent repeated execution
         """
-        from simulation.control import (
+        from simulation.control.command import (
             GraspControl,
             ReleaseControl,
             PlaceControl,
@@ -416,7 +455,7 @@ class Robot:
         from physics_engine.isaacsim_utils import RigidPrim
         from physics_engine.pxr_utils import UsdPhysics, Gf
         from containers import get_container
-        from simulation.control import ControlAction
+        from simulation.control.command import ControlAction
 
         if control.action == ControlAction.CHECK_DISTANCE:
             # Initialize rigid prims
@@ -514,7 +553,7 @@ class Robot:
         """
         from physics_engine.pxr_utils import UsdPhysics
         from containers import get_container
-        from simulation.control import ControlAction
+        from simulation.control.command import ControlAction
 
         if control.action != ControlAction.RELEASE:
             return
@@ -562,7 +601,7 @@ class Robot:
         from physics_engine.isaacsim_utils import RigidPrim
         from physics_engine.pxr_utils import UsdPhysics
         from containers import get_container
-        from simulation.control import ControlAction
+        from simulation.control.command import ControlAction
 
         if control.action != ControlAction.PLACE:
             return

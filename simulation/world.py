@@ -38,14 +38,51 @@ class World:
         self._isaac_world.reset()
 
     def get_actors(self) -> List["Actor"]:
+        """Get all actors in the world"""
         return list(self._actors.values())
 
     def get_actor(self, actor_id: int) -> Optional["Actor"]:
+        """Get actor by ID"""
         return self._actors.get(actor_id)
 
     def find_actor_by_robot(self, robot) -> Optional["Actor"]:
-        """通过 Robot 实例查找对应的 Actor"""
+        """Find actor by Robot instance"""
         return getattr(robot, "actor", None)
+    
+    def find_sensors_by_parent(self, parent_actor) -> List["Actor"]:
+        """
+        Find all sensors attached to a parent actor (CARLA style)
+        
+        Args:
+            parent_actor: Parent actor (RobotActor or other)
+            
+        Returns:
+            List of sensor actors attached to the parent
+        """
+        from simulation.sensor_actor import SensorActor
+        sensors = []
+        for actor in self._actors.values():
+            if isinstance(actor, SensorActor):
+                if actor.get_parent() == parent_actor:
+                    sensors.append(actor)
+        return sensors
+    
+    def find_sensor_by_type(self, parent_actor, sensor_type: str) -> Optional["Actor"]:
+        """
+        Find sensor by type attached to a parent actor
+        
+        Args:
+            parent_actor: Parent actor
+            sensor_type: Sensor type ID (e.g., 'sensor.camera.rgb', 'sensor.lidar.ray_cast')
+            
+        Returns:
+            First matching sensor actor or None
+        """
+        sensors = self.find_sensors_by_parent(parent_actor)
+        for sensor in sensors:
+            if sensor.get_type_id() == sensor_type:
+                return sensor
+        return None
 
     def spawn_actor(self, blueprint, transform=None, attach_to=None):
         """
