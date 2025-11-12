@@ -15,7 +15,6 @@ from .target import Target
 # Robot components
 from .body import *
 from .cfg import *
-from .controller import *
 
 __all__ = [
     # Main robot classes

@@ -21,7 +21,7 @@ from physics_engine.isaacsim_utils import (
     quat_to_rot_matrix,
     ArticulationAction,
 )
-from simulation.robot.controller.controller_policy import PolicyController
+from simulation.control.policy_control.controller_policy import PolicyController
 
 
 class G1FlatTerrainPolicy(PolicyController):
@@ -59,7 +59,7 @@ class G1FlatTerrainPolicy(PolicyController):
         self._action_scale = 0.5
         self._previous_action = np.zeros(19)
         self._policy_counter = 0
-        # from controller.controller_policy import PolicyController
+        # from policy_control.controller_policy import PolicyController
         # self.policy_runner = PolicyController()
 
     def _compute_observation(self, command):

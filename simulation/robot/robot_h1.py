@@ -13,7 +13,7 @@
 import numpy as np
 
 # Local project imports
-from simulation.robot.controller.controller_policy_h1 import H1FlatTerrainPolicy
+from simulation.control.policy_control.controller_policy_h1 import H1FlatTerrainPolicy
 from log.log_manager import LogManager
 from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from simulation.robot.body.body_h1 import BodyH1

@@ -21,7 +21,7 @@ import torch
 from physics_engine.omni_utils import omni
 
 # Local project imports
-from simulation.robot.controller.controller_cfg_loader import (
+from simulation.control.policy_control.controller_cfg_loader import (
     get_articulation_props,
     get_physics_properties,
     get_robot_joint_properties,

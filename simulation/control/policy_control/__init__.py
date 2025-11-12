@@ -2,7 +2,7 @@
 Robot controller module - Controller implementations and utilities.
 """
 
-# Base controller classes
+# Base policy_control classes
 from .controller_policy import PolicyController
 from .controller_policy_h1 import H1FlatTerrainPolicy
 from .controller_policy_g1 import G1FlatTerrainPolicy
