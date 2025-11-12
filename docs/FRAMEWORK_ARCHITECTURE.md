@@ -1,12 +1,30 @@
-# Isaac Sim 机器人仿真框架架构文档
+# Isaac Sim 机器人仿真框架 - 完整架构文档
 
-**版本**: v6.0  
+**版本**: v7.0  
 **最后更新**: 2024年11月12日  
 **状态**: ✅ 生产就绪
 
 ---
 
-## 📐 架构概览
+## 📑 目录
+
+1. [架构概览](#架构概览)
+2. [核心设计原则](#核心设计原则)
+3. [核心组件](#核心组件)
+4. [坐标系统](#坐标系统)
+5. [传感器系统](#传感器系统)
+6. [ROS 集成](#ros-集成)
+7. [技能系统](#技能系统)
+8. [性能优化](#性能优化)
+9. [CARLA 对齐](#carla-对齐)
+10. [使用示例](#使用示例)
+11. [故障排查](#故障排查)
+
+---
+
+## 架构概览
+
+### 三层架构设计
 
 本框架采用三层架构设计，参考 CARLA 架构，实现清晰的职责分离和模块解耦。
 
@@ -36,17 +54,36 @@
 
 ---
 
-## 🎯 核心设计原则
+## 核心设计原则
 
-1. **CARLA 风格 API** - 统一的 `spawn_actor()`, `apply_control()` 接口
-2. **分层边界清晰** - Application 层不直接调用 Isaac Sim API
-3. **状态与命令分离** - 区分实际状态和控制命令
-4. **同步控制** - MPC 直接设置速度，避免 ROS 延迟
-5. **模块化设计** - 每个传感器独立管理
+### 1. CARLA 风格 API
+- 统一的 `spawn_actor()`, `apply_control()` 接口
+- Blueprint 系统管理所有可创建对象
+- Sensor 通过 `.listen()` 模式获取数据
+
+### 2. 分层边界清晰
+- Application 层不直接调用 Isaac Sim API
+- 通过 Actor 和 Control 对象进行交互
+- 数据类型统一转换（torch → Python）
+
+### 3. 状态与命令分离
+- Robot 状态变量只读（由 Isaac Sim 更新）
+- 命令变量可写（由控制器设置）
+- 避免状态覆盖命令的问题
+
+### 4. 同步控制
+- MPC 直接设置速度，避免 ROS 延迟
+- 控制器与仿真同步运行
+- 保证实时性
+
+### 5. 模块化设计
+- 每个传感器独立管理
+- 技能系统可插拔
+- 易于扩展和维护
 
 ---
 
-## 📦 第一部分：核心组件
+## 核心组件
 
 ### 1. World (世界管理器)
 
@@ -88,20 +125,6 @@ simulation/
         └── lidar_blueprint.py      # RayCastLidarBlueprint
 ```
 
-**使用示例**:
-```python
-# 获取蓝图
-bp_library = world.get_blueprint_library()
-camera_bp = bp_library.find('sensor.camera.rgb')
-
-# 配置属性
-camera_bp.set_attribute('image_size_x', 1280)
-camera_bp.set_attribute('image_size_y', 720)
-
-# 创建 Actor
-camera = world.spawn_actor(camera_bp, transform, attach_to=robot)
-```
-
 **Blueprint 类型**:
 - `robot.*` - 机器人 (jetbot, h1, g1, cf2x, drone_autel)
 - `static.prop.*` - 静态物体 (box, car)
@@ -134,25 +157,85 @@ class Actor:
     def destroy()
 ```
 
-**RobotActor**:
+---
+
+### 4. Transform System (坐标变换系统)
+
+**核心类**:
 ```python
-class RobotActor(Actor):
-    robot: Robot    # 双向引用: robot.actor ↔ actor.robot
+class Location:
+    def __init__(self, x=0.0, y=0.0, z=0.0)
+    
+class Rotation:
+    def __init__(self, quaternion=None, order="xyzw")
+    def to_quaternion() -> List[float]  # [x, y, z, w]
+    
+class Transform:
+    def __init__(self, location=None, rotation=None)
 ```
 
-**SensorActor**:
-```python
-class SensorActor(Actor):
-    sensor: Any     # 传感器实现 (Camera, LidarIsaac)
-    
-    def listen(callback: Callable)
-    def stop()
-    def is_listening() -> bool
-```
+**类型转换**:
+- 自动处理 torch tensor、numpy array、Python list
+- 统一转换为 Python 原生类型
+- 支持 wxyz 和 xyzw 四元数顺序
+
+**设计特点**:
+- ✅ 强制显式设置（location/rotation 可以为 None）
+- ✅ Fail-fast 原则（使用 None 属性会立即报错）
+- ✅ 类型安全（自动转换数据类型）
 
 ---
 
-### 4. Sensor System (传感器系统)
+## 坐标系统
+
+### 坐标系约定
+
+**Isaac Sim / ROS 标准**:
+- X: 前方
+- Y: 左侧
+- Z: 上方
+- 右手坐标系
+
+### 四元数格式
+
+**Isaac Sim 格式**: `(w, x, y, z)`  
+**scipy/ROS 格式**: `(x, y, z, w)`
+
+**转换**:
+```python
+# Isaac Sim → scipy
+quat_scipy = [quat[1], quat[2], quat[3], quat[0]]
+
+# scipy → Isaac Sim
+quat_isaac = [quat[3], quat[0], quat[1], quat[2]]
+```
+
+### LiDAR 坐标变换
+
+**完整变换链**:
+```
+1. LiDAR 局部坐标系
+   ↓ (应用 LiDAR 的 quat)
+2. 父对象（机器人）局部坐标系  
+   ↓ (应用父对象的世界位姿)
+3. 世界坐标系 (map)
+```
+
+**实现位置**:
+- `simulation/sensor/lidar/lidar_omni.py` - Omni LiDAR 局部旋转
+- `simulation/sensor/lidar_actor.py` - 父对象变换
+- `ros/sensor_ros_bridge.py` - ROS 坐标系转换
+
+**关键修复**:
+1. ✅ LiDAR 点云应用局部旋转
+2. ✅ RobotActor 返回完整 Transform（包含 rotation）
+3. ✅ 数据类型保持 float32（避免 scipy 的 float64）
+
+---
+
+## 传感器系统
+
+### 传感器架构
 
 **目录结构**:
 ```
@@ -164,75 +247,82 @@ simulation/sensors/
 ├── camera_actor.py             # RGBCamera Actor
 ├── camera/
 │   ├── camera_blueprint.py    # RGBCameraBlueprint
-│   ├── camera.py              # Camera 实现 (Isaac Sim)
+│   ├── camera.py              # Camera 实现
 │   └── cfg_camera.py          # CfgCamera
 │
 ├── lidar_actor.py              # LidarIsaacSensor, LidarOmniSensor
 └── lidar/
     ├── lidar_blueprint.py     # IsaacLidarBlueprint, OmniLidarBlueprint
-    ├── lidar_isaac.py         # LidarIsaac 实现 (Isaac Sim API)
-    ├── lidar_omni.py          # LidarOmni 实现 (Omni API)
+    ├── lidar_isaac.py         # LidarIsaac 实现
+    ├── lidar_omni.py          # LidarOmni 实现
     └── cfg_lidar.py           # CfgLidar
 ```
 
+### LiDAR 实现
+
+**两种 LiDAR 类型**:
+
+| 类型 | Blueprint ID | 底层 API | 数据格式 |
+|------|-------------|---------|---------|
+| Isaac LiDAR | `sensor.lidar.isaac` | Isaac Sim LidarRtx | 字典 (distances, emitterIds) |
+| Omni LiDAR | `sensor.lidar.omni` | Omni RTX LiDAR | 点云数组 [N, 3] |
+
 **使用示例**:
 ```python
-# 1. 获取蓝图
-camera_bp = bp_library.find('sensor.camera.rgb')
-camera_bp.set_attribute('image_size_x', 1280)
+# Isaac LiDAR
+isaac_lidar_bp = bp_library.find('sensor.lidar.isaac')
+isaac_lidar_bp.set_attribute('config_file_name', 'Hesai_XT32_SD10')
+isaac_lidar_bp.set_attribute('frequency', 10)
 
-# 2. 创建传感器
-camera = world.spawn_actor(
-    camera_bp,
-    Transform(Location(x=0.2, z=0.1)),
+isaac_lidar = world.spawn_actor(
+    isaac_lidar_bp,
+    Transform(Location(x=0.0, z=0.05)),
     attach_to=robot_actor
 )
 
-# 3. 监听数据
-camera.listen(lambda img: img.save_to_disk(f'frame_{img.frame}.png'))
+# Omni LiDAR
+omni_lidar_bp = bp_library.find('sensor.lidar.omni')
+omni_lidar_bp.set_attribute('config_file_name', 'Hesai_XT32_SD10')
+omni_lidar_bp.set_attribute('output_size', (352, 120))
+omni_lidar_bp.set_attribute('erp_height', 352)
+omni_lidar_bp.set_attribute('erp_width', 120)
+omni_lidar_bp.set_attribute('frequency', 10)
+
+omni_lidar = world.spawn_actor(
+    omni_lidar_bp,
+    Transform(Location(x=0.0, z=0.1)),
+    attach_to=robot_actor
+)
 ```
 
-**设计特点**:
-- 每个传感器有独立的文件夹
-- Blueprint 和实现分离
-- 延迟导入（Blueprint 不需要 Isaac Sim）
-- 统一的 `listen()` 接口
+### 传感器访问模式
 
----
+**CARLA 风格设计**:
+- 传感器是独立的 Actor
+- 不存储在 Robot 类中
+- 通过 World 查询获取
 
-### 5. Robot (机器人类)
-
-**状态与命令分离**:
-
+**查询方法**:
 ```python
-class Robot:
-    # 状态变量（私有，只读）
-    _position: Tensor
-    _quat: Tensor
-    _linear_velocity: Tensor
-    _angular_velocity: Tensor
-    
-    # 命令变量（公共，可写）
-    target_linear_velocity: Tensor
-    target_angular_velocity: Tensor
-    
-    # 公共接口
-    def get_world_pose() -> Tuple[Tensor, Tensor]
-    def get_velocity() -> Tensor
-    def apply_control(control: RobotControl)
-    def on_physics_step(step_size)
-```
+# 方式 1: 通过 Robot 查询（推荐）
+camera = robot.get_sensor_by_type('sensor.camera.rgb')
 
-**关键设计**:
-- 状态变量由 Isaac Sim 更新，只读
-- 命令变量由控制器设置，可写
-- 避免状态覆盖命令的问题
+# 方式 2: 通过 World 查询
+sensors = world.find_sensors_by_parent(robot_actor)
+
+# 方式 3: 直接引用（创建时保存）
+camera = world.spawn_actor(camera_bp, transform, attach_to=robot_actor)
+```
 
 ---
 
-### 6. ROS Integration (ROS 集成)
+## ROS 集成
 
-**RobotRosManager**:
+### RobotRosManager
+
+**职责**: 管理机器人的所有 ROS 通信
+
+**核心组件**:
 ```python
 class RobotRosManager:
     # ROS 节点
@@ -249,21 +339,7 @@ class RobotRosManager:
     ros_thread: Thread
 ```
 
-**ROS 通信**:
-- **Publishers**: `/robot_0/odom`, `/robot_0/lidar/points`, `/robot_0/camera/image`
-- **Subscribers**: `/robot_0/cmd_vel`, `/sim_clock`
-- **Action Servers**: `/robot_0/skill_execution`
-- **Action Clients**: `/robot_0/compute_path_to_pose`
-
-**设计特点**:
-- 完全解耦：Robot 类不包含 ROS 代码
-- 独立线程：不阻塞仿真循环
-- 统一接口：所有机器人使用相同结构
-- CARLA 风格：通过 `.listen()` 连接传感器到 ROS
-
----
-
-### 7. Sensor ROS Bridge (传感器 ROS 桥接)
+### Sensor ROS Bridge
 
 **架构设计** (CARLA 风格):
 ```
@@ -280,395 +356,356 @@ class RobotRosManager:
 **使用示例**:
 ```python
 # 创建传感器 (CARLA style)
-lidar_bp = bp_library.find('sensor.lidar.isaac')
 lidar = world.spawn_actor(lidar_bp, transform, attach_to=robot_actor)
 
-# 附加到 ROS (通过 RobotRosManager)
+# 附加到 ROS
 robot = robot_actor.robot
-if robot.has_ros():
-    ros_manager = robot.get_ros_manager()
-    ros_manager.attach_sensor_to_ros(lidar, 'lidar', 'front_lidar/points')
-    # 发布到: /robot_0/front_lidar/points
+ros_manager = robot.get_ros_manager()
+ros_manager.attach_sensor_to_ros(lidar, 'lidar', 'front_lidar/points')
+# 发布到: /robot_0/front_lidar/points
 ```
 
 **支持的传感器类型**:
 - **LiDAR**: `sensor_msgs/PointCloud2` → `/robot_0/lidar/points`
 - **Camera**: `sensor_msgs/Image` → `/robot_0/camera/image_raw`
 
-**设计优势**:
-- ✅ 完全符合 CARLA 架构 (`.listen()` 模式)
-- ✅ Sensor 不依赖 ROS (解耦)
-- ✅ 可以同时有多个回调
-- ✅ 动态添加/移除 ROS 发布
-
 ---
 
-## 🔄 第二部分：数据流
+## 技能系统
 
-### 1. 仿真 Tick 循环
+### 状态机架构
 
-```
-主循环
-  ↓ world.tick()
-Isaac Sim 步进
-  ↓ 发布 /sim_clock
-MPC.clock_callback() (ROS 线程)
-  ↓ control_loop()
-  ↓ robot.target_velocity = ... (同步设置)
-robot.on_physics_step()
-  ↓ publish_robot_state() (更新状态)
-  ↓ controller_simplified() (应用命令)
-```
-
-### 2. 传感器数据流
-
-**Camera 数据流**:
-```
-用户代码
-  ↓ camera.listen(callback)
-RGBCamera.tick()
-  ↓ self.sensor.get_rgb()
-Camera (Isaac Sim)
-  ↓ Isaac Sim API
-Isaac Sim 渲染引擎
-  ↓ 返回 RGB 数据
-RGBCamera 构造 CameraData
-  ↓ callback(camera_data)
-用户回调函数
-```
-
-**LiDAR 数据流**:
-```
-用户代码
-  ↓ lidar.listen(callback)
-LidarIsaacSensor.tick()
-  ↓ self.sensor.get_current_frame()
-LidarIsaac (Isaac Sim)
-  ↓ LidarRtx API
-Isaac Sim RTX LiDAR
-  ↓ 返回点云数据
-LidarIsaacSensor 构造 LidarData
-  ↓ callback(lidar_data)
-用户回调函数
-```
-
-**Sensor ROS 发布流程**:
-```
-Sensor.tick()
-  ↓ 获取数据
-  ↓ 构造 SensorData
-  ↓ callback(sensor_data)
-SensorRosBridge.publish()
-  ↓ 转换为 ROS 消息
-  ↓ publisher.publish(msg)
-ROS Topic
-```
-
-### 3. 技能执行流程
+**基于有限状态机（FSM）的技能管理**:
 
 ```
-用户发起请求
-  ↓ ROS Action: /robot_0/skill_execution
-Skill 执行
-  ↓ navigate_to() 发送路径规划请求
-路径规划 (ROS)
-  ↓ NodePlannerOmpl 计算路径
-轨迹生成 (ROS)
-  ↓ NodeTrajectoryGenerator 生成轨迹
-MPC 自动跟踪
-  ↓ 直接设置 robot.target_velocity
-Robot 应用控制
-  ↓ controller_simplified()
+M = (S, Σ, δ, s₀, F)
+
+S: 状态集合
+Σ: 输入符号集合（事件/条件）
+δ: 状态转换函数
+s₀: 初始状态
+F: 终止状态集合
+```
+
+### Navigate To 技能示例
+
+**状态定义**:
+```
+S = {INITIALIZING, EXECUTING, COMPLETED, FAILED}
+```
+
+**状态转换**:
+```
+None --[request_received]--> INITIALIZING
+INITIALIZING --[planning_succeeded]--> EXECUTING
+EXECUTING --[goal_reached]--> COMPLETED
+EXECUTING --[execution_timeout]--> FAILED
+```
+
+**实现特点**:
+1. **异步路径规划**: 使用 ROS Action Future
+2. **并行 MPC 控制**: 状态机监控，MPC 执行
+3. **事件驱动**: 通过事件信号判断到达
+
+### Take Photo 技能示例
+
+**使用方式**:
+```bash
+ros2 action send_goal /h1_0/skill_execution \
+  plan_msgs/action/SkillExecution \
+  '{skill_request: {skill_list: [{
+    skill: "take_photo",
+    params: [
+      {key: "camera_type", value: "sensor.camera.rgb"},
+      {key: "save_path", value: "/path/to/photo.jpg"}
+    ]
+  }]}}' --feedback
 ```
 
 ---
 
-## 📁 第三部分：文件结构
+## 性能优化
 
-### 核心目录
+### LiDAR 频率控制
 
-```
-simulation/                     # 仿真层 (CARLA 风格)
-├── __init__.py
-├── server.py                  # Server 类
-├── world.py                   # World 类
-├── actor.py                   # Actor 基类
-├── robot_actor.py             # RobotActor
-├── static_actor.py            # StaticActor
-├── sensor.py                  # SensorActor 基类
-├── actor_blueprint.py         # ActorBlueprint, BlueprintLibrary
-├── transform.py               # Transform, Location, Rotation
-├── control.py                 # RobotControl
-│
-└── sensors/                   # 传感器系统
-    ├── __init__.py
-    ├── sensor_blueprint_base.py    # SensorBlueprint 基类
-    ├── data.py                     # CameraData, LidarData
-    ├── camera_actor.py             # RGBCamera Actor
-    ├── lidar_actor.py              # LidarSensor Actor
-    │
-    ├── camera/
-    │   ├── camera_blueprint.py    # RGBCameraBlueprint
-    │   ├── camera.py              # Camera 实现
-    │   └── cfg_camera.py          # CfgCamera
-    │
-    └── lidar/
-        ├── lidar_blueprint.py     # RayCastLidarBlueprint
-        ├── lidar_isaac.py         # LidarIsaac 实现
-        └── cfg_lidar.py           # CfgLidar
+**问题**: 默认 60Hz 运行导致 CPU 占用过高
 
-robot/                          # 机器人实现
-├── robot.py                   # Robot 基类
-├── robot_jetbot.py            # RobotJetbot
-├── robot_h1.py                # RobotH1
-└── body/                      # Body 实现 (Isaac Sim 层)
-
-application/                    # 应用层
-├── skill_manager.py           # SkillManager
-└── skills/                    # 技能实现
-
-ros/                           # ROS 集成
-├── ros_manager_robot.py       # RobotRosManager
-├── node_robot.py              # NodeRobot
-└── sensor_ros_bridge.py       # SensorRosBridge, LidarRosBridge, CameraRosBridge
-```
-
----
-
-## 🎨 第四部分：使用示例
-
-### 1. 创建机器人
+**解决方案**: 配置频率参数
 
 ```python
-from simulation import World, Transform, Location
+lidar_bp.set_attribute('frequency', 5)  # 5Hz - 推荐用于调试
+lidar_bp.set_attribute('frequency', 10)  # 10Hz - 默认值
+lidar_bp.set_attribute('frequency', 20)  # 20Hz - 高频率
+```
 
-# 创建世界
+**推荐频率**:
+
+| 场景 | 推荐频率 | CPU 占用 |
+|------|---------|---------|
+| 调试/开发 | 5 Hz | ~8% |
+| 一般使用 | 10 Hz | ~17% |
+| 高精度需求 | 20 Hz | ~33% |
+
+### 数据类型优化
+
+**问题**: scipy 默认返回 float64，导致数据类型提升
+
+**解决方案**: 强制使用 float32
+
+```python
+# 旋转矩阵
+rotation_matrix = rotation.as_matrix().astype(np.float32)
+
+# 平移向量
+translation = np.array([pos.x, pos.y, pos.z], dtype=np.float32)
+
+# 保持原始数据类型
+return points_transformed.astype(original_dtype)
+```
+
+---
+
+## CARLA 对齐
+
+### CARLA 风格说明
+
+**我们参考 CARLA 的设计理念，但实现是全新的**:
+
+| CARLA 类 | 我们的类 | 说明 |
+|---------|---------|------|
+| `carla.World` | `simulation.World` | ✅ 参考 API 设计 |
+| `carla.BlueprintLibrary` | `simulation.BlueprintLibrary` | ✅ 参考 API 设计 |
+| `carla.Actor` | `simulation.Actor` | ✅ 参考 API 设计 |
+| `carla.Image` | `simulation.sensor.CameraData` | ✅ 我们自己创建 |
+| `carla.LidarMeasurement` | `simulation.sensor.LidarData` | ✅ 我们自己创建 |
+
+**关键点**:
+- ✅ API 风格参考 CARLA
+- ✅ 实现完全独立
+- ✅ 适配 Isaac Sim
+- ✅ 用户体验一致
+
+### 未来优化方向
+
+**高优先级**:
+1. **Control 系统重构** - 使用 Control 对象而非直接设置速度
+2. **Skill 系统简化** - 提取状态机基类，减少样板代码
+
+**中优先级**:
+3. **Vehicle/Robot 类型分离** - 区分 Vehicle, Walker, Drone
+4. **传感器数据流优化** - 添加数据缓存和按需获取
+
+---
+
+## 使用示例
+
+### 完整示例：创建机器人和传感器
+
+```python
+from simulation import World, Transform, Location, Rotation
+
+# 1. 创建世界
 world = World(simulation_app)
 
-# 获取蓝图库
+# 2. 获取蓝图库
 bp_library = world.get_blueprint_library()
 
-# 获取机器人蓝图
+# 3. 创建机器人
 robot_bp = bp_library.find('robot.jetbot')
 robot_bp.set_attribute('namespace', 'robot_0')
 
-# 创建机器人
-transform = Transform(location=Location(0, 0, 0.5))
-robot_actor = world.spawn_actor(robot_bp, transform)
+robot_actor = world.spawn_actor(
+    robot_bp,
+    Transform(location=Location(0, 0, 0.5))
+)
 
-# 获取 Robot 对象
-robot = robot_actor.robot
-```
-
-### 2. 添加传感器
-
-**添加 Camera**:
-```python
-# 获取相机蓝图
+# 4. 添加相机
 camera_bp = bp_library.find('sensor.camera.rgb')
 camera_bp.set_attribute('image_size_x', 1280)
 camera_bp.set_attribute('image_size_y', 720)
 
-# 创建相机（附加到机器人）
 camera = world.spawn_actor(
     camera_bp,
     Transform(Location(x=0.2, z=0.1)),
     attach_to=robot_actor
 )
 
-# 监听数据
-camera.listen(lambda img: img.save_to_disk(f'frame_{img.frame}.png'))
-```
+# 5. 添加 LiDAR
+lidar_bp = bp_library.find('sensor.lidar.omni')
+lidar_bp.set_attribute('config_file_name', 'Hesai_XT32_SD10')
+lidar_bp.set_attribute('output_size', (352, 120))
+lidar_bp.set_attribute('frequency', 10)
 
-**添加 LiDAR**:
-```python
-# Isaac LiDAR
-isaac_lidar_bp = bp_library.find('sensor.lidar.isaac')
-isaac_lidar_bp.set_attribute('config_file_name', 'Hesai_XT32_SD10')
-isaac_lidar = world.spawn_actor(
-    isaac_lidar_bp,
+lidar = world.spawn_actor(
+    lidar_bp,
     Transform(Location(x=0.0, z=0.05)),
     attach_to=robot_actor
 )
 
-# Omni LiDAR
-omni_lidar_bp = bp_library.find('sensor.lidar.omni')
-omni_lidar_bp.set_attribute('config_file_name', 'Hesai_XT32_SD10')
-omni_lidar_bp.set_attribute('output_size', (352, 120))
-omni_lidar_bp.set_attribute('erp_height', 352)
-omni_lidar_bp.set_attribute('erp_width', 120)
-omni_lidar = world.spawn_actor(
-    omni_lidar_bp,
-    Transform(Location(x=0.0, z=0.1)),
-    attach_to=robot_actor
-)
+# 6. 监听数据
+camera.listen(lambda img: img.save_to_disk(f'frame_{img.frame}.png'))
+lidar.listen(lambda data: print(f"Points: {len(data.points)}"))
 
-# 监听数据
-isaac_lidar.listen(lambda data: print(f"Points: {len(data.points)}"))
-```
-
-**发布到 ROS**:
-```python
-# 获取 ROS manager
+# 7. 附加到 ROS
 robot = robot_actor.robot
 ros_manager = robot.get_ros_manager()
+ros_manager.attach_sensor_to_ros(camera, 'camera', 'camera/image')
+ros_manager.attach_sensor_to_ros(lidar, 'lidar', 'lidar/points')
 
-# 附加传感器到 ROS (CARLA style)
-ros_manager.attach_sensor_to_ros(camera, 'camera', 'front_camera/image')
-ros_manager.attach_sensor_to_ros(isaac_lidar, 'lidar', 'isaac_lidar/points')
-ros_manager.attach_sensor_to_ros(omni_lidar, 'lidar', 'omni_lidar/points')
-
-# 数据自动发布到:
-# - /robot_0/front_camera/image
-# - /robot_0/isaac_lidar/points
-# - /robot_0/omni_lidar/points
-```
-
-### 3. ROS 控制
-
-```python
-from ros.ros_manager_robot import RobotRosManager
-
-# 创建 ROS Manager
-ros_manager = RobotRosManager(
-    robot=robot,
-    namespace='robot_0',
-    topics={'odom': '/robot_0/odom', 'cmd_vel': '/robot_0/cmd_vel'}
-)
-
-# 注入到 Robot
-robot.set_ros_manager(ros_manager)
-
-# 启动 ROS
-ros_manager.start()
-
-# 通过 ROS 控制
-# ros2 topic pub /robot_0/cmd_vel geometry_msgs/msg/Twist ...
-```
-
-### 4. 技能执行
-
-```python
-from application import SkillManager
-
-# 创建 Skill Manager
-skill_manager = SkillManager(robot, auto_register=True)
-robot.skill_manager = skill_manager
-
-# 执行技能
-result = skill_manager.execute_skill(
-    'navigate_to',
-    goal_pos=[10, 20, 0],
-    timeout=30.0
-)
+# 8. 运行仿真
+while simulation_app.is_running():
+    world.tick()
 ```
 
 ---
 
-## 🚀 第五部分：最佳实践
+## 故障排查
 
-### 1. 命名规范
+### LiDAR 点云方向错误
 
-**Blueprint ID**:
-- 机器人: `robot.{type}` (e.g., `robot.jetbot`)
-- 静态物体: `static.prop.{type}` (e.g., `static.prop.car`)
-- 传感器: `sensor.{category}.{type}` (e.g., `sensor.camera.rgb`)
+**症状**: 点云在 RViz 中上下颠倒或旋转
 
-**类命名**:
-- Blueprint: `{Type}Blueprint` (e.g., `RGBCameraBlueprint`)
-- Actor: `{Type}Actor` 或 `{Type}` (e.g., `RobotActor`, `RGBCamera`)
-- 实现: `{Type}` (e.g., `Camera`, `LidarIsaac`)
-
-### 2. 导入规范
-
-**用户代码**:
-
+**诊断工具**:
 ```python
-# 从 simulation 导入
-from simulation import World, Transform, Location
-from simulation.sensor import RGBCamera, LidarSensor
+from debug_lidar_coordinate import analyze_lidar_data
 
-# 从子包导入 Blueprint
-from simulation.sensor.camera import RGBCameraBlueprint
-from simulation.sensor.lidar import RayCastLidarBlueprint
+lidar.listen(analyze_lidar_data)
 ```
 
-**内部代码**:
-
+**解决方案**:
 ```python
-# 导入实现类
-from simulation.sensor.camera.camera import Camera
-from simulation.sensor.lidar.lidar_isaac import LidarIsaac
+# 调整坐标转换参数
+ros_manager.attach_sensor_to_ros(
+    lidar, 'lidar', 'lidar/points',
+    flip_z=True,      # 翻转 Z 轴
+    rotate_z_deg=-90  # 旋转 -90 度
+)
 ```
 
-### 3. 错误处理
+### 传感器未找到
 
+**症状**: `Camera 'sensor.camera.rgb' not found`
+
+**检查方法**:
 ```python
-# 传感器回调中的错误处理
-def process_image(image):
-    try:
-        image.save_to_disk(f'frame_{image.frame}.png')
-    except Exception as e:
-        logger.error(f"Error saving image: {e}")
-
-camera.listen(process_image)
+# 列出所有传感器
+sensors = robot.get_sensors()
+for sensor in sensors:
+    print(f"Sensor: {sensor.get_type_id()}")
 ```
 
-### 4. 资源清理
+**解决方案**: 确保传感器已创建并附加到机器人
 
+### 仿真卡顿
+
+**原因**: LiDAR 频率过高
+
+**解决方案**:
 ```python
-# 清理传感器
-camera.stop()
-camera.destroy()
-
-# 清理 ROS
-ros_manager.stop()
-
-# 清理机器人
-robot.cleanup()
+# 降低 LiDAR 频率
+lidar_bp.set_attribute('frequency', 5)  # 从 60Hz 降到 5Hz
 ```
 
 ---
 
-## 📚 第六部分：参考文档
+## 文件结构
+
+```
+simulation/                     # 仿真层
+├── world.py                   # World 类
+├── actor.py                   # Actor 基类
+├── robot_actor.py             # RobotActor
+├── static_actor.py            # StaticActor
+├── actor_blueprint.py         # Blueprint 系统
+├── transform.py               # Transform, Location, Rotation
+├── control.py                 # RobotControl
+│
+└── sensors/                   # 传感器系统
+    ├── sensor.py              # SensorActor 基类
+    ├── data.py                # CameraData, LidarData
+    ├── camera_actor.py        # RGBCamera
+    ├── lidar_actor.py         # LidarSensor
+    │
+    ├── camera/
+    │   ├── camera_blueprint.py
+    │   ├── camera.py
+    │   └── cfg_camera.py
+    │
+    └── lidar/
+        ├── lidar_blueprint.py
+        ├── lidar_isaac.py
+        ├── lidar_omni.py
+        └── cfg_lidar.py
+
+robot/                          # 机器人实现
+├── robot.py                   # Robot 基类
+├── robot_jetbot.py
+├── robot_h1.py
+└── body/
+
+application/                    # 应用层
+├── skill_manager.py
+└── skills/
+
+ros/                           # ROS 集成
+├── ros_manager_robot.py
+├── node_robot.py
+└── sensor_ros_bridge.py
+
+docs/                          # 文档
+├── FRAMEWORK_ARCHITECTURE.md  # 本文档
+├── README.md                  # 文档导航
+└── ...
+```
+
+---
+
+## 参考文档
 
 ### 核心文档
-- **`docs/FRAMEWORK_ARCHITECTURE.md`** (本文档) - 框架架构总览
-- **`docs/SENSOR_ACCESS_PATTERN.md`** - 传感器访问模式详解
+- **`docs/FRAMEWORK_ARCHITECTURE.md`** (本文档) - 完整架构
+- **`docs/README.md`** - 文档导航
+
+### 详细文档
+- **`docs/SENSOR_ACCESS_PATTERN.md`** - 传感器访问模式
 - **`docs/LIDAR_IMPLEMENTATION.md`** - LiDAR 实现细节
-- **`docs/SENSOR_ROS_BRIDGE.md`** - Sensor ROS 桥接详解
-
-### 快速参考
-- **`docs/QUICK_REFERENCE.md`** - 传感器系统快速参考
-- **`docs/NAMING_CONVENTIONS.md`** - 命名规范
-
-### 迁移指南
-- **`docs/MIGRATION_GUIDE.md`** - 从旧配置迁移
+- **`docs/SENSOR_ROS_BRIDGE.md`** - Sensor ROS 桥接
+- **`docs/LIDAR_COORDINATE_TRANSFORM.md`** - LiDAR 坐标转换
+- **`docs/LIDAR_LOCAL_ROTATION_FIX.md`** - LiDAR 局部旋转修复
+- **`docs/PERFORMANCE_OPTIMIZATION.md`** - 性能优化指南
+- **`docs/TAKE_PHOTO_SKILL_GUIDE.md`** - Take Photo 技能指南
+- **`docs/navigate_to_skill_architecture.md`** - Navigate To 技能架构
+- **`docs/state_machine_design_for_paper.md`** - 状态机设计（学术）
+- **`docs/CARLA_STYLE_EXPLANATION.md`** - CARLA 风格说明
+- **`docs/CARLA_ALIGNMENT_ROADMAP.md`** - CARLA 对齐路线图
 
 ### 示例代码
 - **`main_example.py`** - 完整使用示例
-- **`examples/add_sensor_to_robot_example.py`** - 添加传感器示例
+- **`debug_lidar_coordinate.py`** - LiDAR 坐标调试工具
 
 ---
 
-## ✅ 验证清单
+## 版本历史
 
-### 系统验证
-- [ ] 所有 Python 文件无语法错误
-- [ ] 所有导入路径正确
-- [ ] Blueprint 系统正常工作
-- [ ] 传感器系统正常工作
-- [ ] ROS 集成正常工作
+### v7.0 (2024-11-12)
+- ✅ 整合所有文档到单一架构文档
+- ✅ 添加完整的坐标系统说明
+- ✅ 添加性能优化指南
+- ✅ 添加故障排查章节
 
-### 代码质量
-- [ ] 无重复代码
-- [ ] 命名规范统一
-- [ ] 文档完整
-- [ ] 示例代码可运行
+### v6.0 (2024-11-12)
+- ✅ 完善 Transform 系统（支持 None 值）
+- ✅ 修复 LiDAR 坐标转换
+- ✅ 优化数据类型处理（float32）
+
+### v5.0 (2024-11-11)
+- ✅ 添加 Sensor ROS Bridge
+- ✅ 完善 LiDAR 实现
+- ✅ 添加频率控制
 
 ---
 
-**文档版本**: v6.0  
+**文档版本**: v7.0  
 **最后更新**: 2024年11月12日  
 **维护者**: Framework Team  
 **状态**: ✅ 生产就绪
