@@ -101,15 +101,59 @@ class LidarOmni:
 
     @carb.profiler.profile
     def get_pointcloud(self):
-        """从深度图生成点云，使用缓存的LUT
+        """
+        从深度图生成点云，使用缓存的LUT
+        
+        返回的点云已经应用了 LiDAR 的局部旋转（相对于父对象）
         shape: width * height * 3
         """
         if self._depth2pc_lut is None:
             self._depth2pc_lut = self.create_depth2pc_lut()
         self.get_depth()
 
+        # 生成局部坐标系下的点云
         point_cloud = (
             self._depth.reshape((self._depth.shape[0], self._depth.shape[1], 1))
             * self._depth2pc_lut
         )
+        
+        # 应用 LiDAR 的局部旋转（相对于父对象的旋转）
+        # 这样点云就在父对象（无人机）的坐标系下了
+        point_cloud = self._apply_local_rotation(point_cloud)
+        
         return point_cloud
+    
+    def _apply_local_rotation(self, point_cloud: np.ndarray) -> np.ndarray:
+        """
+        应用 LiDAR 的局部旋转到点云
+        
+        Args:
+            point_cloud: 点云 [H, W, 3]
+            
+        Returns:
+            旋转后的点云 [H, W, 3]
+        """
+        # 获取 LiDAR 的局部旋转（相对于父对象）
+        quat = self.cfg_lidar.quat  # (w, x, y, z)
+        
+        # 如果是单位四元数，不需要旋转
+        if np.allclose(quat, [1, 0, 0, 0]):
+            return point_cloud
+        
+        # 转换为旋转矩阵
+        from scipy.spatial.transform import Rotation as R
+        # scipy 使用 (x, y, z, w) 格式
+        rotation = R.from_quat([quat[1], quat[2], quat[3], quat[0]])
+        rotation_matrix = rotation.as_matrix()
+        
+        # 保存原始形状
+        original_shape = point_cloud.shape
+        
+        # Reshape 为 [N, 3] 进行旋转
+        points_flat = point_cloud.reshape(-1, 3)
+        
+        # 应用旋转: p_rotated = R * p
+        points_rotated = (rotation_matrix @ points_flat.T).T
+        
+        # 恢复原始形状
+        return points_rotated.reshape(original_shape)

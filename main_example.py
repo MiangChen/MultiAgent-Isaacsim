@@ -291,7 +291,7 @@ def main():
 
         omni_lidar_transform = Transform(
             location=Location(x=0.0, y=0.0, z=0.1),
-            rotation=Rotation(quaternion=[1.0, 0.0, 0.0, 0.0]),
+            rotation=Rotation(quaternion=[0, 0.0, 0.0, 1]),  # xyzw
         )
 
         omni_lidar = world.spawn_actor(
