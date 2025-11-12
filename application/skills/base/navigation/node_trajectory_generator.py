@@ -21,6 +21,8 @@ import toppra.algorithm as algo
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+
+# ROS2 messages imports
 from nav_msgs.msg import Path
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from builtin_interfaces.msg import Duration
