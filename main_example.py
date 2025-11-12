@@ -252,34 +252,13 @@ def main():
     if cf2x_actor:
         logger.info("Adding LiDAR sensors to cf2x_0 robot (CARLA style)...")
 
-        # 1. Add Isaac LiDAR
-        isaac_lidar_bp = blueprint_library.find("sensor.lidar.omni")
-        isaac_lidar_bp.set_attribute("config_file_name", "autel_perception_120x352")
-        isaac_lidar_bp.set_attribute("frequency", 10)
-
-        isaac_lidar_transform = Transform(
-            location=Location(x=0.0, y=0.0, z=0.05),
-            rotation=Rotation(quaternion=[1.0, 0.0, 0.0, 0.0]),
-        )
-
-        isaac_lidar = world.spawn_actor(
-            isaac_lidar_bp, isaac_lidar_transform, attach_to=cf2x_actor
-        )
-
-        ## Listen to Isaac LiDAR data (optional - for testing)
-        def process_isaac_lidar_data(lidar_data):
-            if lidar_data.frame % 60 == 0:  # Log every 60 frames
-                logger.info(f"Isaac LiDAR: {lidar_data}")
-
-        isaac_lidar.listen(process_isaac_lidar_data)
-
-        logger.info(f"✅ Isaac LiDAR added to cf2x_0 at {isaac_lidar.get_prim_path()}")
-        logger.info(f"   Config: Hesai_XT32_SD10, Frequency: 10Hz")
-
         # 2. Add Omni LiDAR
         omni_lidar_bp = blueprint_library.find("sensor.lidar.omni")
-        omni_lidar_bp.set_attribute("config_file_name", "Hesai_XT32_SD10")
-        omni_lidar_bp.set_attribute("output_size", (32, 1800))
+        omni_lidar_bp.set_attribute("config_file_name", "autel_perception_120x352")
+        # 注意: output_size 必须与 (erp_height, erp_width) 一致
+        omni_lidar_bp.set_attribute("erp_height", 352)
+        omni_lidar_bp.set_attribute("erp_width", 120)
+        omni_lidar_bp.set_attribute("output_size", (352, 120))
         omni_lidar_bp.set_attribute("max_depth", 100.0)
         omni_lidar_bp.set_attribute("frequency", 10)
 
@@ -300,7 +279,7 @@ def main():
         omni_lidar.listen(process_omni_lidar_data)
 
         logger.info(f"✅ Omni LiDAR added to cf2x_0 at {omni_lidar.get_prim_path()}")
-        logger.info(f"   Config: Hesai_XT32_SD10, Output: 32x1800, Max depth: 100m")
+        logger.info(f"   Config: autel_perception_120x352, Output: 32x1800, Max depth: 100m")
     else:
         logger.warning("cf2x_0 robot not found, skipping LiDAR setup")
 

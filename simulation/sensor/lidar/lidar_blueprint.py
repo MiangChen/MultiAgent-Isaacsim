@@ -61,17 +61,18 @@ class OmniLidarBlueprint(SensorBlueprint):
         # Sensor tick (0 = every frame)
         self.set_attribute("sensor_tick", 0.0)
 
-        # Output size (height, width)
-        self.set_attribute("output_size", (32, 1800))
+        # Equirectangular projection parameters
+        # 注意: output_size 必须与 (erp_height, erp_width) 一致
+        self.set_attribute("erp_width", 120)
+        self.set_attribute("erp_height", 352)
+        self.set_attribute("output_size", (352, 120))
+        
+        # FOV parameters
+        self.set_attribute("erp_width_fov", 90.0)
+        self.set_attribute("erp_height_fov", 270.0)
 
         # Max depth (meters)
         self.set_attribute("max_depth", 1000.0)
-
-        # Equirectangular projection parameters
-        self.set_attribute("erp_width", 120)
-        self.set_attribute("erp_height", 352)
-        self.set_attribute("erp_width_fov", 90.0)
-        self.set_attribute("erp_height_fov", 270.0)
 
         # Frequency (Hz)
         self.set_attribute("frequency", 10)
