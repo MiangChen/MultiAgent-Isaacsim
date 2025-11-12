@@ -120,7 +120,7 @@ class LidarOmni:
         # 应用 LiDAR 的局部旋转（相对于父对象的旋转）
         # 这样点云就在父对象（无人机）的坐标系下了
         point_cloud = self._apply_local_rotation(point_cloud)
-        
+
         return point_cloud
     
     def _apply_local_rotation(self, point_cloud: np.ndarray) -> np.ndarray:
@@ -145,13 +145,13 @@ class LidarOmni:
         # scipy 使用 (x, y, z, w) 格式
         rotation = R.from_quat([quat[1], quat[2], quat[3], quat[0]])
         rotation_matrix = rotation.as_matrix()
-        
+
         # 保存原始形状
         original_shape = point_cloud.shape
-        
+
         # Reshape 为 [N, 3] 进行旋转
         points_flat = point_cloud.reshape(-1, 3)
-        
+
         # 应用旋转: p_rotated = R * p
         points_rotated = (rotation_matrix @ points_flat.T).T
         

@@ -251,10 +251,8 @@ class LidarOmniSensor(SensorActor):
             # 注意: get_pointcloud() 已经应用了 LiDAR 自身的局部旋转
             # 但还需要应用父对象（机器人）的世界位姿
             point_cloud = self.sensor.get_pointcloud()
-
             # 应用父对象的世界位姿变换
             point_cloud = self._apply_parent_transform(point_cloud)
-
             lidar_data = LidarData(
                 frame=self._world.get_frame(),
                 timestamp=self._world.get_simulation_time(),
@@ -291,19 +289,21 @@ class LidarOmniSensor(SensorActor):
             # 转换为旋转矩阵
             from scipy.spatial.transform import Rotation as R
             rotation = R.from_quat(quat)
-            rotation_matrix = rotation.as_matrix()
+            rotation_matrix = rotation.as_matrix().astype(np.float32)  # 强制 float32
             
-            # 保存原始形状
+            # 保存原始形状和数据类型
             original_shape = point_cloud.shape
+            original_dtype = point_cloud.dtype
             
             # Reshape 为 [N, 3] 进行变换
             points_flat = point_cloud.reshape(-1, 3)
             
             # 应用变换: p_world = R_parent * p_local + t_parent
-            points_transformed = (rotation_matrix @ points_flat.T).T + np.array([pos.x, pos.y, pos.z])
+            translation = np.array([pos.x, pos.y, pos.z], dtype=np.float32)
+            points_transformed = (rotation_matrix @ points_flat.T).T + translation
             
-            # 恢复原始形状
-            return points_transformed.reshape(original_shape)
+            # 恢复原始形状和数据类型
+            return points_transformed.reshape(original_shape).astype(original_dtype)
             
         except Exception as e:
             logger.error(f"Failed to apply parent transform: {e}")

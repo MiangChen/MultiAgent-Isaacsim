@@ -121,8 +121,10 @@ class World:
         actor_config = blueprint.get_all_attributes()
 
         if transform is not None:
-            actor_config["position"] = transform.location.to_list()
-            actor_config["orientation"] = transform.rotation.to_quaternion()
+            if transform.location is not None:
+                actor_config["position"] = transform.location.to_list()
+            if transform.rotation is not None:
+                actor_config["orientation"] = transform.rotation.to_quaternion()
 
         # Instantiate the robot class
         if blueprint.robot_class is None:
@@ -161,12 +163,13 @@ class World:
             attrs["prim_path"] = f"/World/{name}"
 
         if transform:
-            attrs["position"] = [
-                transform.location.x,
-                transform.location.y,
-                transform.location.z,
-            ]
-            if hasattr(transform, "rotation"):
+            if transform.location is not None:
+                attrs["position"] = [
+                    transform.location.x,
+                    transform.location.y,
+                    transform.location.z,
+                ]
+            if transform.rotation is not None:
                 attrs["orientation"] = transform.rotation.to_quaternion()
 
         # Extract semantic_label before passing to create_shape_unified
@@ -440,10 +443,18 @@ class World:
         if transform is None:
             return [0, 0, 0], [1, 0, 0, 0]
 
-        translation = [transform.location.x, transform.location.y, transform.location.z]
+        # 处理 location
+        if transform.location is not None:
+            translation = [transform.location.x, transform.location.y, transform.location.z]
+        else:
+            translation = [0, 0, 0]
 
-        # Convert rotation to quaternion
-        quaternion = transform.rotation.to_quaternion()
+        # 处理 rotation
+        if transform.rotation is not None:
+            quaternion = transform.rotation.to_quaternion()
+        else:
+            # 默认单位四元数 [x, y, z, w]
+            quaternion = [0, 0, 0, 1]
 
         # Isaac Sim uses [w, x, y, z], but to_quaternion returns [x, y, z, w]
         # Reorder to [w, x, y, z]
