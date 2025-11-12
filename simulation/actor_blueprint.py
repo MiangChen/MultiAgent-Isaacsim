@@ -5,7 +5,7 @@ class ActorBlueprint:
     """
     Actor Blueprint (CARLA style)
 
-    Base class for all actor blueprints (robots, sensors, static props, etc.)
+    Base class for all actor blueprints (robots, sensor, static props, etc.)
     """
 
     def __init__(self, blueprint_id: str, robot_class=None, tags: List[str] = None):
@@ -39,12 +39,12 @@ class BlueprintLibrary:
 
     def _register_default_robots(self):
         """预注册所有已知的机器人类型 Pre-register all known robot types (CARLA style)"""
-        from robot.robot_jetbot import RobotJetbot
-        from robot.robot_h1 import RobotH1
-        from robot.robot_g1 import RobotG1
-        from robot.robot_drone_cf2x import RobotCf2x
-        from robot.robot_drone_autel import RobotDroneAutel
-        from robot.target import Target
+        from simulation.robot import RobotJetbot
+        from simulation.robot import RobotH1
+        from simulation.robot import RobotG1
+        from simulation.robot import RobotCf2x
+        from simulation.robot import RobotDroneAutel
+        from simulation.robot.target import Target
 
         self.register_robot_class("jetbot", RobotJetbot)
         self.register_robot_class("h1", RobotH1)
@@ -56,7 +56,7 @@ class BlueprintLibrary:
         # Register static props (CARLA style: static.prop.*)
         self._register_static_props()
 
-        # Register sensors (CARLA style: sensor.*)
+        # Register sensor (CARLA style: sensor.*)
         self._register_sensors()
 
     def _register_static_props(self):
@@ -78,12 +78,12 @@ class BlueprintLibrary:
         self._blueprints[bp.id] = bp
 
     def _register_sensors(self):
-        """注册传感器 Register sensors (CARLA style)"""
-        from simulation.sensors.camera.camera_blueprint import (
+        """注册传感器 Register sensor (CARLA style)"""
+        from simulation.sensor.camera.camera_blueprint import (
             RGBCameraBlueprint,
             DepthCameraBlueprint,
         )
-        from simulation.sensors.lidar.lidar_blueprint import (
+        from simulation.sensor.lidar.lidar_blueprint import (
             RayCastLidarBlueprint,
         )
 

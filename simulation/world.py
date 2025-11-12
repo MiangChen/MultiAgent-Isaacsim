@@ -54,7 +54,7 @@ class World:
         Args:
             blueprint: Blueprint object (robot, static prop, vehicle, sensor, etc.)
             transform: Transform object for initial position/rotation
-            attach_to: Parent actor to attach to (required for sensors)
+            attach_to: Parent actor to attach to (required for sensor)
 
         Returns:
             Actor: RobotActor, StaticActor, or Sensor
@@ -377,18 +377,18 @@ class World:
         """
         Auto-construct sensor prim path
 
-        Rule: parent_path/sensors/sensor_type_id
+        Rule: parent_path/sensor/sensor_type_id
 
         Example:
         - Parent: /World/robot_swarm/jetbot/jetbot_0
         - Sensor: sensor.camera.rgb
         - ID: 0
-        - Result: /World/robot_swarm/jetbot/jetbot_0/sensors/sensor_camera_rgb_0
+        - Result: /World/robot_swarm/jetbot/jetbot_0/sensor/sensor_camera_rgb_0
         """
         parent_path = parent_actor.get_prim_path()
         sensor_type = blueprint.id.replace(".", "_")
         sensor_name = f"{sensor_type}_{self._next_actor_id}"
-        return f"{parent_path}/sensors/{sensor_name}"
+        return f"{parent_path}/sensor/{sensor_name}"
 
     def _extract_transform(self, transform):
         """
@@ -440,8 +440,8 @@ class World:
 
     def _create_camera_impl(self, sensor_path, translation, quaternion, blueprint):
         """Create camera implementation"""
-        from simulation.sensors.camera.camera import Camera
-        from simulation.sensors.camera.cfg_camera import CfgCamera
+        from simulation.sensor.camera.camera import Camera
+        from simulation.sensor.camera.cfg_camera import CfgCamera
 
         # Construct config
         cfg = CfgCamera(
@@ -469,9 +469,9 @@ class World:
 
     def _create_lidar_impl(self, sensor_path, translation, quaternion, blueprint):
         """Create LiDAR implementation"""
-        from simulation.sensors.lidar.lidar_isaac import LidarIsaac
-        from simulation.sensors.lidar.cfg_lidar import CfgLidar
-        from robot.cfg import CfgRobot
+        from simulation.sensor.lidar.lidar_isaac import LidarIsaac
+        from simulation.sensor.lidar.cfg_lidar import CfgLidar
+        from simulation.robot import CfgRobot
 
         # Construct LiDAR config
         cfg_lidar = CfgLidar(

@@ -462,21 +462,23 @@ result = skill_manager.execute_skill(
 ### 2. 导入规范
 
 **用户代码**:
+
 ```python
 # 从 simulation 导入
 from simulation import World, Transform, Location
-from simulation.sensors import RGBCamera, LidarSensor
+from simulation.sensor import RGBCamera, LidarSensor
 
 # 从子包导入 Blueprint
-from simulation.sensors.camera import RGBCameraBlueprint
-from simulation.sensors.lidar import RayCastLidarBlueprint
+from simulation.sensor.camera import RGBCameraBlueprint
+from simulation.sensor.lidar import RayCastLidarBlueprint
 ```
 
 **内部代码**:
+
 ```python
 # 导入实现类
-from simulation.sensors.camera.camera import Camera
-from simulation.sensors.lidar.lidar_isaac import LidarIsaac
+from simulation.sensor.camera.camera import Camera
+from simulation.sensor.lidar.lidar_isaac import LidarIsaac
 ```
 
 ### 3. 错误处理

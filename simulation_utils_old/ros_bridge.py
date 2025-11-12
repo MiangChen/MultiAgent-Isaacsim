@@ -18,7 +18,7 @@ import carb
 # Local project imports
 from containers import get_container
 from physics_engine.pxr_utils import Gf
-from robot.robot_drone_autel import DronePose, RobotDroneAutel
+from simulation.robot import DronePose, RobotDroneAutel
 
 # ROS2 imports
 import rclpy

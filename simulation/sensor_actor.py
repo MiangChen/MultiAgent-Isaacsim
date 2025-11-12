@@ -1,8 +1,8 @@
 """
 Sensor Actor Module - CARLA Style Sensor Implementation
 
-Provides SensorActor wrapper for sensors, following the same pattern as RobotActor.
-All sensors are wrapped in SensorActor and support listen/stop callbacks.
+Provides SensorActor wrapper for sensor, following the same pattern as RobotActor.
+All sensor are wrapped in SensorActor and support listen/stop callbacks.
 """
 
 from abc import ABC, abstractmethod
@@ -20,7 +20,7 @@ class SensorActor(Actor, ABC):
     - RobotActor wraps Robot
     - SensorActor wraps Sensor implementation
 
-    All sensors inherit from Actor and can be spawned/destroyed.
+    All sensor inherit from Actor and can be spawned/destroyed.
     Provides unified listen/stop interface for data callbacks.
     """
 
@@ -133,8 +133,8 @@ class SensorActor(Actor, ABC):
         return Transform()
 
     def set_transform(self, transform: Transform):
-        """Set sensor transform (not supported for attached sensors)"""
-        raise NotImplementedError("Cannot set transform for attached sensors")
+        """Set sensor transform (not supported for attached sensor)"""
+        raise NotImplementedError("Cannot set transform for attached sensor")
 
     def get_velocity(self) -> Vector3D:
         """Get sensor velocity (follows parent, like RobotActor.get_velocity)"""

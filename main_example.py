@@ -15,7 +15,7 @@
 #   └─ Blueprint: Robot and object creation
 #
 #   [Isaac Sim]
-#   └─ Physics engine, rendering, sensors
+#   └─ Physics engine, rendering, sensor
 #
 # Control Modes:
 #   1. Direct: robot.apply_control(control)

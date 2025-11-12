@@ -39,7 +39,7 @@ from physics_engine.isaacsim_utils import (
 
 from simulation_utils_old.minimal_camera import (
     MinimalCamera,
-)  # a stripped down version of isaacsim.sensors.camera
+)  # a stripped down version of isaacsim.sensor.camera
 
 from physics_engine.pxr_utils import Gf, UsdGeom, Sdf, Usd
 
