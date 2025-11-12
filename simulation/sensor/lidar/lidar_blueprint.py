@@ -1,48 +1,77 @@
 """
 LiDAR Blueprints - CARLA Style
 
-Blueprint definitions for LiDAR sensor
+Blueprint definitions for LiDAR sensor (Isaac and Omni implementations)
 """
 
 from simulation.sensor.sensor_blueprint_base import SensorBlueprint
 
 
-class RayCastLidarBlueprint(SensorBlueprint):
+class IsaacLidarBlueprint(SensorBlueprint):
     """
-    Ray-Cast LiDAR Blueprint (CARLA style)
+    Isaac LiDAR Blueprint (CARLA style)
 
-    Blueprint for sensor.lidar.ray_cast
+    Blueprint for sensor.lidar.isaac
+    Uses Isaac Sim's LidarRtx implementation
     """
 
     def __init__(self):
-        from simulation.sensor.lidar_actor import LidarSensor
+        from simulation.sensor.lidar_actor import LidarIsaacSensor
 
         super().__init__(
-            blueprint_id="sensor.lidar.ray_cast",
-            sensor_class=LidarSensor,
-            tags=["sensor", "lidar", "ray_cast"],
+            blueprint_id="sensor.lidar.isaac",
+            sensor_class=LidarIsaacSensor,
+            tags=["sensor", "lidar", "isaac"],
         )
 
     def _define_attributes(self):
-        """Define LiDAR attributes (CARLA standard)"""
-        # Channels
-        self.set_attribute("channels", 32)
-
-        # Range (meters)
-        self.set_attribute("range", 100.0)
-
-        # Points per second
-        self.set_attribute("points_per_second", 56000)
-
-        # Rotation frequency (Hz)
-        self.set_attribute("rotation_frequency", 10.0)
-
-        # Vertical FOV
-        self.set_attribute("upper_fov", 10.0)
-        self.set_attribute("lower_fov", -30.0)
-
-        # Sensor tick
-        self.set_attribute("sensor_tick", 0.0)
-
+        """Define Isaac LiDAR attributes"""
         # Isaac Sim specific: config file name
         self.set_attribute("config_file_name", "Hesai_XT32_SD10")
+
+        # Sensor tick (0 = every frame)
+        self.set_attribute("sensor_tick", 0.0)
+
+        # Frequency (Hz)
+        self.set_attribute("frequency", 10)
+
+
+class OmniLidarBlueprint(SensorBlueprint):
+    """
+    Omni LiDAR Blueprint (CARLA style)
+
+    Blueprint for sensor.lidar.omni
+    Uses Omni's RTX LiDAR implementation
+    """
+
+    def __init__(self):
+        from simulation.sensor.lidar_actor import LidarOmniSensor
+
+        super().__init__(
+            blueprint_id="sensor.lidar.omni",
+            sensor_class=LidarOmniSensor,
+            tags=["sensor", "lidar", "omni"],
+        )
+
+    def _define_attributes(self):
+        """Define Omni LiDAR attributes"""
+        # Isaac Sim specific: config file name
+        self.set_attribute("config_file_name", "Hesai_XT32_SD10")
+
+        # Sensor tick (0 = every frame)
+        self.set_attribute("sensor_tick", 0.0)
+
+        # Output size (height, width)
+        self.set_attribute("output_size", (32, 1800))
+
+        # Max depth (meters)
+        self.set_attribute("max_depth", 1000.0)
+
+        # Equirectangular projection parameters
+        self.set_attribute("erp_width", 120)
+        self.set_attribute("erp_height", 352)
+        self.set_attribute("erp_width_fov", 90.0)
+        self.set_attribute("erp_height_fov", 270.0)
+
+        # Frequency (Hz)
+        self.set_attribute("frequency", 10)

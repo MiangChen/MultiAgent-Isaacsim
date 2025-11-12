@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 class CfgLidar:
     type: str = "lidar"
     # 雷达的名字, 同一个机器人上的雷达名字需要不一样
-    name: str = "name"
+    name: str = "lidar"
     # Lidar 在 USD 舞台中的路径
     prim_path: Optional[str] = None
     # 相对于parent prim的偏移位置
@@ -20,19 +20,19 @@ class CfgLidar:
     如果用自定义的, 需要自己将lidar 的配置文件放到上述的文件夹中, 比如autel_perception_120x352
     """
     config_file_name: str = "Hesai_XT32_SD10"
-    # 雷达的输出维度, 和json中的配置要一致
-    output_size: Optional[Tuple[int, int]] = None
-    # 雷达的最大深度, 如果超过该深度, 则会被设置成这个数值
+    # 雷达的输出维度, 和json中的配置要一致 (用于 Omni LiDAR)
+    output_size: Optional[Tuple[int, int]] = (32, 1800)
+    # 雷达的最大深度, 如果超过该深度, 则会被设置成这个数值 (用于 Omni LiDAR)
     max_depth: float = 1000.0
-    # 等距投影图像宽度（像素）
+    # 等距投影图像宽度（像素）(用于 Omni LiDAR)
     erp_width: int = 120
-    # 等距投影图像高度（像素)
+    # 等距投影图像高度（像素) (用于 Omni LiDAR)
     erp_height: int = 352
-    # 水平视场角（度）
+    # 水平视场角（度）(用于 Omni LiDAR)
     erp_width_fov: float = 90.0
-    # 垂直视场角（度）
+    # 垂直视场角（度）(用于 Omni LiDAR)
     erp_height_fov: float = 270.0
     # Lidar 的扫描频率 (Hz)
     frequency: int = 10
-    # 是否自动附加数据读取器以获取数据
+    # 是否自动附加数据读取器以获取数据 (用于 Omni LiDAR)
     attach_annotator: bool = True

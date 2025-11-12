@@ -44,13 +44,13 @@ class LidarIsaac:
         self.lidar = LidarRtx(
             prim_path=self.cfg_lidar.prim_path,
             name=self.cfg_lidar.type,
-            translation=self.cfg_lidar.position,
+            translation=self.cfg_lidar.translation,
             orientation=self.cfg_lidar.quat,
             config_file_name=self.cfg_lidar.config_file_name,
         )
 
         logger.info(
-            f"Lidar sensor created or encapsulated at path: {self.cfg_lidar.prim_path}"
+            f"Lidar Isaac sensor created or encapsulated at path: {self.cfg_lidar.prim_path}"
         )
 
     def copy_lidar_config(self, lidar_config):

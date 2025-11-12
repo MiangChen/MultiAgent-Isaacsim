@@ -7,11 +7,12 @@ Following the same pattern as RobotActor
 
 from .data import CameraData, LidarData
 from .camera_actor import RGBCamera
-from .lidar_actor import LidarSensor
+from .lidar_actor import LidarIsaacSensor, LidarOmniSensor
 
 __all__ = [
     "CameraData",
     "LidarData",
     "RGBCamera",
-    "LidarSensor",
+    "LidarIsaacSensor",
+    "LidarOmniSensor",
 ]

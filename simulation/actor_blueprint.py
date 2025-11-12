@@ -84,7 +84,8 @@ class BlueprintLibrary:
             DepthCameraBlueprint,
         )
         from simulation.sensor.lidar.lidar_blueprint import (
-            RayCastLidarBlueprint,
+            IsaacLidarBlueprint,
+            OmniLidarBlueprint,
         )
 
         # RGB Camera
@@ -93,8 +94,11 @@ class BlueprintLibrary:
         # Depth Camera
         self._blueprints["sensor.camera.depth"] = DepthCameraBlueprint()
 
-        # LiDAR
-        self._blueprints["sensor.lidar.ray_cast"] = RayCastLidarBlueprint()
+        # Isaac LiDAR
+        self._blueprints["sensor.lidar.isaac"] = IsaacLidarBlueprint()
+
+        # Omni LiDAR
+        self._blueprints["sensor.lidar.omni"] = OmniLidarBlueprint()
 
     def register_robot_class(self, robot_type: str, robot_class: type):
         tags = ["robot"]

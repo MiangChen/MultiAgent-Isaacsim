@@ -73,7 +73,7 @@ def create_car_objects(world):
 
 
 def process_semantic_detection(
-    semantic_camera, map_semantic, target_semantic_class: str
+        semantic_camera, map_semantic, target_semantic_class: str
 ) -> None:
     """
     Process semantic detection and car pose extraction using injected dependencies.
@@ -235,24 +235,74 @@ def main():
         # Spawn camera (attach to h1_0)
         h1_camera = world.spawn_actor(camera_bp, camera_transform, attach_to=h1_actor)
 
-        # Listen to camera data (optional - for testing)
-        # def process_h1_camera_image(image):
-        #     # Save first 10 frames for testing
-        #     if image.frame < 10:
-        #         output_path = f'{PROJECT_ROOT}/output/h1_camera_frame_{image.frame:06d}.png'
-        #         try:
-        #             image.save_to_disk(output_path)
-        #             logger.info(f"Saved h1 camera frame {image.frame} to {output_path}")
-        #         except Exception as e:
-        #             logger.error(f"Failed to save image: {e}")
-        #
-        # h1_camera.listen(process_h1_camera_image)
-
         logger.info(f"✅ Camera sensor added to h1_0 at {h1_camera.get_prim_path()}")
         logger.info(f"   Resolution: 1280x720, Focal length: 2mm")
         logger.info(f"   Semantic detection: Enabled")
     else:
         logger.warning("h1_0 robot not found, skipping camera setup")
+
+    # Add LiDAR sensors to cf2x_0 robot (CARLA style)
+    # Find cf2x_0 robot actor
+    cf2x_actor = None
+    for actor in robot_actors:
+        if hasattr(actor, "robot") and actor.robot.namespace == "cf2x_0":
+            cf2x_actor = actor
+            break
+
+    if cf2x_actor:
+        logger.info("Adding LiDAR sensors to cf2x_0 robot (CARLA style)...")
+
+        # 1. Add Isaac LiDAR
+        isaac_lidar_bp = blueprint_library.find("sensor.lidar.omni")
+        isaac_lidar_bp.set_attribute("config_file_name", "autel_perception_120x352")
+        isaac_lidar_bp.set_attribute("frequency", 10)
+
+        isaac_lidar_transform = Transform(
+            location=Location(x=0.0, y=0.0, z=0.05),
+            rotation=Rotation(quaternion=[1.0, 0.0, 0.0, 0.0]),
+        )
+
+        isaac_lidar = world.spawn_actor(
+            isaac_lidar_bp, isaac_lidar_transform, attach_to=cf2x_actor
+        )
+
+        ## Listen to Isaac LiDAR data (optional - for testing)
+        def process_isaac_lidar_data(lidar_data):
+            if lidar_data.frame % 60 == 0:  # Log every 60 frames
+                logger.info(f"Isaac LiDAR: {lidar_data}")
+
+        isaac_lidar.listen(process_isaac_lidar_data)
+
+        logger.info(f"✅ Isaac LiDAR added to cf2x_0 at {isaac_lidar.get_prim_path()}")
+        logger.info(f"   Config: Hesai_XT32_SD10, Frequency: 10Hz")
+
+        # 2. Add Omni LiDAR
+        omni_lidar_bp = blueprint_library.find("sensor.lidar.omni")
+        omni_lidar_bp.set_attribute("config_file_name", "Hesai_XT32_SD10")
+        omni_lidar_bp.set_attribute("output_size", (32, 1800))
+        omni_lidar_bp.set_attribute("max_depth", 100.0)
+        omni_lidar_bp.set_attribute("frequency", 10)
+
+        omni_lidar_transform = Transform(
+            location=Location(x=0.0, y=0.0, z=0.1),
+            rotation=Rotation(quaternion=[1.0, 0.0, 0.0, 0.0]),
+        )
+
+        omni_lidar = world.spawn_actor(
+            omni_lidar_bp, omni_lidar_transform, attach_to=cf2x_actor
+        )
+
+        ## Listen to Omni LiDAR data (optional - for testing)
+        def process_omni_lidar_data(lidar_data):
+            if lidar_data.frame % 60 == 0:  # Log every 60 frames
+                logger.info(f"Omni LiDAR: {lidar_data}")
+
+        omni_lidar.listen(process_omni_lidar_data)
+
+        logger.info(f"✅ Omni LiDAR added to cf2x_0 at {omni_lidar.get_prim_path()}")
+        logger.info(f"   Config: Hesai_XT32_SD10, Output: 32x1800, Max depth: 100m")
+    else:
+        logger.warning("cf2x_0 robot not found, skipping LiDAR setup")
 
     # Setup semantic camera
     result = scene_manager.add_camera(

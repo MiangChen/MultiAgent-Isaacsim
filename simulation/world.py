@@ -462,14 +462,18 @@ class World:
             blueprint: Sensor blueprint
 
         Returns:
-            Sensor implementation (Camera or LidarIsaac)
+            Sensor implementation (Camera, LidarIsaac, or LidarOmni)
         """
         if blueprint.id == "sensor.camera.rgb":
             return self._create_camera_impl(
                 sensor_path, translation, quaternion, blueprint
             )
-        elif blueprint.id == "sensor.lidar.ray_cast":
-            return self._create_lidar_impl(
+        elif blueprint.id == "sensor.lidar.isaac":
+            return self._create_lidar_isaac_impl(
+                sensor_path, translation, quaternion, blueprint
+            )
+        elif blueprint.id == "sensor.lidar.omni":
+            return self._create_lidar_omni_impl(
                 sensor_path, translation, quaternion, blueprint
             )
         else:
@@ -504,8 +508,8 @@ class World:
 
         return camera
 
-    def _create_lidar_impl(self, sensor_path, translation, quaternion, blueprint):
-        """Create LiDAR implementation"""
+    def _create_lidar_isaac_impl(self, sensor_path, translation, quaternion, blueprint):
+        """Create Isaac LiDAR implementation"""
         from simulation.sensor.lidar.lidar_isaac import LidarIsaac
         from simulation.sensor.lidar.cfg_lidar import CfgLidar
         from simulation.robot import CfgRobot
@@ -517,8 +521,7 @@ class World:
             translation=translation,
             quat=quaternion,
             config_file_name=blueprint.get_attribute("config_file_name"),
-            channels=blueprint.get_attribute("channels"),
-            range=blueprint.get_attribute("range"),
+            frequency=blueprint.get_attribute("frequency", 10),
         )
 
         # Create dummy robot config (LidarIsaac requires it)
@@ -529,6 +532,37 @@ class World:
         lidar = LidarIsaac(cfg_lidar, cfg_robot)
         lidar.create_lidar(prim_path=sensor_path)
         lidar.initialize()
+
+        return lidar
+
+    def _create_lidar_omni_impl(self, sensor_path, translation, quaternion, blueprint):
+        """Create Omni LiDAR implementation"""
+        from simulation.sensor.lidar.lidar_omni import LidarOmni
+        from simulation.sensor.lidar.cfg_lidar import CfgLidar
+        from simulation.robot import CfgRobot
+
+        # Construct LiDAR config
+        cfg_lidar = CfgLidar(
+            name=sensor_path.split("/")[-1],
+            prim_path=sensor_path,
+            translation=translation,
+            quat=quaternion,
+            config_file_name=blueprint.get_attribute("config_file_name"),
+            output_size=blueprint.get_attribute("output_size", (32, 1800)),
+            max_depth=blueprint.get_attribute("max_depth", 1000.0),
+            erp_width=blueprint.get_attribute("erp_width", 120),
+            erp_height=blueprint.get_attribute("erp_height", 352),
+            erp_width_fov=blueprint.get_attribute("erp_width_fov", 90.0),
+            erp_height_fov=blueprint.get_attribute("erp_height_fov", 270.0),
+            frequency=blueprint.get_attribute("frequency", 10),
+        )
+
+        # Create dummy robot config (LidarOmni requires it)
+        cfg_robot = CfgRobot()
+        cfg_robot.path_prim_robot = "/".join(sensor_path.split("/")[:-2])
+
+        # Create LiDAR
+        lidar = LidarOmni(cfg_lidar, cfg_robot)
 
         return lidar
 

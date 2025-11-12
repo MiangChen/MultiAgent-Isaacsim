@@ -42,7 +42,7 @@ class LidarOmni:
             path=self.cfg_lidar.prim_path,
             parent=None,
             config=self.cfg_lidar.config_file_name,
-            translation=self.cfg_lidar.translation,
+            translation=Gf.Vec3d(*self.cfg_lidar.translation),
             orientation=Gf.Quatd(*self.cfg_lidar.quat),  # wxyz
         )
         self.render_product = omni.replicator.core.create.render_product(
