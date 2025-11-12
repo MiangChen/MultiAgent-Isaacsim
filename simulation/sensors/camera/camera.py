@@ -8,7 +8,7 @@
 # =============================================================================
 
 # Standard library imports
-from typing import List, Optional, Tuple, Sequence
+from typing import Tuple, Sequence
 
 # Third-party library imports
 import numpy as np
@@ -22,7 +22,7 @@ from physics_engine.isaacsim_utils import (
     define_prim,
     get_prim_at_path,
 )
-from robot.sensor.camera import CfgCamera
+from simulation.sensors.camera import CfgCamera
 from utils import to_torch
 
 logger = LogManager.get_logger(__name__)

@@ -7,6 +7,19 @@
 #
 # =============================================================================
 
+# Blueprints can be imported without Isaac Sim
+from .lidar_blueprint import RayCastLidarBlueprint
+
+# Config classes (no Isaac Sim dependency)
 from .cfg_lidar import CfgLidar
-from .lidar_isaac import LidarIsaac
-from .lidar_omni import LidarOmni
+
+# LiDAR implementations (require Isaac Sim - import on demand)
+# from .lidar_isaac import LidarIsaac
+# from .lidar_omni import LidarOmni
+
+__all__ = [
+    'RayCastLidarBlueprint',
+    'CfgLidar',
+    # 'LidarIsaac',  # Import on demand
+    # 'LidarOmni',   # Import on demand
+]

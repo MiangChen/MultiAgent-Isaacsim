@@ -8,12 +8,10 @@
 # =============================================================================
 
 # Standard library imports
-import threading
 from typing import Dict
 
 # Third-party library imports
 import numpy as np
-import torch
 import carb
 
 # Local project imports
@@ -24,8 +22,6 @@ from physics_engine.omni_utils import omni
 from robot.robot import Robot
 from robot.cfg import CfgDroneCf2X
 from robot.body.body_drone_cf2x import BodyDroneCf2X
-from robot.sensor.camera import CfgCamera, CfgCameraThird
-from utils import to_torch
 
 logger = LogManager.get_logger(__name__)
 

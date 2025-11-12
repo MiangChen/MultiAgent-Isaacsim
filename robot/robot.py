@@ -23,7 +23,6 @@ from physics_engine.isaacsim_utils import (
     set_camera_view,
     Camera,
 )
-from robot.sensor.camera import Camera
 from robot.body import BodyRobot
 
 # ROS2 message imports
@@ -50,10 +49,9 @@ def _get_viewport_manager_from_container():
 
 class Robot:
     def __init__(self):
-        self.cfg_dict_camera = self.cfg_robot.cfg_dict_camera
-        self.cfg_dict_camera_third = self.cfg_robot.cfg_dict_camera_third
-        self.camera_dict = {}
-        self.camera_third_dict = {}
+        # Note: Cameras are now created using CARLA-style Blueprint system
+        # See main_example.py for how to add sensors to robots
+        pass
 
         self.viewport_manager = _get_viewport_manager_from_container()
         self.cfg_robot.path_prim_robot = (
@@ -292,22 +290,11 @@ class Robot:
             self.ros_manager.stop()
 
     def initialize(self) -> None:
-        for camera_name, camera_cfg in self.cfg_robot.cfg_dict_camera.items():
-            camera_instance = Camera(
-                path_prim_parent=self.cfg_robot.path_prim_robot, cfg_camera=camera_cfg
-            )
-            self.camera_dict[camera_name] = camera_instance
-        for cam_name, cam_cfg in self.cfg_robot.cfg_dict_camera_third.items():
-            camera_instance = Camera(
-                path_prim_parent=self.cfg_robot.path_prim_robot, cfg_camera=cam_cfg
-            )
-            self.camera_third_dict[cam_name] = camera_instance
-        for camera in self.camera_dict.values():
-            camera.initialize()
-
-        # 第三视角相机初始化 - 使用ViewportManager
-        # if self.cfg_camera_third_person and self.cfg_camera_third_person.enabled:
-        #     self._initialize_third_person_camera()
+        # Note: Camera initialization removed
+        # Cameras are now created using CARLA-style Blueprint system
+        # See main_example.py for examples
+        pass
+        return
 
     def form_feedback(
             self, status: str = "processing", message: str = "none", progress: int = 100
@@ -374,7 +361,7 @@ class Robot:
         self.publish_robot_state()
 
         # 2. Update camera view
-        self._update_camera_view()
+        # self._update_camera_view()
 
         # 3. Apply target velocity to Isaac Sim
         # Note: target_linear_velocity is set by MPC (Application layer) via clock callback
@@ -657,58 +644,58 @@ class Robot:
                 "message": f"Place failed: {str(e)}",
                 "data": {},
             }
-
-    def _initialize_third_person_camera(self):
-        """初始化第三人称相机并注册到ViewportManager"""
-        logger.info(f"Creating third-person camera for robot {self.cfg_robot.id}...")
-
-        # 1. 为相机创建唯一的prim路径和视口名称
-        self.camera_prim_path = f"/World/Robot_{self.cfg_robot.id}_Camera"
-        self.viewport_name = f"Viewport_Robot_{self.cfg_robot.id}"
-
-        # # 如果prim已存在，先删除（可选，用于热重载）
-        # if prims_utils.is_prim_path_valid(self.camera_prim_path):
-        #     prims_utils.delete_prim(self.camera_prim_path)
-
-        # 2. 创建相机Prim
-
-        camera = Camera(prim_path=self.camera_prim_path)
-        camera.set_focal_length(2)
-
-        # 3. 创建视口
-        viewport_obj = create_viewport_for_camera(
-            viewport_name=self.viewport_name,
-            camera_prim_path=self.camera_prim_path,
-            width=self.cfg_camera_third_person.viewport_size[0],
-            height=self.cfg_camera_third_person.viewport_size[1],
-            position_x=self.cfg_camera_third_person.viewport_position[0],
-            position_y=self.cfg_camera_third_person.viewport_position[1],
-        )
-
-        # 4. 注册viewport到ViewportManager
-        if viewport_obj and self.viewport_manager:
-            success = self.viewport_manager.register_viewport(
-                self.viewport_name, viewport_obj
-            )
-            if success:
-                self.viewport_manager.map_camera(
-                    self.viewport_name, self.camera_prim_path
-                )
-                logger.info(
-                    f"Robot {self.cfg_robot.id} viewport registered to ViewportManager"
-                )
-            else:
-                raise RuntimeError(
-                    f"Failed to register viewport for robot {self.cfg_robot.id}"
-                )
-
-        # 5. 将相对位置转换为numpy数组以便后续计算
-        self.relative_camera_pos = np.array(
-            self.cfg_camera_third_person.relative_position
-        )
-        self.transform_camera_pos = np.array(
-            self.cfg_camera_third_person.transform_position
-        )
+    #
+    # def _initialize_third_person_camera(self):
+    #     """初始化第三人称相机并注册到ViewportManager"""
+    #     logger.info(f"Creating third-person camera for robot {self.cfg_robot.id}...")
+    #
+    #     # 1. 为相机创建唯一的prim路径和视口名称
+    #     self.camera_prim_path = f"/World/Robot_{self.cfg_robot.id}_Camera"
+    #     self.viewport_name = f"Viewport_Robot_{self.cfg_robot.id}"
+    #
+    #     # # 如果prim已存在，先删除（可选，用于热重载）
+    #     # if prims_utils.is_prim_path_valid(self.camera_prim_path):
+    #     #     prims_utils.delete_prim(self.camera_prim_path)
+    #
+    #     # 2. 创建相机Prim
+    #
+    #     camera = Camera(prim_path=self.camera_prim_path)
+    #     camera.set_focal_length(2)
+    #
+    #     # 3. 创建视口
+    #     viewport_obj = create_viewport_for_camera(
+    #         viewport_name=self.viewport_name,
+    #         camera_prim_path=self.camera_prim_path,
+    #         width=self.cfg_camera_third_person.viewport_size[0],
+    #         height=self.cfg_camera_third_person.viewport_size[1],
+    #         position_x=self.cfg_camera_third_person.viewport_position[0],
+    #         position_y=self.cfg_camera_third_person.viewport_position[1],
+    #     )
+    #
+    #     # 4. 注册viewport到ViewportManager
+    #     if viewport_obj and self.viewport_manager:
+    #         success = self.viewport_manager.register_viewport(
+    #             self.viewport_name, viewport_obj
+    #         )
+    #         if success:
+    #             self.viewport_manager.map_camera(
+    #                 self.viewport_name, self.camera_prim_path
+    #             )
+    #             logger.info(
+    #                 f"Robot {self.cfg_robot.id} viewport registered to ViewportManager"
+    #             )
+    #         else:
+    #             raise RuntimeError(
+    #                 f"Failed to register viewport for robot {self.cfg_robot.id}"
+    #             )
+    #
+    #     # 5. 将相对位置转换为numpy数组以便后续计算
+    #     self.relative_camera_pos = np.array(
+    #         self.cfg_camera_third_person.relative_position
+    #     )
+    #     self.transform_camera_pos = np.array(
+    #         self.cfg_camera_third_person.transform_position
+    #     )
 
     def _update_camera_view(self):
         """更新第三人称相机的位置和朝向"""

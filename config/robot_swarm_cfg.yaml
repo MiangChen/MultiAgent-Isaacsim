@@ -5,7 +5,7 @@ cf2x:
     quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
     disable_gravity: True
     use_simplified_controller: True
-    cfg_dict_camera: {}
+    # Note: Sensors now added via CARLA-style Blueprint (see main_example.py)
 
   - id: 1
     namespace: "cf2x_1"
@@ -13,7 +13,7 @@ cf2x:
     quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
     disable_gravity: True
     use_simplified_controller: True
-    cfg_dict_camera: {}
+    # Note: Sensors now added via CARLA-style Blueprint (see main_example.py)
 
 jetbot:
   - id: 0
@@ -23,14 +23,14 @@ jetbot:
     quat: [1, 0.0, 0.0, 0]
     disable_gravity: True
     use_simplified_controller: True
-    cfg_dict_camera:
-      front:
-        use_existing_camera: True
-        path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
-        id: 0
-        frequency: 30
-        resolution: [1280, 720]
-        enable_semantic_detection: False
+#    cfg_dict_camera:
+#      front:
+#        use_existing_camera: True
+#        path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
+#        id: 0
+#        frequency: 30
+#        resolution: [1280, 720]
+#        enable_semantic_detection: False
 
 #  - id: 1
 #    namespace: Bob
@@ -84,14 +84,14 @@ target:
     quat: [1.0, 0.0, 0.0, 0.0]
     disable_gravity: True
     use_simplified_controller: True
-    cfg_dict_camera:
-      front:
-        use_existing_camera: True
-        path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
-        id: 0
-        frequency: 30
-        resolution: [ 1280, 720 ]
-        enable_semantic_detection: True
+#    cfg_dict_camera:
+#      front:
+#        use_existing_camera: True
+#        path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
+#        id: 0
+#        frequency: 30
+#        resolution: [ 1280, 720 ]
+#        enable_semantic_detection: True
 
 
 h1:
@@ -101,13 +101,5 @@ h1:
     quat: [0.7071067811865476, 0.0, 0.0, 0.7071067811865475]
     disable_gravity: True
     use_simplified_controller: True
-    cfg_dict_camera:
-      front:
-        use_existing_camera: False
-        path_prim_relative_to_robot: "/d435_rgb_module_link"
-        id: 0
-        frequency: 30
-        focal_length: 2
-        orientation: [0.3827, -0.9239, 0.0000, 0.0000]
-        resolution: [1280, 720]
-        enable_semantic_detection: True
+    # Note: Camera configuration moved to CARLA-style Blueprint system
+    # See main_example.py line ~180 for how h1_0 camera is now created

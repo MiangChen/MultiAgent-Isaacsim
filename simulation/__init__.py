@@ -5,6 +5,10 @@ Simulation Layer - CARLA Style
 """
 
 from simulation.transform import Transform, Location, Rotation, Vector3D
+from simulation.actor_blueprint import ActorBlueprint, BlueprintLibrary
+
+# Backward compatibility aliases
+Blueprint = ActorBlueprint
 
 __all__ = [
     "Server",
@@ -15,8 +19,10 @@ __all__ = [
     "Location",
     "Rotation",
     "Vector3D",
-    "Blueprint",
+    "ActorBlueprint",
     "BlueprintLibrary",
+    # Backward compatibility
+    "Blueprint",
     # 控制类
     # 'RobotControl',
     # 'NavigationControl',

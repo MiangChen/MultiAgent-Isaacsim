@@ -7,7 +7,7 @@ from log.log_manager import LogManager
 from physics_engine.omni_utils import omni
 from physics_engine.pxr_utils import Gf
 from robot.cfg.cfg_robot import CfgRobot
-from robot.sensor.lidar.cfg_lidar import CfgLidar
+from simulation.sensors.lidar.cfg_lidar import CfgLidar
 
 logger = LogManager.get_logger(__name__)
 

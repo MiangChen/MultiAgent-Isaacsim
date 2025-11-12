@@ -16,7 +16,7 @@ from typing import Optional, Tuple, Dict, Any
 from log.log_manager import LogManager
 from physics_engine.pxr_utils import Gf
 from physics_engine.isaacsim_utils import get_extension_path_from_name, LidarRtx
-from robot.sensor.lidar.cfg_lidar import CfgLidar
+from simulation.sensors.lidar.cfg_lidar import CfgLidar
 
 logger = LogManager.get_logger(__name__)
 

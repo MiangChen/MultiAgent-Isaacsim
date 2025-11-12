@@ -9,11 +9,9 @@
 
 # Standard library imports
 import threading
-from dataclasses import dataclass, field
 from typing import Dict
 
 # Third-party library imports
-import numpy as np
 
 # Local project imports
 from physics_engine.pxr_utils import Gf, UsdGeom
@@ -97,8 +95,8 @@ class RobotDroneAutel(Robot):
 
     def setup_lidar_and_ros(self, setup_ros_fn):
         """Setup LiDAR sensors and ROS after creation"""
-        from robot.sensor.lidar.lidar_omni import LidarOmni
-        from robot.sensor.lidar.cfg_lidar import CfgLidar
+        from simulation.sensors.lidar import LidarOmni
+        from simulation.sensors.lidar import CfgLidar
 
         prim_path = self.cfg_robot.path_prim_robot
 

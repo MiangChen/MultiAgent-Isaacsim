@@ -8,7 +8,6 @@
 # =============================================================================
 
 # Standard library imports
-from typing import Dict
 
 # Third-party library imports
 import numpy as np
@@ -20,8 +19,7 @@ from physics_engine.isaacsim_utils import Scene, ArticulationActions
 from robot.body.body_h1 import BodyH1
 from robot.cfg import CfgH1
 from robot.robot import Robot
-from robot.sensor.camera import CfgCamera, CfgCameraThird
-from utils import to_torch, quat_to_yaw
+from utils import to_torch
 
 # ROS2 message imports
 

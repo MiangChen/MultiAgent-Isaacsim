@@ -200,6 +200,64 @@ def main():
             callback_name, callback_fn=robot.on_physics_step
         )
 
+    # ============================================================================
+    # Sensors Setup (CARLA Style)
+    # ============================================================================
+    
+    # Add camera sensor to h1_0 robot (CARLA style)
+    # Find h1_0 robot actor
+    h1_actor = None
+    for actor in robot_actors:
+        if hasattr(actor, 'robot') and actor.robot.namespace == 'h1_0':
+            h1_actor = actor
+            break
+    
+    if h1_actor:
+        logger.info("Adding camera sensor to h1_0 robot (CARLA style)...")
+        
+        # Get camera blueprint
+        camera_bp = blueprint_library.find('sensor.camera.rgb')
+        
+        # Configure camera attributes (based on your previous config)
+        camera_bp.set_attribute('image_size_x', 1280)
+        camera_bp.set_attribute('image_size_y', 720)
+        camera_bp.set_attribute('focal_length', 2)
+        camera_bp.set_attribute('enable_semantic_detection', True)
+        
+        # Create camera with relative transform
+        from simulation import Transform, Location, Rotation
+        
+        camera_transform = Transform(
+            location=Location(x=0.1, y=0.01, z=0.69),
+            rotation=Rotation(quaternion=[ 0.5, -0.5, -0.5, 0.5])
+        )
+        
+        # Spawn camera (attach to h1_0)
+        h1_camera = world.spawn_actor(
+            camera_bp,
+            camera_transform,
+            attach_to=h1_actor
+        )
+
+        # Listen to camera data (optional - for testing)
+        # def process_h1_camera_image(image):
+        #     # Save first 10 frames for testing
+        #     if image.frame < 10:
+        #         output_path = f'{PROJECT_ROOT}/output/h1_camera_frame_{image.frame:06d}.png'
+        #         try:
+        #             image.save_to_disk(output_path)
+        #             logger.info(f"Saved h1 camera frame {image.frame} to {output_path}")
+        #         except Exception as e:
+        #             logger.error(f"Failed to save image: {e}")
+        #
+        # h1_camera.listen(process_h1_camera_image)
+
+        logger.info(f"✅ Camera sensor added to h1_0 at {h1_camera.get_prim_path()}")
+        logger.info(f"   Resolution: 1280x720, Focal length: 2mm")
+        logger.info(f"   Semantic detection: Enabled")
+    else:
+        logger.warning("h1_0 robot not found, skipping camera setup")
+
     # Setup semantic camera
     result = scene_manager.add_camera(
         translation=[1, 4, 2], orientation=euler_to_quat(roll=90)

@@ -1,7 +1,13 @@
 from typing import List, Dict, Optional
 
 
-class Blueprint:
+class ActorBlueprint:
+    """
+    Actor Blueprint (CARLA style)
+    
+    Base class for all actor blueprints (robots, sensors, static props, etc.)
+    """
+    
     def __init__(self, blueprint_id: str, robot_class=None, tags: List[str] = None):
         self.id = blueprint_id
         self.robot_class = robot_class
@@ -22,9 +28,13 @@ class Blueprint:
         return tag in self.tags
 
 
+# Alias for backward compatibility
+Blueprint = ActorBlueprint
+
+
 class BlueprintLibrary:
     def __init__(self):
-        self._blueprints: Dict[str, Blueprint] = {}
+        self._blueprints: Dict[str, ActorBlueprint] = {}
         self._register_default_robots()
 
     def _register_default_robots(self):
@@ -45,22 +55,44 @@ class BlueprintLibrary:
 
         # Register static props (CARLA style: static.prop.*)
         self._register_static_props()
+        
+        # Register sensors (CARLA style: sensor.*)
+        self._register_sensors()
 
     def _register_static_props(self):
         """注册静态物体 Register static props (CARLA style)"""
         # Box
-        bp = Blueprint("static.prop.box", robot_class=None, tags=["static", "prop"])
+        bp = ActorBlueprint("static.prop.box", robot_class=None, tags=["static", "prop"])
         bp.set_attribute("shape_type", "cuboid")
         bp.set_attribute("entity_type", "visual")
         self._blueprints[bp.id] = bp
 
         # Car
-        bp = Blueprint(
+        bp = ActorBlueprint(
             "static.prop.car", robot_class=None, tags=["static", "prop", "vehicle"]
         )
         bp.set_attribute("shape_type", "cuboid")
         bp.set_attribute("entity_type", "visual")
         self._blueprints[bp.id] = bp
+        
+    def _register_sensors(self):
+        """注册传感器 Register sensors (CARLA style)"""
+        from simulation.sensors.camera.camera_blueprint import (
+            RGBCameraBlueprint,
+            DepthCameraBlueprint,
+        )
+        from simulation.sensors.lidar.lidar_blueprint import (
+            RayCastLidarBlueprint,
+        )
+        
+        # RGB Camera
+        self._blueprints['sensor.camera.rgb'] = RGBCameraBlueprint()
+        
+        # Depth Camera
+        self._blueprints['sensor.camera.depth'] = DepthCameraBlueprint()
+        
+        # LiDAR
+        self._blueprints['sensor.lidar.ray_cast'] = RayCastLidarBlueprint()
 
     def register_robot_class(self, robot_type: str, robot_class: type):
         tags = ["robot"]
@@ -71,13 +103,13 @@ class BlueprintLibrary:
         elif robot_type in ["cf2x", "drone_autel"]:
             tags.append("drone")
 
-        bp = Blueprint(f"robot.{robot_type}", robot_class=robot_class, tags=tags)
+        bp = ActorBlueprint(f"robot.{robot_type}", robot_class=robot_class, tags=tags)
         self._blueprints[bp.id] = bp
 
-    def find(self, blueprint_id: str) -> Optional[Blueprint]:
+    def find(self, blueprint_id: str) -> Optional[ActorBlueprint]:
         return self._blueprints.get(blueprint_id)
 
-    def filter(self, wildcard: str) -> List[Blueprint]:
+    def filter(self, wildcard: str) -> List[ActorBlueprint]:
         import fnmatch
 
         return [

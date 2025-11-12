@@ -1,0 +1,98 @@
+# 带传感器的机器人配置示例（CARLA 风格）
+
+robots:
+  # 机器人 1：Jetbot 带多个传感器
+  - type: jetbot
+    namespace: robot_0
+    position: [0, 0, 0.5]
+    orientation: [1, 0, 0, 0]  # 四元数 (w, x, y, z)
+    
+    sensors:
+      # 前置 RGB 相机
+      - type: sensor.camera.rgb
+        name: front_camera
+        attributes:
+          image_size_x: 1920
+          image_size_y: 1080
+          fov: 90
+          focal_length: 20
+          x: 0.2      # 相对位置
+          y: 0.0
+          z: 0.1
+          pitch: 0    # 相对姿态（度）
+          yaw: 0
+          roll: 0
+          sensor_tick: 0.0  # 0 = 每帧
+          enable_semantic_detection: false
+          
+      # 后置 RGB 相机
+      - type: sensor.camera.rgb
+        name: rear_camera
+        attributes:
+          image_size_x: 640
+          image_size_y: 480
+          fov: 110
+          x: -0.2
+          z: 0.1
+          yaw: 180  # 朝向后方
+          
+      # LiDAR
+      - type: sensor.lidar.rtx
+        name: lidar
+        attributes:
+          channels: 32
+          range: 100.0
+          rotation_frequency: 10.0
+          config_file_name: Hesai_XT32_SD10
+          x: 0.0
+          y: 0.0
+          z: 0.3
+          
+  # 机器人 2：H1 人形机器人
+  - type: h1
+    namespace: robot_1
+    position: [2, 0, 1.0]
+    
+    sensors:
+      # 头部相机
+      - type: sensor.camera.rgb
+        name: head_camera
+        attributes:
+          image_size_x: 1280
+          image_size_y: 720
+          fov: 90
+          x: 0.1
+          z: 0.3
+          
+      # 深度相机
+      - type: sensor.camera.depth
+        name: depth_camera
+        attributes:
+          image_size_x: 640
+          image_size_y: 480
+          x: 0.1
+          z: 0.3
+          
+  # 机器人 3：无人机
+  - type: drone_autel
+    namespace: drone_0
+    position: [0, 0, 2.0]
+    
+    sensors:
+      # 下视相机
+      - type: sensor.camera.rgb
+        name: downward_camera
+        attributes:
+          image_size_x: 1920
+          image_size_y: 1080
+          fov: 90
+          pitch: -90  # 向下看
+          z: -0.1
+          
+      # LiDAR
+      - type: sensor.lidar.rtx
+        name: lidar
+        attributes:
+          channels: 16
+          range: 50.0
+          config_file_name: Hesai_XT32_SD10

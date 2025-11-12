@@ -16,8 +16,6 @@ from .target import Target
 from .body import *
 from .cfg import *
 from .controller import *
-from .sensor import *
-
 __all__ = [
     # Main robot classes
     "Robot",

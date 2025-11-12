@@ -7,6 +7,20 @@
 #
 # =============================================================================
 
+# Blueprints can be imported without Isaac Sim
+from .camera_blueprint import RGBCameraBlueprint, DepthCameraBlueprint
+
+# Config classes (no Isaac Sim dependency)
 from .cfg_camera import CfgCamera
 from .cfg_camera_third import CfgCameraThird
-from .camera import Camera
+
+# Camera implementation (requires Isaac Sim - import on demand)
+# from .camera import Camera
+
+__all__ = [
+    'RGBCameraBlueprint',
+    'DepthCameraBlueprint',
+    'CfgCamera',
+    'CfgCameraThird',
+    # 'Camera',  # Import on demand
+]
