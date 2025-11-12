@@ -166,26 +166,26 @@ class LidarIsaacSensor(SensorActor):
         """
         if self._parent is None:
             return point_cloud
-        
+
         try:
             # 获取父对象的世界位姿
             parent_transform = self._parent.get_transform()
             pos = parent_transform.location
-            
+
             # 获取父对象的旋转（四元数）
             rot = parent_transform.rotation
             quat = rot.to_quaternion()  # [x, y, z, w]
-            
+
             # 转换为旋转矩阵
             from scipy.spatial.transform import Rotation as R
             rotation = R.from_quat(quat)
             rotation_matrix = rotation.as_matrix()
-            
+
             # 应用变换: p_world = R_parent * p_local + t_parent
             points_transformed = (rotation_matrix @ point_cloud.T).T + np.array([pos.x, pos.y, pos.z])
-            
+
             return points_transformed
-            
+
         except Exception as e:
             logger.error(f"Failed to apply parent transform: {e}")
             return point_cloud
@@ -276,38 +276,33 @@ class LidarOmniSensor(SensorActor):
         """
         if self._parent is None:
             return point_cloud
-        
-        try:
-            # 获取父对象的世界位姿
-            parent_transform = self._parent.get_transform()
-            pos = parent_transform.location
-            
-            # 获取父对象的旋转（四元数）
-            rot = parent_transform.rotation
-            quat = rot.to_quaternion()  # [x, y, z, w]
-            
-            # 转换为旋转矩阵
-            from scipy.spatial.transform import Rotation as R
-            rotation = R.from_quat(quat)
-            rotation_matrix = rotation.as_matrix().astype(np.float32)  # 强制 float32
-            
-            # 保存原始形状和数据类型
-            original_shape = point_cloud.shape
-            original_dtype = point_cloud.dtype
-            
-            # Reshape 为 [N, 3] 进行变换
-            points_flat = point_cloud.reshape(-1, 3)
-            
-            # 应用变换: p_world = R_parent * p_local + t_parent
-            translation = np.array([pos.x, pos.y, pos.z], dtype=np.float32)
-            points_transformed = (rotation_matrix @ points_flat.T).T + translation
-            
-            # 恢复原始形状和数据类型
-            return points_transformed.reshape(original_shape).astype(original_dtype)
-            
-        except Exception as e:
-            logger.error(f"Failed to apply parent transform: {e}")
-            return point_cloud
+
+        # 保存原始形状和数据类型
+        original_shape = point_cloud.shape
+        original_dtype = point_cloud.dtype
+
+        # 获取父对象的世界位姿
+        parent_transform = self._parent.get_transform()
+        pos = parent_transform.location
+
+        # 获取父对象的旋转（四元数）
+        rot = parent_transform.rotation
+        quat = rot.to_quaternion()  # [x, y, z, w]
+
+        # 转换为旋转矩阵
+        from scipy.spatial.transform import Rotation as R
+        rotation = R.from_quat(quat)
+        rotation_matrix = rotation.as_matrix().astype(original_dtype)
+
+        # Reshape 为 [N, 3] 进行变换
+        points_flat = point_cloud.reshape(-1, 3)
+
+        # 应用变换: p_world = R_parent * p_local + t_parent
+        translation = np.array([pos.x, pos.y, pos.z], dtype=original_dtype)
+        points_transformed = (rotation_matrix @ points_flat.T).T + translation
+
+        # 恢复原始形状和数据类型
+        return points_transformed.reshape(original_shape).astype(original_dtype)
 
     def __repr__(self):
         return (
