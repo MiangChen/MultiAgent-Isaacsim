@@ -33,9 +33,10 @@ class LidarOmni:
 
     def create_lidar(self) -> None:
         from pxr import UsdGeom, UsdPhysics, PhysxSchema
+        from containers import get_container
         
         # 从完整路径中提取相对路径
-        # 例如：/World/robot_0/sensor/lidar_0 -> sensor/lidar_0
+        # 例如：/World/robot_0/lidar_0 -> lidar_0
         if self.cfg_lidar.prim_path.startswith(self.parent_prim_path + "/"):
             relative_path = self.cfg_lidar.prim_path.replace(
                 self.parent_prim_path + "/", ""
@@ -60,9 +61,35 @@ class LidarOmni:
             disable_gravity_attr = physx_rigid_body_api.CreateDisableGravityAttr()
         disable_gravity_attr.Set(True)
         
-        logger.info(f"Created xform with rigid body (gravity disabled) at: {xform_path}")
+        # 4. 使用 world.create_joint() 创建 Fixed Joint 连接到机器人
+        # 这是正确的方式，参考 robot.py 中的 ATTACH 操作
+        container = get_container()
+        world = container.world_configured()
         
-        # 4. 在 xform 下创建 lidar 传感器，位移和旋转设置在 lidar 上
+        joint_path = f"/World/lidar_joint_{relative_path.replace('/', '_')}"
+        joint_prim = stage.GetPrimAtPath(joint_path)
+        
+        if not joint_prim.IsValid():
+            world.create_joint(
+                joint_path=joint_path,
+                joint_type="fixed",
+                body0=self.parent_prim_path,
+                body1=xform_path,
+                local_pos_0=(0, 0, 0),
+                local_pos_1=(0, 0, 0),
+                axis=(1, 0, 0),
+            )
+            joint_prim = stage.GetPrimAtPath(joint_path)
+        
+        # Enable joint
+        joint = UsdPhysics.Joint(joint_prim)
+        joint.GetLocalPos0Attr().Set(Gf.Vec3f(0, 0, 0))
+        joint.GetLocalPos1Attr().Set(Gf.Vec3f(0, 0, 0))
+        joint.GetJointEnabledAttr().Set(True)
+        
+        logger.info(f"Created xform with rigid body, fixed joint (gravity disabled) at: {xform_path}")
+        
+        # 5. 在 xform 下创建 lidar 传感器，位移和旋转设置在 lidar 上
         _, self.lidar = omni.kit.commands.execute(
             "IsaacSensorCreateRtxLidar",
             path="lidar",  # 相对于 xform 的路径
@@ -70,7 +97,7 @@ class LidarOmni:
             config=self.cfg_lidar.config_file_name,
             translation=Gf.Vec3d(*self.cfg_lidar.translation),  # 位移设置在 lidar 上
             orientation=Gf.Quatd(*self.cfg_lidar.quat),  # 旋转设置在 lidar 上
-            visibility=True,
+            visibility=True, # 不要注释掉
         )
 
         self.render_product = omni.replicator.core.create.render_product(
