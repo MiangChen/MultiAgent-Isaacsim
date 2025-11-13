@@ -29,79 +29,103 @@ class LidarOmni:
             self.cfg_lidar.output_size, dtype=np.float32
         )  # 存储lidar 的原始深度信息
 
+        # 在暂停状态下创建 lidar
         self.create_lidar()
 
     def create_lidar(self) -> None:
+        """
+        创建 lidar 传感器
+        注意：参考 robot.py 中 attach/grasp 的实现，需要在暂停状态下创建 joint
+        """
         from pxr import UsdGeom, UsdPhysics, PhysxSchema
         from containers import get_container
         
-        # 从完整路径中提取相对路径
-        # 例如：/World/robot_0/lidar_0 -> lidar_0
-        if self.cfg_lidar.prim_path.startswith(self.parent_prim_path + "/"):
-            relative_path = self.cfg_lidar.prim_path.replace(
-                self.parent_prim_path + "/", ""
-            )
-        else:
-            # 如果 prim_path 只是简单名称（如 "lidar"），直接使用
-            relative_path = self.cfg_lidar.prim_path.lstrip("/")
-        
-        # 1. 先创建 xform 节点作为容器（只有 rigid body 和 并且要有 gravity）
-        xform_path = f"{self.parent_prim_path}/{relative_path}"
-        stage = omni.usd.get_context().get_stage()
-        xform_prim = UsdGeom.Xform.Define(stage, xform_path).GetPrim()
-        
-        # 2. 添加 rigid body 到 xform，确保可以随机器人运动
-        rigid_body_api = UsdPhysics.RigidBodyAPI.Apply(xform_prim)
-        rigid_body_api.CreateRigidBodyEnabledAttr(True)
-
-        # 3 使用 world.create_joint() 创建 Fixed Joint 连接到机器人
+        # 获取 world 实例
         container = get_container()
         world = container.world_configured()
         
-        joint_path = f"/World/lidar_joint_{relative_path.replace('/', '_')}"
-        joint_prim = stage.GetPrimAtPath(joint_path)
+        # 保存当前播放状态
+        was_playing = world.is_playing()
         
-        if not joint_prim.IsValid():
-            world.create_joint(
-                joint_path=joint_path,
-                joint_type="fixed",
-                body0=self.parent_prim_path + '/body',
-                body1=xform_path,
-                local_pos_0=(0, 0, 0),
-                local_pos_1=(0, 0, 0),
-                axis=(1, 0, 0),
-            )
-            joint_prim = stage.GetPrimAtPath(joint_path)
+        # 暂停仿真以安全地创建 joint 和 lidar
+        if was_playing:
+            world.pause()
+            logger.info("Paused simulation for lidar creation")
         
-        # Enable joint
-        joint = UsdPhysics.Joint(joint_prim)
-        joint.GetLocalPos0Attr().Set(Gf.Vec3f(0, 0, 0))
-        joint.GetLocalPos1Attr().Set(Gf.Vec3f(0, 0, 0))
-        joint.GetJointEnabledAttr().Set(True)
-        
-        logger.info(f"Created xform with rigid body, fixed joint at: {xform_path}")
-        
-        # 4. 在 xform 下创建 lidar 传感器，位移和旋转设置在 lidar 上
-        _, self.lidar = omni.kit.commands.execute(
-            "IsaacSensorCreateRtxLidar",
-            path="lidar",  # 相对于 xform 的路径
-            parent=xform_path,  # xform 作为父节点
-            config=self.cfg_lidar.config_file_name,
-            translation=Gf.Vec3d(*self.cfg_lidar.translation),  # 位移设置在 lidar 上
-            orientation=Gf.Quatd(*self.cfg_lidar.quat),  # 旋转设置在 lidar 上
-            visibility=True, # 不要注释掉
-        )
+        try:
+            # 从完整路径中提取相对路径
+            # 例如：/World/robot_0/lidar_0 -> lidar_0
+            if self.cfg_lidar.prim_path.startswith(self.parent_prim_path + "/"):
+                relative_path = self.cfg_lidar.prim_path.replace(
+                    self.parent_prim_path + "/", ""
+                )
+            else:
+                # 如果 prim_path 只是简单名称（如 "lidar"），直接使用
+                relative_path = self.cfg_lidar.prim_path.lstrip("/")
+            
+            # 1. 先创建 xform 节点作为容器（只有 rigid body 和 并且要有 gravity）
+            xform_path = f"{self.parent_prim_path}/{relative_path}"
+            stage = omni.usd.get_context().get_stage()
+            xform_prim = UsdGeom.Xform.Define(stage, xform_path).GetPrim()
+            
+            # 2. 添加 rigid body 到 xform，确保可以随机器人运动
+            rigid_body_api = UsdPhysics.RigidBodyAPI.Apply(xform_prim)
+            rigid_body_api.CreateRigidBodyEnabledAttr(True)
 
-        self.render_product = omni.replicator.core.create.render_product(
-            self.lidar.GetPath(), [1, 1]
-        )
-        self.annotator = omni.replicator.core.AnnotatorRegistry.get_annotator(
-            "RtxSensorCpuIsaacReadRTXLidarData"
-        )
-        self.annotator.attach(self.render_product)
-        logger.info(
-            f"Lidar Omni sensor created at path: {self.lidar.GetPath()}"
-        )
+            # 3. 在 xform 下创建 lidar 传感器，位移和旋转设置在 lidar 上
+            _, self.lidar = omni.kit.commands.execute(
+                "IsaacSensorCreateRtxLidar",
+                path="lidar",  # 相对于 xform 的路径
+                parent=xform_path,  # xform 作为父节点
+                config=self.cfg_lidar.config_file_name,
+                translation=Gf.Vec3d(*self.cfg_lidar.translation),  # 位移设置在 lidar 上
+                orientation=Gf.Quatd(*self.cfg_lidar.quat),  # 旋转设置在 lidar 上
+                visibility=True, # 不要注释掉
+            )
+            # world.set_collision_enabled(
+            #     prim_path=xform_path, enabled=False
+            # )
+            # 4 使用 world.create_joint() 创建 Fixed Joint 连接到机器人
+            joint_path = f"/World/lidar_joint_{relative_path.replace('/', '_')}"
+            joint_prim = stage.GetPrimAtPath(joint_path)
+
+            if not joint_prim.IsValid():
+                world.create_joint(
+                    joint_path=joint_path,
+                    joint_type="fixed",
+                    body1=self.parent_prim_path + '/body',
+                    body0=xform_path,
+                    local_pos_0=(0, 0, 0),
+                    local_pos_1=(0, 0, 0),
+                    axis=(1, 0, 0),
+                )
+                joint_prim = stage.GetPrimAtPath(joint_path)
+
+            # Enable joint
+            joint = UsdPhysics.Joint(joint_prim)
+            joint.GetLocalPos0Attr().Set(Gf.Vec3f(0, 0, 0))
+            joint.GetLocalPos1Attr().Set(Gf.Vec3f(0, 0, 0))
+            joint.GetJointEnabledAttr().Set(True)
+
+            logger.info(f"Created xform with rigid body, fixed joint at: {xform_path}")
+
+            self.render_product = omni.replicator.core.create.render_product(
+                self.lidar.GetPath(), [1, 1]
+            )
+            self.annotator = omni.replicator.core.AnnotatorRegistry.get_annotator(
+                "RtxSensorCpuIsaacReadRTXLidarData"
+            )
+            self.annotator.attach(self.render_product)
+            
+            logger.info(
+                f"Lidar Omni sensor created at path: {self.lidar.GetPath()}"
+            )
+        finally:
+            # 恢复之前的播放状态
+            if was_playing:
+                world.play()
+                logger.info("Resumed simulation after lidar creation")
+        
         return None
 
     def create_depth2pc_lut(self):
