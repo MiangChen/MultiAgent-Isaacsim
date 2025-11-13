@@ -80,11 +80,10 @@ class LidarOmni:
                 config=self.cfg_lidar.config_file_name,
                 translation=Gf.Vec3d(*self.cfg_lidar.translation),  # 位移设置在 lidar 上
                 orientation=Gf.Quatd(*self.cfg_lidar.quat),  # 旋转设置在 lidar 上
-                visibility=True, # 不要注释掉
+                visibility=False, # 不要注释掉
             )
-            # world.set_collision_enabled(
-            #     prim_path=xform_path, enabled=False
-            # )
+            scene_manager = container.scene_manager()
+            scene_manager.disable_gravity_for_hierarchy(xform_path)
             # 4 使用 world.create_joint() 创建 Fixed Joint 连接到机器人
             joint_path = f"/World/lidar_joint_{relative_path.replace('/', '_')}"
             joint_prim = stage.GetPrimAtPath(joint_path)
@@ -93,8 +92,8 @@ class LidarOmni:
                 world.create_joint(
                     joint_path=joint_path,
                     joint_type="fixed",
-                    body1=self.parent_prim_path + '/body',
-                    body0=xform_path,
+                    body0=self.parent_prim_path + '/body',
+                    body1=xform_path,
                     local_pos_0=(0, 0, 0),
                     local_pos_1=(0, 0, 0),
                     axis=(1, 0, 0),
