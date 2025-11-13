@@ -115,7 +115,15 @@ class RobotDroneAutel(Robot):
             config_file_name="autel_perception_120x352",
         )
 
-        self.lidar_list = [LidarOmni(cfg_lidar=cfg_lfr), LidarOmni(cfg_lidar=cfg_ubd)]
+        # 创建 LiDAR 实例（不立即初始化）
+        lidar_lfr = LidarOmni(cfg_lidar=cfg_lfr, parent_prim_path=prim_path)
+        lidar_ubd = LidarOmni(cfg_lidar=cfg_ubd, parent_prim_path=prim_path)
+        
+        # 使用 physics step 初始化（最可靠的方式）
+        lidar_lfr.initialize_on_physics_step()
+        lidar_ubd.initialize_on_physics_step()
+        
+        self.lidar_list = [lidar_lfr, lidar_ubd]
 
         node, pubs, subs, srvs = setup_ros_fn(self.namespace, ctx=self)
         self.ros_node = node

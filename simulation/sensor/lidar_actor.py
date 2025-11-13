@@ -242,6 +242,10 @@ class LidarOmniSensor(SensorActor):
         """
         if not self._is_listening or self._callback is None:
             return
+        
+        # 检查传感器是否已初始化
+        if not self.sensor.is_initialized():
+            return
 
         # Frequency control: only process at specified frequency
         self._time_since_last_tick += step_size

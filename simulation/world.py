@@ -578,6 +578,7 @@ class World:
 
         # Create LiDAR with parent_prim_path
         lidar = LidarOmni(cfg_lidar, parent_prim_path)
+        lidar.initialize_on_physics_step()
 
         return lidar
 

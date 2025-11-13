@@ -29,29 +29,41 @@ class LidarOmni:
             self.cfg_lidar.output_size, dtype=np.float32
         )  # 存储lidar 的原始深度信息
 
-        # 在暂停状态下创建 lidar
-        self.create_lidar()
+        # 延迟初始化标志
+        self._initialized = False
 
-    def create_lidar(self) -> None:
+    def initialize_on_physics_step(self) -> None:
         """
-        创建 lidar 传感器
-        注意：参考 robot.py 中 attach/grasp 的实现，需要在暂停状态下创建 joint
+        在 physics step 中延迟初始化 lidar
+        这是最可靠的方式，避免传感器创建时的时序问题
+        """
+        from containers import get_container
+
+        container = get_container()
+        world = container.world_configured()
+
+        # 订阅 physics step 事件，在下一个物理步进时创建传感器
+        def _create_on_step(step_size):
+            if not self._initialized:
+                self._create_lidar_internal()
+                self._initialized = True
+                # 取消订阅
+                world.get_isaac_world().remove_physics_callback(f"lidar_creation_{self.cfg_lidar.prim_path}")
+
+        world.get_isaac_world().add_physics_callback(f"lidar_creation_{self.cfg_lidar.prim_path}", _create_on_step)
+        logger.info("Scheduled lidar creation on next physics step")
+
+    def _create_lidar_internal(self) -> None:
+        """
+        内部方法：实际创建 lidar 传感器
+        应该在 physics step 回调中调用，确保时序正确
         """
         from pxr import UsdGeom, UsdPhysics, PhysxSchema
         from containers import get_container
-        
-        # 获取 world 实例
+
         container = get_container()
         world = container.world_configured()
-        
-        # 保存当前播放状态
-        was_playing = world.is_playing()
-        
-        # 暂停仿真以安全地创建 joint 和 lidar
-        if was_playing:
-            world.pause()
-            logger.info("Paused simulation for lidar creation")
-        
+
         try:
             # 从完整路径中提取相对路径
             # 例如：/World/robot_0/lidar_0 -> lidar_0
@@ -62,12 +74,12 @@ class LidarOmni:
             else:
                 # 如果 prim_path 只是简单名称（如 "lidar"），直接使用
                 relative_path = self.cfg_lidar.prim_path.lstrip("/")
-            
+
             # 1. 先创建 xform 节点作为容器（只有 rigid body 和 并且不要 gravity）
             xform_path = f"{self.parent_prim_path}/{relative_path}"
             stage = omni.usd.get_context().get_stage()
             xform_prim = UsdGeom.Xform.Define(stage, xform_path).GetPrim()
-            
+
             # 2. 添加 rigid body 到 xform，确保可以随机器人运动
             rigid_body_api = UsdPhysics.RigidBodyAPI.Apply(xform_prim)
             rigid_body_api.CreateRigidBodyEnabledAttr(True)
@@ -80,7 +92,7 @@ class LidarOmni:
                 config=self.cfg_lidar.config_file_name,
                 translation=Gf.Vec3d(*self.cfg_lidar.translation),  # 位移设置在 lidar 上
                 orientation=Gf.Quatd(*self.cfg_lidar.quat),  # 旋转设置在 lidar 上
-                visibility=False, # 不要注释掉
+                visibility=False,  # 不要注释掉
             )
             scene_manager = container.scene_manager()
             scene_manager.disable_gravity_for_hierarchy(xform_path)
@@ -115,17 +127,17 @@ class LidarOmni:
                 "RtxSensorCpuIsaacReadRTXLidarData"
             )
             self.annotator.attach(self.render_product)
-            
+
             logger.info(
                 f"Lidar Omni sensor created at path: {self.lidar.GetPath()}"
             )
-        finally:
-            # 恢复之前的播放状态
-            if was_playing:
-                world.play()
-                logger.info("Resumed simulation after lidar creation")
-        
-        return None
+        except Exception as e:
+            logger.error(f"Failed to create lidar: {e}")
+            raise
+
+    def is_initialized(self) -> bool:
+        """检查传感器是否已初始化"""
+        return self._initialized
 
     def create_depth2pc_lut(self):
         """Create lookup table for depth to pointcloud conversion."""
@@ -158,6 +170,10 @@ class LidarOmni:
     @carb.profiler.profile
     def get_depth(self):
         """直接获取深度数据"""
+        if not self._initialized:
+            logger.warning("Lidar not initialized yet, returning empty depth")
+            return self._depth
+
         self._depth.fill(self.cfg_lidar.max_depth)
         data = self.annotator.get_data()
         lidar_depths = data["distances"]
@@ -177,14 +193,21 @@ class LidarOmni:
         返回的点云已经应用了 LiDAR 的局部旋转（相对于父对象）
         shape: width * height * 3
         """
+        if not self._initialized:
+            logger.warning("Lidar not initialized yet, returning empty pointcloud")
+            return np.zeros(
+                (self.cfg_lidar.erp_height, self.cfg_lidar.erp_width, 3),
+                dtype=np.float32
+            )
+
         if self._depth2pc_lut is None:
             self._depth2pc_lut = self.create_depth2pc_lut()
         self.get_depth()
 
         # 生成局部坐标系下的点云
         point_cloud = (
-            self._depth.reshape((self._depth.shape[0], self._depth.shape[1], 1))
-            * self._depth2pc_lut
+                self._depth.reshape((self._depth.shape[0], self._depth.shape[1], 1))
+                * self._depth2pc_lut
         )
 
         # 应用 LiDAR 的局部旋转（相对于父对象的旋转）
