@@ -70,10 +70,6 @@ class RobotActor(Actor):
                     "message": f"Root prim '{root_prim_path}' not found.",
                 }
 
-            print(
-                f"INFO: Starting to disable gravity for all rigid bodies under '{root_prim_path}'..."
-            )
-
             modified_prims_count = 0
 
             # Usd.PrimRange 是一个高效的、可以遍历所有子孙节点的迭代器
@@ -86,16 +82,11 @@ class RobotActor(Actor):
                     physx_rigid_body_api = PhysxSchema.PhysxRigidBodyAPI.Apply(prim)
 
                     # 3. 获取 'disableGravity' 属性并将其设置为 True
-                    #    (我们之前已经通过 dir() 验证了这个属性的存在)
                     disable_gravity_attr = physx_rigid_body_api.GetDisableGravityAttr()
                     disable_gravity_attr.Set(True)
 
                     modified_prims_count += 1
-                    # print(f"  - Disabled gravity for: {prim.GetPath()}")
 
-            print(
-                f"INFO: Gravity disabled for a total of {modified_prims_count} rigid bodies."
-            )
             return {
                 "status": "success",
                 "message": f"Disabled gravity for {modified_prims_count} prims under '{root_prim_path}'.",

@@ -6,6 +6,8 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /Grid1
+        - /PointCloud21
         - /Odometry1
         - /Odometry2
         - /Odometry3
@@ -84,7 +86,7 @@ Visualization Manager:
       Position Transformer: XYZ
       Selectable: true
       Size (Pixels): 3
-      Size (m): 1
+      Size (m): 0.5
       Style: Boxes
       Topic:
         Depth: 5
@@ -587,7 +589,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 194.8756866455078
+      Distance: 111.77749633789062
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -602,10 +604,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2647969722747803
+      Pitch: 0.5047972798347473
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.612346172332764
+      Yaw: 0.9073048233985901
     Saved: ~
 Window Geometry:
   Displays:

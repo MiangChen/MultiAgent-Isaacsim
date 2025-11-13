@@ -18,9 +18,9 @@ class LidarOmni:
     这个方法创建的Lidar是使用的 Omni 的API
     """
 
-    def __init__(self, cfg_lidar: CfgLidar, cfg_robot: CfgRobot = None):
+    def __init__(self, cfg_lidar: CfgLidar, parent_prim_path: str):
         self.cfg_lidar = cfg_lidar
-        self.cfg_robot = cfg_robot
+        self.parent_prim_path = parent_prim_path
         self.lidar = None  # 用于持有 LidarRtx 实例
         self.render_product = None
         self.annotator = None
@@ -32,19 +32,47 @@ class LidarOmni:
         self.create_lidar()
 
     def create_lidar(self) -> None:
-        if self.cfg_lidar.prim_path is None:
-            self.cfg_lidar.prim_path = (
-                f"{self.cfg_robot.path_prim_robot}/lidar/{self.cfg_lidar.name}"
+        from pxr import UsdGeom, UsdPhysics, PhysxSchema
+        
+        # 从完整路径中提取相对路径
+        # 例如：/World/robot_0/sensor/lidar_0 -> sensor/lidar_0
+        if self.cfg_lidar.prim_path.startswith(self.parent_prim_path + "/"):
+            relative_path = self.cfg_lidar.prim_path.replace(
+                self.parent_prim_path + "/", ""
             )
-
+        else:
+            # 如果 prim_path 只是简单名称（如 "lidar"），直接使用
+            relative_path = self.cfg_lidar.prim_path.lstrip("/")
+        
+        # 1. 先创建 xform 节点作为容器（只有 rigid body 和 no gravity）
+        xform_path = f"{self.parent_prim_path}/{relative_path}"
+        stage = omni.usd.get_context().get_stage()
+        xform_prim = UsdGeom.Xform.Define(stage, xform_path).GetPrim()
+        
+        # 2. 添加 rigid body 到 xform，确保可以随机器人运动
+        rigid_body_api = UsdPhysics.RigidBodyAPI.Apply(xform_prim)
+        rigid_body_api.CreateRigidBodyEnabledAttr(True)
+        
+        # 3. 禁用 gravity（使用 PhysX API）
+        physx_rigid_body_api = PhysxSchema.PhysxRigidBodyAPI.Apply(xform_prim)
+        disable_gravity_attr = physx_rigid_body_api.GetDisableGravityAttr()
+        if not disable_gravity_attr:
+            disable_gravity_attr = physx_rigid_body_api.CreateDisableGravityAttr()
+        disable_gravity_attr.Set(True)
+        
+        logger.info(f"Created xform with rigid body (gravity disabled) at: {xform_path}")
+        
+        # 4. 在 xform 下创建 lidar 传感器，位移和旋转设置在 lidar 上
         _, self.lidar = omni.kit.commands.execute(
             "IsaacSensorCreateRtxLidar",
-            path=self.cfg_lidar.prim_path,
-            parent=None,
+            path="lidar",  # 相对于 xform 的路径
+            parent=xform_path,  # xform 作为父节点
             config=self.cfg_lidar.config_file_name,
-            translation=Gf.Vec3d(*self.cfg_lidar.translation),
-            orientation=Gf.Quatd(*self.cfg_lidar.quat),  # wxyz
+            translation=Gf.Vec3d(*self.cfg_lidar.translation),  # 位移设置在 lidar 上
+            orientation=Gf.Quatd(*self.cfg_lidar.quat),  # 旋转设置在 lidar 上
+            visibility=True,
         )
+
         self.render_product = omni.replicator.core.create.render_product(
             self.lidar.GetPath(), [1, 1]
         )
@@ -53,7 +81,7 @@ class LidarOmni:
         )
         self.annotator.attach(self.render_product)
         logger.info(
-            f"Lidar Omni sensor created or encapsulated at path: {self.cfg_lidar.prim_path}"
+            f"Lidar Omni sensor created at path: {self.lidar.GetPath()}"
         )
         return None
 

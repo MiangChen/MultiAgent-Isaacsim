@@ -401,7 +401,7 @@ class World:
 
         # 3. Create sensor implementation (Isaac Sim layer)
         sensor_impl = self._create_sensor_impl(
-            sensor_path, translation, quaternion, blueprint
+            sensor_path, translation, quaternion, blueprint, parent_actor
         )
 
         # 4. Create sensor actor (abstraction layer)
@@ -467,7 +467,7 @@ class World:
 
         return translation, quaternion
 
-    def _create_sensor_impl(self, sensor_path, translation, quaternion, blueprint):
+    def _create_sensor_impl(self, sensor_path, translation, quaternion, blueprint, parent_actor=None):
         """
         Create sensor implementation (Isaac Sim layer)
 
@@ -476,6 +476,7 @@ class World:
             translation: Relative position
             quaternion: Relative orientation [w, x, y, z]
             blueprint: Sensor blueprint
+            parent_actor: Parent actor (for sensors that need it)
 
         Returns:
             Sensor implementation (Camera, LidarIsaac, or LidarOmni)
@@ -490,7 +491,7 @@ class World:
             )
         elif blueprint.id == "sensor.lidar.omni":
             return self._create_lidar_omni_impl(
-                sensor_path, translation, quaternion, blueprint
+                sensor_path, translation, quaternion, blueprint, parent_actor
             )
         else:
             raise ValueError(f"Unknown sensor type: {blueprint.id}")
@@ -551,11 +552,10 @@ class World:
 
         return lidar
 
-    def _create_lidar_omni_impl(self, sensor_path, translation, quaternion, blueprint):
+    def _create_lidar_omni_impl(self, sensor_path, translation, quaternion, blueprint, parent_actor=None):
         """Create Omni LiDAR implementation"""
         from simulation.sensor.lidar.lidar_omni import LidarOmni
         from simulation.sensor.lidar.cfg_lidar import CfgLidar
-        from simulation.robot import CfgRobot
 
         # Construct LiDAR config
         cfg_lidar = CfgLidar(
@@ -573,12 +573,11 @@ class World:
             frequency=blueprint.get_attribute("frequency", 10),
         )
 
-        # Create dummy robot config (LidarOmni requires it)
-        cfg_robot = CfgRobot()
-        cfg_robot.path_prim_robot = "/".join(sensor_path.split("/")[:-2])
+        # Get parent prim path from parent actor
+        parent_prim_path = parent_actor.get_prim_path()
 
-        # Create LiDAR
-        lidar = LidarOmni(cfg_lidar, cfg_robot)
+        # Create LiDAR with parent_prim_path
+        lidar = LidarOmni(cfg_lidar, parent_prim_path)
 
         return lidar
 
