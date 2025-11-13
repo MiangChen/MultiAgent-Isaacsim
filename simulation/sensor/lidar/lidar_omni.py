@@ -63,7 +63,7 @@ class LidarOmni:
                 # 如果 prim_path 只是简单名称（如 "lidar"），直接使用
                 relative_path = self.cfg_lidar.prim_path.lstrip("/")
             
-            # 1. 先创建 xform 节点作为容器（只有 rigid body 和 并且要有 gravity）
+            # 1. 先创建 xform 节点作为容器（只有 rigid body 和 并且不要 gravity）
             xform_path = f"{self.parent_prim_path}/{relative_path}"
             stage = omni.usd.get_context().get_stage()
             xform_prim = UsdGeom.Xform.Define(stage, xform_path).GetPrim()
