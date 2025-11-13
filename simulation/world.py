@@ -424,12 +424,12 @@ class World:
         - Parent: /World/robot_swarm/jetbot/jetbot_0
         - Sensor: sensor.camera.rgb
         - ID: 0
-        - Result: /World/robot_swarm/jetbot/jetbot_0/sensor/sensor_camera_rgb_0
+        - Result: /World/robot_swarm/jetbot/jetbot_0/sensor_camera_rgb_0
         """
         parent_path = parent_actor.get_prim_path()
         sensor_type = blueprint.id.replace(".", "_")
         sensor_name = f"{sensor_type}_{self._next_actor_id}"
-        return f"{parent_path}/sensor/{sensor_name}"
+        return f"{parent_path}/{sensor_name}"
 
     def _extract_transform(self, transform):
         """

@@ -45,7 +45,7 @@ class LidarOmni:
             # 如果 prim_path 只是简单名称（如 "lidar"），直接使用
             relative_path = self.cfg_lidar.prim_path.lstrip("/")
         
-        # 1. 先创建 xform 节点作为容器（只有 rigid body 和 no gravity）
+        # 1. 先创建 xform 节点作为容器（只有 rigid body 和 并且要有 gravity）
         xform_path = f"{self.parent_prim_path}/{relative_path}"
         stage = omni.usd.get_context().get_stage()
         xform_prim = UsdGeom.Xform.Define(stage, xform_path).GetPrim()
@@ -53,16 +53,8 @@ class LidarOmni:
         # 2. 添加 rigid body 到 xform，确保可以随机器人运动
         rigid_body_api = UsdPhysics.RigidBodyAPI.Apply(xform_prim)
         rigid_body_api.CreateRigidBodyEnabledAttr(True)
-        
-        # 3. 禁用 gravity（使用 PhysX API）
-        physx_rigid_body_api = PhysxSchema.PhysxRigidBodyAPI.Apply(xform_prim)
-        disable_gravity_attr = physx_rigid_body_api.GetDisableGravityAttr()
-        if not disable_gravity_attr:
-            disable_gravity_attr = physx_rigid_body_api.CreateDisableGravityAttr()
-        disable_gravity_attr.Set(True)
-        
-        # 4. 使用 world.create_joint() 创建 Fixed Joint 连接到机器人
-        # 这是正确的方式，参考 robot.py 中的 ATTACH 操作
+
+        # 3 使用 world.create_joint() 创建 Fixed Joint 连接到机器人
         container = get_container()
         world = container.world_configured()
         
@@ -73,7 +65,7 @@ class LidarOmni:
             world.create_joint(
                 joint_path=joint_path,
                 joint_type="fixed",
-                body0=self.parent_prim_path,
+                body0=self.parent_prim_path + '/body',
                 body1=xform_path,
                 local_pos_0=(0, 0, 0),
                 local_pos_1=(0, 0, 0),
@@ -87,9 +79,9 @@ class LidarOmni:
         joint.GetLocalPos1Attr().Set(Gf.Vec3f(0, 0, 0))
         joint.GetJointEnabledAttr().Set(True)
         
-        logger.info(f"Created xform with rigid body, fixed joint (gravity disabled) at: {xform_path}")
+        logger.info(f"Created xform with rigid body, fixed joint at: {xform_path}")
         
-        # 5. 在 xform 下创建 lidar 传感器，位移和旋转设置在 lidar 上
+        # 4. 在 xform 下创建 lidar 传感器，位移和旋转设置在 lidar 上
         _, self.lidar = omni.kit.commands.execute(
             "IsaacSensorCreateRtxLidar",
             path="lidar",  # 相对于 xform 的路径
