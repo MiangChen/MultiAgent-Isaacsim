@@ -25,7 +25,7 @@ def take_off(**kwargs):
         target_alt = skill_manager.get_skill_data(skill_name, "target_altitude")
         start_time = skill_manager.get_skill_data(skill_name, "start_time")
 
-        pos = robot.position
+        pos, _ = robot.get_world_pose()
         current_alt = pos[2].item()
 
         # Reached target

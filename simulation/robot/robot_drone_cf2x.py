@@ -37,11 +37,6 @@ class RobotCf2x(Robot):
 
         self._body = BodyDroneCf2X(cfg_robot=self.cfg_robot)
 
-        # 无人机基本属性
-        self.position = np.array(
-            getattr(cfg_robot, "_position", [0.0, 0.0, 0.0]), dtype=np.float32
-        )
-
     def initialize(self):
         """初始化无人机"""
         return
