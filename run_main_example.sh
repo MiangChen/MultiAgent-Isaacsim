@@ -9,6 +9,29 @@ PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # --- 2. Python 可执行文件路径 ---
 PY_EXECUTABLE="$PATH_PYTHON/bin/python"
 
+# --- 路径检查 / Path Validation ---
+if [ ! -f "$PY_EXECUTABLE" ]; then
+    echo "========================================"
+    echo "错误：Python可执行文件不存在 / ERROR: Python executable not found"
+    echo "期望路径 / Expected path: $PY_EXECUTABLE"
+    echo "请检查 PATH_PYTHON 配置是否正确"
+    echo "Please check if PATH_PYTHON is configured correctly"
+    echo "========================================"
+    exit 1
+fi
+
+if [ ! -d "$PATH_GSI_MSG" ]; then
+    echo "========================================"
+    echo "错误：GSI消息路径不存在 / ERROR: GSI messages path does not exist"
+    echo "当前配置 / Current config: PATH_GSI_MSG=\"$PATH_GSI_MSG\""
+    echo "请修改脚本中的 PATH_GSI_MSG 变量为正确的路径"
+    echo "Please modify the PATH_GSI_MSG variable in the script to the correct path"
+    echo "========================================"
+    exit 1
+fi
+
+echo "[INFO] 路径验证通过 / Path validation passed"
+
 # --- 3. 要运行的主 Python 脚本 ---
 MAIN_PY_SCRIPT="main_example.py"
 
