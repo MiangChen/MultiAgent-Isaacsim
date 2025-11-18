@@ -15,7 +15,7 @@ import uuid
 
 # Local project imports
 from log.log_manager import LogManager
-from ros.node_action_client_skill import NodeActionClientSkill
+from application.node_action_client_skill import NodeActionClientSkill
 
 # ROS2 imports
 from rclpy.action import ActionServer

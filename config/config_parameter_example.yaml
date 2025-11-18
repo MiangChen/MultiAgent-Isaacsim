@@ -88,11 +88,10 @@ logging:
   level: "INFO" # 层级关系: DEBUG (all message) > INFO > WARNING > ERROR > CRITICAL (breaking errors)
   file: "logs/app.log" # 相对于项目根目录，或使用绝对路径
 
-# ROS2相关
+# ROS2 isaacsim相关
 ros:
   node_enable:
     node_scene_monitor: False
-    node_action_server_plan_execution: True
     node_time: True
 
 frames:
