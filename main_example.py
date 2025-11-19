@@ -234,6 +234,11 @@ def main():
         camera_bp.set_attribute("image_size_y", 720)
         camera_bp.set_attribute("focal_length", 2)
         camera_bp.set_attribute("enable_semantic_detection", True)
+        # 指定 Camera attach 到机器人的哪个相对 prim 路径
+        # h1_0 机器人的完整路径是 /World/robot/h1/h1_0
+        # 这里指定 attach 到 "/d435_rgb_module_link" 组件
+        # 使用新架构：xform + rigid body + fixed joint
+        camera_bp.set_attribute("attach_prim_relative_path", "/d435_rgb_module_link")
 
         camera_transform = Transform(
             location=Location(x=0.1, y=0.01, z=0.69),
@@ -241,7 +246,8 @@ def main():
         )
 
         h1_camera = world.spawn_actor(camera_bp, camera_transform, attach_to=h1_actor)
-        logger.info(f"✅ Camera added to h1_0 (1280x720, focal: 2mm)")
+        logger.info(f"✅ Camera added to h1_0 (1280x720, focal: 2mm, attached to /d435_rgb_module_link)")
+        logger.info(f"   Using xform + rigid body + fixed joint architecture")
     else:
         logger.warning("h1_0 robot not found, skipping camera")
 

@@ -38,3 +38,6 @@ class CfgCamera:
     horizontal_aperture: Optional[float] = None
     # Emulates sensor/film height on a camera.
     vertical_aperture: Optional[float] = None
+    # Camera attach到机器人的哪个相对prim路径
+    # example: "/body", "/base", "/root", "/pelvis"
+    attach_prim_relative_path: str = None

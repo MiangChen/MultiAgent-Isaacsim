@@ -465,7 +465,7 @@ class World:
             Sensor implementation (Camera, LidarIsaac, or LidarOmni)
         """
         if blueprint.id == "sensor.camera.rgb":
-            return self._create_camera_impl(sensor_path_relative, translation, quaternion, blueprint)
+            return self._create_camera_impl(sensor_path_relative, translation, quaternion, blueprint, parent_actor)
         elif blueprint.id == "sensor.lidar.isaac":
             return self._create_lidar_isaac_impl(sensor_path_relative, translation, quaternion, blueprint)
         elif blueprint.id == "sensor.lidar.omni":
@@ -473,14 +473,16 @@ class World:
         else:
             raise ValueError(f"Unknown sensor type: {blueprint.id}")
 
-    def _create_camera_impl(self, sensor_path_relative, translation, quaternion, blueprint):
-        """Create camera implementation"""
+    def _create_camera_impl(self, sensor_path_relative, translation, quaternion, blueprint, parent_actor=None):
+        """Create camera implementation using new xform + rigid body + fixed joint architecture"""
         from simulation.sensor.camera.camera import Camera
         from simulation.sensor.camera.cfg_camera import CfgCamera
 
         # Construct config
         cfg = CfgCamera(
             name=sensor_path_relative.split('/')[-1],
+            type="rgb",
+            id=self._next_actor_id,
             path_prim_relative=sensor_path_relative,
             resolution=(
                 blueprint.get_attribute("image_size_x"),
@@ -492,14 +494,20 @@ class World:
             enable_semantic_detection=blueprint.get_attribute(
                 "enable_semantic_detection"
             ),
+            attach_prim_relative_path=blueprint.get_attribute("attach_prim_relative_path", None),
+            use_existing_camera=False,  # 创建新 camera，使用 xform + joint 架构
         )
 
-        # Extract parent path
-        parent_path = "/".join(sensor_path_relative.split("/")[:-1])
+        # Get parent prim path from parent actor
+        if parent_actor is not None:
+            parent_prim_path = parent_actor.get_prim_path()
+        else:
+            # Fallback: extract from sensor path
+            parent_prim_path = "/".join(sensor_path_relative.split("/")[:-2])
 
-        # Create camera
-        camera = Camera(path_prim_parent=parent_path, cfg_camera=cfg)
-        camera.initialize()
+        # Create camera with new architecture
+        camera = Camera(path_prim_parent=parent_prim_path, cfg_camera=cfg)
+        camera.initialize_on_physics_step()
 
         return camera
 

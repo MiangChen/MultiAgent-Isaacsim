@@ -47,6 +47,10 @@ class RGBCamera(SensorActor):
         if not self._is_listening or self._callback is None:
             return
 
+        # 检查传感器是否已初始化
+        if not self.sensor.is_initialized():
+            return
+
         try:
             rgb = self.sensor.get_rgb()
             if rgb is None:
