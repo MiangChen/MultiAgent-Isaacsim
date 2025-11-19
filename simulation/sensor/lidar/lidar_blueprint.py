@@ -76,3 +76,7 @@ class OmniLidarBlueprint(SensorBlueprint):
 
         # Frequency (Hz)
         self.set_attribute("frequency", 10)
+
+        # Attach to which relative prim path of the robot
+        # Examples: "/body", "/base", "/root", "/pelvis", etc.
+        self.set_attribute("attach_prim_relative_path", None)

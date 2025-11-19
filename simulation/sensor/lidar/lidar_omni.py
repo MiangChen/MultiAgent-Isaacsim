@@ -77,6 +77,7 @@ class LidarOmni:
 
             # 1. 先创建 xform 节点作为容器（只有 rigid body 和 并且不要 gravity）
             xform_path = f"{self.parent_prim_path}/{relative_path}"
+            # xform_path = '/World/robot/cf2x/sensor/lidar'# f"{self.parent_prim_path}/{relative_path}"
             stage = omni.usd.get_context().get_stage()
             xform_prim = UsdGeom.Xform.Define(stage, xform_path).GetPrim()
 
@@ -96,7 +97,12 @@ class LidarOmni:
             )
             scene_manager = container.scene_manager()
             scene_manager.disable_gravity_for_hierarchy(xform_path)
+
             # 4 使用 world.create_joint() 创建 Fixed Joint 连接到机器人
+            if self.cfg_lidar.attach_prim_relative_path is not None:
+                attach_prim_path = self.parent_prim_path + self.cfg_lidar.attach_prim_relative_path
+            else:
+                raise f"The target attach prim of lidar is None, which must be provided"
             joint_path = f"/World/lidar_joint_{relative_path.replace('/', '_')}"
             joint_prim = stage.GetPrimAtPath(joint_path)
 
@@ -104,7 +110,7 @@ class LidarOmni:
                 world.create_joint(
                     joint_path=joint_path,
                     joint_type="fixed",
-                    body0=self.parent_prim_path + '/body',
+                    body0=attach_prim_path,
                     body1=xform_path,
                     local_pos_0=(0, 0, 0),
                     local_pos_1=(0, 0, 0),

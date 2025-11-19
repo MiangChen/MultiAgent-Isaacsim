@@ -260,6 +260,10 @@ def main():
         omni_lidar_bp.set_attribute("output_size", (352, 120))
         omni_lidar_bp.set_attribute("max_depth", 100.0)
         omni_lidar_bp.set_attribute("frequency", 10)
+        # 指定LiDAR attach到机器人的哪个相对prim路径
+        # cf2x_0机器人的完整路径是 /World/robot/cf2x/cf2x_0
+        # 这里指定attach到 "/body" 组件
+        omni_lidar_bp.set_attribute("attach_prim_relative_path", "/body")
 
         omni_lidar_transform = Transform(
             location=Location(x=0.0, y=0.0, z=0.1),
@@ -269,7 +273,7 @@ def main():
         omni_lidar = world.spawn_actor(
             omni_lidar_bp, omni_lidar_transform, attach_to=cf2x_actor
         )
-        logger.info(f"✅ Omni LiDAR added to cf2x_0 (352x120, 10Hz)")
+        logger.info(f"✅ Omni LiDAR added to cf2x_0 (352x120, 10Hz, attached to /body)")
     else:
         logger.warning("cf2x_0 robot not found, skipping LiDAR")
 

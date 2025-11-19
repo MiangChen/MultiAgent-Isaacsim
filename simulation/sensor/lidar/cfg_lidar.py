@@ -36,3 +36,6 @@ class CfgLidar:
     frequency: int = 10
     # 是否自动附加数据读取器以获取数据 (用于 Omni LiDAR)
     attach_annotator: bool = True
+    # LiDAR attach到机器人的哪个相对prim路径 (用于 Omni LiDAR)
+    # example: "/body", "/base", "/root", "/pelvis"
+    attach_prim_relative_path: str = None

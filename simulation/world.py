@@ -571,6 +571,7 @@ class World:
             erp_width_fov=blueprint.get_attribute("erp_width_fov", 90.0),
             erp_height_fov=blueprint.get_attribute("erp_height_fov", 270.0),
             frequency=blueprint.get_attribute("frequency", 10),
+            attach_prim_relative_path=blueprint.get_attribute("attach_prim_relative_path", None),
         )
 
         # Get parent prim path from parent actor
