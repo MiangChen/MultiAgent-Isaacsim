@@ -40,8 +40,7 @@ class Camera:
 
     def initialize_on_physics_step(self) -> None:
         """
-        在 physics step 中延迟初始化 camera
-        这是最可靠的方式，避免传感器创建时的时序问题
+        在 physics step 中延迟初始化 camera 避免传感器创建时的时序问题
         """
         from containers import get_container
 

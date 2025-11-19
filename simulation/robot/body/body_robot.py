@@ -42,11 +42,14 @@ class BodyRobot:
         """
         quat: wxyz
         """
-        pos_IB, q_IB = self.robot_articulation.get_world_poses()
-        pos_IB, q_IB = pos_IB[0], q_IB[0]
-        pos_IB = to_torch(pos_IB)
-        q_IB = to_torch(q_IB)
-        return pos_IB, q_IB
+        try:
+            pos_IB, q_IB = self.robot_articulation.get_world_poses()
+            pos_IB, q_IB = pos_IB[0], q_IB[0]
+            pos_IB = to_torch(pos_IB)
+            q_IB = to_torch(q_IB)
+            return pos_IB, q_IB
+        except Exception as e:
+            raise f"{e}, in robot cfg: {self.cfg_robot}"
 
     def get_world_vel(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """

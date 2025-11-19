@@ -26,9 +26,8 @@
 
 try:
     import pydevd_pycharm
-    pydevd_pycharm.settrace(
-        "localhost", port=12345, stdout_to_server=True, stderr_to_server=True
-    )
+    # pydevd_pycharm.settrace(        "localhost", port=12345, stdout_to_server=True, stderr_to_server=True    )
+    pydevd_pycharm.settrace('localhost', port=12345, stdout_to_server = True, stderr_to_server = True)
 except Exception as e:
     print(f"no pydevd found: {repr(e)}")
 
@@ -236,13 +235,12 @@ def main():
         camera_bp.set_attribute("enable_semantic_detection", True)
         # 指定 Camera attach 到机器人的哪个相对 prim 路径
         # h1_0 机器人的完整路径是 /World/robot/h1/h1_0
-        # 这里指定 attach 到 "/d435_rgb_module_link" 组件
-        # 使用新架构：xform + rigid body + fixed joint
+        # 这里指定 attach 到h1的 "/d435_rgb_module_link" 组件
         camera_bp.set_attribute("attach_prim_relative_path", "/d435_rgb_module_link")
 
         camera_transform = Transform(
-            location=Location(x=0.1, y=0.01, z=0.69),
-            rotation=Rotation(quaternion=[0.5, -0.5, -0.5, 0.5]),
+            location=Location(x=0.1, y=0.01, z=0),
+            rotation=Rotation(quaternion=[-0.37, 0.926, -0.01, 0.023], order='wxyz'),
         )
 
         h1_camera = world.spawn_actor(camera_bp, camera_transform, attach_to=h1_actor)
