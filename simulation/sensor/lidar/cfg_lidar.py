@@ -9,15 +9,17 @@ class CfgLidar:
     # 雷达的名字, 同一个机器人上的雷达名字需要不一样
     name: str = "lidar"
     # Lidar 在 USD 舞台中的路径
-    prim_path: Optional[str] = None
+    prim_path: str = None
+    # Lidar相对于父Prim的路径
+    prim_path_relative: str = None
     # 相对于parent prim的偏移位置
     translation: Tuple[float, float, float] = (0.0, 0.0, 0.0)
     # 相对于机器人中心的四元数朝向 (WXYZ)
     quat: Tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
     """
-    要使用的Lidar配置文件名 (去掉 .json 后缀), "
-        "对应 .../{python所在的路径}/lib/python3.10/site-packages/isaacsim/exts/isaacsim.sensor.rtx/data/lidar_configs 目录下的文件"
-    如果用自定义的, 需要自己将lidar 的配置文件放到上述的文件夹中, 比如autel_perception_120x352
+    config_file_name要使用的Lidar配置文件名
+    对应 .../{python所在的路径}/lib/python3.10/site-packages/isaacsim/exts/isaacsim.sensor.rtx/data/lidar_configs 目录下的文件
+    如果用自定义的Lidar, 需要将 lidar 的json配置文件放到上述的文件夹中, 比如autel_perception_120x352
     """
     config_file_name: str = "Hesai_XT32_SD10"
     # 雷达的输出维度, 和json中的配置要一致 (用于 Omni LiDAR)

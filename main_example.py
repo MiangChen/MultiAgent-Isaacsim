@@ -343,8 +343,8 @@ def main():
         cf2x_robot = cf2x_actor.robot
         if cf2x_robot.has_ros():
             ros_manager = cf2x_robot.get_ros_manager()
-            ros_manager.attach_sensor_to_ros(omni_lidar, "lidar", "omni_lidar/points")
-            logger.info(f"✅ Omni LiDAR publishing to /cf2x_0/omni_lidar/points")
+            ros_manager.attach_sensor_to_ros(omni_lidar, "lidar")
+            logger.info(f"✅ Omni LiDAR publishing to /cf2x_0/lidar/points")
 
     # 3.4 Build Grid Map for Planning
     logger.info("Building grid map...")

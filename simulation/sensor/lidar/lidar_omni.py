@@ -65,15 +65,16 @@ class LidarOmni:
         world = container.world_configured()
 
         try:
-            # 从完整路径中提取相对路径
-            # 例如：/World/robot_0/lidar_0 -> lidar_0
-            if self.cfg_lidar.prim_path.startswith(self.parent_prim_path + "/"):
+            # 确定 lidar 的相对路径
+            if self.cfg_lidar.prim_path_relative is not None:
+                relative_path = self.cfg_lidar.prim_path_relative.lstrip("/")
+            elif self.cfg_lidar.prim_path is not None:
+
                 relative_path = self.cfg_lidar.prim_path.replace(
                     self.parent_prim_path + "/", ""
                 )
             else:
-                # 如果 prim_path 只是简单名称（如 "lidar"），直接使用
-                relative_path = self.cfg_lidar.prim_path.lstrip("/")
+                raise ValueError("Either prim_path or prim_path_relative must be specified in lidar config")
 
             # 1. 先创建 xform 节点作为容器（只有 rigid body 和 并且不要 gravity）
             xform_path = f"{self.parent_prim_path}/{relative_path}"
@@ -102,7 +103,7 @@ class LidarOmni:
             if self.cfg_lidar.attach_prim_relative_path is not None:
                 attach_prim_path = self.parent_prim_path + self.cfg_lidar.attach_prim_relative_path
             else:
-                raise f"The target attach prim of lidar is None, which must be provided"
+                raise f"The target attach prim of lidar is None, which must be provided. set example: lidar_bp.set_attribute(\"attach_prim_relative_path\", \"/body\")"
             joint_path = f"/World/lidar_joint_{relative_path.replace('/', '_')}"
             joint_prim = stage.GetPrimAtPath(joint_path)
 
