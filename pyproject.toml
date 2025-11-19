@@ -8,6 +8,4 @@ version = "2025.11.6"
 
 
 [tool.setuptools]
-packages = [
-    "robot",
-]
+packages = []
