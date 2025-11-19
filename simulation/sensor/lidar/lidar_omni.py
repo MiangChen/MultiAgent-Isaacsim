@@ -69,7 +69,6 @@ class LidarOmni:
             if self.cfg_lidar.prim_path_relative is not None:
                 relative_path = self.cfg_lidar.prim_path_relative.lstrip("/")
             elif self.cfg_lidar.prim_path is not None:
-
                 relative_path = self.cfg_lidar.prim_path.replace(
                     self.parent_prim_path + "/", ""
                 )

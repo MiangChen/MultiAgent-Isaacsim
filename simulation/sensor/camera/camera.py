@@ -40,7 +40,7 @@ class Camera:
         self.cfg_camera.name = self.cfg_camera.type + "_" + str(self.cfg_camera.id)
         if self.cfg_camera.use_existing_camera == True:
             self.cfg_camera.path_prim_absolute = (
-                self.path_prim_parent + self.cfg_camera.path_prim_relative_to_robot
+                self.path_prim_parent + self.cfg_camera.path_prim_relative
             )
             self.camera = IsaacCamera(
                 prim_path=self.cfg_camera.path_prim_absolute,
@@ -56,7 +56,7 @@ class Camera:
         else:
             self.cfg_camera.path_prim_absolute = (
                 self.path_prim_parent
-                + self.cfg_camera.path_prim_relative_to_robot
+                + self.cfg_camera.path_prim_relative
                 + "/"
                 + self.cfg_camera.name
             )

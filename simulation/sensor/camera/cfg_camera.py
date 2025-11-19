@@ -7,10 +7,10 @@ from typing import Optional, Tuple
 class CfgCamera:
     type: str = "camera"
     id: Optional[int] = None
-    path_prim_relative_to_robot: str = "/sensor/camera"
-    path_prim_absolute: Optional[str] = None
-    path_prim_joint_target_relative_to_robot: Optional[str] = None
-    path_prim_joint_target_absolute: Optional[str] = None
+    path_prim_relative: str = None
+    path_prim_absolute: str = None
+    # path_prim_joint_target_relative_to_robot: Optional[str] = None
+    # path_prim_joint_target_absolute: Optional[str] = None
 
     use_existing_camera: bool = False
     name: str = "camera"

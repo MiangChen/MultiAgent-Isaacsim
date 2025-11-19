@@ -8,8 +8,8 @@ class CfgCamera:
     type: str = "camera"
     path_prim_relative: Optional[str] = None
     path_prim_absolute: Optional[str] = None
-    path_prim_joint_target_relative: Optional[str] = None
-    path_prim_joint_target_absolute: Optional[str] = None
+    # path_prim_joint_target_relative: Optional[str] = None
+    # path_prim_joint_target_absolute: Optional[str] = None
     # 相对于joint target的偏移距离
     position: Tuple[float, float, float] = (0.0, 0.0, 0.0)
     quat: Tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)

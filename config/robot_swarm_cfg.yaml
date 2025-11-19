@@ -26,7 +26,7 @@ jetbot:
 #    cfg_dict_camera:
 #      front:
 #        use_existing_camera: True
-#        path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
+#        path_prim_relative: "/chassis/rgb_camera/jetbot_camera"
 #        id: 0
 #        frequency: 30
 #        resolution: [1280, 720]
@@ -41,7 +41,7 @@ jetbot:
 #    cfg_dict_camera:
 #      front:
 #        use_existing_camera: True
-#        path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
+#        path_prim_relative: "/chassis/rgb_camera/jetbot_camera"
 #        id: 0
 #        frequency: 30
 #        resolution: [ 1280, 720 ]
@@ -56,7 +56,7 @@ jetbot:
 #    cfg_dict_camera:
 #      front:
 #        use_existing_camera: True
-#        path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
+#        path_prim_relative: "/chassis/rgb_camera/jetbot_camera"
 #        id: 0
 #        frequency: 30
 #        resolution: [ 1280, 720 ]
@@ -71,7 +71,7 @@ jetbot:
 #    cfg_dict_camera:
 #      front:
 #        use_existing_camera: True
-#        path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
+#        path_prim_relative: "/chassis/rgb_camera/jetbot_camera"
 #        id: 0
 #        frequency: 30
 #        resolution: [ 1280, 720 ]
@@ -87,7 +87,7 @@ target:
 #    cfg_dict_camera:
 #      front:
 #        use_existing_camera: True
-#        path_prim_relative_to_robot: "/chassis/rgb_camera/jetbot_camera"
+#        path_prim_relative: "/chassis/rgb_camera/jetbot_camera"
 #        id: 0
 #        frequency: 30
 #        resolution: [ 1280, 720 ]

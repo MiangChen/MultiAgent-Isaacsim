@@ -394,15 +394,15 @@ class World:
             Sensor actor
         """
         # 1. Auto-construct sensor path
-        sensor_path = self._construct_sensor_path(parent_actor, blueprint)
+        sensor_type = blueprint.id.replace(".", "_")
+        sensor_name = f"{sensor_type}_{self._next_actor_id}"
+        sensor_path_relative = f"/sensor/{sensor_name}"
 
         # 2. Extract relative transform
         translation, quaternion = self._extract_transform(transform)
 
         # 3. Create sensor implementation (Isaac Sim layer)
-        sensor_impl = self._create_sensor_impl(
-            sensor_path, translation, quaternion, blueprint, parent_actor
-        )
+        sensor_impl = self._create_sensor_impl(sensor_path_relative, translation, quaternion, blueprint, parent_actor)
 
         # 4. Create sensor actor (abstraction layer)
         sensor_actor = blueprint.sensor_class(sensor_impl, self, parent_actor)
@@ -413,23 +413,6 @@ class World:
         )
 
         return sensor_actor
-
-    def _construct_sensor_path(self, parent_actor, blueprint):
-        """
-        Auto-construct sensor prim path
-
-        Rule: parent_path/sensor/sensor_type_id
-
-        Example:
-        - Parent: /World/robot_swarm/jetbot/jetbot_0
-        - Sensor: sensor.camera.rgb
-        - ID: 0
-        - Result: /World/robot_swarm/jetbot/jetbot_0/sensor_camera_rgb_0
-        """
-        parent_path = parent_actor.get_prim_path()
-        sensor_type = blueprint.id.replace(".", "_")
-        sensor_name = f"{sensor_type}_{self._next_actor_id}"
-        return f"{parent_path}/{sensor_name}"
 
     def _extract_transform(self, transform):
         """
@@ -467,12 +450,12 @@ class World:
 
         return translation, quaternion
 
-    def _create_sensor_impl(self, sensor_path, translation, quaternion, blueprint, parent_actor=None):
+    def _create_sensor_impl(self, sensor_path_relative, translation, quaternion, blueprint, parent_actor=None):
         """
         Create sensor implementation (Isaac Sim layer)
 
         Args:
-            sensor_path: Auto-generated sensor path
+            sensor_path_relative: Auto-generated sensor path
             translation: Relative position
             quaternion: Relative orientation [w, x, y, z]
             blueprint: Sensor blueprint
@@ -482,28 +465,23 @@ class World:
             Sensor implementation (Camera, LidarIsaac, or LidarOmni)
         """
         if blueprint.id == "sensor.camera.rgb":
-            return self._create_camera_impl(
-                sensor_path, translation, quaternion, blueprint
-            )
+            return self._create_camera_impl(sensor_path_relative, translation, quaternion, blueprint)
         elif blueprint.id == "sensor.lidar.isaac":
-            return self._create_lidar_isaac_impl(
-                sensor_path, translation, quaternion, blueprint
-            )
+            return self._create_lidar_isaac_impl(sensor_path_relative, translation, quaternion, blueprint)
         elif blueprint.id == "sensor.lidar.omni":
-            return self._create_lidar_omni_impl(
-                sensor_path, translation, quaternion, blueprint, parent_actor
-            )
+            return self._create_lidar_omni_impl(sensor_path_relative, translation, quaternion, blueprint, parent_actor)
         else:
             raise ValueError(f"Unknown sensor type: {blueprint.id}")
 
-    def _create_camera_impl(self, sensor_path, translation, quaternion, blueprint):
+    def _create_camera_impl(self, sensor_path_relative, translation, quaternion, blueprint):
         """Create camera implementation"""
         from simulation.sensor.camera.camera import Camera
         from simulation.sensor.camera.cfg_camera import CfgCamera
 
         # Construct config
         cfg = CfgCamera(
-            path_prim_absolute=sensor_path,
+            name=sensor_path_relative.split('/')[-1],
+            path_prim_relative=sensor_path_relative,
             resolution=(
                 blueprint.get_attribute("image_size_x"),
                 blueprint.get_attribute("image_size_y"),
@@ -517,7 +495,7 @@ class World:
         )
 
         # Extract parent path
-        parent_path = "/".join(sensor_path.split("/")[:-1])
+        parent_path = "/".join(sensor_path_relative.split("/")[:-1])
 
         # Create camera
         camera = Camera(path_prim_parent=parent_path, cfg_camera=cfg)
@@ -525,7 +503,7 @@ class World:
 
         return camera
 
-    def _create_lidar_isaac_impl(self, sensor_path, translation, quaternion, blueprint):
+    def _create_lidar_isaac_impl(self, sensor_path_relative, translation, quaternion, blueprint):
         """Create Isaac LiDAR implementation"""
         from simulation.sensor.lidar.lidar_isaac import LidarIsaac
         from simulation.sensor.lidar.cfg_lidar import CfgLidar
@@ -533,8 +511,8 @@ class World:
 
         # Construct LiDAR config
         cfg_lidar = CfgLidar(
-            name=sensor_path.split("/")[-1],
-            prim_path=sensor_path,
+            name=sensor_path_relative.split("/")[-1],
+            prim_path_relative=sensor_path_relative,
             translation=translation,
             quat=quaternion,
             config_file_name=blueprint.get_attribute("config_file_name"),
@@ -543,24 +521,24 @@ class World:
 
         # Create dummy robot config (LidarIsaac requires it)
         cfg_robot = CfgRobot()
-        cfg_robot.path_prim_swarm = "/".join(sensor_path.split("/")[:-2])
+        cfg_robot.path_prim_swarm = "/".join(sensor_path_relative.split("/")[:-2])
 
         # Create LiDAR
         lidar = LidarIsaac(cfg_lidar, cfg_robot)
-        lidar.create_lidar(prim_path=sensor_path)
+        lidar.create_lidar(prim_path=sensor_path_relative)
         lidar.initialize()
 
         return lidar
 
-    def _create_lidar_omni_impl(self, sensor_path, translation, quaternion, blueprint, parent_actor=None):
+    def _create_lidar_omni_impl(self, sensor_path_relative, translation, quaternion, blueprint, parent_actor=None):
         """Create Omni LiDAR implementation"""
         from simulation.sensor.lidar.lidar_omni import LidarOmni
         from simulation.sensor.lidar.cfg_lidar import CfgLidar
 
         # Construct LiDAR config
         cfg_lidar = CfgLidar(
-            name=sensor_path.split("/")[-1],
-            prim_path=sensor_path,
+            name=sensor_path_relative.split("/")[-1],
+            prim_path_relative=sensor_path_relative,
             translation=translation,
             quat=quaternion,
             config_file_name=blueprint.get_attribute("config_file_name"),
