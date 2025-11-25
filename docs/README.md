@@ -110,11 +110,11 @@ ros_manager.attach_sensor_to_ros(lidar, 'lidar', 'lidar/points')
 ```bash
 # Navigate To
 ros2 action send_goal /robot_0/skill_execution plan_msgs/action/SkillExecution \
-  '{skill_request: {skill_list: [{skill: "navigate_to", params: [{key: "goal_pos", value: "[10, 20, 0]"}]}]}}' --feedback
+  '{skill: "navigate_to", params: [{key: "goal_pos", value: "[10, 20, 0]"}]}' --feedback
 
 # Take Photo
 ros2 action send_goal /robot_0/skill_execution plan_msgs/action/SkillExecution \
-  '{skill_request: {skill_list: [{skill: "take_photo", params: [{key: "save_path", value: "/path/to/photo.jpg"}]}]}}' --feedback
+  '{skill: "take_photo", params: [{key: "save_path", value: "/path/to/photo.jpg"}]}' --feedback
 ```
 
 ---

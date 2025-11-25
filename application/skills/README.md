@@ -91,18 +91,18 @@ result = skill_manager.execute_skill('take_off', altitude=2.0)
 
 ## ROS Action Interface
 
-All skills can be executed via ROS2 actions:
+All skills can be executed via ROS2 actions (simplified format):
 
 ```bash
 # Navigate
 ros2 action send_goal /jetbot_0/skill_execution plan_msgs/action/SkillExecution \
-  '{skill_request: {skill_list: [{skill: "navigate_to", params: [{key: "goal_pos", value: "[3, 3, 0]"}]}]}}' --feedback
+  '{skill: "navigate_to", params: [{key: "goal_pos", value: "[3, 3, 0]"}]}' --feedback
 
 # Take off
 ros2 action send_goal /cf2x_0/skill_execution plan_msgs/action/SkillExecution \
-  '{skill_request: {skill_list: [{skill: "take_off", params: [{key: "altitude", value: "1.0"}]}]}}' --feedback
+  '{skill: "take_off", params: [{key: "altitude", value: "1.0"}]}' --feedback
 
 # Explore
 ros2 action send_goal /jetbot_0/skill_execution plan_msgs/action/SkillExecution \
-  "{skill_request: {skill_list: [{skill: explore, params: [{key: boundary, value: '[[-4.4, 12, 0], [3.0, 27.4, 0]]'}]}]}}" --feedback
+  '{skill: "explore", params: [{key: "boundary", value: "[[-4.4, 12, 0], [3.0, 27.4, 0]]"}]}' --feedback
 ```

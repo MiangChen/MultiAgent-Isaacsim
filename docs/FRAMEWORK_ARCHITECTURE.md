@@ -413,13 +413,10 @@ EXECUTING --[execution_timeout]--> FAILED
 ```bash
 ros2 action send_goal /h1_0/skill_execution \
   plan_msgs/action/SkillExecution \
-  '{skill_request: {skill_list: [{
-    skill: "take_photo",
-    params: [
-      {key: "camera_type", value: "sensor.camera.rgb"},
-      {key: "save_path", value: "/path/to/photo.jpg"}
-    ]
-  }]}}' --feedback
+  '{skill: "take_photo", params: [
+    {key: "camera_type", value: "sensor.camera.rgb"},
+    {key: "save_path", value: "/path/to/photo.jpg"}
+  ]}' --feedback
 ```
 
 ---

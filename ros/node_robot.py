@@ -100,16 +100,20 @@ class NodeRobot(Node):
         """
         ROS2 action server的callback wrapper，处理skill执行请求
         使用新的 SkillManager 架构
+
+        Simplified action format:
+            ros2 action send_goal /<namespace>/skill_execution plan_msgs/action/SkillExecution \
+                '{skill: "navigate_to", params: [{key: "goal_pos", value: "[3, 3, 0]"}]}' --feedback
         """
         import json
         import time
 
-        request = goal_handle.request.skill_request
-        task_name = request.skill_list[0].skill
+        # Simplified: directly access skill and params from request
+        task_name = goal_handle.request.skill
 
         # Parse parameters - convert string values to appropriate types
         params = {}
-        for p in request.skill_list[0].params:
+        for p in goal_handle.request.params:
             try:
                 # Try to parse as JSON first
                 params[p.key] = json.loads(p.value)

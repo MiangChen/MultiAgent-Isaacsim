@@ -242,7 +242,7 @@ def main():
         "  ros2 action send_goal /autel_0/skill_execution plan_msgs/action/SkillExecution \\"
     )
     print(
-        '    \'{skill_request: {skill_list: [{skill: "take_off", params: [{key: "altitude", value: "2.0"}]}]}}\' --feedback'
+        '    \'{skill: "take_off", params: [{key: "altitude", value: "2.0"}]}\' --feedback'
     )
 
     print("\n  # Navigate:")
@@ -250,7 +250,7 @@ def main():
         "  ros2 action send_goal /autel_0/skill_execution plan_msgs/action/SkillExecution \\"
     )
     print(
-        '    \'{skill_request: {skill_list: [{skill: "navigate_to", params: [{key: "goal_pos", value: "[5, 5, 2]"}]}]}}\' --feedback'
+        '    \'{skill: "navigate_to", params: [{key: "goal_pos", value: "[5, 5, 2]"}]}\' --feedback'
     )
 
     print("\n  # Control via cmd_vel:")

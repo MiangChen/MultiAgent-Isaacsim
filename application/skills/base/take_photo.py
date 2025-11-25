@@ -22,13 +22,10 @@ def take_photo(**kwargs):
         
     Example ROS call:
         ros2 action send_goal /h1_0/skill_execution plan_msgs/action/SkillExecution \
-          '{skill_request: {skill_list: [{
-            skill: "take_photo",
-            params: [
-              {key: "camera_type", value: "sensor.camera.rgb"},
-              {key: "save_path", value: "/home/user/photo.jpg"}
-            ]
-          }]}}' --feedback
+          '{skill: "take_photo", params: [
+            {key: "camera_type", value: "sensor.camera.rgb"},
+            {key: "save_path", value: "/home/user/photo.jpg"}
+          ]}' --feedback
     """
     robot = kwargs.get("robot")
     skill_manager = kwargs.get("skill_manager")

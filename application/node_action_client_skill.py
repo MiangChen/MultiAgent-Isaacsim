@@ -89,13 +89,16 @@ class NodeActionClientSkill(Node):
         """
         异步发送一个技能目标，并等待最终结果。
         feedback_handler: 一个可选的回调函数, 用于处理实时的feedback.可以接受(robot_name, feedback_msg)两个参数
+
+        Note: Converts RobotSkill (from PlanExecution) to simplified SkillExecution format
         """
         robot_name = robot_skill_msg.robot_id
-        skill_name = (
-            robot_skill_msg.skill_list[0].skill
-            if robot_skill_msg.skill_list
-            else "unknown"
-        )
+        skill_info = robot_skill_msg.skill_list[0] if robot_skill_msg.skill_list else None
+
+        if not skill_info:
+            return {"success": False, "message": "No skill in skill_list"}
+
+        skill_name = skill_info.skill
 
         action_client = self.get_action_client(robot_name)
         if not await self.loop.run_in_executor(
@@ -108,11 +111,12 @@ class NodeActionClientSkill(Node):
 
         logger.info(f"Preparing to send skill '{skill_name}' to robot '{robot_name}'")
 
-        # 创建顶层的 Goal 对象
+        # Create simplified Goal object (new format)
         goal_msg = SkillExecution.Goal()
-        goal_msg.skill_request = robot_skill_msg
+        goal_msg.skill = skill_name
+        goal_msg.params = skill_info.params  # Parameter[] is compatible
 
-        logger.info(f"Sending goal to '{robot_name}': {goal_msg}")
+        logger.info(f"Sending goal to '{robot_name}': skill={skill_name}, params={len(goal_msg.params)}")
 
         def feedback_callback(feedback_msg):
             feedback = feedback_msg.feedback
