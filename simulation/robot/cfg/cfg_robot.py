@@ -13,7 +13,9 @@ ROBOT_TOPICS = config_manager.get("robot_topics")
 class CfgRobot:
     type: str = "robot"
     id: int = 0
-    namespace: str = "robot"
+    # namespace is auto-generated as "{type}_{id}" in Robot.__init__
+    # Do not set it manually in yaml config
+    namespace: str = ""
     path_prim_swarm: str = "/World/robot"
     path_prim_robot: Optional[str] = None
     path_usd: Optional[str] = None
