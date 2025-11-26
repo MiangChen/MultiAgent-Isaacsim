@@ -20,7 +20,7 @@ from physics_engine.isaacsim_utils import Scene, prims_utils
 from simulation.robot.body import BodyRobot
 
 # ROS2 message imports
-from gsi_msgs.gsi_msgs_helper import (
+from ros_msg.gsi_msgs_helper import (
     RobotFeedback,
     SkillExecution,
     SkillInfo,

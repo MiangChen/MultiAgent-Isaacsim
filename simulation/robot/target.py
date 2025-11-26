@@ -19,7 +19,7 @@ from simulation.robot.cfg.cfg_target import CfgTarget
 from simulation.robot.body.body_target import BodyTarget
 
 # ROS2 message imports
-from gsi_msgs.gsi_msgs_helper import (
+from ros_msg.gsi_msgs_helper import (
     Plan,
     RobotFeedback,
     SkillInfo,

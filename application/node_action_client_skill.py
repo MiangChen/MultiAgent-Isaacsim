@@ -20,7 +20,7 @@ from rclpy.action import ActionClient
 from rclpy.task import Future as RclpyFuture
 
 # ROS2 message imports
-from gsi_msgs.gsi_msgs_helper import (
+from ros_msg.gsi_msgs_helper import (
     PrimTransform,
     SceneModifications,
     RobotFeedback,

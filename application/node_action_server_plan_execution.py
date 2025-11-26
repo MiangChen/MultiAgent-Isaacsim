@@ -22,7 +22,7 @@ from rclpy.action import ActionServer
 from rclpy.node import Node
 
 # ROS2 message imports
-from gsi_msgs.gsi_msgs_helper import (
+from ros_msg.gsi_msgs_helper import (
     PrimTransform,
     SceneModifications,
     RobotFeedback,

@@ -1,0 +1,10 @@
+# Goal: Single skill execution request (simplified)
+string skill
+plan_msgs/Parameter[] params
+---
+# Result: The outcome of the skill execution
+bool success
+string message
+---
+# Feedback: Ongoing status of the skill
+string status

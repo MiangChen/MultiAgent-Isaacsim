@@ -17,7 +17,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Transform as RosTransform
 
 # ROS2 message imports
-from gsi_msgs.gsi_msgs_helper import (
+from ros_msg.gsi_msgs_helper import (
     PrimTransform,
     SceneModifications,
     RobotFeedback,

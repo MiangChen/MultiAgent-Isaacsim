@@ -20,7 +20,7 @@ from simulation.robot.body.body_g1 import BodyG1
 from utils import to_torch
 
 # ROS2 message imports
-from gsi_msgs.gsi_msgs_helper import (
+from ros_msg.gsi_msgs_helper import (
     Plan,
     RobotFeedback,
     SkillInfo,

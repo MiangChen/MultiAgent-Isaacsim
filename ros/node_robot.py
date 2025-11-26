@@ -9,7 +9,7 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 
 # ROS2 message imports
-from gsi_msgs.gsi_msgs_helper import SkillExecution
+from ros_msg.gsi_msgs_helper import SkillExecution
 from rosgraph_msgs.msg import Clock
 
 logger = LogManager.get_logger(__name__)
