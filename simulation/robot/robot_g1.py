@@ -61,9 +61,6 @@ class RobotG1(Robot):
         return obs
 
     def on_physics_step(self, step_size):
-        self.target_linear_velocity[2] = 0
-        self.target_angular_velocity[0] = 0
-        self.target_angular_velocity[1] = 0
         super().on_physics_step(step_size)
 
         # if self.flag_world_reset:

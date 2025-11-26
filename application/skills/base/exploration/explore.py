@@ -66,6 +66,10 @@ def _init_explore(robot, skill_manager, skill_name, kwargs):
         return skill_manager.form_feedback("failed", "Invalid boundary")
 
     try:
+        # Get current robot z position
+        current_position, _ = robot.get_world_pose()
+        current_z = current_position[2] if len(current_position) > 2 else 0.0
+
         # Plan exploration waypoints
         from application.skills.base.exploration.plan_exploration_waypoints import (
             plan_exploration_waypoints,
@@ -79,6 +83,7 @@ def _init_explore(robot, skill_manager, skill_name, kwargs):
             robot_radius=robot.get_robot_radius(),
             interpolation_distance=interpolation_distance,
             interpolation_method=interpolation_method,
+            z_out=current_z,  # Use current robot z height
         )
 
         if not waypoints or not waypoints.poses:

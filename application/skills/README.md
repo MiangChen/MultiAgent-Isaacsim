@@ -102,7 +102,7 @@ ros2 action send_goal /jetbot_0/skill_execution plan_msgs/action/SkillExecution 
 ros2 action send_goal /cf2x_0/skill_execution plan_msgs/action/SkillExecution \
   '{skill: "take_off", params: [{key: "altitude", value: "1.0"}]}' --feedback
 
-# Explore
-ros2 action send_goal /jetbot_0/skill_execution plan_msgs/action/SkillExecution \
-  '{skill: "explore", params: [{key: "boundary", value: "[[-4.4, 12, 0], [3.0, 27.4, 0]]"}]}' --feedback
+# Explore (2D coordinates only, maintains current z height)
+ros2 action send_goal /cf2x_0/skill_execution plan_msgs/action/SkillExecution \
+  '{skill: "explore", params: [{key: "boundary", value: "[[-4.4, 12], [-4.3, 16], [-1.4, 26], [3.0, 27.4], [3.3, 19.4], [0, 11]]"}]}' --feedback
 ```

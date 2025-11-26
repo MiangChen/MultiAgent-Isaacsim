@@ -386,8 +386,22 @@ class Robot:
         """
         Apply target velocity commands to Isaac Sim (CARLA style).
         This is called in on_physics_step, so it's safe to call Isaac Sim API here.
+        
+        For ground robots (jetbot, h1, g1), constrains motion to 2D plane:
+        - vz (linear z) = 0
+        - angular_x = 0
+        - angular_y = 0
         """
         if self._body and self._body.robot_articulation.is_physics_handle_valid():
+            # Apply constraints for ground robots (jetbot, h1, g1)
+            if self.cfg_robot.type in ["jetbot", "h1", "g1"]:
+                self.target_linear_velocity[2] = 0
+                self.target_angular_velocity[0] = 0
+                self.target_angular_velocity[1] = 0
+            elif self.cfg_robot.type in ["cf2x"]:
+                self.target_angular_velocity[0] = 0
+                self.target_angular_velocity[1] = 0
+
             self._body.robot_articulation.set_linear_velocities(
                 self.target_linear_velocity
             )
