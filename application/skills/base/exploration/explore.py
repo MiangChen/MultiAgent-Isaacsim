@@ -51,8 +51,10 @@ def _init_explore(robot, skill_manager, skill_name, kwargs):
     if isinstance(boundary, str):
         try:
             boundary = json.loads(boundary)
-        except:
-            pass
+        except Exception as e:
+            skill_manager.set_skill_state(skill_name, "FAILED")
+            skill_manager.skill_errors[skill_name] = f"Failed to parse boundary JSON: {str(e)}"
+            return skill_manager.form_feedback("failed", f"Invalid boundary JSON: {str(e)}")
     if isinstance(holes, str):
         try:
             holes = json.loads(holes)
@@ -62,8 +64,8 @@ def _init_explore(robot, skill_manager, skill_name, kwargs):
     # Validate
     if not boundary or not isinstance(boundary, (list, tuple)):
         skill_manager.set_skill_state(skill_name, "FAILED")
-        skill_manager.skill_errors[skill_name] = "Invalid boundary"
-        return skill_manager.form_feedback("failed", "Invalid boundary")
+        skill_manager.skill_errors[skill_name] = "Invalid boundary: must be a list of coordinates"
+        return skill_manager.form_feedback("failed", "Invalid boundary format")
 
     try:
         # Get current robot z position
