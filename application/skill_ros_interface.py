@@ -123,10 +123,10 @@ class SkillROSInterface:
         )
 
     def _callback_sim_clock(self, msg: Clock):
-        """Update robot's simulation time from sim_clock topic"""
+        """Update skill_manager's simulation time from sim_clock topic"""
         sim_time = msg.clock.sec + msg.clock.nanosec / 1e9
-        if self.robot is not None:
-            self.robot.update_sim_time(sim_time)
+        if self.skill_manager is not None:
+            self.skill_manager.sim_time = sim_time
 
     def start(self):
         """Start ROS executor in background thread"""

@@ -34,9 +34,9 @@ logger = LogManager.get_logger(__name__)
 class Robot:
     def __init__(self):
         self.cfg_robot.path_prim_robot = (
-            self.cfg_robot.path_prim_swarm
-            + f"/{self.cfg_robot.type}"
-            + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
+                self.cfg_robot.path_prim_swarm
+                + f"/{self.cfg_robot.type}"
+                + f"/{self.cfg_robot.type}_{self.cfg_robot.id}"
         )
         self.cfg_robot.namespace = self.cfg_robot.type + f"_{self.cfg_robot.id}"
         self.namespace = self.cfg_robot.namespace
@@ -72,8 +72,6 @@ class Robot:
         # Manipulation control (set by skills, applied in on_physics_step)
         self._manipulation_control = None
         self._manipulation_result = None
-
-        self.sim_time = 0.0
 
         self.view_angle: float = 2 * np.pi / 3  # 感知视野 弧度
         self.view_radius: float = 2  # 感知半径 米
@@ -309,7 +307,7 @@ class Robot:
         return
 
     def form_feedback(
-        self, status: str = "processing", message: str = "none", progress: int = 100
+            self, status: str = "processing", message: str = "none", progress: int = 100
     ) -> Dict[str, Any]:
         return dict(
             status=str(status),
@@ -667,7 +665,3 @@ class Robot:
                 "message": f"Place failed: {str(e)}",
                 "data": {},
             }
-
-    def update_sim_time(self, sim_time):
-        """更新仿真时间"""
-        self.sim_time = sim_time

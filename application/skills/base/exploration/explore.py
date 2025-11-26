@@ -147,7 +147,7 @@ def _handle_navigating_to_start(robot, skill_manager, skill_name):
         )
 
         skill_manager.set_skill_data(skill_name, "navigate_started", True)
-        skill_manager.set_skill_data(skill_name, "navigate_start_time", robot.sim_time)
+        skill_manager.set_skill_data(skill_name, "navigate_start_time", skill_manager.sim_time)
         return skill_manager.form_feedback("processing", "Navigating to start", 30)
 
     # Check navigate_to status
@@ -163,8 +163,8 @@ def _handle_navigating_to_start(robot, skill_manager, skill_name):
         return skill_manager.form_feedback("failed", f"Navigate failed: {error}")
     else:
         # Check timeout
-        elapsed = robot.sim_time - skill_manager.get_skill_data(
-            skill_name, "navigate_start_time", robot.sim_time
+        elapsed = skill_manager.sim_time - skill_manager.get_skill_data(
+            skill_name, "navigate_start_time", skill_manager.sim_time
         )
         if elapsed > 60.0:
             skill_manager.set_skill_state(skill_name, "FAILED")
@@ -191,11 +191,11 @@ def _handle_executing(robot, skill_manager, skill_name):
         robot.ros_manager.get_node_planner_ompl().publisher_path.publish(waypoints)
 
         skill_manager.set_skill_data(
-            skill_name, "exploration_start_time", robot.sim_time
+            skill_name, "exploration_start_time", skill_manager.sim_time
         )
         return skill_manager.form_feedback("processing", "Starting exploration", 65)
 
-    elapsed = robot.sim_time - start_time
+    elapsed = skill_manager.sim_time - start_time
 
     # Check completion
     if robot.ros_manager.get_node_controller_mpc().move_event.is_set():

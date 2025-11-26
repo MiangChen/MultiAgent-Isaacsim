@@ -103,8 +103,8 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
         _, start_quat_tensor = robot.get_world_pose()
         start_quat = start_quat_tensor.cpu().numpy().tolist()
 
-    goal_msg.start = _create_pose_stamped(robot, start_pos, start_quat)
-    goal_msg.goal = _create_pose_stamped(robot, goal_pos, goal_quat_wxyz)
+    goal_msg.start = _create_pose_stamped(skill_manager, start_pos, start_quat)
+    goal_msg.goal = _create_pose_stamped(skill_manager, goal_pos, goal_quat_wxyz)
 
     # Store skill data
     skill_manager.set_skill_data(skill_name, "goal_pos", goal_pos)
@@ -115,7 +115,7 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
     # Send planning request (ROS action)
     action_client = robot.ros_manager.get_action_client_path_planner()
     send_future = action_client.send_goal_async(goal_msg)
-    start_time = robot.sim_time
+    start_time = skill_manager.sim_time
 
     skill_manager.set_skill_data(skill_name, "send_future", send_future)
     skill_manager.set_skill_data(skill_name, "start_time", start_time)
@@ -136,7 +136,7 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
                 skill_manager.skill_errors[skill_name] = "Request rejected"
                 return skill_manager.form_feedback("failed", "Request rejected")
         else:
-            elapsed = robot.sim_time - start_time
+            elapsed = skill_manager.sim_time - start_time
             if elapsed > 3.0:
                 skill_manager.set_skill_state(skill_name, "FAILED")
                 skill_manager.skill_errors[skill_name] = "No response from planner"
@@ -148,13 +148,13 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
         result = result_future.result()
         if result.status == GoalStatus.STATUS_SUCCEEDED and result.result.path.poses:
             robot.ros_manager.get_node_controller_mpc().move_event.clear()
-            skill_manager.set_skill_data(skill_name, "move_start_time", robot.sim_time)
+            skill_manager.set_skill_data(skill_name, "move_start_time", skill_manager.sim_time)
             skill_manager.set_skill_state(skill_name, "EXECUTING")
         else:
             skill_manager.set_skill_state(skill_name, "FAILED")
             skill_manager.skill_errors[skill_name] = "Planning failed"
     else:
-        elapsed = robot.sim_time - start_time
+        elapsed = skill_manager.sim_time - start_time
         if elapsed > 15.0:
             goal_handle = skill_manager.get_skill_data(skill_name, "goal_handle")
             if goal_handle:
@@ -184,7 +184,7 @@ def _handle_executing(robot, skill_manager, skill_name):
 
     # Check timeout
     move_start_time = skill_manager.get_skill_data(skill_name, "move_start_time", 0)
-    elapsed = robot.sim_time - move_start_time
+    elapsed = skill_manager.sim_time - move_start_time
     if elapsed > 120.0:
         skill_manager.set_skill_state(skill_name, "FAILED")
         skill_manager.skill_errors[skill_name] = "Navigate timeout"
@@ -207,12 +207,12 @@ def _handle_failed(skill_manager, skill_name):
     return skill_manager.form_feedback("failed", error_msg)
 
 
-def _create_pose_stamped(robot, pos: list, quat_wxyz: list):
+def _create_pose_stamped(skill_manager, pos: list, quat_wxyz: list):
     """Create ROS PoseStamped message"""
     pose_stamped = PoseStamped()
 
-    sim_time_sec = int(robot.sim_time)
-    sim_time_nanosec = int((robot.sim_time - sim_time_sec) * 1e9)
+    sim_time_sec = int(skill_manager.sim_time)
+    sim_time_nanosec = int((skill_manager.sim_time - sim_time_sec) * 1e9)
     pose_stamped.header.stamp = Time(sec=sim_time_sec, nanosec=sim_time_nanosec)
     pose_stamped.header.frame_id = "map"
 

@@ -17,7 +17,7 @@ def take_off(**kwargs):
             return skill_manager.form_feedback("failed", "Invalid altitude")
 
         skill_manager.set_skill_data(skill_name, "target_altitude", altitude)
-        skill_manager.set_skill_data(skill_name, "start_time", robot.sim_time)
+        skill_manager.set_skill_data(skill_name, "start_time", skill_manager.sim_time)
         skill_manager.set_skill_state(skill_name, "EXECUTING")
         return skill_manager.form_feedback("processing", "Taking off", 10)
 
@@ -37,7 +37,7 @@ def take_off(**kwargs):
             return skill_manager.form_feedback("completed", "Reached altitude", 100)
 
         # Timeout
-        if robot.sim_time - start_time > 30.0:
+        if skill_manager.sim_time - start_time > 30.0:
             skill_manager.set_skill_state(skill_name, "FAILED")
             skill_manager.skill_errors[skill_name] = "Timeout"
             return skill_manager.form_feedback("failed", "Timeout")

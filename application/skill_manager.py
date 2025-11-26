@@ -35,6 +35,9 @@ class SkillManager:
         self.skill_data = {}
         self.skill_errors = {}
 
+        # Simulation time (updated by SkillROSInterface)
+        self.sim_time: float = 0.0
+
         # Auto-register all global skills
         if auto_register:
             self.register_all_global_skills()
