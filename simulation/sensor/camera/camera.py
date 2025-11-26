@@ -51,6 +51,7 @@ class Camera:
         def _create_on_step(step_size):
             if not self._initialized:
                 self._create_camera_internal()
+                self.initialize()
                 self._initialized = True
                 # 取消订阅
                 callback_name = f"camera_creation_{self.cfg_camera.type}_{self.cfg_camera.id}"
@@ -141,7 +142,7 @@ class Camera:
                             joint_type="fixed",
                             body0=attach_prim_path,
                             body1=xform_path,
-                            local_pos_0=(0, 0, 0),
+                            local_pos_0=(0, 0, 0),   # 这几个参数可以配置, 但是目前作者自己也没完全明白isaacsim的axis参数的使用方法
                             local_pos_1=(0, 0, 0),
                             axis=(1, 0, 0),
                         )
@@ -170,12 +171,10 @@ class Camera:
 
     def initialize(self) -> None:
         """
-        Returns:
-            True if the view object was initialized (after the first call of .initialize()). False otherwise.
         """
-        if not self._initialized:
-            logger.warning("Camera not initialized yet, skipping initialize call")
-            return
+        # if not self._initialized:
+        #     logger.warning("Camera not initialized yet, skipping initialize call")
+        #     return
             
         self.camera.initialize()
         if self.cfg_camera.enable_semantic_detection:
@@ -203,12 +202,6 @@ class Camera:
             logger.warning("Camera not initialized yet, returning None")
             return None
         return self.camera.get_depth()
-
-    def get_point_cloud(self):
-        if not self._initialized:
-            logger.warning("Camera not initialized yet, returning None")
-            return None
-        return self.camera.get_point_cloud()
 
     def get_rgb(self) -> np.ndarray:
         if not self._initialized:
