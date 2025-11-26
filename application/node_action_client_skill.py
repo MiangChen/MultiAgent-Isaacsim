@@ -50,10 +50,10 @@ class NodeActionClientSkill(Node):
     def get_action_client(self, robot_name: str) -> ActionClient:
         """
         获取或创建一个到特定机器人的ActionClient。
-        Action名称格式为 /skill/{robot_name}
+        Action名称格式为 /{robot_name}/skill_execution
         """
         with self._client_lock:
-            action_name = f"/skill/{robot_name}"
+            action_name = f"/{robot_name}/skill_execution"
             if action_name not in self._action_clients:
                 logger.info(f"Creating new action client for '{action_name}'...")
                 self._action_clients[action_name] = ActionClient(

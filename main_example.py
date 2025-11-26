@@ -332,13 +332,27 @@ def main():
     # 3.2 Setup Skill System
     logger.info("Setting up skill system...")
     from application import SkillManager
+    from application.skill_ros_interface import SkillROSInterface
 
     skill_managers = {}
+    skill_ros_interfaces = {}
     for robot in robots:
+        # Create skill manager
         skill_manager = SkillManager(robot, auto_register=True)
         robot.skill_manager = skill_manager
         skill_managers[robot.namespace] = skill_manager
-        logger.info(f"✅ Skill manager created for {robot.namespace}")
+        
+        # Create skill ROS interface (Application Layer)
+        # This creates /{namespace}/skill_execution action server
+        skill_ros = SkillROSInterface(
+            robot=robot,
+            skill_manager=skill_manager,
+            namespace=robot.namespace
+        )
+        skill_ros.start()
+        skill_ros_interfaces[robot.namespace] = skill_ros
+        
+        logger.info(f"✅ Skill system ready for {robot.namespace} (/{robot.namespace}/skill_execution)")
 
     # 3.3 Attach Sensors to ROS (CARLA style)
     logger.info("Attaching sensors to ROS...")
@@ -383,6 +397,11 @@ def main():
     logger.info("=" * 80)
     logger.info("CLEANUP")
     logger.info("=" * 80)
+
+    # Stop skill ROS interfaces
+    for namespace, skill_ros in skill_ros_interfaces.items():
+        skill_ros.stop()
+        logger.info(f"✅ Stopped skill ROS interface for {namespace}")
 
     for robot in robots:
         if robot.has_ros():
