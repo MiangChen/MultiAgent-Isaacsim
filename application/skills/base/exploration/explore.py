@@ -113,20 +113,20 @@ def _init_explore(skill_manager, skill_name, kwargs):
 
 
 def _handle_navigating_to_start(skill_manager, skill_name):
-    # Check if nav_2d is available
-    if skill_manager.get_skill_state("nav_2d") not in [None, "COMPLETED", "FAILED"]:
-        return skill_manager.form_feedback("processing", "Waiting for nav_2d", 25)
-
     # Start nav_2d if not started
     if not skill_manager.get_skill_data(skill_name, "navigate_started", False):
         start_pos = skill_manager.get_skill_data(skill_name, "start_pos")
         start_quat = skill_manager.get_skill_data(skill_name, "start_quat")
 
-        skill_manager.execute_skill("nav_2d", goal_pos=start_pos, goal_quat_wxyz=start_quat)
-
+        # Reset nav_2d state before starting
+        skill_manager.reset_skill("nav_2d")
         skill_manager.set_skill_data(skill_name, "navigate_started", True)
         skill_manager.set_skill_data(skill_name, "navigate_start_time", skill_manager.sim_time)
-        return skill_manager.form_feedback("processing", "Navigating to start", 30)
+
+    # Keep calling nav_2d to update its state machine
+    start_pos = skill_manager.get_skill_data(skill_name, "start_pos")
+    start_quat = skill_manager.get_skill_data(skill_name, "start_quat")
+    skill_manager.execute_skill("nav_2d", goal_pos=start_pos, goal_quat_wxyz=start_quat)
 
     # Check nav_2d status
     nav_state = skill_manager.get_skill_state("nav_2d")
