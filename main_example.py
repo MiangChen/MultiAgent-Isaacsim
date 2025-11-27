@@ -143,7 +143,6 @@ def main():
     server = container.server()
     ros_manager_isaac = container.ros_manager_isaac()
     scene_manager = container.scene_manager()
-    grid_map = container.grid_map()
     semantic_map = container.semantic_map()
     viewport_manager = container.viewport_manager()
 
@@ -204,7 +203,11 @@ def main():
     # 2.4 Initialize World
     logger.info("Initializing world...")
     world.reset()
-    world.initialize_map()
+
+    # Initialize and generate grid map (must be after world.reset())
+    ros_manager_isaac.initialize_grid_map()
+    # ros_manager_isaac.generate_grid_map()
+
     world.initialize_robots()
     logger.info("✅ World initialized")
 
@@ -368,7 +371,7 @@ def main():
 
     # 3.4 Build Grid Map for Planning
     logger.info("Building grid map...")
-    grid_map.generate()
+    # grid_map.generate()
     logger.info("✅ Grid map generated")
 
     # =========================================================================

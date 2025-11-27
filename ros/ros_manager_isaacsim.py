@@ -1,17 +1,14 @@
 # =============================================================================
 # ROS Manager Module - ROS2 Node and Executor Management
 # =============================================================================
-#
-# This module provides centralized management of ROS2 nodes and executors,
-# handling the lifecycle and coordination of all ROS2 components.
-#
-# =============================================================================
 
 # Standard library imports
 import threading
 
 # Local project imports
+from config.config_manager import config_manager
 from log.log_manager import LogManager
+from map.map_grid_map import GridMap
 from ros.node_scene_monitor import NodeSceneMonitor
 
 # ROS2 imports
@@ -31,16 +28,30 @@ class RosManagerIsaac:
         self.executor = MultiThreadedExecutor()
         self.loop = loop
         self.node = {}
+        self.grid_map = None
         self.stop_event = threading.Event()
         self.thread = None
 
         self.build_nodes()
 
     def build_nodes(self) -> None:
-        """构建ROS节点"""
         config_node_enable = self.config.get("node_enable", {})
+
         if config_node_enable.get("node_scene_monitor", False):
             self.node["node_scene_monitor"] = NodeSceneMonitor()
+
+        if config_node_enable.get("node_grid_map", True):
+            map_cfg = config_manager.get("map")
+            self.grid_map = GridMap(
+                cell_size=map_cfg["cell_size"],
+                start_point=map_cfg["start_point"],
+                min_bound=map_cfg["min_bound"],
+                max_bound=map_cfg["max_bound"],
+                occupied_value=map_cfg["occupied_cell"],
+                free_value=map_cfg["free_cell"],
+                unknown_value=map_cfg["unknown_cell"],
+            )
+            self.node["node_grid_map"] = self.grid_map
 
         logger.info("ROS Node for Isaac built successfully.")
 
@@ -84,3 +95,19 @@ class RosManagerIsaac:
             if self.thread.is_alive():
                 logger.warning("ROS thread did not stop gracefully.")
         logger.info("ROS manager Isaac stopped.")
+
+    def initialize_grid_map(self):
+        """初始化GridMap（需要在world reset后调用）"""
+        if self.grid_map:
+            self.grid_map.initialize()
+            logger.info("GridMap initialized.")
+
+    def generate_grid_map(self, ground_height: float = 0.0, ground_tolerance: float = 0.2):
+        """生成并发布地图"""
+        if self.grid_map:
+            self.grid_map.generate(ground_height, ground_tolerance)
+            logger.info("GridMap generated and published.")
+
+    def get_grid_map(self):
+        """获取GridMap节点"""
+        return self.grid_map

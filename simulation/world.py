@@ -29,7 +29,6 @@ class World:
         self._blueprint_library = None
         self._scene_manager = None
         self._semantic_map = None
-        self._grid_map = None
 
     def tick(self):
         self._isaac_world.step(render=True)
@@ -262,8 +261,6 @@ class World:
     def set_semantic_map(self, semantic_map):
         self._semantic_map = semantic_map
 
-    def set_grid_map(self, grid_map):
-        self._grid_map = grid_map
 
     def get_scene_manager(self):
         return self._scene_manager
@@ -271,17 +268,11 @@ class World:
     def get_semantic_map(self):
         return self._semantic_map
 
-    def get_grid_map(self):
-        return self._grid_map
-
     def initialize_robots(self):
         for actor in self.get_actors():
             if hasattr(actor, "robot") and hasattr(actor.robot, "initialize"):
                 actor.robot.initialize()
 
-    def initialize_map(self):
-        if self._grid_map:
-            self._grid_map.initialize()
 
     # ============================================================================
     # Physics Operations (for Application Layer)

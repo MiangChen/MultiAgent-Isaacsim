@@ -54,10 +54,6 @@ class AppContainer(containers.DeclarativeContainer):
         cfg=config,
     )
 
-    grid_map = providers.Singleton(
-        lambda cfg: _import_and_create_grid_map(cfg), cfg=config
-    )
-
     ros_manager_isaac = providers.Singleton(
         lambda loop, ros_config: _import_and_create_ros_manager_isaac(loop, ros_config),
         loop=loop,
@@ -74,13 +70,13 @@ class AppContainer(containers.DeclarativeContainer):
         lambda: _import_and_create_viewport_manager()
     )
 
-    # 配置World的组件（整合原Env的功能）
+    # 配置World的组件
     world_configured = providers.Singleton(
-        lambda w, sm, semantic_map, gm: _configure_world(w, sm, semantic_map, gm),
+        lambda w, sm, semantic_map, ros_isaac: _configure_world(w, sm, semantic_map, ros_isaac),
         w=world,
         sm=scene_manager,
         semantic_map=semantic_map,
-        gm=grid_map,
+        ros_isaac=ros_manager_isaac,
     )
 
 
@@ -88,20 +84,6 @@ def _import_and_create_server():
     from simulation.server import Server
 
     return Server()
-
-
-def _import_and_create_grid_map(cfg):
-    from map.map_grid_map import GridMap
-
-    return GridMap(
-        cell_size=cfg["map"]["cell_size"],
-        start_point=cfg["map"]["start_point"],
-        min_bound=cfg["map"]["min_bound"],
-        max_bound=cfg["map"]["max_bound"],
-        occupied_value=cfg["map"]["occupied_cell"],
-        free_value=cfg["map"]["free_cell"],
-        unknown_value=cfg["map"]["unknown_cell"],
-    )
 
 
 def _import_and_create_ros_manager_isaac(loop, ros_config):
@@ -128,11 +110,11 @@ def _import_and_create_viewport_manager():
     return ViewportManager()
 
 
-def _configure_world(world, scene_manager, semantic_map, grid_map):
+def _configure_world(world, scene_manager, semantic_map, ros_manager_isaac):
     """配置World的组件"""
     world.set_scene_manager(scene_manager)
     world.set_semantic_map(semantic_map)
-    world.set_grid_map(grid_map)
+
     return world
 
 

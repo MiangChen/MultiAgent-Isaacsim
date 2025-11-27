@@ -141,7 +141,6 @@ def main():
     server = container.server()
     ros_manager_isaac = container.ros_manager_isaac()
     scene_manager = container.scene_manager()
-    grid_map = container.grid_map()
     semantic_map = container.semantic_map()
     viewport_manager = container.viewport_manager()
 
@@ -191,6 +190,10 @@ def main():
 
     # Initialize drones
     world.reset()
+
+    # Initialize and generate grid map (must be after world.reset())
+    ros_manager_isaac.initialize_grid_map()
+
     world.initialize_robots()
 
     # Add physics callbacks
