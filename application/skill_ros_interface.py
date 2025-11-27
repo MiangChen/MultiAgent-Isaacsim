@@ -31,7 +31,7 @@ Usage:
 import threading
 import time
 import json
-from typing import Optional
+from typing import Optional, Tuple, List
 
 # ROS2 imports
 import rclpy
@@ -40,6 +40,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rosgraph_msgs.msg import Clock
+from nav_msgs.msg import Odometry
 from nav2_msgs.action import ComputePathToPose
 
 # Local imports
@@ -142,6 +143,18 @@ class SkillROSInterface:
             10
         )
 
+        # Subscribe to odometry (for robot pose)
+        self._current_position: List[float] = [0.0, 0.0, 0.0]
+        self._current_quat_wxyz: List[float] = [1.0, 0.0, 0.0, 0.0]
+        self._odom_received = False
+
+        self._odom_sub = self._node.create_subscription(
+            Odometry,
+            'odom',
+            self._callback_odom,
+            10
+        )
+
         logger.info(
             f"Action server created: /{self.namespace}/skill_execution"
         )
@@ -176,6 +189,19 @@ class SkillROSInterface:
         sim_time = msg.clock.sec + msg.clock.nanosec / 1e9
         if self.skill_manager is not None:
             self.skill_manager.sim_time = sim_time
+
+    def _callback_odom(self, msg: Odometry):
+        """Update current robot pose from odometry topic"""
+        pos = msg.pose.pose.position
+        ori = msg.pose.pose.orientation
+        self._current_position = [pos.x, pos.y, pos.z]
+        # Convert from xyzw to wxyz
+        self._current_quat_wxyz = [ori.w, ori.x, ori.y, ori.z]
+        self._odom_received = True
+
+    def get_current_pose(self) -> Tuple[List[float], List[float]]:
+        """Get current robot pose from odom topic"""
+        return self._current_position.copy(), self._current_quat_wxyz.copy()
 
     def start(self):
         """Start ROS executor in background thread"""

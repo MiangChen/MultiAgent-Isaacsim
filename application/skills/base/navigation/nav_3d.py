@@ -27,33 +27,26 @@ def nav_3d(**kwargs):
     """
     Navigate to target position using 3D path planning.
     Suitable for aerial robots (drones) that can move in full 3D space.
-
-    Application layer skill:
-    - ROS: 3D Path planning (gridmap via service)
-    - MPC: Velocity computation
-    - Control: Execution via robot.apply_control()
     """
-    robot = kwargs.get("robot")
     skill_manager = kwargs.get("skill_manager")
     skill_name = "nav_3d"
 
     current_state = skill_manager.get_skill_state(skill_name)
 
-    # State machine
     if current_state in [None, "INITIALIZING"]:
-        _init_nav_3d(robot, skill_manager, skill_name, kwargs)
+        _init_nav_3d(skill_manager, skill_name, kwargs)
 
     current_state = skill_manager.get_skill_state(skill_name)
 
     if current_state == "EXECUTING":
-        return _handle_executing(robot, skill_manager, skill_name)
+        return _handle_executing(skill_manager, skill_name)
     elif current_state == "COMPLETED":
         return _handle_completed(skill_manager, skill_name)
     elif current_state == "FAILED":
         return _handle_failed(skill_manager, skill_name)
 
 
-def _init_nav_3d(robot, skill_manager, skill_name, kwargs):
+def _init_nav_3d(skill_manager, skill_name, kwargs):
     """Initialize 3D navigation"""
 
     skill_ros = skill_manager.skill_ros_interface
@@ -91,12 +84,13 @@ def _init_nav_3d(robot, skill_manager, skill_name, kwargs):
     # Create goal message
     goal_msg = ComputePathToPose.Goal()
 
-    if start_pos is None:
-        start_pos_tensor, _ = robot.get_world_pose()
-        start_pos = start_pos_tensor.cpu().numpy().tolist()
-    if start_quat is None:
-        _, start_quat_tensor = robot.get_world_pose()
-        start_quat = start_quat_tensor.cpu().numpy().tolist()
+    # Get current pose from odom topic (not from robot instance)
+    if start_pos is None or start_quat is None:
+        current_pos, current_quat = skill_ros.get_current_pose()
+        if start_pos is None:
+            start_pos = current_pos
+        if start_quat is None:
+            start_quat = current_quat
 
     goal_msg.start = _create_pose_stamped(skill_manager, start_pos, start_quat)
     goal_msg.goal = _create_pose_stamped(skill_manager, goal_pos, goal_quat_wxyz)
@@ -159,7 +153,7 @@ def _init_nav_3d(robot, skill_manager, skill_name, kwargs):
     return skill_manager.form_feedback("processing", "Planning 3D path...", 30)
 
 
-def _handle_executing(robot, skill_manager, skill_name):
+def _handle_executing(skill_manager, skill_name):
     """Handle executing state"""
     skill_ros = skill_manager.skill_ros_interface
     if skill_ros.get_node_controller_mpc().move_event.is_set():

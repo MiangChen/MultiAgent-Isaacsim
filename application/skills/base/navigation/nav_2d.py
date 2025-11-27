@@ -34,33 +34,26 @@ def nav_2d(**kwargs):
 
     Uses only z=0 layer of the 3D map for planning, but outputs 3D path
     for consistency with nav_3d.
-
-    Application layer skill:
-    - ROS: 2D Path planning (gridmap z=0 layer via service)
-    - MPC: Velocity computation
-    - Control: Execution via robot.apply_control()
     """
-    robot = kwargs.get("robot")
     skill_manager = kwargs.get("skill_manager")
     skill_name = "nav_2d"
 
     current_state = skill_manager.get_skill_state(skill_name)
 
-    # State machine
     if current_state in [None, "INITIALIZING"]:
-        _init_nav_2d(robot, skill_manager, skill_name, kwargs)
+        _init_nav_2d(skill_manager, skill_name, kwargs)
 
     current_state = skill_manager.get_skill_state(skill_name)
 
     if current_state == "EXECUTING":
-        return _handle_executing(robot, skill_manager, skill_name)
+        return _handle_executing(skill_manager, skill_name)
     elif current_state == "COMPLETED":
         return _handle_completed(skill_manager, skill_name)
     elif current_state == "FAILED":
         return _handle_failed(skill_manager, skill_name)
 
 
-def _init_nav_2d(robot, skill_manager, skill_name, kwargs):
+def _init_nav_2d(skill_manager, skill_name, kwargs):
     """Initialize 2D navigation"""
     skill_ros = skill_manager.skill_ros_interface
     skill_ros.get_node_controller_mpc().has_reached_goal = False
@@ -71,7 +64,7 @@ def _init_nav_2d(robot, skill_manager, skill_name, kwargs):
     start_quat = kwargs.get("start_quat")
     goal_pos = kwargs.get("goal_pos")
     goal_quat_wxyz = kwargs.get("goal_quat_wxyz", [1.0, 0.0, 0.0, 0.0])
-    ground_height = kwargs.get("ground_height", 0.0)  # Default ground height
+    ground_height = kwargs.get("ground_height", 0.0)
 
     if isinstance(start_pos, str):
         start_pos = json.loads(start_pos)
@@ -98,12 +91,13 @@ def _init_nav_2d(robot, skill_manager, skill_name, kwargs):
     # Create goal message
     goal_msg = ComputePathToPose.Goal()
 
-    if start_pos is None:
-        start_pos_tensor, _ = robot.get_world_pose()
-        start_pos = start_pos_tensor.cpu().numpy().tolist()
-    if start_quat is None:
-        _, start_quat_tensor = robot.get_world_pose()
-        start_quat = start_quat_tensor.cpu().numpy().tolist()
+    # Get current pose from odom topic (not from robot instance)
+    if start_pos is None or start_quat is None:
+        current_pos, current_quat = skill_ros.get_current_pose()
+        if start_pos is None:
+            start_pos = current_pos
+        if start_quat is None:
+            start_quat = current_quat
 
     # Force z to ground height for 2D planning
     start_pos_2d = [start_pos[0], start_pos[1], ground_height]
@@ -171,7 +165,7 @@ def _init_nav_2d(robot, skill_manager, skill_name, kwargs):
     return skill_manager.form_feedback("processing", "Planning 2D path...", 30)
 
 
-def _handle_executing(robot, skill_manager, skill_name):
+def _handle_executing(skill_manager, skill_name):
     """Handle executing state"""
     skill_ros = skill_manager.skill_ros_interface
     if skill_ros.get_node_controller_mpc().move_event.is_set():
