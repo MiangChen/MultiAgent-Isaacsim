@@ -6,6 +6,22 @@ Let's build a better isaacsim multi-robot open source repository.
 如果您希望成为 **协作者 (Collaborator)**，请直接在 **[置顶 Issue](https://github.com/MiangChen/MultiAgent-Isaacsim/issues/4#issue-3667665696)** 中留言申请
 让我们打造一个更好的isaacsim多机器人开源仓库
 
+## System Requirements
+
+| Category | Item | Requirement / Version | Notes |
+| :--- | :--- | :--- | :--- |
+| **Hardware** | **CPU** | 12 Cores+ | e.g., AMD 9900X, Intel Ultra 9 |
+| | **GPU** | 16GB+ VRAM (RT Core req.)| e.g., RTX 4090, RTX 5880 Ada |
+| | **RAM** | 64GB+ | |
+| | **Storage**| 512GB+ | |
+| **Software** | **OS** | Ubuntu 22.04 | |
+| | **Driver** | NVIDIA 570.169 | |
+| | **CUDA** | 12.2 / 12.4 / 12.6 | |
+| | **Python** | 3.10 / 3.11 | 3.10 for Isaac Sim 4.5; 3.11 for Isaac Sim 5.x |
+| | **ROS2** | Humble | |
+| | **GCC** | 12.x | |
+> **Note:** Items marked with a `+` indicate **minimum requirements** (higher specifications are acceptable). Items without a `+` require the **specific version** listed.  
+> **注意**：末尾带有 `+` 的项表示**最低配置要求**（可以使用更高配置）；未带 `+` 的项表示必须严格使用**特定版本**。
 
 ## 配置Isaacsim 4.5 的驱动环境和安装包
 
