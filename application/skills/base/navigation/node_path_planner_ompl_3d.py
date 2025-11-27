@@ -81,7 +81,7 @@ class NodePlannerOmpl3D(Node):
         )
         self.time_synchronizer.registerCallback(self.callback_map_received)
 
-        self.publisher_path = self.create_publisher(Path, "planned_path_3d", 10)
+        self.publisher_path = self.create_publisher(Path, "planned_path", 10)
 
         self.server_action = ActionServer(
             self,

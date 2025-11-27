@@ -55,13 +55,6 @@ def nav_3d(**kwargs):
 
 def _init_nav_3d(robot, skill_manager, skill_name, kwargs):
     """Initialize 3D navigation"""
-    # Check if ROS is available
-    if not robot.has_ros():
-        skill_manager.set_skill_state(skill_name, "FAILED")
-        skill_manager.skill_errors[skill_name] = (
-            "ROS not available - navigation requires ROS"
-        )
-        return
 
     skill_ros = skill_manager.skill_ros_interface
     skill_ros.get_node_controller_mpc().has_reached_goal = False
