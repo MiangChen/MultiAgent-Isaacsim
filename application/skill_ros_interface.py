@@ -11,6 +11,7 @@ Architecture:
     - Runs in separate thread
     - Supports concurrent execution for multiple robots
     - Subscribes to sim_clock for skill timing
+    - Manages navigation nodes (planner, trajectory, MPC)
 
 Usage:
     # In main.py (Application Layer)
@@ -34,15 +35,22 @@ from typing import Optional
 
 # ROS2 imports
 import rclpy
-from rclpy.action import ActionServer, GoalResponse, CancelResponse
+from rclpy.action import ActionServer, ActionClient, GoalResponse, CancelResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rosgraph_msgs.msg import Clock
+from nav2_msgs.action import ComputePathToPose
 
 # Local imports
 from log.log_manager import LogManager
 from ros_msg.gsi_msgs_helper import SkillExecution
+from application.skills.base.navigation import (
+    NodePlannerOmpl2D,
+    NodePlannerOmpl3D,
+    NodeTrajectoryGenerator,
+    NodeMpcController,
+)
 
 logger = LogManager.get_logger(__name__)
 
@@ -85,8 +93,24 @@ class SkillROSInterface:
         self._ros_thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
 
+        # Navigation nodes (Application Layer)
+        self.node_planner_ompl_2d: Optional[NodePlannerOmpl2D] = None
+        self.node_planner_ompl_3d: Optional[NodePlannerOmpl3D] = None
+        self.node_trajectory_generator: Optional[NodeTrajectoryGenerator] = None
+        self.node_controller_mpc: Optional[NodeMpcController] = None
+
+        # Action clients for path planning
+        self.action_client_path_planner_2d: Optional[ActionClient] = None
+        self.action_client_path_planner_3d: Optional[ActionClient] = None
+
         # Initialize ROS node and action server
         self._init_ros_components()
+        self._init_navigation_nodes()
+        self._init_action_clients()
+
+        # Set reference in skill_manager for skills to access navigation nodes
+        if self.skill_manager is not None:
+            self.skill_manager.skill_ros_interface = self
 
         logger.info(f"SkillROSInterface initialized for {namespace}")
 
@@ -122,6 +146,31 @@ class SkillROSInterface:
             f"Action server created: /{self.namespace}/skill_execution"
         )
 
+    def _init_navigation_nodes(self):
+        """Initialize navigation nodes (Application Layer)"""
+        self.node_planner_ompl_2d = NodePlannerOmpl2D(namespace=self.namespace)
+        self.node_planner_ompl_3d = NodePlannerOmpl3D(namespace=self.namespace)
+        self.node_trajectory_generator = NodeTrajectoryGenerator(
+            namespace=self.namespace
+        )
+        self.node_controller_mpc = NodeMpcController(namespace=self.namespace)
+
+        logger.info(f"Navigation nodes initialized for {self.namespace}")
+
+    def _init_action_clients(self):
+        """Initialize action clients for path planning"""
+        # 2D planner (service-based map, z=0 layer only)
+        self.action_client_path_planner_2d = ActionClient(
+            self._node, ComputePathToPose, "action_compute_path_to_pose_2d"
+        )
+
+        # 3D planner (service-based map, full 3D)
+        self.action_client_path_planner_3d = ActionClient(
+            self._node, ComputePathToPose, "action_compute_path_to_pose_3d"
+        )
+
+        logger.info(f"Action clients initialized for {self.namespace}")
+
     def _callback_sim_clock(self, msg: Clock):
         """Update skill_manager's simulation time from sim_clock topic"""
         sim_time = msg.clock.sec + msg.clock.nanosec / 1e9
@@ -136,9 +185,13 @@ class SkillROSInterface:
             )
             return
 
-        # Create executor
+        # Create executor and add all nodes
         self._executor = MultiThreadedExecutor()
         self._executor.add_node(self._node)
+        self._executor.add_node(self.node_planner_ompl_2d)
+        self._executor.add_node(self.node_planner_ompl_3d)
+        self._executor.add_node(self.node_trajectory_generator)
+        self._executor.add_node(self.node_controller_mpc)
 
         # Start thread
         self._ros_thread = threading.Thread(
@@ -326,6 +379,34 @@ class SkillROSInterface:
                 params[p.key] = p.value
 
         return params
+
+    # =========================================================================
+    # Navigation Node Getters (for skills to access)
+    # =========================================================================
+
+    def get_action_client_path_planner_2d(self):
+        """Get 2D path planner action client"""
+        return self.action_client_path_planner_2d
+
+    def get_action_client_path_planner_3d(self):
+        """Get 3D path planner action client"""
+        return self.action_client_path_planner_3d
+
+    def get_node_planner_ompl_2d(self):
+        """Get 2D OMPL planner node"""
+        return self.node_planner_ompl_2d
+
+    def get_node_planner_ompl_3d(self):
+        """Get 3D OMPL planner node"""
+        return self.node_planner_ompl_3d
+
+    def get_node_trajectory_generator(self):
+        """Get trajectory generator node"""
+        return self.node_trajectory_generator
+
+    def get_node_controller_mpc(self):
+        """Get MPC controller node"""
+        return self.node_controller_mpc
 
     def __del__(self):
         """Cleanup on deletion"""

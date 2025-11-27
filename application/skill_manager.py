@@ -44,6 +44,9 @@ class SkillManager:
         # Simulation time (updated by SkillROSInterface)
         self.sim_time: float = 0.0
 
+        # Reference to SkillROSInterface (set by SkillROSInterface)
+        self.skill_ros_interface = None
+
         # Load skill config if not loaded
         if SkillManager._skill_config is None:
             SkillManager._load_skill_config()

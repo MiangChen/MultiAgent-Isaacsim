@@ -105,6 +105,7 @@ def _init_track(robot, skill_manager, skill_name, kwargs):
         track_callback, robot=robot, skill_manager=skill_manager
     )
 
+    # Use robot's ROS node for subscription (basic communication)
     node = robot.ros_manager.get_node()
     track_waypoint_sub = node.create_subscription(
         Odometry,
@@ -147,7 +148,8 @@ def _handle_idle(robot, skill_manager, skill_name):
 
 def _start_navigation_to_waypoint(robot, skill_manager, skill_name, goal_pos):
     """Start navigation to specified waypoint"""
-    mpc = robot.ros_manager.get_node_controller_mpc()
+    skill_ros = skill_manager.skill_ros_interface
+    mpc = skill_ros.get_node_controller_mpc()
     mpc.has_reached_goal = False
 
     # Convert tuple to list
@@ -156,8 +158,8 @@ def _start_navigation_to_waypoint(robot, skill_manager, skill_name, goal_pos):
 
     goal_quat_wxyz = [1.0, 0.0, 0.0, 0.0]
 
-    # Check if path planner server is available
-    action_client = robot.ros_manager.get_action_client_path_planner()
+    # Check if path planner server is available (use 2D planner for tracking)
+    action_client = skill_ros.get_action_client_path_planner_2d()
     if not action_client.wait_for_server(timeout_sec=2.0):
         skill_manager.set_skill_state(skill_name, "FAILED")
         skill_manager.skill_errors[skill_name] = "Path planner server is not available"
@@ -197,6 +199,7 @@ def _start_navigation_to_waypoint(robot, skill_manager, skill_name, goal_pos):
 
 def _handle_initializing(robot, skill_manager, skill_name):
     """Handle initializing state: wait for path planning to complete"""
+    skill_ros = skill_manager.skill_ros_interface
     track_nav_send_future = skill_manager.get_skill_data(
         skill_name, "track_nav_send_future"
     )
@@ -236,7 +239,7 @@ def _handle_initializing(robot, skill_manager, skill_name):
     if track_nav_result_future.done():
         result = track_nav_result_future.result()
         if result.status == GoalStatus.STATUS_SUCCEEDED and result.result.path.poses:
-            robot.ros_manager.get_node_controller_mpc().move_event.clear()
+            skill_ros.get_node_controller_mpc().move_event.clear()
             skill_manager.set_skill_data(
                 skill_name, "track_nav_move_start_time", skill_manager.sim_time
             )
@@ -260,7 +263,8 @@ def _handle_initializing(robot, skill_manager, skill_name):
 
 def _handle_executing(robot, skill_manager, skill_name):
     """Handle executing state: robot is moving to target"""
-    if robot.ros_manager.get_node_controller_mpc().move_event.is_set():
+    skill_ros = skill_manager.skill_ros_interface
+    if skill_ros.get_node_controller_mpc().move_event.is_set():
         skill_manager.set_skill_state(skill_name, "COMPLETED")
         return skill_manager.form_feedback("processing", "Executing...", 50)
     else:

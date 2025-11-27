@@ -63,7 +63,8 @@ def _init_nav_3d(robot, skill_manager, skill_name, kwargs):
         )
         return
 
-    robot.ros_manager.get_node_controller_mpc().has_reached_goal = False
+    skill_ros = skill_manager.skill_ros_interface
+    skill_ros.get_node_controller_mpc().has_reached_goal = False
     skill_manager.set_skill_state(skill_name, "EXECUTING")
 
     # Parse parameters
@@ -86,13 +87,13 @@ def _init_nav_3d(robot, skill_manager, skill_name, kwargs):
         goal_quat_wxyz = list(goal_quat_wxyz)
 
     # Check ROS action server
-    action_client = robot.ros_manager.get_action_client_path_planner_3d()
+    action_client = skill_ros.get_action_client_path_planner_3d()
     if not action_client.wait_for_server(timeout_sec=2.0):
         skill_manager.set_skill_state(skill_name, "FAILED")
         skill_manager.skill_errors[skill_name] = "3D Path planner server not available"
         return
 
-    robot.ros_manager.get_node_controller_mpc().move_event.clear()
+    skill_ros.get_node_controller_mpc().move_event.clear()
 
     # Create goal message
     goal_msg = ComputePathToPose.Goal()
@@ -147,7 +148,7 @@ def _init_nav_3d(robot, skill_manager, skill_name, kwargs):
     if result_future.done():
         result = result_future.result()
         if result.status == GoalStatus.STATUS_SUCCEEDED and result.result.path.poses:
-            robot.ros_manager.get_node_controller_mpc().move_event.clear()
+            skill_ros.get_node_controller_mpc().move_event.clear()
             skill_manager.set_skill_data(skill_name, "move_start_time", skill_manager.sim_time)
             skill_manager.set_skill_state(skill_name, "EXECUTING")
         else:
@@ -167,7 +168,8 @@ def _init_nav_3d(robot, skill_manager, skill_name, kwargs):
 
 def _handle_executing(robot, skill_manager, skill_name):
     """Handle executing state"""
-    if robot.ros_manager.get_node_controller_mpc().move_event.is_set():
+    skill_ros = skill_manager.skill_ros_interface
+    if skill_ros.get_node_controller_mpc().move_event.is_set():
         skill_manager.set_skill_state(skill_name, "COMPLETED")
         return skill_manager.form_feedback("completed", "Reached goal", 100)
 

@@ -15,7 +15,6 @@
 # Standard library imports
 import json
 import time
-import threading
 
 # Third-party library imports
 import numpy as np
@@ -28,13 +27,12 @@ import sensor_msgs_py.point_cloud2 as pc2
 from nav_msgs.msg import Path
 from nav2_msgs.action import ComputePathToPose
 from rclpy.action import ActionServer
-from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.callback_groups import ReentrantCallbackGroup, MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import PointCloud2
 from diagnostic_msgs.msg import DiagnosticArray
-from visualization_msgs.msg import Marker
 from std_srvs.srv import Trigger
 
 
@@ -56,12 +54,17 @@ class NodePlannerOmpl2D(Node):
         self.space = None
         self.si = None
         self.map_ready = False
-        self._map_update_event = threading.Event()
 
-        # Service client for triggering map update
-        self.client_update_map = self.create_client(Trigger, "/update_grid_map")
+        # Callback groups for parallel execution
+        self._action_cb_group = ReentrantCallbackGroup()
+        self._service_cb_group = MutuallyExclusiveCallbackGroup()
 
-        # Subscribe to map topics (same as original planner)
+        # Service client (in separate callback group to avoid deadlock)
+        self.client_update_map = self.create_client(
+            Trigger, "/update_grid_map", callback_group=self._service_cb_group
+        )
+
+        # Subscribe to map topics
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
             history=HistoryPolicy.KEEP_LAST,
@@ -81,16 +84,14 @@ class NodePlannerOmpl2D(Node):
         )
         self.time_synchronizer.registerCallback(self.callback_map_received)
 
-        # Path publisher
         self.publisher_path = self.create_publisher(Path, "planned_path_2d", 10)
 
-        callback_group = ReentrantCallbackGroup()
         self.server_action = ActionServer(
             self,
             ComputePathToPose,
             "action_compute_path_to_pose_2d",
             execute_callback=self.callback_compute_path_to_pose,
-            callback_group=callback_group,
+            callback_group=self._action_cb_group,
         )
 
     def callback_map_received(self, msg_map_info: DiagnosticArray, msg_point_cloud: PointCloud2):
@@ -99,7 +100,7 @@ class NodePlannerOmpl2D(Node):
         self._extract_2d_map_from_pointcloud(msg_point_cloud)
         self._setup_ompl_2d()
         self.map_ready = True
-        self._map_update_event.set()
+        self.get_logger().info("2D map received and processed")
 
     def _process_map_info(self, msg_map_info: DiagnosticArray):
         """Process map info from DiagnosticArray message."""
@@ -129,29 +130,31 @@ class NodePlannerOmpl2D(Node):
             self.get_logger().error("Map update service not available")
             return False
 
-        self._map_update_event.clear()
+        self.map_ready = False
         request = Trigger.Request()
         future = self.client_update_map.call_async(request)
 
-        # Wait for service response
+        # Wait for service response (works because service client is in different callback group)
         start_time = time.time()
         while not future.done():
             if time.time() - start_time > 10.0:
                 self.get_logger().error("Map update service timeout")
                 return False
-            time.sleep(0.1)
+            time.sleep(0.05)
 
         response = future.result()
         if not response.success:
             self.get_logger().error(f"Map update failed: {response.message}")
             return False
 
-        # Wait for map data via topics
-        if not self._map_update_event.wait(timeout=5.0):
-            self.get_logger().error("Timeout waiting for map data")
-            return False
+        # Wait for map data via topic callback
+        start_time = time.time()
+        while not self.map_ready:
+            if time.time() - start_time > 5.0:
+                self.get_logger().error("Timeout waiting for map data")
+                return False
+            time.sleep(0.05)
 
-        self.get_logger().info("2D map updated successfully")
         return True
 
     def _extract_2d_map_from_pointcloud(self, point_cloud: PointCloud2):

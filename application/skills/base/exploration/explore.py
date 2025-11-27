@@ -187,8 +187,9 @@ def _handle_executing(robot, skill_manager, skill_name):
 
         # Publish waypoints path
         waypoints = skill_manager.get_skill_data(skill_name, "waypoints")
-        robot.ros_manager.get_node_controller_mpc().move_event.clear()
-        robot.ros_manager.get_node_planner_ompl().publisher_path.publish(waypoints)
+        skill_ros = skill_manager.skill_ros_interface
+        skill_ros.get_node_controller_mpc().move_event.clear()
+        skill_ros.get_node_planner_ompl_2d().publisher_path.publish(waypoints)
 
         skill_manager.set_skill_data(
             skill_name, "exploration_start_time", skill_manager.sim_time
@@ -198,7 +199,8 @@ def _handle_executing(robot, skill_manager, skill_name):
     elapsed = skill_manager.sim_time - start_time
 
     # Check completion
-    if robot.ros_manager.get_node_controller_mpc().move_event.is_set():
+    skill_ros = skill_manager.skill_ros_interface
+    if skill_ros.get_node_controller_mpc().move_event.is_set():
         _cleanup_explore(robot, skill_manager, skill_name)
         skill_manager.set_skill_state(skill_name, "COMPLETED")
         return skill_manager.form_feedback("completed", "Exploration completed", 100)
