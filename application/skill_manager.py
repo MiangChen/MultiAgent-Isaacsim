@@ -1,4 +1,6 @@
-from typing import Dict, Any, Callable, Optional
+from typing import Dict, Any, Callable, Optional, List
+from pathlib import Path
+import yaml
 
 
 class SkillManager:
@@ -20,16 +22,20 @@ class SkillManager:
 
     # 类变量：全局技能注册表
     _global_skills: Dict[str, Callable] = {}
+    _skill_config: Dict[str, Any] = None
 
-    def __init__(self, robot, auto_register: bool = True):
+    def __init__(self, robot, auto_register: bool = True, robot_type: str = None):
         """
         初始化技能管理器
 
         Args:
             robot: 机器人实例
             auto_register: 是否自动注册所有全局技能
+            robot_type: 机器人类型 (e.g., 'jetbot', 'h1', 'cf2x', 'drone_autel')
+                       用于过滤可用技能
         """
         self.robot = robot
+        self.robot_type = robot_type
         self.skills = {}
         self.skill_states = {}
         self.skill_data = {}
@@ -38,9 +44,13 @@ class SkillManager:
         # Simulation time (updated by SkillROSInterface)
         self.sim_time: float = 0.0
 
-        # Auto-register all global skills
+        # Load skill config if not loaded
+        if SkillManager._skill_config is None:
+            SkillManager._load_skill_config()
+
+        # Auto-register skills based on robot type
         if auto_register:
-            self.register_all_global_skills()
+            self.register_skills_for_robot_type()
 
     # ============================================================================
     # 装饰器：注册技能到全局注册表
@@ -87,6 +97,43 @@ class SkillManager:
         """列出所有全局注册的技能名称"""
         return list(cls._global_skills.keys())
 
+    @classmethod
+    def _load_skill_config(cls) -> None:
+        """加载技能配置文件"""
+        config_path = Path(__file__).parent.parent / "config" / "skill_config.yaml"
+        if config_path.exists():
+            with open(config_path, "r") as f:
+                cls._skill_config = yaml.safe_load(f)
+        else:
+            cls._skill_config = {}
+
+    @classmethod
+    def get_skills_for_robot_type(cls, robot_type: str) -> List[str]:
+        """
+        获取指定机器人类型可用的技能列表
+
+        Args:
+            robot_type: 机器人类型 (e.g., 'jetbot', 'h1', 'cf2x', 'drone_autel')
+
+        Returns:
+            该机器人类型可用的技能名称列表
+        """
+        if cls._skill_config is None:
+            cls._load_skill_config()
+
+        available_skills = set()
+
+        for group_name, group_config in cls._skill_config.items():
+            if not isinstance(group_config, dict):
+                continue
+            robot_types = group_config.get("robot_types", [])
+            skills = group_config.get("skills", [])
+
+            if robot_type in robot_types:
+                available_skills.update(skills)
+
+        return list(available_skills)
+
     # ============================================================================
     # 实例方法：管理单个机器人的技能
     # ============================================================================
@@ -96,9 +143,28 @@ class SkillManager:
         self.skills[skill_name] = skill_function
 
     def register_all_global_skills(self):
-        """从全局注册表注册所有技能"""
+        """从全局注册表注册所有技能（不考虑机器人类型）"""
         for skill_name, skill_func in self._global_skills.items():
             self.register_skill(skill_name, skill_func)
+
+    def register_skills_for_robot_type(self):
+        """
+        根据机器人类型注册可用技能
+
+        如果未指定 robot_type，则注册所有全局技能
+        """
+        if self.robot_type is None:
+            # 未指定类型，注册所有技能
+            self.register_all_global_skills()
+            return
+
+        # 获取该机器人类型可用的技能
+        available_skills = self.get_skills_for_robot_type(self.robot_type)
+
+        # 只注册配置中允许的技能
+        for skill_name, skill_func in self._global_skills.items():
+            if skill_name in available_skills:
+                self.register_skill(skill_name, skill_func)
 
     def execute_skill(self, skill_name: str, **kwargs) -> Dict[str, Any]:
         """

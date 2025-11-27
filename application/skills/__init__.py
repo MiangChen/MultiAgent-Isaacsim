@@ -1,6 +1,6 @@
 # Base skills - 基础技能 (所有机器人通用)
 from .base import (
-    navigate_to,
+    # navigate_to,
     explore,
     detect,
     track,
@@ -22,7 +22,7 @@ from .target import move
 
 __all__ = [
     # Base
-    "navigate_to",
+    # "navigate_to",
     "explore",
     "detect",
     "track",

@@ -6,6 +6,8 @@
 # continuous 3D space into discrete grid representation with height filtering
 # to remove ground obstacles.
 #
+# Supports both topic-based publishing and service-based on-demand map retrieval.
+#
 # =============================================================================
 
 # Standard library imports
@@ -26,6 +28,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from sensor_msgs.msg import PointCloud2, PointField
 from std_msgs.msg import Header
+from std_srvs.srv import Trigger
 
 
 class GridMap(Node):
@@ -36,14 +39,14 @@ class GridMap(Node):
     """
 
     def __init__(
-        self,
-        cell_size: float = 1.0,
-        start_point: list = [0, 0, 0],
-        min_bound: List[float] = [-20, -20, 0],
-        max_bound: List[float] = [20, 20, 5],
-        occupied_value: int = 100,
-        free_value: int = 0,
-        unknown_value: int = -1,
+            self,
+            cell_size: float = 1.0,
+            start_point: list = [0, 0, 0],
+            min_bound: List[float] = [-20, -20, 0],
+            max_bound: List[float] = [20, 20, 5],
+            occupied_value: int = 100,
+            free_value: int = 0,
+            unknown_value: int = -1,
     ):
         """
         Initialize GridMap for path planning.
@@ -86,6 +89,12 @@ class GridMap(Node):
             DiagnosticArray, "/map_info", qos_profile
         )
 
+        # Service for on-demand map update (uses std_srvs/Trigger)
+        # Call this service to regenerate and republish map via topics
+        self.srv_update_map = self.create_service(
+            Trigger, "/update_grid_map", self.callback_update_map
+        )
+
     def initialize(self) -> None:
         """
         Initialize the grid map generator. Must be called after world reset.
@@ -103,28 +112,60 @@ class GridMap(Node):
 
         self.generator.set_transform(self.start_point, self.min_bound, self.max_bound)
 
-    def publish_map(self) -> bool:
+    def callback_update_map(self, request, response):
+        """
+        Service callback for on-demand map update.
+        Regenerates the map and republishes via topics.
+        Uses std_srvs/Trigger - no custom srv needed.
+        """
+        try:
+            # Regenerate map and publish to topics
+            self.generate()
+            self.publish_map()
+
+            response.success = True
+            response.message = "Map updated and published successfully"
+
+        except Exception as e:
+            response.success = False
+            response.message = f"Failed to update map: {str(e)}"
+
+        return response
+
+    def _get_occupied_points(self) -> list:
+        """
+        Get all occupied points from the value map.
+        Returns list of [x, y, z] world coordinates.
+        """
         points = []
-        self.dimension = 3
-        if self.dimension == 2:
-            # 2D 地图：z=0
+        if self.value_map is None:
+            return points
+
+        if len(self.value_map.shape) == 2:
+            # 2D map
             for x in range(self.value_map.shape[0]):
                 for y in range(self.value_map.shape[1]):
-                    if grid_map[x, y] == 100:  # 占用格子
+                    if self.value_map[x, y] == self.occupied_value:
                         world_x = self.min_bound[0] + x * self.cell_size
                         world_y = self.min_bound[1] + y * self.cell_size
                         points.append([world_x, world_y, 0.0])
-
-        elif self.dimension == 3:
-            # 3D 地图：真实 z 值
+        else:
+            # 3D map
             for x in range(self.value_map.shape[0]):
                 for y in range(self.value_map.shape[1]):
                     for z in range(self.value_map.shape[2]):
-                        if self.value_map[x, y, z] == 100:  # 占用格子
+                        if self.value_map[x, y, z] == self.occupied_value:
                             world_x = self.min_bound[0] + x * self.cell_size
                             world_y = self.min_bound[1] + y * self.cell_size
                             world_z = self.min_bound[2] + z * self.cell_size
                             points.append([world_x, world_y, world_z])
+        return points
+
+    def publish_map(self) -> bool:
+        """
+        Publish map data via topics (for backward compatibility).
+        """
+        points = self._get_occupied_points()
 
         if points:
             stamp = self.get_clock().now().to_msg()
@@ -199,7 +240,7 @@ class GridMap(Node):
         return msg
 
     def generate(
-        self, ground_height: float = 0.0, ground_tolerance: float = 0.2
+            self, ground_height: float = 0.0, ground_tolerance: float = 0.2
     ) -> np.ndarray:
         """
         Generate 3D grid map with height-based ground filtering.
@@ -233,8 +274,6 @@ class GridMap(Node):
         # Apply height-based ground filtering
         self._remove_ground_obstacles(ground_height, ground_tolerance)
 
-        # publish point cloud and map info to ros2
-        self.publish_map()
         return self.value_map
 
     def _remove_ground_obstacles(self, ground_height: float, tolerance: float) -> None:
@@ -269,8 +308,8 @@ class GridMap(Node):
                             self.generator.get_min_bound(), dtype=np.float32
                         )
                         world_pos = (
-                            min_bound
-                            + np.array([x, y, z], dtype=np.float32) * self.cell_size
+                                min_bound
+                                + np.array([x, y, z], dtype=np.float32) * self.cell_size
                         )
                         actual_height = float(world_pos[2])
 
@@ -281,7 +320,7 @@ class GridMap(Node):
                             check_z = z + 1
                             if check_z < z_dim:
                                 is_empty_above = (
-                                    self.value_map[x, y, check_z] == self.free_value
+                                        self.value_map[x, y, check_z] == self.free_value
                                 )
                             else:
                                 # If we're at the top layer, consider it empty above

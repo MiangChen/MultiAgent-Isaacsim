@@ -74,7 +74,7 @@ application/skills/
 
 ```python
 from application import SkillManager
-from application.skills import navigate_to, explore, take_off
+from application.skills import explore, take_off
 
 # Create skill manager
 skill_manager = SkillManager(robot)

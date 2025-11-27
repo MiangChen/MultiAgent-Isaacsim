@@ -337,8 +337,10 @@ def main():
     skill_managers = {}
     skill_ros_interfaces = {}
     for robot in robots:
-        # Create skill manager
-        skill_manager = SkillManager(robot, auto_register=True)
+        # Create skill manager with robot type for skill filtering
+        # robot_type determines which skills are available (e.g., nav_2d for ground robots, nav_3d for drones)
+        robot_type = robot.cfg_robot.type
+        skill_manager = SkillManager(robot, auto_register=True, robot_type=robot_type)
         robot.skill_manager = skill_manager
         skill_managers[robot.namespace] = skill_manager
         

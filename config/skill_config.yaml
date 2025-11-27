@@ -5,11 +5,22 @@
 base_skills:
   robot_types: ['jetbot', 'g1', 'h1', 'cf2x', 'drone_autel']
   skills:
-    - navigate_to
     - detect
     - take_photo
     - object_detection
     - explore
+
+# Navigation 2D - Ground robots only (prevents "flying" paths)
+navigation_2d_skills:
+  robot_types: ['jetbot', 'g1', 'h1']
+  skills:
+    - nav_2d
+
+# Navigation 3D - Aerial robots (drones)
+navigation_3d_skills:
+  robot_types: ['cf2x', 'drone_autel']
+  skills:
+    - nav_3d
 
 # Drone skills - UAV specific
 drone_skills:

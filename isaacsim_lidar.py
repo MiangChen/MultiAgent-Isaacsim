@@ -217,7 +217,9 @@ def main():
 
     skill_managers = {}
     for drone in drones:
-        skill_manager = SkillManager(drone.robot, auto_register=True)
+        # Create skill manager with robot type for skill filtering
+        robot_type = drone.robot.cfg_robot.type
+        skill_manager = SkillManager(drone.robot, auto_register=True, robot_type=robot_type)
         drone.robot.skill_manager = skill_manager
         skill_managers[drone.robot.cfg_robot.namespace] = skill_manager
 
@@ -233,7 +235,7 @@ def main():
         print(f"  - {drone.robot.cfg_robot.namespace}")
 
     print("\nAvailable skills:")
-    print("  ROS Required: navigate_to, explore, track, move")
+    print("  ROS Required: explore, track, move")
     print("  No ROS: take_off, pick_up, put_down, take_photo, detect, object_detection")
 
     print("\nExample commands:")

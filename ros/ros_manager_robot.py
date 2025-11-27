@@ -14,7 +14,8 @@ from nav_msgs.msg import Odometry
 
 from ros.node_robot import NodeRobot
 from application.skills.base.navigation import (
-    NodePlannerOmpl,
+    NodePlannerOmpl2D,
+    NodePlannerOmpl3D,
     NodeTrajectoryGenerator,
     NodeMpcController,
 )
@@ -50,12 +51,14 @@ class RobotRosManager:
 
         # ROS nodes
         self.node = None
-        self.node_planner_ompl = None
+        self.node_planner_ompl_2d = None
+        self.node_planner_ompl_3d = None
         self.node_trajectory_generator = None
         self.node_controller_mpc = None
 
         # Action clients
-        self.action_client_path_planner = None
+        self.action_client_path_planner_2d = None
+        self.action_client_path_planner_3d = None
 
         # Sensor ROS bridges (CARLA style)
         self.sensor_bridges = {}
@@ -76,8 +79,10 @@ class RobotRosManager:
         self.node = NodeRobot(namespace=self.namespace, topics=self.topics)
         self.node.set_robot_instance(self.robot)
 
-        # Navigation nodes
-        self.node_planner_ompl = NodePlannerOmpl(namespace=self.namespace)
+        # Navigation nodes - 2D and 3D planners (service-based)
+        self.node_planner_ompl_2d = NodePlannerOmpl2D(namespace=self.namespace)
+        self.node_planner_ompl_3d = NodePlannerOmpl3D(namespace=self.namespace)
+
         self.node_trajectory_generator = NodeTrajectoryGenerator(
             namespace=self.namespace
         )
@@ -87,16 +92,24 @@ class RobotRosManager:
 
     def _init_action_clients(self):
         """Initialize action clients"""
-        self.action_client_path_planner = ActionClient(
-            self.node, ComputePathToPose, "action_compute_path_to_pose"
+        # 2D planner (service-based map, z=0 layer only)
+        self.action_client_path_planner_2d = ActionClient(
+            self.node, ComputePathToPose, "action_compute_path_to_pose_2d"
         )
+
+        # 3D planner (service-based map, full 3D)
+        self.action_client_path_planner_3d = ActionClient(
+            self.node, ComputePathToPose, "action_compute_path_to_pose_3d"
+        )
+
         logger.info(f"Action clients initialized for {self.namespace}")
 
     def _init_executor(self):
         """Initialize executor and add all nodes"""
         self.executor = MultiThreadedExecutor()
         self.executor.add_node(self.node)
-        self.executor.add_node(self.node_planner_ompl)
+        self.executor.add_node(self.node_planner_ompl_2d)
+        self.executor.add_node(self.node_planner_ompl_3d)
         self.executor.add_node(self.node_trajectory_generator)
         self.executor.add_node(self.node_controller_mpc)
         logger.info(f"Executor initialized for {self.namespace}")
@@ -179,13 +192,21 @@ class RobotRosManager:
         """Get main ROS node"""
         return self.node
 
-    def get_action_client_path_planner(self):
-        """Get path planner action client"""
-        return self.action_client_path_planner
+    def get_action_client_path_planner_2d(self):
+        """Get 2D path planner action client (service-based, z=0 layer)"""
+        return self.action_client_path_planner_2d
 
-    def get_node_planner_ompl(self):
-        """Get OMPL planner node"""
-        return self.node_planner_ompl
+    def get_action_client_path_planner_3d(self):
+        """Get 3D path planner action client (service-based, full 3D)"""
+        return self.action_client_path_planner_3d
+
+    def get_node_planner_ompl_2d(self):
+        """Get 2D OMPL planner node"""
+        return self.node_planner_ompl_2d
+
+    def get_node_planner_ompl_3d(self):
+        """Get 3D OMPL planner node"""
+        return self.node_planner_ompl_3d
 
     def get_node_trajectory_generator(self):
         """Get trajectory generator node"""

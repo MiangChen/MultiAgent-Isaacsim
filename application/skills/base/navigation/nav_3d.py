@@ -1,13 +1,13 @@
 """
-Navigate To Skill - Application layer
+Nav 3D Skill - 3D Path Planning for Aerial Robots (Drones)
 
 Architecture:
-    1. Path Planning: ROS action (gridmap via ROS)
+    1. Path Planning: ROS action with 3D grid map (via service)
     2. Velocity Computation: MPC controller (application layer)
     3. Execution: Control objects (simulation layer)
 
 Flow:
-    navigate_to -> ROS path planning -> MPC computes velocity ->
+    nav_3d -> Request map via service -> 3D path planning -> MPC computes velocity ->
     RobotControl object -> robot.apply_control() -> Isaac Sim
 """
 
@@ -23,24 +23,25 @@ from nav2_msgs.action import ComputePathToPose
 
 
 @SkillManager.register()
-def navigate_to(**kwargs):
+def nav_3d(**kwargs):
     """
-    Navigate to target osition
+    Navigate to target position using 3D path planning.
+    Suitable for aerial robots (drones) that can move in full 3D space.
 
     Application layer skill:
-    - ROS: Path planning (gridmap subscription)
+    - ROS: 3D Path planning (gridmap via service)
     - MPC: Velocity computation
     - Control: Execution via robot.apply_control()
     """
     robot = kwargs.get("robot")
     skill_manager = kwargs.get("skill_manager")
-    skill_name = "navigate_to"
+    skill_name = "nav_3d"
 
     current_state = skill_manager.get_skill_state(skill_name)
 
     # State machine
     if current_state in [None, "INITIALIZING"]:
-        _init_navigate_to(robot, skill_manager, skill_name, kwargs)
+        _init_nav_3d(robot, skill_manager, skill_name, kwargs)
 
     current_state = skill_manager.get_skill_state(skill_name)
 
@@ -52,8 +53,8 @@ def navigate_to(**kwargs):
         return _handle_failed(skill_manager, skill_name)
 
 
-def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
-    """Initialize navigation"""
+def _init_nav_3d(robot, skill_manager, skill_name, kwargs):
+    """Initialize 3D navigation"""
     # Check if ROS is available
     if not robot.has_ros():
         skill_manager.set_skill_state(skill_name, "FAILED")
@@ -85,10 +86,10 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
         goal_quat_wxyz = list(goal_quat_wxyz)
 
     # Check ROS action server
-    action_client = robot.ros_manager.get_action_client_path_planner()
+    action_client = robot.ros_manager.get_action_client_path_planner_3d()
     if not action_client.wait_for_server(timeout_sec=2.0):
         skill_manager.set_skill_state(skill_name, "FAILED")
-        skill_manager.skill_errors[skill_name] = "Path planner server not available"
+        skill_manager.skill_errors[skill_name] = "3D Path planner server not available"
         return
 
     robot.ros_manager.get_node_controller_mpc().move_event.clear()
@@ -113,7 +114,6 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
     skill_manager.set_skill_data(skill_name, "start_quat", start_quat)
 
     # Send planning request (ROS action)
-    action_client = robot.ros_manager.get_action_client_path_planner()
     send_future = action_client.send_goal_async(goal_msg)
     start_time = skill_manager.sim_time
 
@@ -130,7 +130,7 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
                 result_future = goal_handle.get_result_async()
                 skill_manager.set_skill_data(skill_name, "result_future", result_future)
                 skill_manager.set_skill_data(skill_name, "goal_handle", goal_handle)
-                return skill_manager.form_feedback("processing", "Planning path...", 15)
+                return skill_manager.form_feedback("processing", "Planning 3D path...", 15)
             else:
                 skill_manager.set_skill_state(skill_name, "FAILED")
                 skill_manager.skill_errors[skill_name] = "Request rejected"
@@ -152,7 +152,7 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
             skill_manager.set_skill_state(skill_name, "EXECUTING")
         else:
             skill_manager.set_skill_state(skill_name, "FAILED")
-            skill_manager.skill_errors[skill_name] = "Planning failed"
+            skill_manager.skill_errors[skill_name] = "3D Planning failed"
     else:
         elapsed = skill_manager.sim_time - start_time
         if elapsed > 15.0:
@@ -162,27 +162,15 @@ def _init_navigate_to(robot, skill_manager, skill_name, kwargs):
             skill_manager.set_skill_state(skill_name, "FAILED")
             skill_manager.skill_errors[skill_name] = "Planning timeout"
 
-    return skill_manager.form_feedback("processing", "Planning path...", 30)
+    return skill_manager.form_feedback("processing", "Planning 3D path...", 30)
 
 
 def _handle_executing(robot, skill_manager, skill_name):
-    """
-    Handle executing state
-
-    MPC controller (via ROS) automatically computes and publishes velocity commands.
-    ROS bridge receives cmd_vel and updates robot.vel_linear/vel_angular.
-    We just monitor progress here.
-    """
-    # Check if reached goal
+    """Handle executing state"""
     if robot.ros_manager.get_node_controller_mpc().move_event.is_set():
         skill_manager.set_skill_state(skill_name, "COMPLETED")
         return skill_manager.form_feedback("completed", "Reached goal", 100)
 
-    # MPC controller is running in on_physics_step via control_loop()
-    # It publishes cmd_vel -> ROS bridge -> robot.vel_linear/vel_angular
-    # No need to manually apply control here
-
-    # Check timeout
     move_start_time = skill_manager.get_skill_data(skill_name, "move_start_time", 0)
     elapsed = skill_manager.sim_time - move_start_time
     if elapsed > 120.0:
@@ -192,13 +180,13 @@ def _handle_executing(robot, skill_manager, skill_name):
 
     progress = min(50 + (elapsed / 120.0) * 45, 95)
     return skill_manager.form_feedback(
-        "processing", f"Moving... ({elapsed:.1f}s)", int(progress)
+        "processing", f"Moving in 3D... ({elapsed:.1f}s)", int(progress)
     )
 
 
 def _handle_completed(skill_manager, skill_name):
     """Handle completed state"""
-    return skill_manager.form_feedback("completed", "Navigate completed", 100)
+    return skill_manager.form_feedback("completed", "3D Navigate completed", 100)
 
 
 def _handle_failed(skill_manager, skill_name):
