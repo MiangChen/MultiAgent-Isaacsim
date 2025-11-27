@@ -1,5 +1,4 @@
 def plan_exploration_waypoints(**kwargs):
-    robot = kwargs.get("robot")
     polygon_coords = kwargs.get("polygon_coords")
     holes = kwargs.get("holes", [])
     lane_width = kwargs.get("lane_width", 1.0)
@@ -8,12 +7,8 @@ def plan_exploration_waypoints(**kwargs):
     min_seg = kwargs.get("min_seg", 0.5)
     z_out = kwargs.get("z_out", 0.0)
     frame_id = kwargs.get("frame_id", "map")
-
-    # 插值参数
-    interpolation_distance = kwargs.get("interpolation_distance", 0.05)  # 5cm
-    interpolation_method = kwargs.get(
-        "interpolation_method", "linear"
-    )  # linear, spline, adaptive
+    interpolation_distance = kwargs.get("interpolation_distance", 0.05)
+    interpolation_method = kwargs.get("interpolation_method", "linear")
 
     import numpy as np
     from shapely.geometry import Polygon, LineString, MultiLineString
@@ -138,26 +133,18 @@ def plan_exploration_waypoints(**kwargs):
 
     # ---- 7) 构造 Path 消息（z = z_out，默认 0；朝向为单位四元数）----
     path_msg = Path()
-    now = robot.get_clock().now().to_msg() if hasattr(robot, "get_clock") else None
     path_msg.header.frame_id = frame_id
-    if now:
-        path_msg.header.stamp = now
 
     for xv, yv in interpolated_2d:
         ps = PoseStamped()
         ps.header.frame_id = frame_id
-        if now:
-            ps.header.stamp = now
         ps.pose.position.x = float(xv)
         ps.pose.position.y = float(yv)
-        ps.pose.position.z = float(z_out)  # 默认 0
-
-        # 朝向：xyzw = (0,0,0,1)
+        ps.pose.position.z = float(z_out)
         ps.pose.orientation.x = 0.0
         ps.pose.orientation.y = 0.0
         ps.pose.orientation.z = 0.0
         ps.pose.orientation.w = 1.0
-
         path_msg.poses.append(ps)
 
     return path_msg
